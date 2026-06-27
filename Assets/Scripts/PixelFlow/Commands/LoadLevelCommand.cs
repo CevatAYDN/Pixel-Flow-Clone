@@ -4,12 +4,13 @@ using PixelFlow.Signals;
 
 namespace PixelFlow.Commands
 {
-    [SignalHandler(typeof(LoadLevelSignal))]
+    // Kayıt: GameContextLifecycle.OnConfigure'da fluent API ile yapılıyor.
     public class LoadLevelCommand : ICommand<LoadLevelSignal>, IResettable
     {
         [Inject] public IGridModel GridModel { get; set; }
         [Inject] public ILevelModel LevelModel { get; set; }
         [Inject] public IGameStateModel GameStateModel { get; set; }
+        [Inject] public ISignalBus SignalBus { get; set; }
 
         public void Execute(LoadLevelSignal signal)
         {
@@ -43,7 +44,9 @@ namespace PixelFlow.Commands
                 }
             }
 
-            GridModel.UpdateGrid();
+            // Tek kanal: signal. GridModel event'i kaldırıldı, görsel güncelleme için
+            // GridMediator bu sinyali dinler.
+            SignalBus.Fire(new GridUpdatedSignal());
             GameStateModel.SetState(GameState.Playing);
         }
 
@@ -52,6 +55,7 @@ namespace PixelFlow.Commands
             GridModel = null;
             LevelModel = null;
             GameStateModel = null;
+            SignalBus = null;
         }
     }
 }

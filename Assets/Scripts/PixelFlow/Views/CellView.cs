@@ -9,17 +9,16 @@ namespace PixelFlow.Views
     [Mediator(typeof(CellMediator))]
     public class CellView : View
     {
-        public event Action<Vector2Int> OnPointerDown;
-        public event Action<Vector2Int> OnPointerDrag;
-        public event Action<Vector2Int> OnPointerUp;
+        // Not: Input akışı tek bir yerden (GridView.Update) okunur.
+        // Bu view'in OnMouse olayları kaldırıldı çünkü GridView zaten global olarak
+        // Pointer.current'tan okuyup Bresenham-like interpolation yapıyor.
+        // Çift yol (cell-level + grid-level) yarış koşuluna yol açıyordu.
 
         [SerializeField] private SpriteRenderer _bgRenderer;
         [SerializeField] private SpriteRenderer _dotRenderer;
         [SerializeField] private SpriteRenderer _bridgeRenderer;
 
         public Vector2Int GridPosition { get; private set; }
-
-        private static bool _isDragging;
 
         private static Sprite s_squareSprite;
         private static Sprite s_circleSprite;
@@ -163,34 +162,5 @@ namespace PixelFlow.Views
             }
         }
 
-        private void OnMouseDown()
-        {
-            _isDragging = true;
-            OnPointerDown?.Invoke(GridPosition);
         }
-        
-        private void OnMouseEnter()
-        {
-            bool isPressed = false;
-            if (UnityEngine.InputSystem.Pointer.current != null)
-            {
-                isPressed = UnityEngine.InputSystem.Pointer.current.press.isPressed;
-            }
-
-            if (_isDragging && isPressed)
-            {
-                OnPointerDrag?.Invoke(GridPosition);
-            }
-            else
-            {
-                _isDragging = false;
-            }
-        }
-        
-        private void OnMouseUp()
-        {
-            _isDragging = false;
-            OnPointerUp?.Invoke(GridPosition);
-        }
-    }
 }

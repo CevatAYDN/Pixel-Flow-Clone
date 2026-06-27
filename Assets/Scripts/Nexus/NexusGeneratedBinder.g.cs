@@ -26,6 +26,8 @@ namespace Nexus.Generated
             {
                 instance.HintModel = di.Resolve<PixelFlow.Models.IHintModel>();
                 instance.LevelModel = di.Resolve<PixelFlow.Models.ILevelModel>();
+                instance.SettingsModel = di.Resolve<PixelFlow.Models.ISettingsModel>();
+                instance.GameStateModel = di.Resolve<PixelFlow.Models.IGameStateModel>();
             });
             NexusDI.RegisterInjector<PixelFlow.Views.LevelPackMediator>((instance, di) =>
             {
@@ -56,6 +58,7 @@ namespace Nexus.Generated
                 instance.GridModel = di.Resolve<PixelFlow.Models.IGridModel>();
                 instance.LevelModel = di.Resolve<PixelFlow.Models.ILevelModel>();
                 instance.GameStateModel = di.Resolve<PixelFlow.Models.IGameStateModel>();
+                instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.ProcessInputCommand>((instance, di) =>
             {
@@ -88,6 +91,8 @@ namespace Nexus.Generated
                 var _p_GridMediator_SettingsModel = default(PixelFlow.Views.GridMediator).SettingsModel;
                 var _p_HUDMediator_HintModel = default(PixelFlow.Views.HUDMediator).HintModel;
                 var _p_HUDMediator_LevelModel = default(PixelFlow.Views.HUDMediator).LevelModel;
+                var _p_HUDMediator_SettingsModel = default(PixelFlow.Views.HUDMediator).SettingsModel;
+                var _p_HUDMediator_GameStateModel = default(PixelFlow.Views.HUDMediator).GameStateModel;
                 var _p_LevelPackMediator_ProgressModel = default(PixelFlow.Views.LevelPackMediator).ProgressModel;
                 var _p_SoundHandlerMediator_SoundModel = default(PixelFlow.Views.SoundHandlerMediator).SoundModel;
                 var _p_ThemeHandlerMediator_SettingsModel = default(PixelFlow.Views.ThemeHandlerMediator).SettingsModel;
@@ -100,6 +105,7 @@ namespace Nexus.Generated
                 var _p_LoadLevelCommand_GridModel = default(PixelFlow.Commands.LoadLevelCommand).GridModel;
                 var _p_LoadLevelCommand_LevelModel = default(PixelFlow.Commands.LoadLevelCommand).LevelModel;
                 var _p_LoadLevelCommand_GameStateModel = default(PixelFlow.Commands.LoadLevelCommand).GameStateModel;
+                var _p_LoadLevelCommand_SignalBus = default(PixelFlow.Commands.LoadLevelCommand).SignalBus;
                 var _p_ProcessInputCommand_GridModel = default(PixelFlow.Commands.ProcessInputCommand).GridModel;
                 var _p_ProcessInputCommand_SignalBus = default(PixelFlow.Commands.ProcessInputCommand).SignalBus;
                 var _p_ProcessInputCommand_SoundModel = default(PixelFlow.Commands.ProcessInputCommand).SoundModel;

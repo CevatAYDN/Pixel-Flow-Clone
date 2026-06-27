@@ -9,7 +9,10 @@ namespace PixelFlow.Commands
         public AppTheme Theme;
     }
 
-    [SignalHandler(typeof(ChangeThemeSignal))]
+    // Kayıt: GameContextLifecycle.OnConfigure'da fluent API ile yapılıyor
+    // (builder.BindSignal<ChangeThemeSignal>().To<ChangeThemeCommand>()).
+    // Attribute tabanlı otomatik keşif bu projede kapalı; çift kayıt riskini önlemek
+    // ve AOT uyumluluğunu korumak için tek kaynak burası.
     public class ChangeThemeCommand : ICommand<ChangeThemeSignal>, IResettable
     {
         [Inject] public ISettingsModel SettingsModel { get; set; }

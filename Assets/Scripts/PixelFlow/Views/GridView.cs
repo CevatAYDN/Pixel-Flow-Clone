@@ -25,6 +25,10 @@ namespace PixelFlow.Views
         private bool _clickedOutside;
         private Vector2Int _lastGridPos = new Vector2Int(-1, -1);
 
+        // Camera.main her frame FindObjectByType çağırır (yavaş). Scene boyunca değişmediği
+        // için bir kez çözüp cache'liyoruz. Kamera yoksa fallback olarak Update'te tekrar deneriz.
+        private Camera _cachedCamera;
+
         private void Update()
         {
             if (_cells == null) return;
@@ -37,7 +41,8 @@ namespace PixelFlow.Views
 
             if (isPressed)
             {
-                Camera cam = Camera.main;
+                if (_cachedCamera == null) _cachedCamera = Camera.main;
+                var cam = _cachedCamera;
                 if (cam != null)
                 {
                     Vector3 worldPos = cam.ScreenToWorldPoint(screenPos);
@@ -253,6 +258,38 @@ namespace PixelFlow.Views
                 }
             }
             _pathLines.Clear();
+            // Kamera referansı serbest bırak.
+            _cachedCamera = null;
+        }
+
+        /// <summary>
+        /// View üzerinden kamera konumlandırma. Kamera referansı burada cache'lenir;
+        /// her çağrıda FindObjectByType tetiklenmez. Null gelirse kamera yok demektir,
+        /// sonraki çağrıda tekrar denenir (fallback).
+        /// </summary>
+        public void CenterCamera(int width, int height)
+        {
+            if (_cachedCamera == null) _cachedCamera = Camera.main;
+            var cam = _cachedCamera;
+            if (cam == null) return;
+
+            float cx = (width - 1) * 0.5f;
+            float cy = (height - 1) * 0.5f;
+            cam.transform.position = new Vector3(cx, cy, -10f);
+            cam.orthographic = true;
+
+            float aspect = cam.aspect;
+            const float padding = 1f;
+            float hSize = (height + padding) * 0.5f;
+            float wSize = (width + padding) * 0.5f / aspect;
+
+            // Dikey modda HUD'un grid'i kapatmaması için dikey padding ekle.
+            if (aspect < 1f)
+            {
+                hSize += 1.5f;
+            }
+
+            cam.orthographicSize = Mathf.Max(hSize, wSize);
         }
     }
 }

@@ -22,6 +22,13 @@ namespace PixelFlow.Views
                 _audioSource = View.gameObject.AddComponent<AudioSource>();
 
             _audioSource.playOnAwake = false;
+
+            if (_audioSource.clip == null)
+            {
+                Debug.LogWarning("[SoundHandler] AudioSource has no clip assigned. " +
+                    "Assign an AudioClip in the Inspector for draw sounds to play.");
+            }
+
             SoundModel.OnPlayDrawSound += HandlePlayDrawSound;
         }
 
@@ -33,6 +40,7 @@ namespace PixelFlow.Views
         private void HandlePlayDrawSound(int pathLength)
         {
             if (SoundModel.IsMuted) return;
+            if (_audioSource == null || _audioSource.clip == null) return;
 
             _audioSource.pitch = Mathf.Clamp(0.8f + pathLength * 0.03f, 0.5f, 2.0f);
             _audioSource.Play();

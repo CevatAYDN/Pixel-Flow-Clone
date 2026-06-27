@@ -7,7 +7,7 @@ using PixelFlow.Data;
 
 namespace PixelFlow.Commands
 {
-    [SignalHandler(typeof(RequestHintSignal))]
+    // Kayıt: GameContextLifecycle.OnConfigure'da fluent API ile yapılıyor.
     public class UseHintCommand : ICommand<RequestHintSignal>, IResettable
     {
         [Inject] public IHintModel HintModel { get; set; }
@@ -35,7 +35,6 @@ namespace PixelFlow.Commands
                     HintModel.UseHint();
                     GridModel.LockedColors.Add(solution.color);
                     UnityEngine.Debug.Log($"[UseHintCommand] Applied hint for color: {solution.color} (LOCKED)");
-                    GridModel.UpdateGrid();
                     SignalBus.Fire(new GridUpdatedSignal());
                     SignalBus.Fire(new CheckWinConditionSignal());
                     break;

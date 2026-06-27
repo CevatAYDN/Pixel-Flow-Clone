@@ -1,4 +1,4 @@
-using UnityEngine;
+using PixelFlow.Services;
 
 namespace PixelFlow.Models
 {
@@ -8,23 +8,34 @@ namespace PixelFlow.Models
         void UnlockLevel(int levelIndex);
     }
 
+    /// <summary>
+    /// Açılan level'ları IPlayerPrefsService üzerinden kalıcı saklar.
+    /// Constructor injection ile prefs servisi alır; testlerde fake ile değiştirilebilir.
+    /// </summary>
     public class ProgressModel : IProgressModel
     {
+        private const string Key = "UnlockedLevels";
+        private const int DefaultUnlocked = 1;
+
+        private readonly IPlayerPrefsService _prefs;
+
         public int UnlockedLevels { get; private set; }
 
-        public ProgressModel()
+        public ProgressModel(IPlayerPrefsService prefs)
         {
-            UnlockedLevels = PlayerPrefs.GetInt("UnlockedLevels", 1);
+            _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
+            UnlockedLevels = _prefs.GetInt(Key, DefaultUnlocked);
         }
 
         public void UnlockLevel(int levelIndex)
         {
+            // Mantık: tamamlanan level index'i + 2, çünkü henüz gösterilmeyen bir sonraki
+            // level için de izin veriyoruz. Aşağı iniş yok.
             int requiredUnlocked = levelIndex + 2;
             if (requiredUnlocked > UnlockedLevels)
             {
                 UnlockedLevels = requiredUnlocked;
-                PlayerPrefs.SetInt("UnlockedLevels", UnlockedLevels);
-                PlayerPrefs.Save();
+                _prefs.SetInt(Key, UnlockedLevels);
             }
         }
     }

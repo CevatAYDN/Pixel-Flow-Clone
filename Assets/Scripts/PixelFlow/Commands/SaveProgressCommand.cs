@@ -4,7 +4,7 @@ using PixelFlow.Signals;
 
 namespace PixelFlow.Commands
 {
-    [SignalHandler(typeof(LevelCompletedSignal))]
+    // Kayıt: GameContextLifecycle.OnConfigure'da fluent API ile yapılıyor.
     public class SaveProgressCommand : ICommand<LevelCompletedSignal>, IResettable
     {
         [Inject] public IProgressModel ProgressModel { get; set; }

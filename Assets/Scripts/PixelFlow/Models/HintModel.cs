@@ -1,5 +1,5 @@
 using System;
-using UnityEngine;
+using PixelFlow.Services;
 
 namespace PixelFlow.Models
 {
@@ -11,33 +11,43 @@ namespace PixelFlow.Models
         void AddHints(int amount);
     }
 
+    /// <summary>
+    /// İpucu sayısını IPlayerPrefsService üzerinden kalıcı saklar.
+    /// Testlerde InMemoryPlayerPrefsService ile değiştirilebilir.
+    /// </summary>
     public class HintModel : IHintModel
     {
-        public int HintsRemaining { get; private set; }
+        private const string Key = "HintCount";
+        private const int DefaultHints = 3;
+
+        private readonly IPlayerPrefsService _prefs;
+        private int _hintsRemaining;
+
+        public int HintsRemaining => _hintsRemaining;
         public event Action<int> OnHintCountChanged;
 
-        public HintModel()
+        public HintModel(IPlayerPrefsService prefs)
         {
-            HintsRemaining = PlayerPrefs.GetInt("HintCount", 3);
+            _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
+            _hintsRemaining = _prefs.GetInt(Key, DefaultHints);
         }
 
         public void UseHint()
         {
-            if (HintsRemaining > 0)
+            if (_hintsRemaining > 0)
             {
-                HintsRemaining--;
-                PlayerPrefs.SetInt("HintCount", HintsRemaining);
-                PlayerPrefs.Save();
-                OnHintCountChanged?.Invoke(HintsRemaining);
+                _hintsRemaining--;
+                _prefs.SetInt(Key, _hintsRemaining);
+                OnHintCountChanged?.Invoke(_hintsRemaining);
             }
         }
 
         public void AddHints(int amount)
         {
-            HintsRemaining += amount;
-            PlayerPrefs.SetInt("HintCount", HintsRemaining);
-            PlayerPrefs.Save();
-            OnHintCountChanged?.Invoke(HintsRemaining);
+            if (amount <= 0) return;
+            _hintsRemaining += amount;
+            _prefs.SetInt(Key, _hintsRemaining);
+            OnHintCountChanged?.Invoke(_hintsRemaining);
         }
     }
 }

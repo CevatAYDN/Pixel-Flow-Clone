@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using PixelFlow.Data;
@@ -22,12 +21,16 @@ namespace PixelFlow.Models
         HashSet<ColorType> LockedColors { get; }
         ColorType ActiveColor { get; set; }
         Vector2Int LastPosition { get; set; }
-        
-        event Action OnGridUpdated;
+
         void Initialize(int width, int height);
-        void UpdateGrid();
     }
 
+    /// <summary>
+    /// Izgara state'i. Bildirim için doğrudan C# event kullanmak yerine
+    /// SignalBus.Fire(GridUpdatedSignal) tercih edilir; bu sayede tüm MVCS akışı
+    /// tek kanaldan (sinyal) geçer, debug/trace tutarlı olur ve state değişikliği
+    /// Nerede olursa olsun tek bir yerde gözlemlenebilir.
+    /// </summary>
     public class GridModel : IGridModel
     {
         public int Width { get; private set; }
@@ -38,10 +41,11 @@ namespace PixelFlow.Models
         public ColorType ActiveColor { get; set; }
         public Vector2Int LastPosition { get; set; }
 
-        public event Action OnGridUpdated;
-
         public void Initialize(int width, int height)
         {
+            if (width <= 0 || height <= 0)
+                throw new System.ArgumentException($"Grid boyutu pozitif olmalı: {width}x{height}");
+
             Width = width;
             Height = height;
             Grid = new CellData[width, height];
@@ -56,11 +60,6 @@ namespace PixelFlow.Models
             LockedColors = new HashSet<ColorType>();
             ActiveColor = ColorType.None;
             LastPosition = new Vector2Int(-1, -1);
-        }
-
-        public void UpdateGrid()
-        {
-            OnGridUpdated?.Invoke();
         }
     }
 }

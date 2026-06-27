@@ -1,5 +1,5 @@
 using System;
-using UnityEngine;
+using PixelFlow.Services;
 
 namespace PixelFlow.Models
 {
@@ -13,22 +13,30 @@ namespace PixelFlow.Models
         void PlayDrawSound(int currentPathLength);
     }
 
+    /// <summary>
+    /// Ses tercihlerini IPlayerPrefsService üzerinden kalıcı saklar.
+    /// PlayDrawSound çağrısı mute durumunda event fırlatmaz.
+    /// </summary>
     public class SoundModel : ISoundModel
     {
+        private const string MuteKey = "IsMuted";
+
+        private readonly IPlayerPrefsService _prefs;
+
         public bool IsMuted { get; private set; }
         public event Action<bool> OnMuteChanged;
         public event Action<int> OnPlayDrawSound;
 
-        public SoundModel()
+        public SoundModel(IPlayerPrefsService prefs)
         {
-            IsMuted = PlayerPrefs.GetInt("IsMuted", 0) == 1;
+            _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
+            IsMuted = _prefs.GetBool(MuteKey, false);
         }
 
         public void ToggleMute()
         {
             IsMuted = !IsMuted;
-            PlayerPrefs.SetInt("IsMuted", IsMuted ? 1 : 0);
-            PlayerPrefs.Save();
+            _prefs.SetBool(MuteKey, IsMuted);
             OnMuteChanged?.Invoke(IsMuted);
         }
 

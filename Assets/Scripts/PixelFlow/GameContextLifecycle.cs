@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Nexus.Core;
 using PixelFlow.Models;
+using PixelFlow.Services;
 
 using UnityEngine;
 
@@ -11,6 +12,10 @@ namespace PixelFlow
     {
         public void OnConfigure(IContextBuilder builder)
         {
+            // PlayerPrefs servisini singleton olarak bağla; kalıcı state kullanan tüm
+            // modeller bunu constructor injection ile alır (test edilebilir).
+            builder.Bind<IPlayerPrefsService, UnityPlayerPrefsService>();
+
             builder.BindModel<IGridModel, GridModel>();
             builder.BindModel<ILevelModel, LevelModel>();
             builder.BindModel<IProgressModel, ProgressModel>();

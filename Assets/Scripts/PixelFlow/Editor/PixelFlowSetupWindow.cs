@@ -31,15 +31,15 @@ namespace PixelFlow.Editor
                 SetupScene();
             }
             
-GUILayout.Space(20);
-             GUILayout.Label("Level Management", EditorStyles.boldLabel);
-             
-             if (GUILayout.Button("Create Empty LevelData"))
-             {
-                 CreateLevelData();
-             }
-             
-             GUILayout.Space(10);
+            GUILayout.Space(20);
+            GUILayout.Label("Level Management", EditorStyles.boldLabel);
+
+            if (GUILayout.Button("Create Empty LevelData"))
+            {
+                CreateLevelData();
+            }
+
+            GUILayout.Space(10);
             if (GUILayout.Button("Create Sample 5x5 Level"))
             {
                 CreateSampleLevel();
@@ -473,7 +473,7 @@ GUILayout.Space(20);
                     bootstrapper.initialLevel = AssetDatabase.LoadAssetAtPath<LevelData>(path);
                     Debug.Log($"[PixelFlowSetupWindow] Assigned initialLevel to GameBootstrapper: {bootstrapper.initialLevel.name} from {path}");
                     
-// Auto-populate Level1 if empty
+                    // Auto-populate Level1 if empty
                     if (bootstrapper.initialLevel.initialNodes == null || bootstrapper.initialLevel.initialNodes.Count == 0)
                     {
                         CreateSampleLevel(bootstrapper.initialLevel, path);

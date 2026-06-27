@@ -6,57 +6,81 @@ using System.Collections;
 
 namespace PixelFlow
 {
+    /// <summary>
+    /// Oyunun başlangıç noktası. Nexus Root'un tamamen hazır olmasını bekler,
+    /// sonra ilk level'ı yükler. Çift fallback stratejisi:
+    ///   1) Inspector'dan atanmış initialLevel (tercih edilen)
+    ///   2) Resources/Levels/Level1 (kurulum sonrası garanti)
+    ///   3) Resources'taki ilk LevelData (kullanıcı farklı isimle kaydettiyse)
+    /// Hiçbiri yoksa net bir hata loglar ve çıkar.
+    /// </summary>
     public class GameBootstrapper : MonoBehaviour
     {
         public LevelData initialLevel;
         public Root nexusRoot;
 
+        private const int RootSearchRetries = 10;
+        private const float RootSearchInterval = 0.1f;
+
         private IEnumerator Start()
         {
-            int retries = 5;
+            yield return WaitForRoot();
+            if (nexusRoot == null)
+            {
+                Debug.LogError("[PixelFlow] Nexus Root not found after retries. Game cannot start.");
+                yield break;
+            }
+
+            // Root tüm lifecycle aşamalarını bitirene kadar bekle; aksi halde
+            // SignalBus henüz komutları kaydetmemiş olabilir.
+            while (!nexusRoot.IsInitialized)
+            {
+                yield return null;
+            }
+
+            var level = ResolveInitialLevel();
+            if (level == null)
+            {
+                Debug.LogError("[PixelFlow] No level available to load. Create a LevelData asset or assign initialLevel.");
+                yield break;
+            }
+
+            Debug.Log($"[PixelFlow] Bootstrap loading level: {level.name} ({level.width}x{level.height})");
+            var signalBus = nexusRoot.Context.Container.Resolve<ISignalBus>();
+            signalBus.Fire(new LoadLevelSignal { LevelToLoad = level });
+        }
+
+        private IEnumerator WaitForRoot()
+        {
+            int retries = RootSearchRetries;
             while (nexusRoot == null && retries > 0)
             {
                 nexusRoot = FindAnyObjectByType<Root>();
                 if (nexusRoot == null)
                 {
                     retries--;
-                    yield return new WaitForSeconds(0.1f);
+                    yield return new WaitForSeconds(RootSearchInterval);
                 }
             }
-                
-            if (nexusRoot == null)
+        }
+
+        private LevelData ResolveInitialLevel()
+        {
+            if (initialLevel != null) return initialLevel;
+
+            // Yaygın isim
+            var byName = Resources.Load<LevelData>("Levels/Level1");
+            if (byName != null) return byName;
+
+            // Resources/Levels altındaki ilk LevelData
+            var any = Resources.LoadAll<LevelData>("Levels");
+            if (any != null && any.Length > 0)
             {
-                Debug.LogError("[PixelFlow] Nexus Root not found! Cannot start game.");
-                yield break;
+                Debug.LogWarning($"[PixelFlow] Levels/Level1 bulunamadı; ilk bulunan LevelData kullanılıyor: {any[0].name}");
+                return any[0];
             }
 
-            // Wait until Nexus Root is fully initialized
-            while (!nexusRoot.IsInitialized)
-            {
-                yield return null;
-            }
-
-            if (initialLevel != null)
-            {
-                Debug.Log($"[PixelFlow] Bootstrapper firing LoadLevelSignal for: {initialLevel.name} ({initialLevel.width}x{initialLevel.height})");
-                var signalBus = nexusRoot.Context.Container.Resolve<ISignalBus>();
-                signalBus.Fire(new LoadLevelSignal { LevelToLoad = initialLevel });
-            }
-            else
-            {
-                Debug.LogWarning("[PixelFlow] No Initial Level assigned in GameBootstrapper! Attempting to load default level...");
-                var signalBus = nexusRoot.Context.Container.Resolve<ISignalBus>();
-                var defaultLevel = Resources.Load<LevelData>("Levels/Level1");
-                if (defaultLevel != null)
-                {
-                    Debug.Log($"[PixelFlow] Loaded default level from Resources: {defaultLevel.name}");
-                    signalBus.Fire(new LoadLevelSignal { LevelToLoad = defaultLevel });
-                }
-                else
-                {
-                    Debug.LogError("[PixelFlow] No default level found at Resources/Levels/Level1.asset!");
-                }
-            }
+            return null;
         }
     }
 }
