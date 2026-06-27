@@ -1,5 +1,4 @@
 using Nexus.Core;
-using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 
@@ -8,7 +7,6 @@ namespace PixelFlow.Views
     public class LevelPackMediator : Mediator<LevelPackView>
     {
         [Inject] public IProgressModel ProgressModel { get; set; }
-        [Inject] public LevelPack CurrentPack { get; set; }
 
         protected override void OnBind()
         {
@@ -18,9 +16,10 @@ namespace PixelFlow.Views
 
         private void OnLevelSelected(int levelIndex)
         {
-            if (CurrentPack != null && levelIndex < CurrentPack.levels.Count)
+            var pack = View.LevelPackData;
+            if (pack != null && levelIndex < pack.levels.Count)
             {
-                var levelData = CurrentPack.levels[levelIndex];
+                var levelData = pack.levels[levelIndex];
                 SignalBus.Fire(new LoadLevelSignal { LevelToLoad = levelData });
             }
         }
