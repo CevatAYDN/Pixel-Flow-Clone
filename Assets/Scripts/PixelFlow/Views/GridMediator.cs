@@ -26,6 +26,10 @@ namespace PixelFlow.Views
 
         private void HandleGridUpdated()
         {
+            if (!View.IsInitialized && GridModel.Width > 0 && GridModel.Height > 0)
+            {
+                View.InitializeGrid(GridModel.Width, GridModel.Height);
+            }
             View.UpdateGridVisuals(GridModel.Grid, GridModel.Width, GridModel.Height);
         }
     }

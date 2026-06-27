@@ -132,10 +132,50 @@ namespace PixelFlow.Editor
                 var hintText = hintTextObj.AddComponent<Text>();
                 hintText.text = "3";
 
+                // Completion Panel
+                GameObject completionPanel = new GameObject("CompletionPanel");
+                completionPanel.transform.SetParent(hudObj.transform, false);
+                var panelImg = completionPanel.AddComponent<Image>();
+                panelImg.color = new Color(0, 0, 0, 0.7f);
+                RectTransform panelRect = completionPanel.GetComponent<RectTransform>();
+                panelRect.anchorMin = Vector2.zero;
+                panelRect.anchorMax = Vector2.one;
+                panelRect.sizeDelta = Vector2.zero;
+                completionPanel.SetActive(false);
+
+                GameObject completionTextObj = new GameObject("CompletionText");
+                completionTextObj.transform.SetParent(completionPanel.transform, false);
+                var compText = completionTextObj.AddComponent<Text>();
+                compText.text = "Tebrikler!";
+                compText.fontSize = 48;
+                compText.alignment = TextAnchor.MiddleCenter;
+                RectTransform textRect = completionTextObj.GetComponent<RectTransform>();
+                textRect.anchorMin = Vector2.zero;
+                textRect.anchorMax = Vector2.one;
+                textRect.sizeDelta = Vector2.zero;
+
                 SerializedObject so = new SerializedObject(hudView);
                 so.FindProperty("_hintButton").objectReferenceValue = hintBtn;
                 so.FindProperty("_hintCountText").objectReferenceValue = hintText;
+                so.FindProperty("_completionPanel").objectReferenceValue = completionPanel;
+                so.FindProperty("_completionText").objectReferenceValue = compText;
                 so.ApplyModifiedProperties();
+            }
+
+            // Auto-create SoundHandlerView if missing
+            if (Object.FindAnyObjectByType<SoundHandlerView>() == null)
+            {
+                GameObject soundObj = new GameObject("SoundHandlerView");
+                soundObj.AddComponent<SoundHandlerView>();
+                Debug.Log("SoundHandlerView created.");
+            }
+
+            // Auto-create ThemeHandlerView if missing
+            if (Object.FindAnyObjectByType<ThemeHandlerView>() == null)
+            {
+                GameObject themeObj = new GameObject("ThemeHandlerView");
+                themeObj.AddComponent<ThemeHandlerView>();
+                Debug.Log("ThemeHandlerView created.");
             }
 
             if (Object.FindAnyObjectByType<GameBootstrapper>() == null)

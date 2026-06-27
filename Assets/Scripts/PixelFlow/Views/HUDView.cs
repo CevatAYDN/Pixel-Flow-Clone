@@ -10,17 +10,23 @@ namespace PixelFlow.Views
     {
         [SerializeField] private Button _hintButton;
         [SerializeField] private Text _hintCountText;
+        [SerializeField] private GameObject _completionPanel;
+        [SerializeField] private Text _completionText;
 
         public event Action OnHintClicked;
 
         protected override void OnBind(IContext context)
         {
+            base.OnBind(context);
             if (_hintButton != null)
                 _hintButton.onClick.AddListener(() => OnHintClicked?.Invoke());
+            if (_completionPanel != null)
+                _completionPanel.SetActive(false);
         }
 
         protected override void OnUnbind()
         {
+            base.OnUnbind();
             if (_hintButton != null)
                 _hintButton.onClick.RemoveAllListeners();
         }
@@ -29,6 +35,22 @@ namespace PixelFlow.Views
         {
             if (_hintCountText != null)
                 _hintCountText.text = count.ToString();
+        }
+
+        public void ShowCompletion()
+        {
+            if (_completionPanel != null)
+            {
+                _completionPanel.SetActive(true);
+                if (_completionText != null)
+                    _completionText.text = "Tebrikler! Seviye Tamamland\u0131!";
+            }
+        }
+
+        public void HideCompletion()
+        {
+            if (_completionPanel != null)
+                _completionPanel.SetActive(false);
         }
     }
 }

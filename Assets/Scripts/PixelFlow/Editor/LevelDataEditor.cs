@@ -10,7 +10,7 @@ namespace PixelFlow.Editor
     [CustomEditor(typeof(LevelData))]
     public class LevelDataEditor : UnityEditor.Editor
     {
-        private enum EditMode { None, Node, Path, Eraser }
+        private enum EditMode { None, Node, Path, Bridge, Eraser }
         private EditMode _currentMode = EditMode.Node;
         private ColorType _currentColor = ColorType.Red;
         
@@ -49,6 +49,8 @@ namespace PixelFlow.Editor
             GUILayout.EndHorizontal();
 
             GUILayout.Space(10);
+            EditorGUILayout.LabelField("Bridge Count", _data.bridgePositions.Count.ToString());
+            GUILayout.Space(5);
             GUILayout.Label("Grid Editor (Click/Drag to paint)", EditorStyles.boldLabel);
 
             DrawVisualGrid();
@@ -59,6 +61,7 @@ namespace PixelFlow.Editor
                 Undo.RecordObject(_data, "Clear Data");
                 _data.initialNodes.Clear();
                 _data.solutions.Clear();
+                _data.bridgePositions.Clear();
                 EditorUtility.SetDirty(_data);
             }
 
@@ -127,6 +130,13 @@ namespace PixelFlow.Editor
                     Color cellColor = Color.gray;
                     string cellText = "";
                     
+                    bool isBridge = _data.bridgePositions.Contains(new Vector2Int(x, y));
+                    if (isBridge)
+                    {
+                        cellColor = Color.black;
+                        cellText = "B";
+                    }
+
                     var node = _data.initialNodes.Find(n => n.position.x == x && n.position.y == y);
                     if (node.color != ColorType.None)
                     {
@@ -180,11 +190,17 @@ namespace PixelFlow.Editor
                     if (sol.pathPositions != null)
                         sol.pathPositions.RemoveAll(p => p == pos);
                 }
+                _data.bridgePositions.Remove(pos);
             }
             else if (_currentMode == EditMode.Node)
             {
                 _data.initialNodes.RemoveAll(n => n.position == pos);
                 _data.initialNodes.Add(new GridNode { position = pos, color = _currentColor });
+            }
+            else if (_currentMode == EditMode.Bridge)
+            {
+                if (!_data.bridgePositions.Contains(pos))
+                    _data.bridgePositions.Add(pos);
             }
             else if (_currentMode == EditMode.Path)
             {
@@ -224,6 +240,8 @@ namespace PixelFlow.Editor
                 case ColorType.Yellow: return Color.yellow;
                 case ColorType.Orange: return new Color(1f, 0.5f, 0f);
                 case ColorType.Purple: return new Color(0.5f, 0f, 0.5f);
+                case ColorType.Cyan: return Color.cyan;
+                case ColorType.Magenta: return Color.magenta;
                 default: return Color.gray;
             }
         }

@@ -7,7 +7,7 @@ using PixelFlow.Data;
 
 namespace PixelFlow.Commands
 {
-    public class UseHintCommand : ICommand<RequestHintSignal>
+    public class UseHintCommand : ICommand<RequestHintSignal>, IResettable
     {
         [Inject] public IHintModel HintModel { get; set; }
         [Inject] public IGridModel GridModel { get; set; }
@@ -16,7 +16,11 @@ namespace PixelFlow.Commands
 
         public void Execute(RequestHintSignal signal)
         {
-            if (HintModel.HintsRemaining <= 0) return;
+            if (HintModel.HintsRemaining <= 0)
+            {
+                UnityEngine.Debug.Log("[UseHintCommand] No hints remaining!");
+                return;
+            }
 
             var level = LevelModel.CurrentLevel;
             if (level == null || level.solutions == null || level.solutions.Count == 0) return;
@@ -28,6 +32,8 @@ namespace PixelFlow.Commands
                 {
                     ApplySolution(solution);
                     HintModel.UseHint();
+                    GridModel.LockedColors.Add(solution.color);
+                    UnityEngine.Debug.Log($"[UseHintCommand] Applied hint for color: {solution.color} (LOCKED)");
                     GridModel.UpdateGrid();
                     SignalBus.Fire(new GridUpdatedSignal());
                     SignalBus.Fire(new CheckWinConditionSignal());
@@ -109,6 +115,14 @@ namespace PixelFlow.Commands
                 }
                 path.RemoveAt(i);
             }
+        }
+
+        public void Reset()
+        {
+            HintModel = null;
+            GridModel = null;
+            LevelModel = null;
+            SignalBus = null;
         }
     }
 }

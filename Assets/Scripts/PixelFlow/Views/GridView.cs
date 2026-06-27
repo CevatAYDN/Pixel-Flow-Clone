@@ -12,6 +12,7 @@ namespace PixelFlow.Views
         [SerializeField] private Transform _gridContainer;
 
         private CellView[,] _cells;
+        public bool IsInitialized => _cells != null;
 
         public void InitializeGrid(int width, int height)
         {

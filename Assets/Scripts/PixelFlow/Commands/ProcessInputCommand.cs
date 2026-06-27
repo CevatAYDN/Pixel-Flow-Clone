@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 namespace PixelFlow.Commands
 {
-    public class ProcessInputCommand : ICommand<InputInteractionSignal>
+    public class ProcessInputCommand : ICommand<InputInteractionSignal>, IResettable
     {
         [Inject] public IGridModel GridModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
@@ -29,6 +29,13 @@ namespace PixelFlow.Commands
                 
                 if (currentCell.Color != ColorType.None)
                 {
+                    // Skip interaction if color is locked (e.g. by hint)
+                    if (GridModel.LockedColors.Contains(currentCell.Color))
+                    {
+                        UnityEngine.Debug.Log($"[ProcessInputCommand] Color {currentCell.Color} is locked by hint, ignoring input");
+                        return;
+                    }
+
                     _activeColor = currentCell.Color;
                     _lastPos = signal.GridPosition;
                     
@@ -159,6 +166,15 @@ namespace PixelFlow.Commands
         private void BreakPath(ColorType color, Vector2Int breakPos)
         {
             BacktrackPath(color, breakPos);
+        }
+
+        public void Reset()
+        {
+            GridModel = null;
+            SignalBus = null;
+            SoundModel = null;
+            _activeColor = ColorType.None;
+            _lastPos = new Vector2Int(-1, -1);
         }
     }
 }

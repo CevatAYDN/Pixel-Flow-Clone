@@ -19,6 +19,7 @@ namespace PixelFlow.Models
         int Height { get; }
         CellData[,] Grid { get; }
         Dictionary<ColorType, List<Vector2Int>> Paths { get; }
+        HashSet<ColorType> LockedColors { get; }
         
         event Action OnGridUpdated;
         void Initialize(int width, int height);
@@ -31,6 +32,7 @@ namespace PixelFlow.Models
         public int Height { get; private set; }
         public CellData[,] Grid { get; private set; }
         public Dictionary<ColorType, List<Vector2Int>> Paths { get; private set; }
+        public HashSet<ColorType> LockedColors { get; private set; }
 
         public event Action OnGridUpdated;
 
@@ -47,6 +49,7 @@ namespace PixelFlow.Models
                 }
             }
             Paths = new Dictionary<ColorType, List<Vector2Int>>();
+            LockedColors = new HashSet<ColorType>();
         }
 
         public void UpdateGrid()
