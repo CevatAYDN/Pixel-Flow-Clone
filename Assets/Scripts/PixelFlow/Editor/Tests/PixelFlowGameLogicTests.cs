@@ -55,6 +55,7 @@ namespace PixelFlow.Editor.Tests
             return NexusTestHarness.CreateContext(builder =>
             {
                 builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
+                builder.Bind<IPathService, PathService>();
 
                 builder.BindModel<IGridModel, GridModel>();
                 builder.BindModel<ILevelModel, LevelModel>();
@@ -603,6 +604,100 @@ namespace PixelFlow.Editor.Tests
 
             Assert.IsTrue(_ctx.SignalWasDispatched<ProgressUpdatedSignal>(),
                 "LevelCompletedSignal should trigger ProgressUpdatedSignal via SaveProgressCommand");
+        }
+
+        // ---------------------------------------------------------------
+        // Architectural & Performance Validation Tests (Finding C-001 / ADR)
+        // ---------------------------------------------------------------
+
+        [Test]
+        public void Architecture_Dependency_Test()
+        {
+            var modelAssembly = typeof(GridModel).Assembly;
+            var types = modelAssembly.GetTypes();
+
+            foreach (var type in types)
+            {
+                if (type.Namespace != null && type.Namespace.StartsWith("PixelFlow.Models"))
+                {
+                    // Check fields
+                    var fields = type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static);
+                    foreach (var field in fields)
+                    {
+                        var fieldType = field.FieldType;
+                        AssertNoForbiddenDependency(type, fieldType, $"field '{field.Name}'");
+                    }
+
+                    // Check properties
+                    var properties = type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static);
+                    foreach (var prop in properties)
+                    {
+                        var propType = prop.PropertyType;
+                        AssertNoForbiddenDependency(type, propType, $"property '{prop.Name}'");
+                    }
+
+                    // Check constructors
+                    var constructors = type.GetConstructors();
+                    foreach (var ctor in constructors)
+                    {
+                        var parameters = ctor.GetParameters();
+                        foreach (var param in parameters)
+                        {
+                            AssertNoForbiddenDependency(type, param.ParameterType, $"constructor parameter '{param.Name}'");
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void AssertNoForbiddenDependency(System.Type sourceType, System.Type dependencyType, string context)
+        {
+            if (dependencyType == null) return;
+
+            if (dependencyType.IsGenericType)
+            {
+                foreach (var genericArg in dependencyType.GetGenericArguments())
+                {
+                    AssertNoForbiddenDependency(sourceType, genericArg, context);
+                }
+            }
+
+            var depNamespace = dependencyType.Namespace;
+            if (depNamespace == null) return;
+
+            bool isForbidden = depNamespace.StartsWith("PixelFlow.Views") || 
+                               depNamespace.StartsWith("UnityEngine.UI") || 
+                               depNamespace.StartsWith("UnityEngine.UIElements");
+
+            if (isForbidden)
+            {
+                Assert.Fail($"Architecture Violation: Model '{sourceType.FullName}' has a forbidden dependency on '{dependencyType.FullName}' via {context}!");
+            }
+        }
+
+        [Test]
+        public void Signal_Performance_Benchmark_Test()
+        {
+            _ctx.Register<GridUpdatedSignal>();
+            
+            // Warm up
+            for (int i = 0; i < 100; i++)
+            {
+                _ctx.Dispatch(new GridUpdatedSignal());
+            }
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            int iterations = 10000;
+            for (int i = 0; i < iterations; i++)
+            {
+                _ctx.Dispatch(new GridUpdatedSignal());
+            }
+            sw.Stop();
+
+            double ms = sw.Elapsed.TotalMilliseconds;
+            UnityEngine.Debug.Log($"[Signal Benchmark] Dispatched {iterations} signals in {ms:F2} ms (Avg: {ms * 1000.0 / iterations:F4} microseconds per signal)");
+            
+            Assert.Less(sw.ElapsedMilliseconds, 200, $"Signal dispatching is too slow: {sw.ElapsedMilliseconds} ms");
         }
     }
 }

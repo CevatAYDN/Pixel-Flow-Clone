@@ -41,6 +41,10 @@ namespace Nexus.Generated
             {
                 instance.SettingsModel = di.Resolve<PixelFlow.Models.ISettingsModel>();
             });
+            NexusDI.RegisterInjector<PixelFlow.Services.PathService>((instance, di) =>
+            {
+                instance.GridModel = di.Resolve<PixelFlow.Models.IGridModel>();
+            });
             NexusDI.RegisterInjector<PixelFlow.Commands.ChangeThemeCommand>((instance, di) =>
             {
                 instance.SettingsModel = di.Resolve<PixelFlow.Models.ISettingsModel>();
@@ -65,6 +69,7 @@ namespace Nexus.Generated
                 instance.GridModel = di.Resolve<PixelFlow.Models.IGridModel>();
                 instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
                 instance.SoundModel = di.Resolve<PixelFlow.Models.ISoundModel>();
+                instance.PathService = di.Resolve<PixelFlow.Services.IPathService>();
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.SaveProgressCommand>((instance, di) =>
             {
@@ -78,6 +83,7 @@ namespace Nexus.Generated
                 instance.GridModel = di.Resolve<PixelFlow.Models.IGridModel>();
                 instance.LevelModel = di.Resolve<PixelFlow.Models.ILevelModel>();
                 instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
+                instance.PathService = di.Resolve<PixelFlow.Services.IPathService>();
             });
         }
 
@@ -96,6 +102,7 @@ namespace Nexus.Generated
                 var _p_LevelPackMediator_ProgressModel = default(PixelFlow.Views.LevelPackMediator).ProgressModel;
                 var _p_SoundHandlerMediator_SoundModel = default(PixelFlow.Views.SoundHandlerMediator).SoundModel;
                 var _p_ThemeHandlerMediator_SettingsModel = default(PixelFlow.Views.ThemeHandlerMediator).SettingsModel;
+                var _p_PathService_GridModel = default(PixelFlow.Services.PathService).GridModel;
                 var _p_ChangeThemeCommand_SettingsModel = default(PixelFlow.Commands.ChangeThemeCommand).SettingsModel;
                 var _p_ChangeThemeCommand_SignalBus = default(PixelFlow.Commands.ChangeThemeCommand).SignalBus;
                 var _p_CheckWinConditionCommand_GridModel = default(PixelFlow.Commands.CheckWinConditionCommand).GridModel;
@@ -109,6 +116,7 @@ namespace Nexus.Generated
                 var _p_ProcessInputCommand_GridModel = default(PixelFlow.Commands.ProcessInputCommand).GridModel;
                 var _p_ProcessInputCommand_SignalBus = default(PixelFlow.Commands.ProcessInputCommand).SignalBus;
                 var _p_ProcessInputCommand_SoundModel = default(PixelFlow.Commands.ProcessInputCommand).SoundModel;
+                var _p_ProcessInputCommand_PathService = default(PixelFlow.Commands.ProcessInputCommand).PathService;
                 var _p_SaveProgressCommand_ProgressModel = default(PixelFlow.Commands.SaveProgressCommand).ProgressModel;
                 var _p_SaveProgressCommand_LevelModel = default(PixelFlow.Commands.SaveProgressCommand).LevelModel;
                 var _p_SaveProgressCommand_SignalBus = default(PixelFlow.Commands.SaveProgressCommand).SignalBus;
@@ -116,8 +124,9 @@ namespace Nexus.Generated
                 var _p_UseHintCommand_GridModel = default(PixelFlow.Commands.UseHintCommand).GridModel;
                 var _p_UseHintCommand_LevelModel = default(PixelFlow.Commands.UseHintCommand).LevelModel;
                 var _p_UseHintCommand_SignalBus = default(PixelFlow.Commands.UseHintCommand).SignalBus;
+                var _p_UseHintCommand_PathService = default(PixelFlow.Commands.UseHintCommand).PathService;
             }
-            #pragma warning restore 0169, 0414, 0219, 0162
+            #pragma warning restore 0169, 0414, 0219
         }
     }
 }
