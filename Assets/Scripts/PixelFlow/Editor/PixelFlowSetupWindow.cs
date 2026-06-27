@@ -84,14 +84,14 @@ namespace PixelFlow.Editor
 
         private void SetupScene()
         {
-            if (FindObjectOfType<Context>() == null)
+            if (Object.FindAnyObjectByType<Root>() == null)
             {
                 GameObject contextObj = new GameObject("PixelFlow_Context");
-                var context = contextObj.AddComponent<Context>();
+                var context = contextObj.AddComponent<Root>();
                 contextObj.AddComponent<GameContextLifecycle>();
             }
 
-            if (FindObjectOfType<GridView>() == null)
+            if (Object.FindAnyObjectByType<GridView>() == null)
             {
                 GameObject gridObj = new GameObject("GridView");
                 var gridView = gridObj.AddComponent<GridView>();
@@ -110,7 +110,7 @@ namespace PixelFlow.Editor
                 so.ApplyModifiedProperties();
             }
 
-            if (FindObjectOfType<HUDView>() == null)
+            if (Object.FindAnyObjectByType<HUDView>() == null)
             {
                 GameObject canvasObj = new GameObject("Canvas");
                 var canvas = canvasObj.AddComponent<Canvas>();

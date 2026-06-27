@@ -3,9 +3,11 @@ using System.Threading.Tasks;
 using Nexus.Core;
 using PixelFlow.Models;
 
+using UnityEngine;
+
 namespace PixelFlow
 {
-    public class GameContextLifecycle : IContextLifecycle
+    public class GameContextLifecycle : MonoBehaviour, IContextLifecycle
     {
         public void OnConfigure(IContextBuilder builder)
         {
