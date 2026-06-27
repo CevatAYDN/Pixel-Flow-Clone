@@ -6,10 +6,10 @@ Bu proje, Google Play'deki "Pixel Flow" oyununun tüm oynanış mekaniklerini, i
 ## 2. Genişletilmiş Mimari Tasarım (MVCS)
 
 ### 2.1. Modeller (Veri Katmanı)
-* **`GridModel`**: Gridin boyutları, hücre durumları (boş, duvar, nokta, yol) ve renk verileri.
-* **`LevelModel`**: Mevcut paket (örn: 5x5 Başlangıç), seviye indeksi ve hedeflenen bağlantı sayısı.
+* **`GridModel`**: Gridin boyutları, hücre durumları (boş, duvar, nokta, yol, **köprü**), her rengin başlangıç/bitiş noktaları ve mevcut çizilen yol verisi (`Dictionary<ColorType, List<Vector2Int>>`).
+* **`LevelModel`**: Mevcut paket (örn: 5x5 Başlangıç), seviye indeksi, hedeflenen bağlantı sayısı ve zorluk çarpanı.
 * **`GameStateModel`**: Oyunun anlık state'i (MainMenu, Playing, Paused, LevelCompleted).
-* **`ProgressModel`**: Oyuncunun kayıt dosyası (hangi seviyeler açık, kazanılan yıldızlar/paralar).
+* **`ProgressModel`**: Oyuncunun kayıt dosyası (hangi seviyeler açık, kazanılan yıldızlar/paralar). JSON/PlayerPrefs ile serileştirilir.
 * **`SettingsModel`**: Ses seviyesi, müzik seviyesi ve aktif görsel tema (Dark/Light/Neon).
 * **`HintModel`**: Oyuncunun elindeki ipucu sayısı ve bekleme süreleri (Cooldown).
 
@@ -24,7 +24,7 @@ Bu proje, Google Play'deki "Pixel Flow" oyununun tüm oynanış mekaniklerini, i
 
 ### 2.3. Komutlar (İş Mantığı Katmanı)
 * **`LoadLevelCommand`**: Seviye verisini JSON veya ScriptableObject'ten okur, Grid'i inşa eder.
-* **`ProcessInputCommand`**: Geçerli sürükleme hamlelerini hesaplar. Çapraz gitmeyi engeller, farklı renklerin kesişiminde eski yolu koparır (Kritik Pixel Flow mekaniği).
+* **`ProcessInputCommand`**: Geçerli sürükleme hamlelerini hesaplar. Çapraz gitmeyi engeller, farklı renklerin kesişiminde (köprü hücresi değilse) eski yolu koparır, köprü hücresinde ise iki farklı rengin birbirinin üzerinden geçmesine izin verir.
 * **`CheckWinConditionCommand`**: Tüm renkler bağlandı mı ve boş hücre kalmadı mı kontrol eder.
 * **`UseHintCommand`**: `HintModel`'i kontrol eder, yeterli ipucu varsa çözülmemiş bir renk çiftinin doğru yolunu `GridModel`'e yazarak `GridUpdatedSignal` fırlatır.
 * **`SaveProgressCommand`**: Bölüm bittiğinde veriyi diske/buluta kaydeder ve sonraki bölümün kilidini açar.
