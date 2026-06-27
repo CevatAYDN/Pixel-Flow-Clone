@@ -29,7 +29,7 @@ namespace PixelFlow
             builder.BindSignal<PixelFlow.Signals.LoadLevelSignal>().To<PixelFlow.Commands.LoadLevelCommand>();
             builder.BindSignal<PixelFlow.Signals.RequestHintSignal>().To<PixelFlow.Commands.UseHintCommand>();
             builder.BindSignal<PixelFlow.Commands.ChangeThemeSignal>().To<PixelFlow.Commands.ChangeThemeCommand>();
-            builder.BindSignal<PixelFlow.Signals.LevelCompletedSignal>().To<PixelFlow.Commands.SaveProgressCommand>();
+            builder.BindCommand<PixelFlow.Signals.LevelCompletedSignal, PixelFlow.Commands.SaveProgressCommand>(ExecutionMode.Exclusive, priority: 0);
         }
 
         public ValueTask OnInitializeAsync(CancellationToken ct) => default;
