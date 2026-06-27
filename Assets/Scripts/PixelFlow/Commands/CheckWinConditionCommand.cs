@@ -16,7 +16,10 @@ namespace PixelFlow.Commands
         public void Execute(CheckWinConditionSignal signal)
         {
             if (GameStateModel.CurrentState != GameState.Playing)
+            {
+                UnityEngine.Debug.Log($"[CheckWinConditionCommand] Aborting check: GameState is not Playing (current: {GameStateModel.CurrentState})");
                 return;
+            }
 
             // 1. Check no empty cells remain
             for (int x = 0; x < GridModel.Width; x++)
@@ -24,7 +27,10 @@ namespace PixelFlow.Commands
                 for (int y = 0; y < GridModel.Height; y++)
                 {
                     if (GridModel.Grid[x, y].State == CellState.Empty)
+                    {
+                        UnityEngine.Debug.Log($"[CheckWinConditionCommand] Win check failed: empty cell remaining at ({x}, {y})");
                         return;
+                    }
                 }
             }
 
@@ -41,12 +47,14 @@ namespace PixelFlow.Commands
                     if (group.Key == ColorType.None) continue;
 
                     var nodes = group.ToList();
-                    // Each color must have exactly 2 nodes (start + end) in a standard level
                     if (nodes.Count < 2) continue;
 
                     // The color must have a path registered
                     if (!GridModel.Paths.ContainsKey(group.Key) || GridModel.Paths[group.Key].Count == 0)
+                    {
+                        UnityEngine.Debug.Log($"[CheckWinConditionCommand] Win check failed: color {group.Key} has no path");
                         return;
+                    }
 
                     var path = GridModel.Paths[group.Key];
 
@@ -58,13 +66,19 @@ namespace PixelFlow.Commands
 
                     bool validConnection = (startPos == node1 && endPos == node2) || (startPos == node2 && endPos == node1);
                     if (!validConnection)
+                    {
+                        UnityEngine.Debug.Log($"[CheckWinConditionCommand] Win check failed: color {group.Key} path does not connect nodes. Path endpoints: ({startPos}, {endPos}), Node positions: ({node1}, {node2})");
                         return;
+                    }
 
                     // Additionally verify all path positions belong to the grid
                     foreach (var pos in path)
                     {
                         if (pos.x < 0 || pos.x >= GridModel.Width || pos.y < 0 || pos.y >= GridModel.Height)
+                        {
+                            UnityEngine.Debug.Log($"[CheckWinConditionCommand] Win check failed: path position {pos} out of bounds");
                             return;
+                        }
                     }
                 }
             }
