@@ -55,6 +55,7 @@ namespace Nexus.Generated
             {
                 instance.GridModel = di.Resolve<PixelFlow.Models.IGridModel>();
                 instance.LevelModel = di.Resolve<PixelFlow.Models.ILevelModel>();
+                instance.GameStateModel = di.Resolve<PixelFlow.Models.IGameStateModel>();
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.ProcessInputCommand>((instance, di) =>
             {
@@ -98,6 +99,7 @@ namespace Nexus.Generated
                 var _p_CheckWinConditionCommand_SignalBus = default(PixelFlow.Commands.CheckWinConditionCommand).SignalBus;
                 var _p_LoadLevelCommand_GridModel = default(PixelFlow.Commands.LoadLevelCommand).GridModel;
                 var _p_LoadLevelCommand_LevelModel = default(PixelFlow.Commands.LoadLevelCommand).LevelModel;
+                var _p_LoadLevelCommand_GameStateModel = default(PixelFlow.Commands.LoadLevelCommand).GameStateModel;
                 var _p_ProcessInputCommand_GridModel = default(PixelFlow.Commands.ProcessInputCommand).GridModel;
                 var _p_ProcessInputCommand_SignalBus = default(PixelFlow.Commands.ProcessInputCommand).SignalBus;
                 var _p_ProcessInputCommand_SoundModel = default(PixelFlow.Commands.ProcessInputCommand).SoundModel;

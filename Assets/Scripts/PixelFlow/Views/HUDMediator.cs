@@ -20,6 +20,12 @@ namespace PixelFlow.Views
 
             View.UpdateHintCount(HintModel.HintsRemaining);
             Subscribe<LevelCompletedSignal>(HandleLevelCompleted);
+            Subscribe<LoadLevelSignal>(HandleLoadLevel);
+        }
+
+        private void HandleLoadLevel(LoadLevelSignal signal)
+        {
+            View.HideCompletion();
         }
 
         protected override void OnUnbind()

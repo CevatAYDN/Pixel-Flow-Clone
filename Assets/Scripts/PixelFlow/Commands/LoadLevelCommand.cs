@@ -8,6 +8,7 @@ namespace PixelFlow.Commands
     {
         [Inject] public IGridModel GridModel { get; set; }
         [Inject] public ILevelModel LevelModel { get; set; }
+        [Inject] public IGameStateModel GameStateModel { get; set; }
 
         public void Execute(LoadLevelSignal signal)
         {
@@ -42,12 +43,14 @@ namespace PixelFlow.Commands
             }
 
             GridModel.UpdateGrid();
+            GameStateModel.SetState(GameState.Playing);
         }
 
         public void Reset()
         {
             GridModel = null;
             LevelModel = null;
+            GameStateModel = null;
         }
     }
 }
