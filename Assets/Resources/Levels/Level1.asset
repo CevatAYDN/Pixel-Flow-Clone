@@ -15,5 +15,13 @@ MonoBehaviour:
   levelIndex: 0
   width: 5
   height: 5
-  initialNodes: []
+  initialNodes:
+  - position: {x: 2, y: 0}
+    color: 2
+  - position: {x: 2, y: 4}
+    color: 2
+  - position: {x: 0, y: 2}
+    color: 4
+  - position: {x: 4, y: 2}
+    color: 4
   solutions: []

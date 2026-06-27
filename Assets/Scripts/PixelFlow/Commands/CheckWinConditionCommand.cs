@@ -24,6 +24,7 @@ namespace PixelFlow.Commands
                 }
             }
 
+            UnityEngine.Debug.Log("[CheckWinConditionCommand] WIN CONDITION MET! Level Completed!");
             GameStateModel.SetState(GameState.LevelCompleted);
             SignalBus.Fire(new LevelCompletedSignal());
         }

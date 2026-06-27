@@ -13,6 +13,7 @@ namespace PixelFlow.Commands
 
         public void Execute(LoadLevelSignal signal)
         {
+            UnityEngine.Debug.Log($"[LoadLevelCommand] Loading level: {signal.LevelToLoad.name} ({signal.LevelToLoad.width}x{signal.LevelToLoad.height})");
             LevelModel.SetLevel(signal.LevelToLoad);
             GridModel.Initialize(signal.LevelToLoad.width, signal.LevelToLoad.height);
 

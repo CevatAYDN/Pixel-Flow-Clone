@@ -138,6 +138,19 @@ namespace PixelFlow.Editor
                 so.ApplyModifiedProperties();
             }
 
+            if (Object.FindAnyObjectByType<GameBootstrapper>() == null)
+            {
+                GameObject bootObj = new GameObject("GameBootstrapper");
+                var bootstrapper = bootObj.AddComponent<GameBootstrapper>();
+                
+                string[] guids = AssetDatabase.FindAssets("t:LevelData");
+                if (guids.Length > 0)
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+                    bootstrapper.initialLevel = AssetDatabase.LoadAssetAtPath<LevelData>(path);
+                }
+            }
+
             if (Camera.main != null)
             {
                 Camera.main.orthographic = true;

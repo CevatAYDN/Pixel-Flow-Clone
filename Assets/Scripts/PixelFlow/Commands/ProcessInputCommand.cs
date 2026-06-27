@@ -18,22 +18,25 @@ namespace PixelFlow.Commands
 
         public void Execute(InputInteractionSignal signal)
         {
+            if (signal.GridPosition.x < 0 || signal.GridPosition.y < 0 || signal.GridPosition.x >= GridModel.Width || signal.GridPosition.y >= GridModel.Height)
+                return;
+
+            var currentCell = GridModel.Grid[signal.GridPosition.x, signal.GridPosition.y];
+
             if (signal.Type == InputType.PointerDown)
             {
-                if (signal.GridPosition.x < 0 || signal.GridPosition.y < 0 || signal.GridPosition.x >= GridModel.Width || signal.GridPosition.y >= GridModel.Height)
-                    return;
-
-                var cell = GridModel.Grid[signal.GridPosition.x, signal.GridPosition.y];
-                if (cell.Color != ColorType.None)
+                UnityEngine.Debug.Log($"[ProcessInputCommand] PointerDown on ({signal.GridPosition.x}, {signal.GridPosition.y}), Color: {currentCell.Color}, State: {currentCell.State}");
+                
+                if (currentCell.Color != ColorType.None)
                 {
-                    _activeColor = cell.Color;
+                    _activeColor = currentCell.Color;
                     _lastPos = signal.GridPosition;
                     
                     if (!GridModel.Paths.ContainsKey(_activeColor))
                         GridModel.Paths[_activeColor] = new List<Vector2Int>();
                     else
                     {
-                        if (cell.State == CellState.Node)
+                        if (currentCell.State == CellState.Node)
                         {
                             ClearPath(_activeColor);
                             GridModel.Paths[_activeColor].Add(signal.GridPosition);
