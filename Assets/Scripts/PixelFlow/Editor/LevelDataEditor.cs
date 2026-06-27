@@ -62,7 +62,48 @@ namespace PixelFlow.Editor
                 EditorUtility.SetDirty(_data);
             }
 
+            GUILayout.Space(10);
+            GUILayout.Label("Templates (Overrides Data)", EditorStyles.boldLabel);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("5x5 Basic")) ApplyTemplate5x5();
+            if (GUILayout.Button("5x5 Cross")) ApplyTemplateCross();
+            GUILayout.EndHorizontal();
+
             serializedObject.ApplyModifiedProperties();
+        }
+
+        private void ApplyTemplate5x5()
+        {
+            Undo.RecordObject(_data, "Apply Template");
+            _data.width = 5;
+            _data.height = 5;
+            _data.initialNodes.Clear();
+            _data.solutions.Clear();
+
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(4, 0), color = ColorType.Red });
+
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(0, 4), color = ColorType.Blue });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(4, 4), color = ColorType.Blue });
+            
+            EditorUtility.SetDirty(_data);
+        }
+
+        private void ApplyTemplateCross()
+        {
+            Undo.RecordObject(_data, "Apply Template");
+            _data.width = 5;
+            _data.height = 5;
+            _data.initialNodes.Clear();
+            _data.solutions.Clear();
+
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(2, 0), color = ColorType.Green });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(2, 4), color = ColorType.Green });
+
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(0, 2), color = ColorType.Yellow });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(4, 2), color = ColorType.Yellow });
+            
+            EditorUtility.SetDirty(_data);
         }
 
         private void DrawVisualGrid()
