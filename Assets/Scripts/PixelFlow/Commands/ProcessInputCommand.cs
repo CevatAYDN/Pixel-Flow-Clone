@@ -15,9 +15,15 @@ namespace PixelFlow.Commands
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public ISoundModel SoundModel { get; set; }
         [Inject] public IPathService PathService { get; set; }
+        [Inject] public IGameStateModel GameStateModel { get; set; }
 
         public void Execute(InputInteractionSignal signal)
         {
+            if (GameStateModel.CurrentState != GameState.Playing)
+            {
+                return;
+            }
+
             UnityEngine.Debug.Log($"[ProcessInputCommand] Execute: Type={signal.Type}, Pos={signal.GridPosition}, ActiveColor={GridModel.ActiveColor}");
 
             if (signal.GridPosition.x < 0 || signal.GridPosition.y < 0 || signal.GridPosition.x >= GridModel.Width || signal.GridPosition.y >= GridModel.Height)

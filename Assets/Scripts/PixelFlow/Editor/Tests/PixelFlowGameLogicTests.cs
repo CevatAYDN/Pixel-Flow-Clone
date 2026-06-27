@@ -699,5 +699,32 @@ namespace PixelFlow.Editor.Tests
             
             Assert.Less(sw.ElapsedMilliseconds, 200, $"Signal dispatching is too slow: {sw.ElapsedMilliseconds} ms");
         }
+
+        [Test]
+        public void ProcessInput_WhenNotPlaying_IsIgnored()
+        {
+            var level = CreateTestLevel();
+            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
+            
+            var gameState = _ctx.GetModel<IGameStateModel>();
+            gameState.SetState(GameState.LevelCompleted);
+
+            var gridModel = _ctx.GetModel<IGridModel>();
+            Assert.AreEqual(ColorType.None, gridModel.Grid[0, 1].Color, "Prerequisite: cell (0, 1) should be empty");
+
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.PointerDown,
+                GridPosition = new Vector2Int(0, 0)
+            });
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(0, 1)
+            });
+
+            Assert.AreEqual(ColorType.None, gridModel.Grid[0, 1].Color, "Cell color should remain None since input is blocked when not Playing");
+            Assert.AreEqual(ColorType.None, gridModel.ActiveColor, "ActiveColor should remain None since input is blocked");
+        }
     }
 }

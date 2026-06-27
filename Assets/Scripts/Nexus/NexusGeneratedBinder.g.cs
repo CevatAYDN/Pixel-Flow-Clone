@@ -70,6 +70,7 @@ namespace Nexus.Generated
                 instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
                 instance.SoundModel = di.Resolve<PixelFlow.Models.ISoundModel>();
                 instance.PathService = di.Resolve<PixelFlow.Services.IPathService>();
+                instance.GameStateModel = di.Resolve<PixelFlow.Models.IGameStateModel>();
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.SaveProgressCommand>((instance, di) =>
             {
@@ -117,6 +118,7 @@ namespace Nexus.Generated
                 var _p_ProcessInputCommand_SignalBus = default(PixelFlow.Commands.ProcessInputCommand).SignalBus;
                 var _p_ProcessInputCommand_SoundModel = default(PixelFlow.Commands.ProcessInputCommand).SoundModel;
                 var _p_ProcessInputCommand_PathService = default(PixelFlow.Commands.ProcessInputCommand).PathService;
+                var _p_ProcessInputCommand_GameStateModel = default(PixelFlow.Commands.ProcessInputCommand).GameStateModel;
                 var _p_SaveProgressCommand_ProgressModel = default(PixelFlow.Commands.SaveProgressCommand).ProgressModel;
                 var _p_SaveProgressCommand_LevelModel = default(PixelFlow.Commands.SaveProgressCommand).LevelModel;
                 var _p_SaveProgressCommand_SignalBus = default(PixelFlow.Commands.SaveProgressCommand).SignalBus;
