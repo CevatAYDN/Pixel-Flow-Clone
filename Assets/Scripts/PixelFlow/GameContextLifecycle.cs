@@ -16,6 +16,8 @@ namespace PixelFlow
             // modeller bunu constructor injection ile alır (test edilebilir).
             builder.Bind<IPlayerPrefsService, UnityPlayerPrefsService>();
 
+            builder.Bind<IPathService, PathService>();
+
             builder.BindModel<IGridModel, GridModel>();
             builder.BindModel<ILevelModel, LevelModel>();
             builder.BindModel<IProgressModel, ProgressModel>();

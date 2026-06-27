@@ -52,10 +52,7 @@ namespace PixelFlow.Commands
 
         public void Reset()
         {
-            GridModel = null;
-            LevelModel = null;
-            GameStateModel = null;
-            SignalBus = null;
+            // Injected dependencies are automatically cleared by the framework's CommandPool
         }
     }
 }

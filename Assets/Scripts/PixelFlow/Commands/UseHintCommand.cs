@@ -1,6 +1,7 @@
 using Nexus.Core;
 using PixelFlow.Models;
 using PixelFlow.Signals;
+using PixelFlow.Services;
 using System.Collections.Generic;
 using UnityEngine;
 using PixelFlow.Data;
@@ -14,6 +15,7 @@ namespace PixelFlow.Commands
         [Inject] public IGridModel GridModel { get; set; }
         [Inject] public ILevelModel LevelModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
+        [Inject] public IPathService PathService { get; set; }
 
         public void Execute(RequestHintSignal signal)
         {
@@ -62,22 +64,13 @@ namespace PixelFlow.Commands
 
         private void ApplySolution(PathSolution solution)
         {
-            if (GridModel.Paths.ContainsKey(solution.color))
+            if (!GridModel.Paths.ContainsKey(solution.color))
             {
-                foreach(var pos in GridModel.Paths[solution.color])
-                {
-                    var c = GridModel.Grid[pos.x, pos.y];
-                    if (c.State == CellState.Path)
-                    {
-                        c.State = CellState.Empty;
-                        c.Color = ColorType.None;
-                    }
-                }
-                GridModel.Paths[solution.color].Clear();
+                GridModel.Paths[solution.color] = new List<Vector2Int>();
             }
             else
             {
-                GridModel.Paths[solution.color] = new List<Vector2Int>();
+                PathService.ClearPath(solution.color);
             }
 
             foreach (var pos in solution.pathPositions)
@@ -94,29 +87,10 @@ namespace PixelFlow.Commands
                 }
                 else if (cell.Color != solution.color && cell.State == CellState.Path)
                 {
-                    BreakPath(cell.Color, pos);
+                    PathService.BreakPath(cell.Color, pos);
                     cell.State = CellState.Path;
                     cell.Color = solution.color;
                 }
-            }
-        }
-
-        private void BreakPath(ColorType color, Vector2Int breakPos)
-        {
-            var path = GridModel.Paths[color];
-            int idx = path.IndexOf(breakPos);
-            if (idx == -1) return;
-
-            for (int i = path.Count - 1; i >= idx; i--) 
-            {
-                var pos = path[i];
-                var cell = GridModel.Grid[pos.x, pos.y];
-                if (cell.State == CellState.Path)
-                {
-                    cell.State = CellState.Empty;
-                    cell.Color = ColorType.None;
-                }
-                path.RemoveAt(i);
             }
         }
 

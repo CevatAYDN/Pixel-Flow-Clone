@@ -1,0 +1,53 @@
+using UnityEngine;
+using PixelFlow.Models;
+using PixelFlow.Data;
+using Nexus.Core;
+
+namespace PixelFlow.Services
+{
+    public class PathService : IPathService
+    {
+        [Inject] public IGridModel GridModel { get; set; }
+
+        public void ClearPath(ColorType color)
+        {
+            if (GridModel == null || !GridModel.Paths.ContainsKey(color)) return;
+            var path = GridModel.Paths[color];
+            foreach (var pos in path)
+            {
+                var cell = GridModel.Grid[pos.x, pos.y];
+                if (cell.State == CellState.Path)
+                {
+                    cell.State = CellState.Empty;
+                    cell.Color = ColorType.None;
+                }
+            }
+            path.Clear();
+        }
+
+        public void BacktrackPath(ColorType color, Vector2Int toPos)
+        {
+            if (GridModel == null || !GridModel.Paths.ContainsKey(color)) return;
+            var path = GridModel.Paths[color];
+            int idx = path.IndexOf(toPos);
+            if (idx == -1) return;
+
+            for (int i = path.Count - 1; i > idx; i--)
+            {
+                var pos = path[i];
+                var cell = GridModel.Grid[pos.x, pos.y];
+                if (cell.State == CellState.Path)
+                {
+                    cell.State = CellState.Empty;
+                    cell.Color = ColorType.None;
+                }
+                path.RemoveAt(i);
+            }
+        }
+
+        public void BreakPath(ColorType color, Vector2Int breakPos)
+        {
+            BacktrackPath(color, breakPos);
+        }
+    }
+}
