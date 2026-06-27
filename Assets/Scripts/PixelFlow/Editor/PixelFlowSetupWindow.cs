@@ -108,17 +108,17 @@ namespace PixelFlow.Editor
             Debug.Log("[PixelFlowSetupWindow] Starting scene setup...");
 
             // Check for duplicates
-            var roots = Object.FindObjectsByType<Root>(FindObjectsSortMode.None);
+            var roots = Object.FindObjectsByType<Root>();
             if (roots.Length > 1)
             {
                 Debug.LogWarning($"[PixelFlowSetupWindow] WARNING: Multiple Root components found in scene ({roots.Length})!");
             }
-            var gridViews = Object.FindObjectsByType<GridView>(FindObjectsSortMode.None);
+            var gridViews = Object.FindObjectsByType<GridView>();
             if (gridViews.Length > 1)
             {
                 Debug.LogWarning($"[PixelFlowSetupWindow] WARNING: Multiple GridView components found in scene ({gridViews.Length})!");
             }
-            var canvases = Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None);
+            var canvases = Object.FindObjectsByType<Canvas>();
             if (canvases.Length > 1)
             {
                 Debug.LogWarning($"[PixelFlowSetupWindow] WARNING: Multiple Canvas components found in scene ({canvases.Length})!");

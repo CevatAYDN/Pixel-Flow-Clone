@@ -84,7 +84,7 @@ namespace Nexus.Generated
         // Forces IL2CPP to preserve members that are injected
         public static void PreserveMembers()
         {
-            #pragma warning disable 0169, 0414, 0219
+            #pragma warning disable 0169, 0414, 0219, 0162
             if (false)
             {
                 var _p_GridMediator_GridModel = default(PixelFlow.Views.GridMediator).GridModel;
@@ -117,7 +117,7 @@ namespace Nexus.Generated
                 var _p_UseHintCommand_LevelModel = default(PixelFlow.Commands.UseHintCommand).LevelModel;
                 var _p_UseHintCommand_SignalBus = default(PixelFlow.Commands.UseHintCommand).SignalBus;
             }
-            #pragma warning restore 0169, 0414, 0219
+            #pragma warning restore 0169, 0414, 0219, 0162
         }
     }
 }
