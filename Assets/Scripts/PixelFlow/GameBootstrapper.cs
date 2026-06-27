@@ -44,7 +44,18 @@ namespace PixelFlow
             }
             else
             {
-                Debug.LogWarning("[PixelFlow] No Initial Level assigned in GameBootstrapper!");
+                Debug.LogWarning("[PixelFlow] No Initial Level assigned in GameBootstrapper! Attempting to load default level...");
+                var signalBus = nexusRoot.Context.Container.Resolve<ISignalBus>();
+                var defaultLevel = Resources.Load<LevelData>("Levels/Level1");
+                if (defaultLevel != null)
+                {
+                    Debug.Log($"[PixelFlow] Loaded default level from Resources: {defaultLevel.name}");
+                    signalBus.Fire(new LoadLevelSignal { LevelToLoad = defaultLevel });
+                }
+                else
+                {
+                    Debug.LogError("[PixelFlow] No default level found at Resources/Levels/Level1.asset!");
+                }
             }
         }
     }

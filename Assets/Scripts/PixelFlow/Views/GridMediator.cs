@@ -57,7 +57,19 @@ namespace PixelFlow.Views
                 float cy = (GridModel.Height - 1) * 0.5f;
                 cam.transform.position = new Vector3(cx, cy, -10f);
                 cam.orthographic = true;
-                cam.orthographicSize = Mathf.Max(GridModel.Width, GridModel.Height) * 0.6f;
+
+                float aspect = cam.aspect;
+                float padding = 1f; // Minimum padding around grid in units
+                float hSize = (GridModel.Height + padding) * 0.5f;
+                float wSize = (GridModel.Width + padding) * 0.5f / aspect;
+
+                // In portrait mode, reserve extra vertical space to avoid HUD overlapping
+                if (aspect < 1f)
+                {
+                    hSize += 1.5f;
+                }
+
+                cam.orthographicSize = Mathf.Max(hSize, wSize);
             }
         }
     }
