@@ -127,6 +127,7 @@ namespace PixelFlow.Views
                     lineRenderer.numCornerVertices = 8;
                     lineRenderer.numCapVertices = 8;
                     lineRenderer.useWorldSpace = false;
+                    lineRenderer.sortingOrder = 1;
                     
                     Shader spriteShader = Shader.Find("Sprites/Default");
                     Material mat = new Material(spriteShader != null ? spriteShader : Shader.Find("Unlit/Color"));

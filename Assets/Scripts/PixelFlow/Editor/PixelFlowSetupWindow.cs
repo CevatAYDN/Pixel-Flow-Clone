@@ -40,10 +40,16 @@ GUILayout.Space(20);
              }
              
              GUILayout.Space(10);
-             if (GUILayout.Button("Create Sample 5x5 Level"))
-             {
-                 CreateSampleLevel();
-             }
+            if (GUILayout.Button("Create Sample 5x5 Level"))
+            {
+                CreateSampleLevel();
+            }
+
+            GUILayout.Space(10);
+            if (GUILayout.Button("Generate 3-Level Pack and LevelPack"))
+            {
+                CreateThreeLevelPack();
+            }
         }
 
 
@@ -326,15 +332,71 @@ GUILayout.Space(20);
             compText.alignment = TextAnchor.MiddleCenter;
 
             RectTransform compTextRect = completionTextObj.GetComponent<RectTransform>();
-            compTextRect.anchorMin = Vector2.zero;
-            compTextRect.anchorMax = Vector2.one;
+            compTextRect.anchorMin = new Vector2(0f, 0.6f);
+            compTextRect.anchorMax = new Vector2(1f, 0.9f);
             compTextRect.sizeDelta = Vector2.zero;
+
+            // Next Level Button setup
+            Transform nextLvlBtnTransform = completionPanel.transform.Find("NextLevelButton");
+            GameObject nextLvlBtnObj;
+            if (nextLvlBtnTransform == null)
+            {
+                nextLvlBtnObj = new GameObject("NextLevelButton", typeof(RectTransform));
+                nextLvlBtnObj.transform.SetParent(completionPanel.transform, false);
+                Debug.Log("[PixelFlowSetupWindow] Created NextLevelButton GameObject under CompletionPanel.");
+            }
+            else
+            {
+                nextLvlBtnObj = nextLvlBtnTransform.gameObject;
+                Debug.Log("[PixelFlowSetupWindow] Found existing NextLevelButton GameObject under CompletionPanel.");
+            }
+
+            Image nextLvlImg = nextLvlBtnObj.GetComponent<Image>();
+            if (nextLvlImg == null) nextLvlImg = nextLvlBtnObj.AddComponent<Image>();
+            nextLvlImg.color = new Color(0.15f, 0.6f, 0.25f, 1f); // Nice green button
+
+            Button nextLvlBtn = nextLvlBtnObj.GetComponent<Button>();
+            if (nextLvlBtn == null) nextLvlBtn = nextLvlBtnObj.AddComponent<Button>();
+
+            RectTransform nextLvlRect = nextLvlBtnObj.GetComponent<RectTransform>();
+            nextLvlRect.anchorMin = new Vector2(0.5f, 0.4f);
+            nextLvlRect.anchorMax = new Vector2(0.5f, 0.4f);
+            nextLvlRect.pivot = new Vector2(0.5f, 0.5f);
+            nextLvlRect.anchoredPosition = new Vector2(0f, 0f);
+            nextLvlRect.sizeDelta = new Vector2(180f, 50f);
+
+            // Next Level Button Text
+            Transform nextLvlTextTransform = nextLvlBtnObj.transform.Find("Text");
+            GameObject nextLvlTextObj;
+            if (nextLvlTextTransform == null)
+            {
+                nextLvlTextObj = new GameObject("Text", typeof(RectTransform));
+                nextLvlTextObj.transform.SetParent(nextLvlBtnObj.transform, false);
+            }
+            else
+            {
+                nextLvlTextObj = nextLvlTextTransform.gameObject;
+            }
+
+            Text nextLvlText = nextLvlTextObj.GetComponent<Text>();
+            if (nextLvlText == null) nextLvlText = nextLvlTextObj.AddComponent<Text>();
+            nextLvlText.text = "SONRAKİ SEVİYE";
+            nextLvlText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf") ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
+            nextLvlText.fontSize = 18;
+            nextLvlText.alignment = TextAnchor.MiddleCenter;
+            nextLvlText.color = Color.white;
+
+            RectTransform nextLvlTextRect = nextLvlTextObj.GetComponent<RectTransform>();
+            nextLvlTextRect.anchorMin = Vector2.zero;
+            nextLvlTextRect.anchorMax = Vector2.one;
+            nextLvlTextRect.sizeDelta = Vector2.zero;
 
             SerializedObject hudSo = new SerializedObject(hudView);
             hudSo.FindProperty("_hintButton").objectReferenceValue = hintBtn;
             hudSo.FindProperty("_hintCountText").objectReferenceValue = hintText;
             hudSo.FindProperty("_completionPanel").objectReferenceValue = completionPanel;
             hudSo.FindProperty("_completionText").objectReferenceValue = compText;
+            hudSo.FindProperty("_nextLevelButton").objectReferenceValue = nextLvlBtn;
             hudSo.ApplyModifiedProperties();
             EditorUtility.SetDirty(hudView);
             Debug.Log("[PixelFlowSetupWindow] Assigned HUDView references to SerializedObject and marked HUDView dirty.");
@@ -512,8 +574,112 @@ GUILayout.Space(20);
                     }
                 }
             };
-            
             level.bridgePositions = new System.Collections.Generic.List<Vector2Int>();
+        }
+
+        private void CreateThreeLevelPack()
+        {
+            if (!Directory.Exists("Assets/Resources/Levels"))
+            {
+                Directory.CreateDirectory("Assets/Resources/Levels");
+            }
+
+            // Level 1
+            LevelData lvl1 = ScriptableObject.CreateInstance<LevelData>();
+            lvl1.levelIndex = 0;
+            lvl1.width = 5;
+            lvl1.height = 5;
+            lvl1.initialNodes = new System.Collections.Generic.List<GridNode>
+            {
+                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(4, 0), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(0, 1), color = ColorType.Blue },
+                new GridNode { position = new Vector2Int(0, 4), color = ColorType.Blue },
+                new GridNode { position = new Vector2Int(1, 1), color = ColorType.Green },
+                new GridNode { position = new Vector2Int(4, 1), color = ColorType.Green },
+                new GridNode { position = new Vector2Int(1, 2), color = ColorType.Yellow },
+                new GridNode { position = new Vector2Int(4, 2), color = ColorType.Yellow },
+                new GridNode { position = new Vector2Int(1, 3), color = ColorType.Orange },
+                new GridNode { position = new Vector2Int(4, 3), color = ColorType.Orange },
+                new GridNode { position = new Vector2Int(1, 4), color = ColorType.Purple },
+                new GridNode { position = new Vector2Int(4, 4), color = ColorType.Purple }
+            };
+            lvl1.solutions = new System.Collections.Generic.List<PathSolution>
+            {
+                new PathSolution { color = ColorType.Red, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(0,0), new Vector2Int(1,0), new Vector2Int(2,0), new Vector2Int(3,0), new Vector2Int(4,0) } },
+                new PathSolution { color = ColorType.Blue, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(0,1), new Vector2Int(0,2), new Vector2Int(0,3), new Vector2Int(0,4) } },
+                new PathSolution { color = ColorType.Green, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(1,1), new Vector2Int(2,1), new Vector2Int(3,1), new Vector2Int(4,1) } },
+                new PathSolution { color = ColorType.Yellow, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(1,2), new Vector2Int(2,2), new Vector2Int(3,2), new Vector2Int(4,2) } },
+                new PathSolution { color = ColorType.Orange, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(1,3), new Vector2Int(2,3), new Vector2Int(3,3), new Vector2Int(4,3) } },
+                new PathSolution { color = ColorType.Purple, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(1,4), new Vector2Int(2,4), new Vector2Int(3,4), new Vector2Int(4,4) } }
+            };
+            AssetDatabase.CreateAsset(lvl1, "Assets/Resources/Levels/Level1.asset");
+
+            // Level 2
+            LevelData lvl2 = ScriptableObject.CreateInstance<LevelData>();
+            lvl2.levelIndex = 1;
+            lvl2.width = 5;
+            lvl2.height = 5;
+            lvl2.initialNodes = new System.Collections.Generic.List<GridNode>
+            {
+                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(4, 0), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(0, 2), color = ColorType.Blue },
+                new GridNode { position = new Vector2Int(4, 4), color = ColorType.Blue },
+                new GridNode { position = new Vector2Int(1, 2), color = ColorType.Green },
+                new GridNode { position = new Vector2Int(4, 1), color = ColorType.Green },
+                new GridNode { position = new Vector2Int(3, 2), color = ColorType.Yellow },
+                new GridNode { position = new Vector2Int(4, 2), color = ColorType.Yellow }
+            };
+            lvl2.solutions = new System.Collections.Generic.List<PathSolution>
+            {
+                new PathSolution { color = ColorType.Red, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(0,0), new Vector2Int(0,1), new Vector2Int(1,1), new Vector2Int(1,0), new Vector2Int(2,0), new Vector2Int(3,0), new Vector2Int(4,0) } },
+                new PathSolution { color = ColorType.Blue, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(0,2), new Vector2Int(0,3), new Vector2Int(0,4), new Vector2Int(1,4), new Vector2Int(2,4), new Vector2Int(3,4), new Vector2Int(4,4) } },
+                new PathSolution { color = ColorType.Green, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(1,2), new Vector2Int(1,3), new Vector2Int(2,3), new Vector2Int(2,2), new Vector2Int(2,1), new Vector2Int(3,1), new Vector2Int(4,1) } },
+                new PathSolution { color = ColorType.Yellow, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(3,2), new Vector2Int(3,3), new Vector2Int(4,3), new Vector2Int(4,2) } }
+            };
+            AssetDatabase.CreateAsset(lvl2, "Assets/Resources/Levels/Level2.asset");
+
+            // Level 3 (Bridge)
+            LevelData lvl3 = ScriptableObject.CreateInstance<LevelData>();
+            lvl3.levelIndex = 2;
+            lvl3.width = 5;
+            lvl3.height = 5;
+            lvl3.bridgePositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(2, 2) };
+            lvl3.initialNodes = new System.Collections.Generic.List<GridNode>
+            {
+                new GridNode { position = new Vector2Int(0, 2), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(4, 2), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(2, 0), color = ColorType.Blue },
+                new GridNode { position = new Vector2Int(2, 4), color = ColorType.Blue },
+                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Green },
+                new GridNode { position = new Vector2Int(0, 1), color = ColorType.Green },
+                new GridNode { position = new Vector2Int(3, 0), color = ColorType.Yellow },
+                new GridNode { position = new Vector2Int(3, 1), color = ColorType.Yellow },
+                new GridNode { position = new Vector2Int(0, 3), color = ColorType.Orange },
+                new GridNode { position = new Vector2Int(0, 4), color = ColorType.Orange },
+                new GridNode { position = new Vector2Int(3, 3), color = ColorType.Purple },
+                new GridNode { position = new Vector2Int(3, 4), color = ColorType.Purple }
+            };
+            lvl3.solutions = new System.Collections.Generic.List<PathSolution>
+            {
+                new PathSolution { color = ColorType.Red, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(0,2), new Vector2Int(1,2), new Vector2Int(2,2), new Vector2Int(3,2), new Vector2Int(4,2) } },
+                new PathSolution { color = ColorType.Blue, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(2,0), new Vector2Int(2,1), new Vector2Int(2,2), new Vector2Int(2,3), new Vector2Int(2,4) } },
+                new PathSolution { color = ColorType.Green, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(0,0), new Vector2Int(1,0), new Vector2Int(1,1), new Vector2Int(0,1) } },
+                new PathSolution { color = ColorType.Yellow, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(3,0), new Vector2Int(4,0), new Vector2Int(4,1), new Vector2Int(3,1) } },
+                new PathSolution { color = ColorType.Orange, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(0,3), new Vector2Int(1,3), new Vector2Int(1,4), new Vector2Int(0,4) } },
+                new PathSolution { color = ColorType.Purple, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(3,3), new Vector2Int(4,3), new Vector2Int(4,4), new Vector2Int(3,4) } }
+            };
+            AssetDatabase.CreateAsset(lvl3, "Assets/Resources/Levels/Level3.asset");
+
+            // Level Pack
+            LevelPack pack = ScriptableObject.CreateInstance<LevelPack>();
+            pack.packName = "5x5 Beginner Pack";
+            pack.levels = new System.Collections.Generic.List<LevelData> { lvl1, lvl2, lvl3 };
+            AssetDatabase.CreateAsset(pack, "Assets/Resources/Levels/MainLevelPack.asset");
+
+            AssetDatabase.SaveAssets();
+            Debug.Log("[PixelFlowSetupWindow] Generated Level 1, Level 2, Level 3, and MainLevelPack.asset successfully.");
         }
     }
 }

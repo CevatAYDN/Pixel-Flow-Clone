@@ -12,14 +12,18 @@ namespace PixelFlow.Views
         [SerializeField] private Text _hintCountText;
         [SerializeField] private GameObject _completionPanel;
         [SerializeField] private Text _completionText;
+        [SerializeField] private Button _nextLevelButton;
 
         public event Action OnHintClicked;
+        public event Action OnNextLevelClicked;
 
         protected override void OnBind(IContext context)
         {
             base.OnBind(context);
             if (_hintButton != null)
                 _hintButton.onClick.AddListener(() => OnHintClicked?.Invoke());
+            if (_nextLevelButton != null)
+                _nextLevelButton.onClick.AddListener(() => OnNextLevelClicked?.Invoke());
             if (_completionPanel != null)
                 _completionPanel.SetActive(false);
         }
@@ -29,6 +33,8 @@ namespace PixelFlow.Views
             base.OnUnbind();
             if (_hintButton != null)
                 _hintButton.onClick.RemoveAllListeners();
+            if (_nextLevelButton != null)
+                _nextLevelButton.onClick.RemoveAllListeners();
         }
 
         public void UpdateHintCount(int count)

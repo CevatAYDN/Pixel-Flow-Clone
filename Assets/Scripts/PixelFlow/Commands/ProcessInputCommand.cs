@@ -37,18 +37,18 @@ namespace PixelFlow.Commands
                     GridModel.LastPosition = signal.GridPosition;
                     
                     if (!GridModel.Paths.ContainsKey(GridModel.ActiveColor))
-                        GridModel.Paths[GridModel.ActiveColor] = new List<Vector2Int>();
-                    else
                     {
-                        if (currentCell.State == CellState.Node)
-                        {
-                            ClearPath(GridModel.ActiveColor);
-                            GridModel.Paths[GridModel.ActiveColor].Add(signal.GridPosition);
-                        }
-                        else if (currentCell.State == CellState.Path || currentCell.State == CellState.Bridge)
-                        {
-                            BacktrackPath(GridModel.ActiveColor, signal.GridPosition);
-                        }
+                        GridModel.Paths[GridModel.ActiveColor] = new List<Vector2Int>();
+                    }
+
+                    if (currentCell.State == CellState.Node)
+                    {
+                        ClearPath(GridModel.ActiveColor);
+                        GridModel.Paths[GridModel.ActiveColor].Add(signal.GridPosition);
+                    }
+                    else if (currentCell.State == CellState.Path || currentCell.State == CellState.Bridge)
+                    {
+                        BacktrackPath(GridModel.ActiveColor, signal.GridPosition);
                     }
                     GridModel.UpdateGrid();
                     SignalBus.Fire(new GridUpdatedSignal());

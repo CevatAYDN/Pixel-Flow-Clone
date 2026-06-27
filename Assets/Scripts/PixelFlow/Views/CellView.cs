@@ -19,13 +19,17 @@ namespace PixelFlow.Views
 
         public Vector2Int GridPosition { get; private set; }
 
-        private bool _isDragging;
+        private static bool _isDragging;
 
         private void Awake()
         {
             EnsureSprite(_bgRenderer);
             EnsureCircleSprite(_dotRenderer);
             EnsureSprite(_bridgeRenderer);
+
+            if (_bgRenderer != null) _bgRenderer.sortingOrder = 0;
+            if (_bridgeRenderer != null) _bridgeRenderer.sortingOrder = 2;
+            if (_dotRenderer != null) _dotRenderer.sortingOrder = 3;
         }
 
         private static void EnsureSprite(SpriteRenderer renderer)
@@ -148,8 +152,20 @@ namespace PixelFlow.Views
         
         private void OnMouseEnter()
         {
-            if (_isDragging)
+            bool isPressed = false;
+            if (UnityEngine.InputSystem.Pointer.current != null)
+            {
+                isPressed = UnityEngine.InputSystem.Pointer.current.press.isPressed;
+            }
+
+            if (_isDragging && isPressed)
+            {
                 OnPointerDrag?.Invoke(GridPosition);
+            }
+            else
+            {
+                _isDragging = false;
+            }
         }
         
         private void OnMouseUp()
