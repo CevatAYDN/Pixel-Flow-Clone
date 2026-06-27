@@ -6,53 +6,339 @@ using Nexus.Core;
 using PixelFlow.Views;
 using PixelFlow.Data;
 using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace PixelFlow.Editor
 {
     public class PixelFlowSetupWindow : EditorWindow
     {
-        [MenuItem("Pixel Flow/Setup Helper")]
+        [MenuItem("Pixel Flow/Setup Helper Dashboard")]
         public static void ShowWindow()
         {
-            GetWindow<PixelFlowSetupWindow>("Pixel Flow Setup");
+            var window = GetWindow<PixelFlowSetupWindow>("Pixel Flow Setup");
+            window.minSize = new Vector2(480, 580);
+            window.RefreshData();
+        }
+
+        // Diagnostics status
+        private bool _prefabsOk = false;
+        private bool _rootOk = false;
+        private bool _contextDataOk = false;
+        private bool _gridViewOk = false;
+        private bool _canvasOk = false;
+        private bool _hudOk = false;
+        private bool _eventSystemOk = false;
+        private bool _soundOk = false;
+        private bool _themeOk = false;
+        private bool _bootstrapperOk = false;
+
+        // Level Creator Fields
+        private int _newLevelIndex = 1;
+        private int _newWidth = 5;
+        private int _newHeight = 5;
+
+        // Level List state
+        private List<LevelData> _cachedLevels = new List<LevelData>();
+        private Vector2 _scrollPos;
+
+        // Styling
+        private GUIStyle _headerStyle;
+        private GUIStyle _cardStyle;
+        private GUIStyle _okBadgeStyle;
+        private GUIStyle _warnBadgeStyle;
+        private GUIStyle _errorBadgeStyle;
+        private GUIStyle _titleBannerStyle;
+
+        private void OnEnable()
+        {
+            RefreshData();
+        }
+
+        private void OnFocus()
+        {
+            RefreshData();
+        }
+
+        private void RefreshData()
+        {
+            RunDiagnostics();
+            RefreshLevelsCache();
+        }
+
+        private void RunDiagnostics()
+        {
+            _prefabsOk = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/CellView.prefab") != null;
+            
+            var root = Object.FindAnyObjectByType<Root>();
+            _rootOk = root != null;
+            _contextDataOk = _rootOk && root.ContextData != null;
+
+            var grid = Object.FindAnyObjectByType<GridView>();
+            if (grid != null)
+            {
+                SerializedObject so = new SerializedObject(grid);
+                var containerProp = so.FindProperty("_gridContainer");
+                var prefabProp = so.FindProperty("_cellPrefab");
+                _gridViewOk = containerProp != null && containerProp.objectReferenceValue != null &&
+                               prefabProp != null && prefabProp.objectReferenceValue != null;
+            }
+            else
+            {
+                _gridViewOk = false;
+            }
+
+            _canvasOk = Object.FindAnyObjectByType<Canvas>() != null;
+
+            var hud = Object.FindAnyObjectByType<HUDView>();
+            if (hud != null)
+            {
+                SerializedObject so = new SerializedObject(hud);
+                _hudOk = so.FindProperty("_hintButton").objectReferenceValue != null &&
+                         so.FindProperty("_hintCountText").objectReferenceValue != null &&
+                         so.FindProperty("_completionPanel").objectReferenceValue != null;
+            }
+            else
+            {
+                _hudOk = false;
+            }
+
+            var es = Object.FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>();
+            _eventSystemOk = es != null && es.GetComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>() != null;
+
+            _soundOk = Object.FindAnyObjectByType<SoundHandlerView>() != null;
+            _themeOk = Object.FindAnyObjectByType<ThemeHandlerView>() != null;
+
+            var boot = Object.FindAnyObjectByType<GameBootstrapper>();
+            _bootstrapperOk = boot != null && boot.initialLevel != null;
+        }
+
+        private void RefreshLevelsCache()
+        {
+            _cachedLevels.Clear();
+            string[] guids = AssetDatabase.FindAssets("t:LevelData");
+            foreach (var guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                var lvl = AssetDatabase.LoadAssetAtPath<LevelData>(path);
+                if (lvl != null)
+                {
+                    _cachedLevels.Add(lvl);
+                }
+            }
+            _cachedLevels = _cachedLevels.OrderBy(l => l.levelIndex).ToList();
         }
 
         private void OnGUI()
         {
-            GUILayout.Label("Pixel Flow Scene Setup", EditorStyles.boldLabel);
+            InitStyles();
 
-            if (GUILayout.Button("1. Generate Base Prefabs"))
-            {
-                GeneratePrefabs();
-            }
+            // Banner Title Card
+            GUILayout.BeginVertical(_titleBannerStyle);
+            GUILayout.Label("PIXEL FLOW SETUP DASHBOARD", _headerStyle);
+            GUILayout.Label("One-click workspace setup & level builder manager.", EditorStyles.miniLabel);
+            GUILayout.EndVertical();
 
-            if (GUILayout.Button("2. Setup Scene (Context, Grid, UI)"))
-            {
-                SetupScene();
-            }
-            
-            GUILayout.Space(20);
-            GUILayout.Label("Level Management", EditorStyles.boldLabel);
+            _scrollPos = GUILayout.BeginScrollView(_scrollPos);
 
-            if (GUILayout.Button("Create Empty LevelData"))
+            // 1. Scene setup and Diagnostics Card
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label("Scene Status & Diagnostics", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+
+            DrawDiagnosticRow("Base Prefabs (CellView)", _prefabsOk, GeneratePrefabs);
+            DrawDiagnosticRow("Scene Root Context", _rootOk, SetupScene);
+            DrawDiagnosticRow("Context Data Configuration", _contextDataOk, SetupScene);
+            DrawDiagnosticRow("GridView Component & Layout", _gridViewOk, SetupScene);
+            DrawDiagnosticRow("Canvas UI Wrapper", _canvasOk, SetupScene);
+            DrawDiagnosticRow("HUDView Control Panel", _hudOk, SetupScene);
+            DrawDiagnosticRow("EventSystem (Input System Model)", _eventSystemOk, SetupScene);
+            DrawDiagnosticRow("Audio & Sound System Handler", _soundOk, SetupScene);
+            DrawDiagnosticRow("Color Theme Handler", _themeOk, SetupScene);
+            DrawDiagnosticRow("Game Lifecycle Bootstrapper", _bootstrapperOk, SetupScene);
+
+            GUILayout.Space(12);
+
+            bool allOk = _prefabsOk && _rootOk && _contextDataOk && _gridViewOk && _canvasOk && _hudOk && _eventSystemOk && _soundOk && _themeOk && _bootstrapperOk;
+            if (allOk)
             {
-                CreateLevelData();
+                EditorGUILayout.HelpBox("✔ Everything is configured perfectly. Ready to play!", MessageType.Info);
             }
+            else
+            {
+                GUI.backgroundColor = new Color(0.2f, 0.6f, 1f);
+                if (GUILayout.Button("One-Click Auto-Setup Game Scene", GUILayout.Height(35)))
+                {
+                    GeneratePrefabs();
+                    SetupScene();
+                    RefreshData();
+                }
+                GUI.backgroundColor = Color.white;
+            }
+            GUILayout.EndVertical();
 
             GUILayout.Space(10);
-            if (GUILayout.Button("Create Sample 5x5 Level"))
+
+            // 2. Level Creation panel
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label("Create New Level", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+
+            _newLevelIndex = EditorGUILayout.IntField("New Level Index", _newLevelIndex);
+            _newWidth = EditorGUILayout.IntSlider("Grid Width", _newWidth, 3, 10);
+            _newHeight = EditorGUILayout.IntSlider("Grid Height", _newHeight, 3, 10);
+
+            GUILayout.Space(8);
+            if (GUILayout.Button("Generate Empty Level Asset", GUILayout.Height(28)))
             {
-                CreateSampleLevel();
+                CreateCustomLevel(_newLevelIndex, _newWidth, _newHeight);
+                RefreshData();
             }
+            GUILayout.EndVertical();
 
             GUILayout.Space(10);
-            if (GUILayout.Button("Generate 3-Level Pack and LevelPack"))
+
+            // 3. Level Database Manager Panel
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label($"Project Level Registry ({_cachedLevels.Count} Levels)", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+
+            if (_cachedLevels.Count == 0)
             {
-                CreateThreeLevelPack();
+                GUILayout.Label("No LevelData assets found in this project.", EditorStyles.miniLabel);
+                GUILayout.Space(5);
+                if (GUILayout.Button("Create Initial 3-Level Beginner Pack", GUILayout.Height(25)))
+                {
+                    CreateThreeLevelPack();
+                    RefreshData();
+                }
+            }
+            else
+            {
+                // Level list table header
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Index", EditorStyles.boldLabel, GUILayout.Width(50));
+                GUILayout.Label("Name", EditorStyles.boldLabel, GUILayout.Width(130));
+                GUILayout.Label("Grid Size", EditorStyles.boldLabel, GUILayout.Width(70));
+                GUILayout.Label("Nodes", EditorStyles.boldLabel, GUILayout.Width(50));
+                GUILayout.Label("Bridges", EditorStyles.boldLabel, GUILayout.Width(55));
+                GUILayout.Label("Actions", EditorStyles.boldLabel);
+                GUILayout.EndHorizontal();
+
+                // List levels
+                for (int i = 0; i < _cachedLevels.Count; i++)
+                {
+                    var lvl = _cachedLevels[i];
+                    if (lvl == null) continue;
+
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label(lvl.levelIndex.ToString(), GUILayout.Width(50));
+                    GUILayout.Label(lvl.name, GUILayout.Width(130));
+                    GUILayout.Label($"{lvl.width}x{lvl.height}", GUILayout.Width(70));
+                    GUILayout.Label(lvl.initialNodes.Count.ToString(), GUILayout.Width(50));
+                    GUILayout.Label(lvl.bridgePositions.Count.ToString(), GUILayout.Width(55));
+
+                    if (GUILayout.Button("Select", GUILayout.Height(18)))
+                    {
+                        Selection.activeObject = lvl;
+                        EditorGUIUtility.PingObject(lvl);
+                    }
+                    GUILayout.EndHorizontal();
+                }
+            }
+            GUILayout.EndVertical();
+
+            GUILayout.EndScrollView();
+        }
+
+        private void DrawDiagnosticRow(string name, bool status, System.Action fixAction)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(name, GUILayout.Width(240));
+
+            if (status)
+            {
+                GUILayout.Label("[OK]", _okBadgeStyle, GUILayout.Width(70));
+            }
+            else
+            {
+                GUILayout.Label("[MISSING]", _errorBadgeStyle, GUILayout.Width(70));
+                if (GUILayout.Button("Fix", GUILayout.Height(18), GUILayout.Width(60)))
+                {
+                    fixAction.Invoke();
+                    RefreshData();
+                }
+            }
+            GUILayout.EndHorizontal();
+        }
+
+        private void InitStyles()
+        {
+            if (_headerStyle == null)
+            {
+                _headerStyle = new GUIStyle(EditorStyles.boldLabel)
+                {
+                    fontSize = 15,
+                    alignment = TextAnchor.MiddleCenter
+                };
+                if (EditorGUIUtility.isProSkin)
+                    _headerStyle.normal.textColor = new Color(0.3f, 0.7f, 1f);
+                else
+                    _headerStyle.normal.textColor = new Color(0.05f, 0.25f, 0.5f);
+            }
+
+            if (_cardStyle == null)
+            {
+                _cardStyle = new GUIStyle(GUI.skin.box);
+                _cardStyle.padding = new RectOffset(10, 10, 10, 10);
+                _cardStyle.margin = new RectOffset(6, 6, 6, 6);
+            }
+
+            if (_titleBannerStyle == null)
+            {
+                _titleBannerStyle = new GUIStyle(GUI.skin.box);
+                _titleBannerStyle.padding = new RectOffset(8, 8, 8, 8);
+                _titleBannerStyle.margin = new RectOffset(6, 6, 4, 4);
+                if (EditorGUIUtility.isProSkin)
+                    _titleBannerStyle.normal.background = Texture2D.grayTexture;
+            }
+
+            if (_okBadgeStyle == null)
+            {
+                _okBadgeStyle = new GUIStyle(EditorStyles.label);
+                _okBadgeStyle.normal.textColor = new Color(0.12f, 0.65f, 0.22f);
+                _okBadgeStyle.fontStyle = FontStyle.Bold;
+            }
+
+            if (_errorBadgeStyle == null)
+            {
+                _errorBadgeStyle = new GUIStyle(EditorStyles.label);
+                _errorBadgeStyle.normal.textColor = new Color(0.85f, 0.2f, 0.18f);
+                _errorBadgeStyle.fontStyle = FontStyle.Bold;
             }
         }
 
+        private void CreateCustomLevel(int index, int w, int h)
+        {
+            string folder = "Assets/Resources/Levels";
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
 
+            LevelData asset = ScriptableObject.CreateInstance<LevelData>();
+            asset.levelIndex = index;
+            asset.width = w;
+            asset.height = h;
+
+            string path = AssetDatabase.GenerateUniqueAssetPath($"{folder}/Level{index}.asset");
+            AssetDatabase.CreateAsset(asset, path);
+            AssetDatabase.SaveAssets();
+
+            Debug.Log($"[PixelFlowSetupWindow] Generated empty level index {index} ({w}x{h}) at {path}");
+            Selection.activeObject = asset;
+            EditorGUIUtility.PingObject(asset);
+        }
 
         private void GeneratePrefabs()
         {
@@ -60,7 +346,6 @@ namespace PixelFlow.Editor
             if (!Directory.Exists("Assets/Prefabs"))
             {
                 Directory.CreateDirectory("Assets/Prefabs");
-                Debug.Log("[PixelFlowSetupWindow] Created Assets/Prefabs directory.");
             }
 
             string cellPrefabPath = "Assets/Prefabs/CellView.prefab";
@@ -69,60 +354,34 @@ namespace PixelFlow.Editor
                 GameObject cellObj = new GameObject("CellView");
                 var cellView = cellObj.AddComponent<CellView>();
                 cellObj.AddComponent<BoxCollider2D>(); 
-                Debug.Log("[PixelFlowSetupWindow] Created CellView GameObject and added BoxCollider2D.");
                 
                 GameObject bgObj = new GameObject("Background");
                 bgObj.transform.SetParent(cellObj.transform);
                 var bgRenderer = bgObj.AddComponent<SpriteRenderer>();
-                Debug.Log("[PixelFlowSetupWindow] Created Background child and added SpriteRenderer.");
 
                 GameObject dotObj = new GameObject("Dot");
                 dotObj.transform.SetParent(cellObj.transform);
                 var dotRenderer = dotObj.AddComponent<SpriteRenderer>();
-                Debug.Log("[PixelFlowSetupWindow] Created Dot child and added SpriteRenderer.");
 
                 GameObject bridgeObj = new GameObject("Bridge");
                 bridgeObj.transform.SetParent(cellObj.transform);
                 var bridgeRenderer = bridgeObj.AddComponent<SpriteRenderer>();
-                Debug.Log("[PixelFlowSetupWindow] Created Bridge child and added SpriteRenderer.");
 
                 SerializedObject so = new SerializedObject(cellView);
                 so.FindProperty("_bgRenderer").objectReferenceValue = bgRenderer;
                 so.FindProperty("_dotRenderer").objectReferenceValue = dotRenderer;
                 so.FindProperty("_bridgeRenderer").objectReferenceValue = bridgeRenderer;
                 so.ApplyModifiedProperties();
-                Debug.Log("[PixelFlowSetupWindow] Assigned CellView renderer references in SerializedObject.");
 
                 PrefabUtility.SaveAsPrefabAsset(cellObj, cellPrefabPath);
                 DestroyImmediate(cellObj);
                 Debug.Log("[PixelFlowSetupWindow] CellView prefab created at: " + cellPrefabPath);
-            }
-            else
-            {
-                Debug.Log("[PixelFlowSetupWindow] CellView prefab already exists.");
             }
         }
 
         private void SetupScene()
         {
             Debug.Log("[PixelFlowSetupWindow] Starting scene setup...");
-
-            // Check for duplicates
-            var roots = Object.FindObjectsByType<Root>();
-            if (roots.Length > 1)
-            {
-                Debug.LogWarning($"[PixelFlowSetupWindow] WARNING: Multiple Root components found in scene ({roots.Length})!");
-            }
-            var gridViews = Object.FindObjectsByType<GridView>();
-            if (gridViews.Length > 1)
-            {
-                Debug.LogWarning($"[PixelFlowSetupWindow] WARNING: Multiple GridView components found in scene ({gridViews.Length})!");
-            }
-            var canvases = Object.FindObjectsByType<Canvas>();
-            if (canvases.Length > 1)
-            {
-                Debug.LogWarning($"[PixelFlowSetupWindow] WARNING: Multiple Canvas components found in scene ({canvases.Length})!");
-            }
 
             // 1. Context setup
             Root context = Object.FindAnyObjectByType<Root>();
@@ -132,11 +391,6 @@ namespace PixelFlow.Editor
                 context = contextObj.AddComponent<Root>();
                 contextObj.AddComponent<GameContextLifecycle>();
                 Undo.RegisterCreatedObjectUndo(contextObj, "Create Context");
-                Debug.Log("[PixelFlowSetupWindow] Created PixelFlow_Context GameObject with Root and GameContextLifecycle components.");
-            }
-            else
-            {
-                Debug.Log("[PixelFlowSetupWindow] Found existing PixelFlow_Context in the scene.");
             }
 
             if (context != null && context.ContextData == null)
@@ -154,7 +408,6 @@ namespace PixelFlow.Editor
                     contextDataAsset = ScriptableObject.CreateInstance<ContextData>();
                     AssetDatabase.CreateAsset(contextDataAsset, assetPath);
                     AssetDatabase.SaveAssets();
-                    Debug.Log($"[PixelFlowSetupWindow] Created new ContextData asset at {assetPath}");
                 }
 
                 SerializedObject serializedContext = new SerializedObject(context);
@@ -165,7 +418,6 @@ namespace PixelFlow.Editor
                     contextDataProp.objectReferenceValue = contextDataAsset;
                     serializedContext.ApplyModifiedProperties();
                     EditorUtility.SetDirty(context);
-                    Debug.Log("[PixelFlowSetupWindow] Assigned PixelFlowContextData configuration to the Root component.");
                 }
             }
 
@@ -177,45 +429,27 @@ namespace PixelFlow.Editor
                 gridObj = new GameObject("GridView");
                 gridView = gridObj.AddComponent<GridView>();
                 Undo.RegisterCreatedObjectUndo(gridObj, "Create GridView");
-                Debug.Log("[PixelFlowSetupWindow] Created GridView GameObject.");
             }
             else
             {
                 gridObj = gridView.gameObject;
-                Debug.Log("[PixelFlowSetupWindow] Found existing GridView GameObject.");
             }
 
-            // GridView children setup
             Transform container = gridObj.transform.Find("CellsContainer");
             if (container == null)
             {
                 GameObject containerObj = new GameObject("CellsContainer");
                 container = containerObj.transform;
                 container.SetParent(gridObj.transform);
-                Debug.Log("[PixelFlowSetupWindow] Created CellsContainer child under GridView.");
-            }
-            else
-            {
-                Debug.Log("[PixelFlowSetupWindow] Found existing CellsContainer child under GridView.");
             }
 
-            // Load and assign CellView prefab
             CellView cellPrefab = AssetDatabase.LoadAssetAtPath<CellView>("Assets/Prefabs/CellView.prefab");
-            if (cellPrefab == null)
-            {
-                Debug.LogError("[PixelFlowSetupWindow] CellView prefab not found at Assets/Prefabs/CellView.prefab! Generate prefabs first.");
-            }
-            else
-            {
-                Debug.Log("[PixelFlowSetupWindow] Successfully loaded CellView prefab.");
-            }
 
             SerializedObject gridSo = new SerializedObject(gridView);
             gridSo.FindProperty("_gridContainer").objectReferenceValue = container;
             gridSo.FindProperty("_cellPrefab").objectReferenceValue = cellPrefab;
             gridSo.ApplyModifiedProperties();
             EditorUtility.SetDirty(gridView);
-            Debug.Log($"[PixelFlowSetupWindow] Assigned GridView references. _gridContainer: {container.name}, _cellPrefab: {(cellPrefab != null ? cellPrefab.name : "null")}");
 
             // 3. UI setup (Canvas & HUDView)
             Canvas canvas = Object.FindAnyObjectByType<Canvas>();
@@ -228,12 +462,10 @@ namespace PixelFlow.Editor
                 canvasObj.AddComponent<CanvasScaler>();
                 canvasObj.AddComponent<GraphicRaycaster>();
                 Undo.RegisterCreatedObjectUndo(canvasObj, "Create Canvas");
-                Debug.Log("[PixelFlowSetupWindow] Created Canvas GameObject with Canvas, CanvasScaler, and GraphicRaycaster components.");
             }
             else
             {
                 canvasObj = canvas.gameObject;
-                Debug.Log("[PixelFlowSetupWindow] Found existing Canvas GameObject.");
             }
 
             var eventSystem = Object.FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>();
@@ -243,7 +475,6 @@ namespace PixelFlow.Editor
                 eventSystemObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
                 eventSystemObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
                 Undo.RegisterCreatedObjectUndo(eventSystemObj, "Create EventSystem");
-                Debug.Log("[PixelFlowSetupWindow] Created EventSystem GameObject with InputSystemUIInputModule.");
             }
             else
             {
@@ -252,7 +483,6 @@ namespace PixelFlow.Editor
                 {
                     Undo.DestroyObjectImmediate(standaloneModule);
                     eventSystem.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-                    Debug.Log("[PixelFlowSetupWindow] Replaced StandaloneInputModule with InputSystemUIInputModule on EventSystem.");
                 }
             }
 
@@ -267,13 +497,11 @@ namespace PixelFlow.Editor
                 hudRect.anchorMin = Vector2.zero;
                 hudRect.anchorMax = Vector2.one;
                 hudRect.sizeDelta = Vector2.zero;
-                Debug.Log("[PixelFlowSetupWindow] Created HUDView GameObject under Canvas.");
             }
             else
             {
                 hudObj = hudView.gameObject;
                 hudObj.transform.SetParent(canvasObj.transform, false);
-                Debug.Log("[PixelFlowSetupWindow] Found existing HUDView GameObject.");
             }
 
             // Hint Button setup
@@ -283,12 +511,10 @@ namespace PixelFlow.Editor
             {
                 hintBtnObj = new GameObject("HintButton", typeof(RectTransform));
                 hintBtnObj.transform.SetParent(hudObj.transform, false);
-                Debug.Log("[PixelFlowSetupWindow] Created HintButton GameObject under HUDView.");
             }
             else
             {
                 hintBtnObj = hintBtnTransform.gameObject;
-                Debug.Log("[PixelFlowSetupWindow] Found existing HintButton GameObject under HUDView.");
             }
 
             Image hintImg = hintBtnObj.GetComponent<Image>();
@@ -312,12 +538,10 @@ namespace PixelFlow.Editor
             {
                 hintTextObj = new GameObject("HintCountText", typeof(RectTransform));
                 hintTextObj.transform.SetParent(hintBtnObj.transform, false);
-                Debug.Log("[PixelFlowSetupWindow] Created HintCountText GameObject under HintButton.");
             }
             else
             {
                 hintTextObj = hintTextTransform.gameObject;
-                Debug.Log("[PixelFlowSetupWindow] Found existing HintCountText GameObject.");
             }
 
             Text hintText = hintTextObj.GetComponent<Text>();
@@ -340,12 +564,10 @@ namespace PixelFlow.Editor
             {
                 completionPanel = new GameObject("CompletionPanel", typeof(RectTransform));
                 completionPanel.transform.SetParent(hudObj.transform, false);
-                Debug.Log("[PixelFlowSetupWindow] Created CompletionPanel GameObject under HUDView.");
             }
             else
             {
                 completionPanel = compPanelTransform.gameObject;
-                Debug.Log("[PixelFlowSetupWindow] Found existing CompletionPanel GameObject.");
             }
 
             Image panelImg = completionPanel.GetComponent<Image>();
@@ -365,12 +587,10 @@ namespace PixelFlow.Editor
             {
                 completionTextObj = new GameObject("CompletionText", typeof(RectTransform));
                 completionTextObj.transform.SetParent(completionPanel.transform, false);
-                Debug.Log("[PixelFlowSetupWindow] Created CompletionText GameObject under CompletionPanel.");
             }
             else
             {
                 completionTextObj = compTextTransform.gameObject;
-                Debug.Log("[PixelFlowSetupWindow] Found existing CompletionText GameObject.");
             }
 
             Text compText = completionTextObj.GetComponent<Text>();
@@ -393,17 +613,15 @@ namespace PixelFlow.Editor
             {
                 nextLvlBtnObj = new GameObject("NextLevelButton", typeof(RectTransform));
                 nextLvlBtnObj.transform.SetParent(completionPanel.transform, false);
-                Debug.Log("[PixelFlowSetupWindow] Created NextLevelButton GameObject under CompletionPanel.");
             }
             else
             {
                 nextLvlBtnObj = nextLvlBtnTransform.gameObject;
-                Debug.Log("[PixelFlowSetupWindow] Found existing NextLevelButton GameObject under CompletionPanel.");
             }
 
             Image nextLvlImg = nextLvlBtnObj.GetComponent<Image>();
             if (nextLvlImg == null) nextLvlImg = nextLvlBtnObj.AddComponent<Image>();
-            nextLvlImg.color = new Color(0.15f, 0.6f, 0.25f, 1f); // Nice green button
+            nextLvlImg.color = new Color(0.15f, 0.6f, 0.25f, 1f);
 
             Button nextLvlBtn = nextLvlBtnObj.GetComponent<Button>();
             if (nextLvlBtn == null) nextLvlBtn = nextLvlBtnObj.AddComponent<Button>();
@@ -415,18 +633,9 @@ namespace PixelFlow.Editor
             nextLvlRect.anchoredPosition = new Vector2(0f, 0f);
             nextLvlRect.sizeDelta = new Vector2(180f, 50f);
 
-            // Next Level Button Text
             Transform nextLvlTextTransform = nextLvlBtnObj.transform.Find("Text");
-            GameObject nextLvlTextObj;
-            if (nextLvlTextTransform == null)
-            {
-                nextLvlTextObj = new GameObject("Text", typeof(RectTransform));
-                nextLvlTextObj.transform.SetParent(nextLvlBtnObj.transform, false);
-            }
-            else
-            {
-                nextLvlTextObj = nextLvlTextTransform.gameObject;
-            }
+            GameObject nextLvlTextObj = nextLvlTextTransform != null ? nextLvlTextTransform.gameObject : new GameObject("Text", typeof(RectTransform));
+            nextLvlTextObj.transform.SetParent(nextLvlBtnObj.transform, false);
 
             Text nextLvlText = nextLvlTextObj.GetComponent<Text>();
             if (nextLvlText == null) nextLvlText = nextLvlTextObj.AddComponent<Text>();
@@ -449,7 +658,6 @@ namespace PixelFlow.Editor
             hudSo.FindProperty("_nextLevelButton").objectReferenceValue = nextLvlBtn;
             hudSo.ApplyModifiedProperties();
             EditorUtility.SetDirty(hudView);
-            Debug.Log("[PixelFlowSetupWindow] Assigned HUDView references to SerializedObject and marked HUDView dirty.");
 
             // 4. SoundHandlerView setup
             SoundHandlerView soundView = Object.FindAnyObjectByType<SoundHandlerView>();
@@ -458,11 +666,6 @@ namespace PixelFlow.Editor
                 GameObject soundObj = new GameObject("SoundHandlerView");
                 soundView = soundObj.AddComponent<SoundHandlerView>();
                 Undo.RegisterCreatedObjectUndo(soundObj, "Create SoundHandlerView");
-                Debug.Log("[PixelFlowSetupWindow] Created SoundHandlerView GameObject.");
-            }
-            else
-            {
-                Debug.Log("[PixelFlowSetupWindow] Found existing SoundHandlerView in the scene.");
             }
 
             // 5. ThemeHandlerView setup
@@ -472,11 +675,6 @@ namespace PixelFlow.Editor
                 GameObject themeObj = new GameObject("ThemeHandlerView");
                 themeView = themeObj.AddComponent<ThemeHandlerView>();
                 Undo.RegisterCreatedObjectUndo(themeObj, "Create ThemeHandlerView");
-                Debug.Log("[PixelFlowSetupWindow] Created ThemeHandlerView GameObject.");
-            }
-            else
-            {
-                Debug.Log("[PixelFlowSetupWindow] Found existing ThemeHandlerView in the scene.");
             }
 
             // 6. GameBootstrapper setup
@@ -486,14 +684,8 @@ namespace PixelFlow.Editor
                 GameObject bootObj = new GameObject("GameBootstrapper");
                 bootstrapper = bootObj.AddComponent<GameBootstrapper>();
                 Undo.RegisterCreatedObjectUndo(bootObj, "Create GameBootstrapper");
-                Debug.Log("[PixelFlowSetupWindow] Created GameBootstrapper GameObject.");
-            }
-            else
-            {
-                Debug.Log("[PixelFlowSetupWindow] Found existing GameBootstrapper in the scene.");
             }
 
-            // Assign level if missing
             if (bootstrapper.initialLevel == null)
             {
                 string[] guids = AssetDatabase.FindAssets("t:LevelData");
@@ -501,25 +693,12 @@ namespace PixelFlow.Editor
                 {
                     string path = AssetDatabase.GUIDToAssetPath(guids[0]);
                     bootstrapper.initialLevel = AssetDatabase.LoadAssetAtPath<LevelData>(path);
-                    Debug.Log($"[PixelFlowSetupWindow] Assigned initialLevel to GameBootstrapper: {bootstrapper.initialLevel.name} from {path}");
-                    
-                    // Auto-populate Level1 if empty
-                    if (bootstrapper.initialLevel.initialNodes == null || bootstrapper.initialLevel.initialNodes.Count == 0)
-                    {
-                        CreateSampleLevel(bootstrapper.initialLevel, path);
-                    }
-                }
-                else
-                {
-                    Debug.LogWarning("[PixelFlowSetupWindow] No LevelData found in project resources to assign to GameBootstrapper.");
                 }
             }
             
-            // Assign nexusRoot reference on bootstrapper
             if (bootstrapper.nexusRoot == null)
             {
                 bootstrapper.nexusRoot = context;
-                Debug.Log("[PixelFlowSetupWindow] Assigned nexusRoot reference to GameBootstrapper.");
             }
             EditorUtility.SetDirty(bootstrapper);
 
@@ -529,109 +708,18 @@ namespace PixelFlow.Editor
                 Camera.main.orthographic = true;
                 Camera.main.orthographicSize = 5;
                 EditorUtility.SetDirty(Camera.main);
-                Debug.Log("[PixelFlowSetupWindow] Main Camera set to orthographic with size 5.");
             }
 
-            // 8. Mark the active scene dirty so changes are saved
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
-            Debug.Log("[PixelFlowSetupWindow] Scene marked as dirty. Setup completed successfully.");
-        }
-
-        private void CreateLevelData()
-        {
-            if (!Directory.Exists("Assets/Resources/Levels"))
-            {
-                Directory.CreateDirectory("Assets/Resources/Levels");
-            }
-
-            LevelData asset = ScriptableObject.CreateInstance<LevelData>();
-            string path = AssetDatabase.GenerateUniqueAssetPath("Assets/Resources/Levels/NewLevelData.asset");
-            AssetDatabase.CreateAsset(asset, path);
-            AssetDatabase.SaveAssets();
-
-            EditorUtility.FocusProjectWindow();
-            Selection.activeObject = asset;
-            Debug.Log("Created LevelData at " + path);
-        }
-        
-        private void CreateSampleLevel()
-        {
-            LevelData level = null;
-            string levelPath = "Assets/Resources/Levels/Level1.asset";
-            
-            if (File.Exists(levelPath))
-            {
-                level = AssetDatabase.LoadAssetAtPath<LevelData>(levelPath);
-            }
-            else
-            {
-                string[] guids = AssetDatabase.FindAssets("t:LevelData", new[] { "Assets/Resources/Levels" });
-                if (guids.Length == 0)
-                {
-                    Debug.LogError("[PixelFlowSetupWindow] No LevelData found in Resources/Levels. Create one first.");
-                    return;
-                }
-                levelPath = AssetDatabase.GUIDToAssetPath(guids[0]);
-                level = AssetDatabase.LoadAssetAtPath<LevelData>(levelPath);
-            }
-            
-            if (level != null)
-            {
-                PopulateSampleLevel(level);
-                EditorUtility.SetDirty(level);
-                AssetDatabase.SaveAssets();
-                Debug.Log($"[PixelFlowSetupWindow] Sample level populated: {level.name} (5x5, 2 colors)");
-            }
-        }
-        
-        private void CreateSampleLevel(LevelData level, string assetPath)
-        {
-            PopulateSampleLevel(level);
-            EditorUtility.SetDirty(level);
-            AssetDatabase.SaveAssets();
-            Debug.Log($"[PixelFlowSetupWindow] Auto-populated level: {level.name} ({assetPath})");
-        }
-        
-        private void PopulateSampleLevel(LevelData level)
-        {
-            level.width = 5;
-            level.height = 5;
-            
-            level.initialNodes = new System.Collections.Generic.List<PixelFlow.Data.GridNode>
-            {
-                new PixelFlow.Data.GridNode { position = new Vector2Int(0, 0), color = PixelFlow.Data.ColorType.Red },
-                new PixelFlow.Data.GridNode { position = new Vector2Int(4, 0), color = PixelFlow.Data.ColorType.Red },
-                new PixelFlow.Data.GridNode { position = new Vector2Int(0, 4), color = PixelFlow.Data.ColorType.Blue },
-                new PixelFlow.Data.GridNode { position = new Vector2Int(4, 4), color = PixelFlow.Data.ColorType.Blue }
-            };
-            
-            level.solutions = new System.Collections.Generic.List<PathSolution>
-            {
-                new PathSolution
-                {
-                    color = PixelFlow.Data.ColorType.Red,
-                    pathPositions = new System.Collections.Generic.List<Vector2Int>
-                    {
-                        new Vector2Int(0, 0), new Vector2Int(1, 0), new Vector2Int(2, 0), new Vector2Int(3, 0), new Vector2Int(4, 0)
-                    }
-                },
-                new PathSolution
-                {
-                    color = PixelFlow.Data.ColorType.Blue,
-                    pathPositions = new System.Collections.Generic.List<Vector2Int>
-                    {
-                        new Vector2Int(0, 4), new Vector2Int(1, 4), new Vector2Int(2, 4), new Vector2Int(3, 4), new Vector2Int(4, 4)
-                    }
-                }
-            };
-            level.bridgePositions = new System.Collections.Generic.List<Vector2Int>();
+            Debug.Log("[PixelFlowSetupWindow] Setup completed successfully.");
         }
 
         private void CreateThreeLevelPack()
         {
-            if (!Directory.Exists("Assets/Resources/Levels"))
+            string folder = "Assets/Resources/Levels";
+            if (!Directory.Exists(folder))
             {
-                Directory.CreateDirectory("Assets/Resources/Levels");
+                Directory.CreateDirectory(folder);
             }
 
             // Level 1
@@ -663,7 +751,7 @@ namespace PixelFlow.Editor
                 new PathSolution { color = ColorType.Orange, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(1,3), new Vector2Int(2,3), new Vector2Int(3,3), new Vector2Int(4,3) } },
                 new PathSolution { color = ColorType.Purple, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(1,4), new Vector2Int(2,4), new Vector2Int(3,4), new Vector2Int(4,4) } }
             };
-            AssetDatabase.CreateAsset(lvl1, "Assets/Resources/Levels/Level1.asset");
+            AssetDatabase.CreateAsset(lvl1, $"{folder}/Level1.asset");
 
             // Level 2
             LevelData lvl2 = ScriptableObject.CreateInstance<LevelData>();
@@ -688,9 +776,9 @@ namespace PixelFlow.Editor
                 new PathSolution { color = ColorType.Green, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(1,2), new Vector2Int(1,3), new Vector2Int(2,3), new Vector2Int(2,2), new Vector2Int(2,1), new Vector2Int(3,1), new Vector2Int(4,1) } },
                 new PathSolution { color = ColorType.Yellow, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(3,2), new Vector2Int(3,3), new Vector2Int(4,3), new Vector2Int(4,2) } }
             };
-            AssetDatabase.CreateAsset(lvl2, "Assets/Resources/Levels/Level2.asset");
+            AssetDatabase.CreateAsset(lvl2, $"{folder}/Level2.asset");
 
-            // Level 3 (Bridge)
+            // Level 3
             LevelData lvl3 = ScriptableObject.CreateInstance<LevelData>();
             lvl3.levelIndex = 2;
             lvl3.width = 5;
@@ -720,13 +808,13 @@ namespace PixelFlow.Editor
                 new PathSolution { color = ColorType.Orange, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(0,3), new Vector2Int(1,3), new Vector2Int(1,4), new Vector2Int(0,4) } },
                 new PathSolution { color = ColorType.Purple, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(3,3), new Vector2Int(4,3), new Vector2Int(4,4), new Vector2Int(3,4) } }
             };
-            AssetDatabase.CreateAsset(lvl3, "Assets/Resources/Levels/Level3.asset");
+            AssetDatabase.CreateAsset(lvl3, $"{folder}/Level3.asset");
 
             // Level Pack
             LevelPack pack = ScriptableObject.CreateInstance<LevelPack>();
             pack.packName = "5x5 Beginner Pack";
             pack.levels = new System.Collections.Generic.List<LevelData> { lvl1, lvl2, lvl3 };
-            AssetDatabase.CreateAsset(pack, "Assets/Resources/Levels/MainLevelPack.asset");
+            AssetDatabase.CreateAsset(pack, $"{folder}/MainLevelPack.asset");
 
             AssetDatabase.SaveAssets();
             Debug.Log("[PixelFlowSetupWindow] Generated Level 1, Level 2, Level 3, and MainLevelPack.asset successfully.");
