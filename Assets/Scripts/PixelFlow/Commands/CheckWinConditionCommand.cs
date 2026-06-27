@@ -6,6 +6,7 @@ using System.Linq;
 
 namespace PixelFlow.Commands
 {
+    [SignalHandler(typeof(CheckWinConditionSignal))]
     public class CheckWinConditionCommand : ICommand<CheckWinConditionSignal>, IResettable
     {
         [Inject] public IGridModel GridModel { get; set; }

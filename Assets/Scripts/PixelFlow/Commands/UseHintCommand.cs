@@ -7,6 +7,7 @@ using PixelFlow.Data;
 
 namespace PixelFlow.Commands
 {
+    [SignalHandler(typeof(RequestHintSignal))]
     public class UseHintCommand : ICommand<RequestHintSignal>, IResettable
     {
         [Inject] public IHintModel HintModel { get; set; }

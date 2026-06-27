@@ -4,6 +4,7 @@ using PixelFlow.Signals;
 
 namespace PixelFlow.Commands
 {
+    [SignalHandler(typeof(LoadLevelSignal))]
     public class LoadLevelCommand : ICommand<LoadLevelSignal>, IResettable
     {
         [Inject] public IGridModel GridModel { get; set; }

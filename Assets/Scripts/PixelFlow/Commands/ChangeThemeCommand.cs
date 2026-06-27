@@ -9,6 +9,7 @@ namespace PixelFlow.Commands
         public AppTheme Theme;
     }
 
+    [SignalHandler(typeof(ChangeThemeSignal))]
     public class ChangeThemeCommand : ICommand<ChangeThemeSignal>, IResettable
     {
         [Inject] public ISettingsModel SettingsModel { get; set; }

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 
 namespace PixelFlow.Commands
 {
+    [SignalHandler(typeof(InputInteractionSignal))]
     public class ProcessInputCommand : ICommand<InputInteractionSignal>, IResettable
     {
         [Inject] public IGridModel GridModel { get; set; }
