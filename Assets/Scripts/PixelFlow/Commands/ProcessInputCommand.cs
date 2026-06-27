@@ -41,7 +41,7 @@ namespace PixelFlow.Commands
                             ClearPath(_activeColor);
                             GridModel.Paths[_activeColor].Add(signal.GridPosition);
                         }
-                        else if (cell.State == CellState.Path || cell.State == CellState.Bridge)
+                        else if (currentCell.State == CellState.Path || currentCell.State == CellState.Bridge)
                         {
                             BacktrackPath(_activeColor, signal.GridPosition);
                         }
@@ -60,7 +60,6 @@ namespace PixelFlow.Commands
                 if (Mathf.Abs(signal.GridPosition.x - _lastPos.x) + Mathf.Abs(signal.GridPosition.y - _lastPos.y) != 1)
                     return;
 
-                var currentCell = GridModel.Grid[signal.GridPosition.x, signal.GridPosition.y];
                 var path = GridModel.Paths[_activeColor];
 
                 if (path.Count > 1 && path[path.Count - 2] == signal.GridPosition)
