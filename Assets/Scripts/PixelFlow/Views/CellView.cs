@@ -18,7 +18,25 @@ namespace PixelFlow.Views
         [SerializeField] private SpriteRenderer _bridgeRenderer;
 
         public Vector2Int GridPosition { get; private set; }
-        
+
+        private bool _isDragging;
+
+        private void Awake()
+        {
+            EnsureSprite(_bgRenderer);
+            EnsureSprite(_dotRenderer);
+            EnsureSprite(_bridgeRenderer);
+        }
+
+        private static void EnsureSprite(SpriteRenderer renderer)
+        {
+            if (renderer == null || renderer.sprite != null) return;
+            Texture2D tex = new Texture2D(1, 1);
+            tex.SetPixel(0, 0, Color.white);
+            tex.Apply();
+            renderer.sprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
+        }
+
         public void Setup(Vector2Int pos)
         {
             GridPosition = pos;
@@ -78,14 +96,22 @@ namespace PixelFlow.Views
             }
         }
 
-        private void OnMouseDown() => OnPointerDown?.Invoke(GridPosition);
+        private void OnMouseDown()
+        {
+            _isDragging = true;
+            OnPointerDown?.Invoke(GridPosition);
+        }
         
         private void OnMouseEnter()
         {
-            if (Input.GetMouseButton(0))
+            if (_isDragging)
                 OnPointerDrag?.Invoke(GridPosition);
         }
         
-        private void OnMouseUp() => OnPointerUp?.Invoke(GridPosition);
+        private void OnMouseUp()
+        {
+            _isDragging = false;
+            OnPointerUp?.Invoke(GridPosition);
+        }
     }
 }
