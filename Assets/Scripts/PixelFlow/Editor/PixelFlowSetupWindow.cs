@@ -139,6 +139,36 @@ namespace PixelFlow.Editor
                 Debug.Log("[PixelFlowSetupWindow] Found existing PixelFlow_Context in the scene.");
             }
 
+            if (context != null && context.ContextData == null)
+            {
+                string settingsFolder = "Assets/Settings";
+                if (!AssetDatabase.IsValidFolder(settingsFolder))
+                {
+                    AssetDatabase.CreateFolder("Assets", "Settings");
+                }
+
+                string assetPath = "Assets/Settings/PixelFlowContextData.asset";
+                ContextData contextDataAsset = AssetDatabase.LoadAssetAtPath<ContextData>(assetPath);
+                if (contextDataAsset == null)
+                {
+                    contextDataAsset = ScriptableObject.CreateInstance<ContextData>();
+                    AssetDatabase.CreateAsset(contextDataAsset, assetPath);
+                    AssetDatabase.SaveAssets();
+                    Debug.Log($"[PixelFlowSetupWindow] Created new ContextData asset at {assetPath}");
+                }
+
+                SerializedObject serializedContext = new SerializedObject(context);
+                SerializedProperty contextDataProp = serializedContext.FindProperty("contextData");
+                if (contextDataProp != null)
+                {
+                    serializedContext.Update();
+                    contextDataProp.objectReferenceValue = contextDataAsset;
+                    serializedContext.ApplyModifiedProperties();
+                    EditorUtility.SetDirty(context);
+                    Debug.Log("[PixelFlowSetupWindow] Assigned PixelFlowContextData configuration to the Root component.");
+                }
+            }
+
             // 2. GridView setup
             GridView gridView = Object.FindAnyObjectByType<GridView>();
             GameObject gridObj;

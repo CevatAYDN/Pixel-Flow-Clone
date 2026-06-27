@@ -1026,7 +1026,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: com.nexus.core::Nexus.Core.Root
   parentRoot: {fileID: 0}
-  contextData: {fileID: 0}
+  contextData: {fileID: 11400000, guid: d260c829dbacb2f4e81b05e8cf38a78c, type: 2}
   initializationPriority: 0
 --- !u!114 &1090863686
 MonoBehaviour:
