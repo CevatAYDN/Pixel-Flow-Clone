@@ -7,12 +7,17 @@ namespace PixelFlow.Commands
     public class SaveProgressCommand : ICommand<LevelCompletedSignal>, IResettable
     {
         [Inject] public IProgressModel ProgressModel { get; set; }
+        [Inject] public ILevelModel LevelModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
 
         public void Execute(LevelCompletedSignal signal)
         {
             int previousUnlocked = ProgressModel.UnlockedLevels;
-            ProgressModel.UnlockNextLevel();
+            var currentLevel = LevelModel.CurrentLevel;
+            if (currentLevel != null)
+            {
+                ProgressModel.UnlockLevel(currentLevel.levelIndex);
+            }
             UnityEngine.Debug.Log($"[SaveProgressCommand] Level completed! Unlocked levels: {previousUnlocked} -> {ProgressModel.UnlockedLevels}");
 
             SignalBus.Fire(new ProgressUpdatedSignal
@@ -23,8 +28,7 @@ namespace PixelFlow.Commands
 
         public void Reset()
         {
-            ProgressModel = null;
-            SignalBus = null;
+            // Do not nullify injected properties to prevent null-ref risks on framework reuse
         }
     }
 }

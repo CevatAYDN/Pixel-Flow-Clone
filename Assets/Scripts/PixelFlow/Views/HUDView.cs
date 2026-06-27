@@ -34,7 +34,7 @@ namespace PixelFlow.Views
         public void UpdateHintCount(int count)
         {
             if (_hintCountText != null)
-                _hintCountText.text = count.ToString();
+                _hintCountText.text = $"HINT ({count})";
         }
 
         public void ShowCompletion()

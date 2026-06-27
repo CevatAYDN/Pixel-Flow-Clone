@@ -33,15 +33,15 @@ namespace PixelFlow.Views
             switch (theme)
             {
                 case AppTheme.Dark:
-                    cam.backgroundColor = new Color(0.1f, 0.1f, 0.12f);
+                    cam.backgroundColor = new Color(0.08f, 0.08f, 0.1f);
                     Debug.Log("[ThemeHandler] Applied Dark theme");
                     break;
                 case AppTheme.Light:
-                    cam.backgroundColor = new Color(0.95f, 0.95f, 0.95f);
+                    cam.backgroundColor = new Color(0.85f, 0.85f, 0.88f);
                     Debug.Log("[ThemeHandler] Applied Light theme");
                     break;
                 case AppTheme.Neon:
-                    cam.backgroundColor = new Color(0.05f, 0f, 0.1f);
+                    cam.backgroundColor = new Color(0.03f, 0.01f, 0.06f);
                     Debug.Log("[ThemeHandler] Applied Neon theme");
                     break;
             }

@@ -16,12 +16,27 @@ MonoBehaviour:
   width: 5
   height: 5
   initialNodes:
-  - position: {x: 2, y: 0}
-    color: 2
-  - position: {x: 2, y: 4}
-    color: 2
+  - position: {x: 0, y: 3}
+    color: 1
   - position: {x: 0, y: 2}
-    color: 4
+    color: 1
+  - position: {x: 0, y: 1}
+    color: 1
+  - position: {x: 1, y: 3}
+    color: 1
+  - position: {x: 2, y: 3}
+    color: 1
+  - position: {x: 2, y: 2}
+    color: 1
+  - position: {x: 2, y: 1}
+    color: 1
+  - position: {x: 1, y: 1}
+    color: 1
+  - position: {x: 4, y: 3}
+    color: 2
   - position: {x: 4, y: 2}
-    color: 4
+    color: 2
+  - position: {x: 4, y: 1}
+    color: 2
   solutions: []
+  bridgePositions: []

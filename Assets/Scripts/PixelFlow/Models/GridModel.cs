@@ -20,6 +20,8 @@ namespace PixelFlow.Models
         CellData[,] Grid { get; }
         Dictionary<ColorType, List<Vector2Int>> Paths { get; }
         HashSet<ColorType> LockedColors { get; }
+        ColorType ActiveColor { get; set; }
+        Vector2Int LastPosition { get; set; }
         
         event Action OnGridUpdated;
         void Initialize(int width, int height);
@@ -33,6 +35,8 @@ namespace PixelFlow.Models
         public CellData[,] Grid { get; private set; }
         public Dictionary<ColorType, List<Vector2Int>> Paths { get; private set; }
         public HashSet<ColorType> LockedColors { get; private set; }
+        public ColorType ActiveColor { get; set; }
+        public Vector2Int LastPosition { get; set; }
 
         public event Action OnGridUpdated;
 
@@ -50,6 +54,8 @@ namespace PixelFlow.Models
             }
             Paths = new Dictionary<ColorType, List<Vector2Int>>();
             LockedColors = new HashSet<ColorType>();
+            ActiveColor = ColorType.None;
+            LastPosition = new Vector2Int(-1, -1);
         }
 
         public void UpdateGrid()

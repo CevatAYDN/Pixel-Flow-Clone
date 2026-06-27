@@ -5,7 +5,7 @@ namespace PixelFlow.Models
     public interface IProgressModel
     {
         int UnlockedLevels { get; }
-        void UnlockNextLevel();
+        void UnlockLevel(int levelIndex);
     }
 
     public class ProgressModel : IProgressModel
@@ -17,11 +17,15 @@ namespace PixelFlow.Models
             UnlockedLevels = PlayerPrefs.GetInt("UnlockedLevels", 1);
         }
 
-        public void UnlockNextLevel()
+        public void UnlockLevel(int levelIndex)
         {
-            UnlockedLevels++;
-            PlayerPrefs.SetInt("UnlockedLevels", UnlockedLevels);
-            PlayerPrefs.Save();
+            int requiredUnlocked = levelIndex + 2;
+            if (requiredUnlocked > UnlockedLevels)
+            {
+                UnlockedLevels = requiredUnlocked;
+                PlayerPrefs.SetInt("UnlockedLevels", UnlockedLevels);
+                PlayerPrefs.Save();
+            }
         }
     }
 }

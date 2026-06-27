@@ -40,11 +40,15 @@ namespace PixelFlow.Editor
             }
         }
 
+
+
         private void GeneratePrefabs()
         {
+            Debug.Log("[PixelFlowSetupWindow] Generating Base Prefabs...");
             if (!Directory.Exists("Assets/Prefabs"))
             {
                 Directory.CreateDirectory("Assets/Prefabs");
+                Debug.Log("[PixelFlowSetupWindow] Created Assets/Prefabs directory.");
             }
 
             string cellPrefabPath = "Assets/Prefabs/CellView.prefab";
@@ -53,151 +57,360 @@ namespace PixelFlow.Editor
                 GameObject cellObj = new GameObject("CellView");
                 var cellView = cellObj.AddComponent<CellView>();
                 cellObj.AddComponent<BoxCollider2D>(); 
+                Debug.Log("[PixelFlowSetupWindow] Created CellView GameObject and added BoxCollider2D.");
                 
                 GameObject bgObj = new GameObject("Background");
                 bgObj.transform.SetParent(cellObj.transform);
                 var bgRenderer = bgObj.AddComponent<SpriteRenderer>();
+                Debug.Log("[PixelFlowSetupWindow] Created Background child and added SpriteRenderer.");
 
                 GameObject dotObj = new GameObject("Dot");
                 dotObj.transform.SetParent(cellObj.transform);
                 var dotRenderer = dotObj.AddComponent<SpriteRenderer>();
+                Debug.Log("[PixelFlowSetupWindow] Created Dot child and added SpriteRenderer.");
 
                 GameObject bridgeObj = new GameObject("Bridge");
                 bridgeObj.transform.SetParent(cellObj.transform);
                 var bridgeRenderer = bridgeObj.AddComponent<SpriteRenderer>();
+                Debug.Log("[PixelFlowSetupWindow] Created Bridge child and added SpriteRenderer.");
 
                 SerializedObject so = new SerializedObject(cellView);
                 so.FindProperty("_bgRenderer").objectReferenceValue = bgRenderer;
                 so.FindProperty("_dotRenderer").objectReferenceValue = dotRenderer;
                 so.FindProperty("_bridgeRenderer").objectReferenceValue = bridgeRenderer;
                 so.ApplyModifiedProperties();
+                Debug.Log("[PixelFlowSetupWindow] Assigned CellView renderer references in SerializedObject.");
 
                 PrefabUtility.SaveAsPrefabAsset(cellObj, cellPrefabPath);
                 DestroyImmediate(cellObj);
-                Debug.Log("CellView prefab created at " + cellPrefabPath);
+                Debug.Log("[PixelFlowSetupWindow] CellView prefab created at: " + cellPrefabPath);
             }
             else
             {
-                Debug.Log("CellView prefab already exists.");
+                Debug.Log("[PixelFlowSetupWindow] CellView prefab already exists.");
             }
         }
 
         private void SetupScene()
         {
-            if (Object.FindAnyObjectByType<Root>() == null)
+            Debug.Log("[PixelFlowSetupWindow] Starting scene setup...");
+
+            // Check for duplicates
+            var roots = Object.FindObjectsByType<Root>(FindObjectsSortMode.None);
+            if (roots.Length > 1)
+            {
+                Debug.LogWarning($"[PixelFlowSetupWindow] WARNING: Multiple Root components found in scene ({roots.Length})!");
+            }
+            var gridViews = Object.FindObjectsByType<GridView>(FindObjectsSortMode.None);
+            if (gridViews.Length > 1)
+            {
+                Debug.LogWarning($"[PixelFlowSetupWindow] WARNING: Multiple GridView components found in scene ({gridViews.Length})!");
+            }
+            var canvases = Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None);
+            if (canvases.Length > 1)
+            {
+                Debug.LogWarning($"[PixelFlowSetupWindow] WARNING: Multiple Canvas components found in scene ({canvases.Length})!");
+            }
+
+            // 1. Context setup
+            Root context = Object.FindAnyObjectByType<Root>();
+            if (context == null)
             {
                 GameObject contextObj = new GameObject("PixelFlow_Context");
-                var context = contextObj.AddComponent<Root>();
+                context = contextObj.AddComponent<Root>();
                 contextObj.AddComponent<GameContextLifecycle>();
+                Undo.RegisterCreatedObjectUndo(contextObj, "Create Context");
+                Debug.Log("[PixelFlowSetupWindow] Created PixelFlow_Context GameObject with Root and GameContextLifecycle components.");
+            }
+            else
+            {
+                Debug.Log("[PixelFlowSetupWindow] Found existing PixelFlow_Context in the scene.");
             }
 
-            if (Object.FindAnyObjectByType<GridView>() == null)
+            // 2. GridView setup
+            GridView gridView = Object.FindAnyObjectByType<GridView>();
+            GameObject gridObj;
+            if (gridView == null)
             {
-                GameObject gridObj = new GameObject("GridView");
-                var gridView = gridObj.AddComponent<GridView>();
-                
-                GameObject container = new GameObject("CellsContainer");
-                container.transform.SetParent(gridObj.transform);
-                
-                SerializedObject so = new SerializedObject(gridView);
-                so.FindProperty("_gridContainer").objectReferenceValue = container.transform;
-
-                var cellPrefab = AssetDatabase.LoadAssetAtPath<CellView>("Assets/Prefabs/CellView.prefab");
-                if (cellPrefab != null)
-                {
-                    so.FindProperty("_cellPrefab").objectReferenceValue = cellPrefab;
-                }
-                so.ApplyModifiedProperties();
+                gridObj = new GameObject("GridView");
+                gridView = gridObj.AddComponent<GridView>();
+                Undo.RegisterCreatedObjectUndo(gridObj, "Create GridView");
+                Debug.Log("[PixelFlowSetupWindow] Created GridView GameObject.");
+            }
+            else
+            {
+                gridObj = gridView.gameObject;
+                Debug.Log("[PixelFlowSetupWindow] Found existing GridView GameObject.");
             }
 
-            if (Object.FindAnyObjectByType<HUDView>() == null)
+            // GridView children setup
+            Transform container = gridObj.transform.Find("CellsContainer");
+            if (container == null)
             {
-                GameObject canvasObj = new GameObject("Canvas");
-                var canvas = canvasObj.AddComponent<Canvas>();
+                GameObject containerObj = new GameObject("CellsContainer");
+                container = containerObj.transform;
+                container.SetParent(gridObj.transform);
+                Debug.Log("[PixelFlowSetupWindow] Created CellsContainer child under GridView.");
+            }
+            else
+            {
+                Debug.Log("[PixelFlowSetupWindow] Found existing CellsContainer child under GridView.");
+            }
+
+            // Load and assign CellView prefab
+            CellView cellPrefab = AssetDatabase.LoadAssetAtPath<CellView>("Assets/Prefabs/CellView.prefab");
+            if (cellPrefab == null)
+            {
+                Debug.LogError("[PixelFlowSetupWindow] CellView prefab not found at Assets/Prefabs/CellView.prefab! Generate prefabs first.");
+            }
+            else
+            {
+                Debug.Log("[PixelFlowSetupWindow] Successfully loaded CellView prefab.");
+            }
+
+            SerializedObject gridSo = new SerializedObject(gridView);
+            gridSo.FindProperty("_gridContainer").objectReferenceValue = container;
+            gridSo.FindProperty("_cellPrefab").objectReferenceValue = cellPrefab;
+            gridSo.ApplyModifiedProperties();
+            EditorUtility.SetDirty(gridView);
+            Debug.Log($"[PixelFlowSetupWindow] Assigned GridView references. _gridContainer: {container.name}, _cellPrefab: {(cellPrefab != null ? cellPrefab.name : "null")}");
+
+            // 3. UI setup (Canvas & HUDView)
+            Canvas canvas = Object.FindAnyObjectByType<Canvas>();
+            GameObject canvasObj;
+            if (canvas == null)
+            {
+                canvasObj = new GameObject("Canvas");
+                canvas = canvasObj.AddComponent<Canvas>();
                 canvas.renderMode = RenderMode.ScreenSpaceOverlay;
                 canvasObj.AddComponent<CanvasScaler>();
                 canvasObj.AddComponent<GraphicRaycaster>();
-
-                GameObject hudObj = new GameObject("HUDView");
-                hudObj.transform.SetParent(canvasObj.transform, false);
-                var hudView = hudObj.AddComponent<HUDView>();
-
-                GameObject hintBtnObj = new GameObject("HintButton");
-                hintBtnObj.transform.SetParent(hudObj.transform, false);
-                hintBtnObj.AddComponent<Image>();
-                var hintBtn = hintBtnObj.AddComponent<Button>();
-
-                GameObject hintTextObj = new GameObject("HintCountText");
-                hintTextObj.transform.SetParent(hintBtnObj.transform, false);
-                var hintText = hintTextObj.AddComponent<Text>();
-                hintText.text = "3";
-
-                // Completion Panel
-                GameObject completionPanel = new GameObject("CompletionPanel");
-                completionPanel.transform.SetParent(hudObj.transform, false);
-                var panelImg = completionPanel.AddComponent<Image>();
-                panelImg.color = new Color(0, 0, 0, 0.7f);
-                RectTransform panelRect = completionPanel.GetComponent<RectTransform>();
-                panelRect.anchorMin = Vector2.zero;
-                panelRect.anchorMax = Vector2.one;
-                panelRect.sizeDelta = Vector2.zero;
-                completionPanel.SetActive(false);
-
-                GameObject completionTextObj = new GameObject("CompletionText");
-                completionTextObj.transform.SetParent(completionPanel.transform, false);
-                var compText = completionTextObj.AddComponent<Text>();
-                compText.text = "Tebrikler!";
-                compText.fontSize = 48;
-                compText.alignment = TextAnchor.MiddleCenter;
-                RectTransform textRect = completionTextObj.GetComponent<RectTransform>();
-                textRect.anchorMin = Vector2.zero;
-                textRect.anchorMax = Vector2.one;
-                textRect.sizeDelta = Vector2.zero;
-
-                SerializedObject so = new SerializedObject(hudView);
-                so.FindProperty("_hintButton").objectReferenceValue = hintBtn;
-                so.FindProperty("_hintCountText").objectReferenceValue = hintText;
-                so.FindProperty("_completionPanel").objectReferenceValue = completionPanel;
-                so.FindProperty("_completionText").objectReferenceValue = compText;
-                so.ApplyModifiedProperties();
+                Undo.RegisterCreatedObjectUndo(canvasObj, "Create Canvas");
+                Debug.Log("[PixelFlowSetupWindow] Created Canvas GameObject with Canvas, CanvasScaler, and GraphicRaycaster components.");
+            }
+            else
+            {
+                canvasObj = canvas.gameObject;
+                Debug.Log("[PixelFlowSetupWindow] Found existing Canvas GameObject.");
             }
 
-            // Auto-create SoundHandlerView if missing
-            if (Object.FindAnyObjectByType<SoundHandlerView>() == null)
+            HUDView hudView = Object.FindAnyObjectByType<HUDView>();
+            GameObject hudObj;
+            if (hudView == null)
+            {
+                hudObj = new GameObject("HUDView");
+                hudObj.transform.SetParent(canvasObj.transform, false);
+                hudView = hudObj.AddComponent<HUDView>();
+                RectTransform hudRect = hudObj.GetComponent<RectTransform>();
+                hudRect.anchorMin = Vector2.zero;
+                hudRect.anchorMax = Vector2.one;
+                hudRect.sizeDelta = Vector2.zero;
+                Debug.Log("[PixelFlowSetupWindow] Created HUDView GameObject under Canvas.");
+            }
+            else
+            {
+                hudObj = hudView.gameObject;
+                hudObj.transform.SetParent(canvasObj.transform, false);
+                Debug.Log("[PixelFlowSetupWindow] Found existing HUDView GameObject.");
+            }
+
+            // Hint Button setup
+            Transform hintBtnTransform = hudObj.transform.Find("HintButton");
+            GameObject hintBtnObj;
+            if (hintBtnTransform == null)
+            {
+                hintBtnObj = new GameObject("HintButton");
+                hintBtnObj.transform.SetParent(hudObj.transform, false);
+                Debug.Log("[PixelFlowSetupWindow] Created HintButton GameObject under HUDView.");
+            }
+            else
+            {
+                hintBtnObj = hintBtnTransform.gameObject;
+                Debug.Log("[PixelFlowSetupWindow] Found existing HintButton GameObject under HUDView.");
+            }
+
+            Image hintImg = hintBtnObj.GetComponent<Image>();
+            if (hintImg == null) hintImg = hintBtnObj.AddComponent<Image>();
+            hintImg.color = new Color(0.15f, 0.15f, 0.18f, 1f);
+
+            Button hintBtn = hintBtnObj.GetComponent<Button>();
+            if (hintBtn == null) hintBtn = hintBtnObj.AddComponent<Button>();
+
+            RectTransform hintRect = hintBtnObj.GetComponent<RectTransform>();
+            hintRect.anchorMin = new Vector2(0.5f, 0f);
+            hintRect.anchorMax = new Vector2(0.5f, 0f);
+            hintRect.pivot = new Vector2(0.5f, 0f);
+            hintRect.anchoredPosition = new Vector2(0f, 60f);
+            hintRect.sizeDelta = new Vector2(160f, 50f);
+
+            // Hint Count Text setup
+            Transform hintTextTransform = hintBtnObj.transform.Find("HintCountText");
+            GameObject hintTextObj;
+            if (hintTextTransform == null)
+            {
+                hintTextObj = new GameObject("HintCountText");
+                hintTextObj.transform.SetParent(hintBtnObj.transform, false);
+                Debug.Log("[PixelFlowSetupWindow] Created HintCountText GameObject under HintButton.");
+            }
+            else
+            {
+                hintTextObj = hintTextTransform.gameObject;
+                Debug.Log("[PixelFlowSetupWindow] Found existing HintCountText GameObject.");
+            }
+
+            Text hintText = hintTextObj.GetComponent<Text>();
+            if (hintText == null) hintText = hintTextObj.AddComponent<Text>();
+            hintText.text = "HINT (3)";
+            hintText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf") ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
+            hintText.fontSize = 18;
+            hintText.alignment = TextAnchor.MiddleCenter;
+            hintText.color = Color.white;
+
+            RectTransform textRect = hintTextObj.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.sizeDelta = Vector2.zero;
+
+            // Completion Panel setup
+            Transform compPanelTransform = hudObj.transform.Find("CompletionPanel");
+            GameObject completionPanel;
+            if (compPanelTransform == null)
+            {
+                completionPanel = new GameObject("CompletionPanel");
+                completionPanel.transform.SetParent(hudObj.transform, false);
+                Debug.Log("[PixelFlowSetupWindow] Created CompletionPanel GameObject under HUDView.");
+            }
+            else
+            {
+                completionPanel = compPanelTransform.gameObject;
+                Debug.Log("[PixelFlowSetupWindow] Found existing CompletionPanel GameObject.");
+            }
+
+            Image panelImg = completionPanel.GetComponent<Image>();
+            if (panelImg == null) panelImg = completionPanel.AddComponent<Image>();
+            panelImg.color = new Color(0.08f, 0.08f, 0.1f, 0.85f);
+
+            RectTransform panelRect = completionPanel.GetComponent<RectTransform>();
+            panelRect.anchorMin = Vector2.zero;
+            panelRect.anchorMax = Vector2.one;
+            panelRect.sizeDelta = Vector2.zero;
+            completionPanel.SetActive(false);
+
+            // Completion Text setup
+            Transform compTextTransform = completionPanel.transform.Find("CompletionText");
+            GameObject completionTextObj;
+            if (compTextTransform == null)
+            {
+                completionTextObj = new GameObject("CompletionText");
+                completionTextObj.transform.SetParent(completionPanel.transform, false);
+                Debug.Log("[PixelFlowSetupWindow] Created CompletionText GameObject under CompletionPanel.");
+            }
+            else
+            {
+                completionTextObj = compTextTransform.gameObject;
+                Debug.Log("[PixelFlowSetupWindow] Found existing CompletionText GameObject.");
+            }
+
+            Text compText = completionTextObj.GetComponent<Text>();
+            if (compText == null) compText = completionTextObj.AddComponent<Text>();
+            compText.text = "Tebrikler!";
+            compText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf") ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
+            compText.fontSize = 32;
+            compText.color = new Color(0.2f, 0.85f, 0.3f);
+            compText.alignment = TextAnchor.MiddleCenter;
+
+            RectTransform compTextRect = completionTextObj.GetComponent<RectTransform>();
+            compTextRect.anchorMin = Vector2.zero;
+            compTextRect.anchorMax = Vector2.one;
+            compTextRect.sizeDelta = Vector2.zero;
+
+            SerializedObject hudSo = new SerializedObject(hudView);
+            hudSo.FindProperty("_hintButton").objectReferenceValue = hintBtn;
+            hudSo.FindProperty("_hintCountText").objectReferenceValue = hintText;
+            hudSo.FindProperty("_completionPanel").objectReferenceValue = completionPanel;
+            hudSo.FindProperty("_completionText").objectReferenceValue = compText;
+            hudSo.ApplyModifiedProperties();
+            EditorUtility.SetDirty(hudView);
+            Debug.Log("[PixelFlowSetupWindow] Assigned HUDView references to SerializedObject and marked HUDView dirty.");
+
+            // 4. SoundHandlerView setup
+            SoundHandlerView soundView = Object.FindAnyObjectByType<SoundHandlerView>();
+            if (soundView == null)
             {
                 GameObject soundObj = new GameObject("SoundHandlerView");
-                soundObj.AddComponent<SoundHandlerView>();
-                Debug.Log("SoundHandlerView created.");
+                soundView = soundObj.AddComponent<SoundHandlerView>();
+                Undo.RegisterCreatedObjectUndo(soundObj, "Create SoundHandlerView");
+                Debug.Log("[PixelFlowSetupWindow] Created SoundHandlerView GameObject.");
+            }
+            else
+            {
+                Debug.Log("[PixelFlowSetupWindow] Found existing SoundHandlerView in the scene.");
             }
 
-            // Auto-create ThemeHandlerView if missing
-            if (Object.FindAnyObjectByType<ThemeHandlerView>() == null)
+            // 5. ThemeHandlerView setup
+            ThemeHandlerView themeView = Object.FindAnyObjectByType<ThemeHandlerView>();
+            if (themeView == null)
             {
                 GameObject themeObj = new GameObject("ThemeHandlerView");
-                themeObj.AddComponent<ThemeHandlerView>();
-                Debug.Log("ThemeHandlerView created.");
+                themeView = themeObj.AddComponent<ThemeHandlerView>();
+                Undo.RegisterCreatedObjectUndo(themeObj, "Create ThemeHandlerView");
+                Debug.Log("[PixelFlowSetupWindow] Created ThemeHandlerView GameObject.");
+            }
+            else
+            {
+                Debug.Log("[PixelFlowSetupWindow] Found existing ThemeHandlerView in the scene.");
             }
 
-            if (Object.FindAnyObjectByType<GameBootstrapper>() == null)
+            // 6. GameBootstrapper setup
+            GameBootstrapper bootstrapper = Object.FindAnyObjectByType<GameBootstrapper>();
+            if (bootstrapper == null)
             {
                 GameObject bootObj = new GameObject("GameBootstrapper");
-                var bootstrapper = bootObj.AddComponent<GameBootstrapper>();
-                
+                bootstrapper = bootObj.AddComponent<GameBootstrapper>();
+                Undo.RegisterCreatedObjectUndo(bootObj, "Create GameBootstrapper");
+                Debug.Log("[PixelFlowSetupWindow] Created GameBootstrapper GameObject.");
+            }
+            else
+            {
+                Debug.Log("[PixelFlowSetupWindow] Found existing GameBootstrapper in the scene.");
+            }
+
+            // Assign level if missing
+            if (bootstrapper.initialLevel == null)
+            {
                 string[] guids = AssetDatabase.FindAssets("t:LevelData");
                 if (guids.Length > 0)
                 {
                     string path = AssetDatabase.GUIDToAssetPath(guids[0]);
                     bootstrapper.initialLevel = AssetDatabase.LoadAssetAtPath<LevelData>(path);
+                    Debug.Log($"[PixelFlowSetupWindow] Assigned initialLevel to GameBootstrapper: {bootstrapper.initialLevel.name} from {path}");
+                }
+                else
+                {
+                    Debug.LogWarning("[PixelFlowSetupWindow] No LevelData found in project resources to assign to GameBootstrapper.");
                 }
             }
+            
+            // Assign nexusRoot reference on bootstrapper
+            if (bootstrapper.nexusRoot == null)
+            {
+                bootstrapper.nexusRoot = context;
+                Debug.Log("[PixelFlowSetupWindow] Assigned nexusRoot reference to GameBootstrapper.");
+            }
+            EditorUtility.SetDirty(bootstrapper);
 
+            // 7. Main Camera setup
             if (Camera.main != null)
             {
                 Camera.main.orthographic = true;
                 Camera.main.orthographicSize = 5;
+                EditorUtility.SetDirty(Camera.main);
+                Debug.Log("[PixelFlowSetupWindow] Main Camera set to orthographic with size 5.");
             }
 
-            Debug.Log("Scene setup complete.");
+            // 8. Mark the active scene dirty so changes are saved
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
+            Debug.Log("[PixelFlowSetupWindow] Scene marked as dirty. Setup completed successfully.");
         }
 
         private void CreateLevelData()

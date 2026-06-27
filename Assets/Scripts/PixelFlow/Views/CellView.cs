@@ -24,17 +24,44 @@ namespace PixelFlow.Views
         private void Awake()
         {
             EnsureSprite(_bgRenderer);
-            EnsureSprite(_dotRenderer);
+            EnsureCircleSprite(_dotRenderer);
             EnsureSprite(_bridgeRenderer);
         }
 
         private static void EnsureSprite(SpriteRenderer renderer)
         {
             if (renderer == null || renderer.sprite != null) return;
-            Texture2D tex = new Texture2D(1, 1);
-            tex.SetPixel(0, 0, Color.white);
+            Texture2D tex = new Texture2D(4, 4);
+            for (int x = 0; x < 4; x++)
+                for (int y = 0; y < 4; y++)
+                    tex.SetPixel(x, y, Color.white);
             tex.Apply();
-            renderer.sprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
+            renderer.sprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4f);
+        }
+
+        private static void EnsureCircleSprite(SpriteRenderer renderer, int radius = 32)
+        {
+            if (renderer == null || renderer.sprite != null) return;
+            int size = radius * 2;
+            Texture2D tex = new Texture2D(size, size);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - radius + 0.5f;
+                    float dy = y - radius + 0.5f;
+                    if (dx * dx + dy * dy <= radius * radius)
+                    {
+                        tex.SetPixel(x, y, Color.white);
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            renderer.sprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
         }
 
         public void Setup(Vector2Int pos)
@@ -42,36 +69,53 @@ namespace PixelFlow.Views
             GridPosition = pos;
         }
 
-        public void UpdateVisuals(ColorType color, CellState state)
+        public static Color GetCellBackgroundColor(AppTheme theme)
         {
+            switch (theme)
+            {
+                case AppTheme.Dark:
+                    return new Color(0.15f, 0.15f, 0.18f, 1f);
+                case AppTheme.Light:
+                    return new Color(0.92f, 0.92f, 0.94f, 1f);
+                case AppTheme.Neon:
+                    return new Color(0.12f, 0.08f, 0.22f, 1f);
+                default:
+                    return new Color(0.2f, 0.2f, 0.2f, 1f);
+            }
+        }
+
+        public void UpdateVisuals(ColorType color, CellState state, AppTheme theme)
+        {
+            Color cellBg = GetCellBackgroundColor(theme);
+            _bgRenderer.transform.localScale = new Vector3(0.92f, 0.92f, 1f);
+
             switch (state)
             {
                 case CellState.Empty:
-                    _bgRenderer.color = Color.white;
+                    _bgRenderer.color = cellBg;
                     _bgRenderer.enabled = true;
                     _dotRenderer.enabled = false;
                     _bridgeRenderer.enabled = false;
                     break;
 
                 case CellState.Node:
-                    _bgRenderer.color = GetColor(color);
+                    _bgRenderer.color = cellBg;
                     _bgRenderer.enabled = true;
                     _dotRenderer.enabled = true;
-                    _dotRenderer.color = Color.white;
+                    _dotRenderer.color = GetColor(color);
+                    _dotRenderer.transform.localScale = new Vector3(0.45f, 0.45f, 1f);
                     _bridgeRenderer.enabled = false;
                     break;
 
                 case CellState.Path:
-                    Color pathColor = GetColor(color);
-                    pathColor.a = 0.7f;
-                    _bgRenderer.color = pathColor;
+                    _bgRenderer.color = cellBg;
                     _bgRenderer.enabled = true;
                     _dotRenderer.enabled = false;
                     _bridgeRenderer.enabled = false;
                     break;
 
                 case CellState.Bridge:
-                    _bgRenderer.color = GetColor(color);
+                    _bgRenderer.color = cellBg;
                     _bgRenderer.enabled = true;
                     _dotRenderer.enabled = false;
                     _bridgeRenderer.enabled = true;
@@ -80,7 +124,7 @@ namespace PixelFlow.Views
             }
         }
 
-        private static Color GetColor(ColorType colorType)
+        public static Color GetColor(ColorType colorType)
         {
             switch (colorType)
             {

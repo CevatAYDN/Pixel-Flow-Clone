@@ -13,8 +13,16 @@ namespace PixelFlow
 
         private IEnumerator Start()
         {
-            if (nexusRoot == null)
+            int retries = 5;
+            while (nexusRoot == null && retries > 0)
+            {
                 nexusRoot = FindAnyObjectByType<Root>();
+                if (nexusRoot == null)
+                {
+                    retries--;
+                    yield return new WaitForSeconds(0.1f);
+                }
+            }
                 
             if (nexusRoot == null)
             {

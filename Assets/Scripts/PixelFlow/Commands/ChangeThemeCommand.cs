@@ -23,8 +23,7 @@ namespace PixelFlow.Commands
 
         public void Reset()
         {
-            SettingsModel = null;
-            SignalBus = null;
+            // Do not nullify injected properties to prevent null-ref risks on framework reuse
         }
     }
 }

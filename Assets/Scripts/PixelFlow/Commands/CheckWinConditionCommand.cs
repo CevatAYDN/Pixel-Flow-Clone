@@ -40,8 +40,9 @@ namespace PixelFlow.Commands
                 {
                     if (group.Key == ColorType.None) continue;
 
-                    // Each color must have at least 2 nodes (start + end)
-                    if (group.Count() < 2) continue;
+                    var nodes = group.ToList();
+                    // Each color must have exactly 2 nodes (start + end) in a standard level
+                    if (nodes.Count < 2) continue;
 
                     // The color must have a path registered
                     if (!GridModel.Paths.ContainsKey(group.Key) || GridModel.Paths[group.Key].Count == 0)
@@ -49,10 +50,20 @@ namespace PixelFlow.Commands
 
                     var path = GridModel.Paths[group.Key];
 
-                    // All nodes of this color must be in the path (ensures they're connected)
-                    foreach (var node in group)
+                    // Verify that the path starts at one of the nodes and ends at the other node
+                    var startPos = path[0];
+                    var endPos = path[path.Count - 1];
+                    var node1 = nodes[0].position;
+                    var node2 = nodes[1].position;
+
+                    bool validConnection = (startPos == node1 && endPos == node2) || (startPos == node2 && endPos == node1);
+                    if (!validConnection)
+                        return;
+
+                    // Additionally verify all path positions belong to the grid
+                    foreach (var pos in path)
                     {
-                        if (!path.Contains(node.position))
+                        if (pos.x < 0 || pos.x >= GridModel.Width || pos.y < 0 || pos.y >= GridModel.Height)
                             return;
                     }
                 }
@@ -65,10 +76,7 @@ namespace PixelFlow.Commands
 
         public void Reset()
         {
-            GridModel = null;
-            LevelModel = null;
-            GameStateModel = null;
-            SignalBus = null;
+            // Do not nullify injected properties to prevent null-ref risks on framework reuse
         }
     }
 }

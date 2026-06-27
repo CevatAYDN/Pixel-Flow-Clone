@@ -13,9 +13,6 @@ namespace PixelFlow.Commands
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public ISoundModel SoundModel { get; set; }
 
-        private static ColorType _activeColor = ColorType.None;
-        private static Vector2Int _lastPos = new Vector2Int(-1, -1);
-
         public void Execute(InputInteractionSignal signal)
         {
             if (signal.GridPosition.x < 0 || signal.GridPosition.y < 0 || signal.GridPosition.x >= GridModel.Width || signal.GridPosition.y >= GridModel.Height)
@@ -36,21 +33,21 @@ namespace PixelFlow.Commands
                         return;
                     }
 
-                    _activeColor = currentCell.Color;
-                    _lastPos = signal.GridPosition;
+                    GridModel.ActiveColor = currentCell.Color;
+                    GridModel.LastPosition = signal.GridPosition;
                     
-                    if (!GridModel.Paths.ContainsKey(_activeColor))
-                        GridModel.Paths[_activeColor] = new List<Vector2Int>();
+                    if (!GridModel.Paths.ContainsKey(GridModel.ActiveColor))
+                        GridModel.Paths[GridModel.ActiveColor] = new List<Vector2Int>();
                     else
                     {
                         if (currentCell.State == CellState.Node)
                         {
-                            ClearPath(_activeColor);
-                            GridModel.Paths[_activeColor].Add(signal.GridPosition);
+                            ClearPath(GridModel.ActiveColor);
+                            GridModel.Paths[GridModel.ActiveColor].Add(signal.GridPosition);
                         }
                         else if (currentCell.State == CellState.Path || currentCell.State == CellState.Bridge)
                         {
-                            BacktrackPath(_activeColor, signal.GridPosition);
+                            BacktrackPath(GridModel.ActiveColor, signal.GridPosition);
                         }
                     }
                     GridModel.UpdateGrid();
@@ -59,15 +56,15 @@ namespace PixelFlow.Commands
             }
             else if (signal.Type == InputType.Drag)
             {
-                if (_activeColor == ColorType.None) return;
+                if (GridModel.ActiveColor == ColorType.None) return;
                 
                 if (signal.GridPosition.x < 0 || signal.GridPosition.y < 0 || signal.GridPosition.x >= GridModel.Width || signal.GridPosition.y >= GridModel.Height)
                     return;
 
-                if (Mathf.Abs(signal.GridPosition.x - _lastPos.x) + Mathf.Abs(signal.GridPosition.y - _lastPos.y) != 1)
+                if (Mathf.Abs(signal.GridPosition.x - GridModel.LastPosition.x) + Mathf.Abs(signal.GridPosition.y - GridModel.LastPosition.y) != 1)
                     return;
 
-                var path = GridModel.Paths[_activeColor];
+                var path = GridModel.Paths[GridModel.ActiveColor];
 
                 if (path.Count > 1 && path[path.Count - 2] == signal.GridPosition)
                 {
@@ -79,7 +76,7 @@ namespace PixelFlow.Commands
                         removedCell.Color = ColorType.None;
                         removedCell.State = CellState.Empty;
                     }
-                    _lastPos = signal.GridPosition;
+                    GridModel.LastPosition = signal.GridPosition;
                     GridModel.UpdateGrid();
                     SignalBus.Fire(new GridUpdatedSignal());
                     return;
@@ -87,19 +84,19 @@ namespace PixelFlow.Commands
 
                 if (currentCell.State == CellState.Empty)
                 {
-                    currentCell.Color = _activeColor;
+                    currentCell.Color = GridModel.ActiveColor;
                     currentCell.State = CellState.Path;
                     path.Add(signal.GridPosition);
-                    _lastPos = signal.GridPosition;
+                    GridModel.LastPosition = signal.GridPosition;
                     GridModel.UpdateGrid();
                     SignalBus.Fire(new GridUpdatedSignal());
                     SoundModel.PlayDrawSound(path.Count);
                 }
-                else if (currentCell.State == CellState.Node && currentCell.Color == _activeColor)
+                else if (currentCell.State == CellState.Node && currentCell.Color == GridModel.ActiveColor)
                 {
                     path.Add(signal.GridPosition);
-                    _lastPos = signal.GridPosition;
-                    _activeColor = ColorType.None; 
+                    GridModel.LastPosition = signal.GridPosition;
+                    GridModel.ActiveColor = ColorType.None; 
                     GridModel.UpdateGrid();
                     SignalBus.Fire(new GridUpdatedSignal());
                     SignalBus.Fire(new CheckWinConditionSignal());
@@ -107,25 +104,25 @@ namespace PixelFlow.Commands
                 else if (currentCell.State == CellState.Bridge)
                 {
                     path.Add(signal.GridPosition);
-                    _lastPos = signal.GridPosition;
+                    GridModel.LastPosition = signal.GridPosition;
                     GridModel.UpdateGrid();
                     SignalBus.Fire(new GridUpdatedSignal());
                 }
-                else if (currentCell.Color != ColorType.None && currentCell.Color != _activeColor && currentCell.State == CellState.Path)
+                else if (currentCell.Color != ColorType.None && currentCell.Color != GridModel.ActiveColor && currentCell.State == CellState.Path)
                 {
                     BreakPath(currentCell.Color, signal.GridPosition);
-                    currentCell.Color = _activeColor;
+                    currentCell.Color = GridModel.ActiveColor;
                     currentCell.State = CellState.Path;
                     path.Add(signal.GridPosition);
-                    _lastPos = signal.GridPosition;
+                    GridModel.LastPosition = signal.GridPosition;
                     GridModel.UpdateGrid();
                     SignalBus.Fire(new GridUpdatedSignal());
                 }
             }
             else if (signal.Type == InputType.PointerUp)
             {
-                _activeColor = ColorType.None;
-                _lastPos = new Vector2Int(-1, -1);
+                GridModel.ActiveColor = ColorType.None;
+                GridModel.LastPosition = new Vector2Int(-1, -1);
             }
         }
 
@@ -170,11 +167,11 @@ namespace PixelFlow.Commands
 
         public void Reset()
         {
-            GridModel = null;
-            SignalBus = null;
-            SoundModel = null;
-            _activeColor = ColorType.None;
-            _lastPos = new Vector2Int(-1, -1);
+            if (GridModel != null)
+            {
+                GridModel.ActiveColor = ColorType.None;
+                GridModel.LastPosition = new Vector2Int(-1, -1);
+            }
         }
     }
 }

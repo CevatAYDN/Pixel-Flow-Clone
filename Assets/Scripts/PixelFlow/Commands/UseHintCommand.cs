@@ -82,6 +82,9 @@ namespace PixelFlow.Commands
 
             foreach (var pos in solution.pathPositions)
             {
+                if (pos.x < 0 || pos.x >= GridModel.Width || pos.y < 0 || pos.y >= GridModel.Height)
+                    continue;
+
                 GridModel.Paths[solution.color].Add(pos);
                 var cell = GridModel.Grid[pos.x, pos.y];
                 if (cell.State == CellState.Empty)
@@ -119,10 +122,7 @@ namespace PixelFlow.Commands
 
         public void Reset()
         {
-            HintModel = null;
-            GridModel = null;
-            LevelModel = null;
-            SignalBus = null;
+            // Do not nullify injected properties to prevent null-ref risks on framework reuse
         }
     }
 }
