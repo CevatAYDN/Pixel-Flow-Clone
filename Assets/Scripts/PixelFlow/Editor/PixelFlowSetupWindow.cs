@@ -206,6 +206,26 @@ GUILayout.Space(20);
                 Debug.Log("[PixelFlowSetupWindow] Found existing Canvas GameObject.");
             }
 
+            var eventSystem = Object.FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>();
+            if (eventSystem == null)
+            {
+                GameObject eventSystemObj = new GameObject("EventSystem");
+                eventSystemObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
+                eventSystemObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                Undo.RegisterCreatedObjectUndo(eventSystemObj, "Create EventSystem");
+                Debug.Log("[PixelFlowSetupWindow] Created EventSystem GameObject with InputSystemUIInputModule.");
+            }
+            else
+            {
+                var standaloneModule = eventSystem.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                if (standaloneModule != null)
+                {
+                    Undo.DestroyObjectImmediate(standaloneModule);
+                    eventSystem.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                    Debug.Log("[PixelFlowSetupWindow] Replaced StandaloneInputModule with InputSystemUIInputModule on EventSystem.");
+                }
+            }
+
             HUDView hudView = Object.FindAnyObjectByType<HUDView>();
             GameObject hudObj;
             if (hudView == null)

@@ -15,6 +15,8 @@ namespace PixelFlow.Commands
 
         public void Execute(InputInteractionSignal signal)
         {
+            UnityEngine.Debug.Log($"[ProcessInputCommand] Execute: Type={signal.Type}, Pos={signal.GridPosition}, ActiveColor={GridModel.ActiveColor}");
+
             if (signal.GridPosition.x < 0 || signal.GridPosition.y < 0 || signal.GridPosition.x >= GridModel.Width || signal.GridPosition.y >= GridModel.Height)
                 return;
 
@@ -56,13 +58,23 @@ namespace PixelFlow.Commands
             }
             else if (signal.Type == InputType.Drag)
             {
-                if (GridModel.ActiveColor == ColorType.None) return;
+                UnityEngine.Debug.Log($"[ProcessInputCommand] Drag received at ({signal.GridPosition.x}, {signal.GridPosition.y}). ActiveColor={GridModel.ActiveColor}, LastPos={GridModel.LastPosition}");
+                
+                if (GridModel.ActiveColor == ColorType.None)
+                {
+                    UnityEngine.Debug.Log("[ProcessInputCommand] Drag ignored: ActiveColor is None");
+                    return;
+                }
                 
                 if (signal.GridPosition.x < 0 || signal.GridPosition.y < 0 || signal.GridPosition.x >= GridModel.Width || signal.GridPosition.y >= GridModel.Height)
                     return;
 
-                if (Mathf.Abs(signal.GridPosition.x - GridModel.LastPosition.x) + Mathf.Abs(signal.GridPosition.y - GridModel.LastPosition.y) != 1)
+                int distance = Mathf.Abs(signal.GridPosition.x - GridModel.LastPosition.x) + Mathf.Abs(signal.GridPosition.y - GridModel.LastPosition.y);
+                if (distance != 1)
+                {
+                    UnityEngine.Debug.Log($"[ProcessInputCommand] Drag ignored: distance={distance} != 1");
                     return;
+                }
 
                 var path = GridModel.Paths[GridModel.ActiveColor];
 
@@ -167,11 +179,7 @@ namespace PixelFlow.Commands
 
         public void Reset()
         {
-            if (GridModel != null)
-            {
-                GridModel.ActiveColor = ColorType.None;
-                GridModel.LastPosition = new Vector2Int(-1, -1);
-            }
+            // Do not reset GridModel singleton values in command Reset, as commands are recycled per signal execution
         }
     }
 }

@@ -15,6 +15,11 @@ namespace PixelFlow.Views
             UnityEngine.Debug.Log($"[GridMediator] OnBind called.");
             GridModel.OnGridUpdated += HandleGridUpdated;
             Subscribe<ThemeChangedSignal>(HandleThemeChanged);
+            
+            View.OnGlobalPointerDown += HandleGlobalPointerDown;
+            View.OnGlobalPointerDrag += HandleGlobalPointerDrag;
+            View.OnGlobalPointerUp += HandleGlobalPointerUp;
+
             if (GridModel.Width > 0 && GridModel.Height > 0)
             {
                 InitializeAndCenter();
@@ -24,6 +29,25 @@ namespace PixelFlow.Views
         protected override void OnUnbind()
         {
             GridModel.OnGridUpdated -= HandleGridUpdated;
+            
+            View.OnGlobalPointerDown -= HandleGlobalPointerDown;
+            View.OnGlobalPointerDrag -= HandleGlobalPointerDrag;
+            View.OnGlobalPointerUp -= HandleGlobalPointerUp;
+        }
+
+        private void HandleGlobalPointerDown(Vector2Int pos)
+        {
+            SignalBus.Fire(new InputInteractionSignal { Type = InputType.PointerDown, GridPosition = pos });
+        }
+
+        private void HandleGlobalPointerDrag(Vector2Int pos)
+        {
+            SignalBus.Fire(new InputInteractionSignal { Type = InputType.Drag, GridPosition = pos });
+        }
+
+        private void HandleGlobalPointerUp(Vector2Int pos)
+        {
+            SignalBus.Fire(new InputInteractionSignal { Type = InputType.PointerUp, GridPosition = pos });
         }
 
         private void HandleThemeChanged(ThemeChangedSignal signal)

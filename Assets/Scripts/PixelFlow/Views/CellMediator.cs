@@ -9,16 +9,10 @@ namespace PixelFlow.Views
 
         protected override void OnBind()
         {
-            View.OnPointerDown += HandlePointerDown;
-            View.OnPointerDrag += HandlePointerDrag;
-            View.OnPointerUp += HandlePointerUp;
         }
 
         protected override void OnUnbind()
         {
-            View.OnPointerDown -= HandlePointerDown;
-            View.OnPointerDrag -= HandlePointerDrag;
-            View.OnPointerUp -= HandlePointerUp;
         }
 
         private void HandlePointerDown(Vector2Int pos)

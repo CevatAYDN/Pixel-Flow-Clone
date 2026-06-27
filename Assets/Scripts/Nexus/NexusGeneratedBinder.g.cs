@@ -25,6 +25,7 @@ namespace Nexus.Generated
             NexusDI.RegisterInjector<PixelFlow.Views.HUDMediator>((instance, di) =>
             {
                 instance.HintModel = di.Resolve<PixelFlow.Models.IHintModel>();
+                instance.LevelModel = di.Resolve<PixelFlow.Models.ILevelModel>();
             });
             NexusDI.RegisterInjector<PixelFlow.Views.LevelPackMediator>((instance, di) =>
             {
@@ -85,6 +86,7 @@ namespace Nexus.Generated
                 var _p_GridMediator_GridModel = default(PixelFlow.Views.GridMediator).GridModel;
                 var _p_GridMediator_SettingsModel = default(PixelFlow.Views.GridMediator).SettingsModel;
                 var _p_HUDMediator_HintModel = default(PixelFlow.Views.HUDMediator).HintModel;
+                var _p_HUDMediator_LevelModel = default(PixelFlow.Views.HUDMediator).LevelModel;
                 var _p_LevelPackMediator_ProgressModel = default(PixelFlow.Views.LevelPackMediator).ProgressModel;
                 var _p_SoundHandlerMediator_SoundModel = default(PixelFlow.Views.SoundHandlerMediator).SoundModel;
                 var _p_ThemeHandlerMediator_SettingsModel = default(PixelFlow.Views.ThemeHandlerMediator).SettingsModel;

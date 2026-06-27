@@ -9,6 +9,10 @@ namespace PixelFlow.Views
     [Mediator(typeof(GridMediator))]
     public class GridView : View
     {
+        public event System.Action<Vector2Int> OnGlobalPointerDown;
+        public event System.Action<Vector2Int> OnGlobalPointerDrag;
+        public event System.Action<Vector2Int> OnGlobalPointerUp;
+
         [SerializeField] private CellView _cellPrefab;
         [SerializeField] private Transform _gridContainer;
 
@@ -16,6 +20,90 @@ namespace PixelFlow.Views
         private List<CellView> _instantiatedCells = new List<CellView>();
         private Queue<CellView> _cellPool = new Queue<CellView>();
         public bool IsInitialized => _cells != null;
+
+        private bool _isPointerDown;
+        private bool _clickedOutside;
+        private Vector2Int _lastGridPos = new Vector2Int(-1, -1);
+
+        private void Update()
+        {
+            if (_cells == null) return;
+
+            var pointer = UnityEngine.InputSystem.Pointer.current;
+            if (pointer == null) return;
+
+            bool isPressed = pointer.press.isPressed;
+            Vector2 screenPos = pointer.position.ReadValue();
+
+            if (isPressed)
+            {
+                Camera cam = Camera.main;
+                if (cam != null)
+                {
+                    Vector3 worldPos = cam.ScreenToWorldPoint(screenPos);
+                    int gx = Mathf.RoundToInt(worldPos.x);
+                    int gy = Mathf.RoundToInt(worldPos.y);
+
+                    int width = _cells.GetLength(0);
+                    int height = _cells.GetLength(1);
+
+                    if (gx >= 0 && gx < width && gy >= 0 && gy < height)
+                    {
+                        Vector2Int currentGridPos = new Vector2Int(gx, gy);
+
+                        if (!_isPointerDown)
+                        {
+                            _isPointerDown = true;
+                            _clickedOutside = false;
+                            _lastGridPos = currentGridPos;
+                            OnGlobalPointerDown?.Invoke(currentGridPos);
+                        }
+                        else if (!_clickedOutside && currentGridPos != _lastGridPos)
+                        {
+                            Vector2Int tempPos = _lastGridPos;
+                            while (tempPos != currentGridPos)
+                            {
+                                int dx = currentGridPos.x - tempPos.x;
+                                int dy = currentGridPos.y - tempPos.y;
+
+                                if (Mathf.Abs(dx) >= Mathf.Abs(dy))
+                                {
+                                    tempPos.x += System.Math.Sign(dx);
+                                }
+                                else
+                                {
+                                    tempPos.y += System.Math.Sign(dy);
+                                }
+
+                                OnGlobalPointerDrag?.Invoke(tempPos);
+                            }
+                            _lastGridPos = currentGridPos;
+                        }
+                    }
+                    else
+                    {
+                        if (!_isPointerDown)
+                        {
+                            _isPointerDown = true;
+                            _clickedOutside = true;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (_isPointerDown)
+                {
+                    _isPointerDown = false;
+                    if (!_clickedOutside)
+                    {
+                        OnGlobalPointerUp?.Invoke(_lastGridPos);
+                    }
+                    _clickedOutside = false;
+                    _lastGridPos = new Vector2Int(-1, -1);
+                }
+            }
+        }
 
         private void EnsurePool(int requiredSize)
         {
