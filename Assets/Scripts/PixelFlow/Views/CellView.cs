@@ -13,6 +13,10 @@ namespace PixelFlow.Views
         public event Action<Vector2Int> OnPointerDrag;
         public event Action<Vector2Int> OnPointerUp;
 
+        [SerializeField] private SpriteRenderer _bgRenderer;
+        [SerializeField] private SpriteRenderer _dotRenderer;
+        [SerializeField] private SpriteRenderer _bridgeRenderer;
+
         public Vector2Int GridPosition { get; private set; }
         
         public void Setup(Vector2Int pos)
