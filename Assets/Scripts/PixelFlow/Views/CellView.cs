@@ -21,6 +21,9 @@ namespace PixelFlow.Views
 
         private static bool _isDragging;
 
+        private static Sprite s_squareSprite;
+        private static Sprite s_circleSprite;
+
         private void Awake()
         {
             EnsureSprite(_bgRenderer);
@@ -34,38 +37,54 @@ namespace PixelFlow.Views
 
         private static void EnsureSprite(SpriteRenderer renderer)
         {
-            if (renderer == null || renderer.sprite != null) return;
-            Texture2D tex = new Texture2D(4, 4);
-            for (int x = 0; x < 4; x++)
-                for (int y = 0; y < 4; y++)
-                    tex.SetPixel(x, y, Color.white);
-            tex.Apply();
-            renderer.sprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4f);
+            if (renderer == null) return;
+            if (renderer.sprite != null) return;
+
+            if (s_squareSprite == null)
+            {
+                Texture2D tex = new Texture2D(4, 4);
+                for (int x = 0; x < 4; x++)
+                    for (int y = 0; y < 4; y++)
+                        tex.SetPixel(x, y, Color.white);
+                tex.Apply();
+                tex.hideFlags = HideFlags.DontSave;
+                s_squareSprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4f);
+                s_squareSprite.hideFlags = HideFlags.DontSave;
+            }
+            renderer.sprite = s_squareSprite;
         }
 
         private static void EnsureCircleSprite(SpriteRenderer renderer, int radius = 32)
         {
-            if (renderer == null || renderer.sprite != null) return;
-            int size = radius * 2;
-            Texture2D tex = new Texture2D(size, size);
-            for (int y = 0; y < size; y++)
+            if (renderer == null) return;
+            if (renderer.sprite != null) return;
+
+            if (s_circleSprite == null)
             {
-                for (int x = 0; x < size; x++)
+                int size = radius * 2;
+                Texture2D tex = new Texture2D(size, size);
+                for (int y = 0; y < size; y++)
                 {
-                    float dx = x - radius + 0.5f;
-                    float dy = y - radius + 0.5f;
-                    if (dx * dx + dy * dy <= radius * radius)
+                    for (int x = 0; x < size; x++)
                     {
-                        tex.SetPixel(x, y, Color.white);
-                    }
-                    else
-                    {
-                        tex.SetPixel(x, y, Color.clear);
+                        float dx = x - radius + 0.5f;
+                        float dy = y - radius + 0.5f;
+                        if (dx * dx + dy * dy <= radius * radius)
+                        {
+                            tex.SetPixel(x, y, Color.white);
+                        }
+                        else
+                        {
+                            tex.SetPixel(x, y, Color.clear);
+                        }
                     }
                 }
+                tex.Apply();
+                tex.hideFlags = HideFlags.DontSave;
+                s_circleSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+                s_circleSprite.hideFlags = HideFlags.DontSave;
             }
-            tex.Apply();
-            renderer.sprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+            renderer.sprite = s_circleSprite;
         }
 
         public void Setup(Vector2Int pos)

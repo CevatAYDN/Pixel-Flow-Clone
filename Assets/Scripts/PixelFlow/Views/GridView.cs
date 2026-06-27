@@ -238,5 +238,21 @@ namespace PixelFlow.Views
                 }
             }
         }
+
+        private void OnDestroy()
+        {
+            foreach (var kvp in _pathLines)
+            {
+                if (kvp.Value != null)
+                {
+                    if (kvp.Value.material != null)
+                    {
+                        Destroy(kvp.Value.material);
+                    }
+                    Destroy(kvp.Value.gameObject);
+                }
+            }
+            _pathLines.Clear();
+        }
     }
 }
