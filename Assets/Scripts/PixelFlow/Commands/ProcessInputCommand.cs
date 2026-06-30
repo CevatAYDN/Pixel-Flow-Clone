@@ -84,14 +84,29 @@ namespace PixelFlow.Commands
                     var removedPos = path[path.Count - 1];
                     path.RemoveAt(path.Count - 1);
                     var removedCell = GridModel.Grid[removedPos.x, removedPos.y];
-                    if (removedCell.State != CellState.Node)
+                    if (removedCell.State != CellState.Node && removedCell.State != CellState.Bridge)
                     {
                         removedCell.Color = ColorType.None;
                         removedCell.State = CellState.Empty;
                     }
+                    else if (removedCell.State == CellState.Bridge)
+                    {
+                        removedCell.Color = ColorType.None;
+                    }
                     GridModel.LastPosition = signal.GridPosition;
                     SignalBus.Fire(new GridUpdatedSignal());
                     return;
+                }
+
+                // Bridge'den çıkış yön kontrolü: girilen yönde düz devam zorunlu
+                var lastCell = GridModel.Grid[GridModel.LastPosition.x, GridModel.LastPosition.y];
+                if (lastCell.State == CellState.Bridge && path.Count >= 2)
+                {
+                    Vector2Int bridgePos = GridModel.LastPosition;
+                    Vector2Int entryDir = bridgePos - path[path.Count - 2];
+                    Vector2Int moveDir = signal.GridPosition - bridgePos;
+                    if (moveDir != entryDir)
+                        return;
                 }
 
                 if (currentCell.State == CellState.Empty)
@@ -115,7 +130,34 @@ namespace PixelFlow.Commands
                 }
                 else if (currentCell.State == CellState.Bridge)
                 {
+                    Vector2Int entryDir = signal.GridPosition - GridModel.LastPosition;
+
+                    if (currentCell.Color != ColorType.None && currentCell.Color != GridModel.ActiveColor)
+                    {
+                        if (GridModel.Paths.TryGetValue(currentCell.Color, out var otherPath))
+                        {
+                            int bridgeIdx = otherPath.IndexOf(signal.GridPosition);
+                            if (bridgeIdx > 0 && bridgeIdx < otherPath.Count - 1)
+                            {
+                                var otherPrev = otherPath[bridgeIdx - 1];
+                                var otherNext = otherPath[bridgeIdx + 1];
+                                bool otherHorizontal = otherPrev.y == otherNext.y;
+                                bool weHorizontal = entryDir.y == 0;
+
+                                if (otherHorizontal != weHorizontal)
+                                {
+                                    RecordHistory();
+                                    path.Add(signal.GridPosition);
+                                    GridModel.LastPosition = signal.GridPosition;
+                                    SignalBus.Fire(new GridUpdatedSignal());
+                                }
+                            }
+                        }
+                        return;
+                    }
+
                     RecordHistory();
+                    currentCell.Color = GridModel.ActiveColor;
                     path.Add(signal.GridPosition);
                     GridModel.LastPosition = signal.GridPosition;
                     SignalBus.Fire(new GridUpdatedSignal());

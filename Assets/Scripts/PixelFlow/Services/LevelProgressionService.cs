@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Nexus.Core;
 using PixelFlow.Data;
 
 namespace PixelFlow.Services
@@ -29,9 +30,10 @@ namespace PixelFlow.Services
 
         public int LevelsPerDifficulty => 5;
 
+        [Inject]
         public LevelProgressionService() : this(new ProceduralLevelGenerator(new RuntimePathSolver())) { }
 
-        public LevelProgressionService(ProceduralLevelGenerator generator)
+        internal LevelProgressionService(ProceduralLevelGenerator generator)
         {
             _generator = generator;
             _generatedCache = new Dictionary<int, LevelData>();

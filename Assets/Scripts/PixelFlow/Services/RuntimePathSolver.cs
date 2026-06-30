@@ -127,6 +127,8 @@ namespace PixelFlow.Services
                     if (isBridge)
                     {
                         var exit = next + dir;
+                        var oldNextColor = grid[next.x, next.y];
+                        var oldExitColor = grid[exit.x, exit.y];
                         grid[next.x, next.y] = color;
                         grid[exit.x, exit.y] = color;
                         path.Add(next);
@@ -137,11 +139,12 @@ namespace PixelFlow.Services
 
                         path.RemoveAt(path.Count - 1);
                         path.RemoveAt(path.Count - 1);
-                        grid[next.x, next.y] = ColorType.None;
-                        grid[exit.x, exit.y] = ColorType.None;
+                        grid[next.x, next.y] = oldNextColor;
+                        grid[exit.x, exit.y] = oldExitColor;
                     }
                     else
                     {
+                        var oldColor = grid[next.x, next.y];
                         grid[next.x, next.y] = color;
                         path.Add(next);
 
@@ -149,7 +152,7 @@ namespace PixelFlow.Services
                         if (sub != null) return sub;
 
                         path.RemoveAt(path.Count - 1);
-                        grid[next.x, next.y] = ColorType.None;
+                        grid[next.x, next.y] = oldColor;
                     }
                 }
             }
@@ -278,6 +281,7 @@ namespace PixelFlow.Services
                 }
                 else if (canMove)
                 {
+                    var oldColor = grid[next.x, next.y];
                     grid[next.x, next.y] = color;
                     path.Add(next);
 
@@ -285,7 +289,7 @@ namespace PixelFlow.Services
                         return true;
 
                     path.RemoveAt(path.Count - 1);
-                    grid[next.x, next.y] = ColorType.None;
+                    grid[next.x, next.y] = oldColor;
                 }
             }
 

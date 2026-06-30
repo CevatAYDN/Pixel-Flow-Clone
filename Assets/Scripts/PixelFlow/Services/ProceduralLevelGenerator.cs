@@ -106,6 +106,12 @@ namespace PixelFlow.Services
             // Solver ile çözümü doğrula
             if (_solver.Solve(level, out var solutions))
             {
+                if (!ValidateSolutions(solutions, nodes))
+                {
+                    Debug.LogWarning("[ProceduralLevelGenerator] Solver produced invalid solution (path through node). Retrying...");
+                    return null;
+                }
+
                 level.solutions = solutions.Select(kvp => new PathSolution
                 {
                     color = kvp.Key,
@@ -115,6 +121,31 @@ namespace PixelFlow.Services
             }
 
             return null;
+        }
+
+        private static bool ValidateSolutions(
+            Dictionary<ColorType, List<Vector2Int>> solutions,
+            List<GridNode> nodes)
+        {
+            var nodePositions = new HashSet<Vector2Int>();
+            var nodeColor = new Dictionary<Vector2Int, ColorType>();
+            foreach (var node in nodes)
+            {
+                nodePositions.Add(node.position);
+                nodeColor[node.position] = node.color;
+            }
+
+            foreach (var kvp in solutions)
+            {
+                var pathColor = kvp.Key;
+                foreach (var pos in kvp.Value)
+                {
+                    if (nodePositions.Contains(pos) && nodeColor[pos] != pathColor)
+                        return false;
+                }
+            }
+
+            return true;
         }
 
         private (Vector2Int pos1, Vector2Int pos2)? PickTwoPositions(int w, int h, HashSet<Vector2Int> occupied)

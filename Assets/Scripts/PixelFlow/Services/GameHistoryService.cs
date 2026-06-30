@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Nexus.Core;
 using PixelFlow.Models;
 
 namespace PixelFlow.Services
@@ -20,9 +21,12 @@ namespace PixelFlow.Services
         public bool CanUndo => _undoStack.Count > 0;
         public bool CanRedo => _redoStack.Count > 0;
 
+        [Inject]
         public GameHistoryService() : this(DefaultMaxDepth) { }
 
-        public GameHistoryService(int maxDepth)
+        // DI dışı manuel oluşturma (testler vb.) için internal bırakıldı.
+        // Nexus DI, [Inject] attribute'u sayesinde parametresiz constructor'ı seçer.
+        internal GameHistoryService(int maxDepth)
         {
             _maxDepth = maxDepth > 0 ? maxDepth : DefaultMaxDepth;
         }

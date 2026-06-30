@@ -298,7 +298,7 @@ namespace PixelFlow.Editor
             Event e = Event.current;
             Vector2 mousePos = e.mousePosition;
 
-            // Draw cells and nodes/bridges
+            // === PASS 1: Hücre arkaplanları (en altta) ===
             for (int y = _data.height - 1; y >= 0; y--)
             {
                 for (int x = 0; x < _data.width; x++)
@@ -307,63 +307,12 @@ namespace PixelFlow.Editor
                     Rect cellRect = new Rect(
                         gridRect.x + x * (cellSize + spacing),
                         gridRect.y + drawY * (cellSize + spacing),
-                        cellSize,
-                        cellSize
-                    );
-
-                    // Cell Background (Dark Gray/Navy tone)
-                    Color cellColor = new Color(0.18f, 0.18f, 0.22f, 1f);
-                    
-                    bool isBridge = _data.bridgePositions.Contains(new Vector2Int(x, y));
-                    var node = _data.initialNodes.Find(n => n.position.x == x && n.position.y == y);
-                    bool isNode = node.color != ColorType.None;
-
-                    EditorGUI.DrawRect(cellRect, cellColor);
-
-                    // Mouse Interaction (Click / Drag to Paint)
-                    if ((e.type == EventType.MouseDown || e.type == EventType.MouseDrag) && cellRect.Contains(mousePos))
-                    {
-                        Vector2Int cellPos = new Vector2Int(x, y);
-                        if (e.type == EventType.MouseDown || _lastPaintedCell != cellPos)
-                        {
-                            HandleCellClick(x, y);
-                            _lastPaintedCell = cellPos;
-                            e.Use();
-                        }
-                    }
-
-                    // Draw Bridge Graphic
-                    if (isBridge)
-                    {
-                        Vector2 center = cellRect.center;
-                        Handles.BeginGUI();
-                        Handles.color = new Color(0.35f, 0.35f, 0.4f, 1f);
-                        // Draw horizontal track
-                        Handles.DrawAAPolyLine(4f, new Vector3(center.x - cellSize * 0.4f, center.y), new Vector3(center.x + cellSize * 0.4f, center.y));
-                        // Draw vertical track
-                        Handles.DrawAAPolyLine(4f, new Vector3(center.x, center.y - cellSize * 0.4f), new Vector3(center.x, center.y + cellSize * 0.4f));
-                        Handles.EndGUI();
-                    }
-
-                    // Draw Node Circle
-                    if (isNode)
-                    {
-                        Vector2 center = cellRect.center;
-                        Color nodeColor = GetVisualColor(node.color);
-
-                        Handles.BeginGUI();
-                        // Outer black outline ring
-                        Handles.color = Color.black;
-                        Handles.DrawSolidDisc(new Vector3(center.x, center.y, 0), Vector3.forward, cellSize * 0.32f);
-                        // Inner colored solid disk
-                        Handles.color = nodeColor;
-                        Handles.DrawSolidDisc(new Vector3(center.x, center.y, 0), Vector3.forward, cellSize * 0.26f);
-                        Handles.EndGUI();
-                    }
+                        cellSize, cellSize);
+                    EditorGUI.DrawRect(cellRect, new Color(0.18f, 0.18f, 0.22f, 1f));
                 }
             }
 
-            // Draw paths as thick lines connecting cell centers (drawn on top of cells)
+            // === PASS 2: Path çizgileri (ortada) ===
             foreach (var sol in _data.solutions)
             {
                 if (sol.pathPositions != null && sol.pathPositions.Count > 1 && sol.color != ColorType.None)
@@ -375,24 +324,63 @@ namespace PixelFlow.Editor
                     foreach (var p in sol.pathPositions)
                     {
                         int drawY = _data.height - 1 - p.y;
-                        Vector2 cellCenter = new Vector2(
+                        points.Add(new Vector2(
                             gridRect.x + p.x * (cellSize + spacing) + cellSize / 2f,
-                            gridRect.y + drawY * (cellSize + spacing) + cellSize / 2f
-                        );
-                        points.Add(cellCenter);
+                            gridRect.y + drawY * (cellSize + spacing) + cellSize / 2f));
                     }
 
-                    // Draw path connection segments
                     Handles.DrawAAPolyLine(6f, points.ToArray());
-                    
-                    // Draw smaller joining dots for smoother path intersections
-                    Handles.color = GetVisualColor(sol.color);
-                    foreach (var pt in points)
-                    {
-                        Handles.DrawSolidDisc(pt, Vector3.forward, 3f);
-                    }
-                    
                     Handles.EndGUI();
+                }
+            }
+
+            // === PASS 3: Bridge + Node (en üstte) ===
+            for (int y = _data.height - 1; y >= 0; y--)
+            {
+                for (int x = 0; x < _data.width; x++)
+                {
+                    int drawY = _data.height - 1 - y;
+                    Rect cellRect = new Rect(
+                        gridRect.x + x * (cellSize + spacing),
+                        gridRect.y + drawY * (cellSize + spacing),
+                        cellSize, cellSize);
+
+                    bool isBridge = _data.bridgePositions.Contains(new Vector2Int(x, y));
+                    var node = _data.initialNodes.Find(n => n.position.x == x && n.position.y == y);
+                    bool isNode = node.color != ColorType.None;
+
+                    if ((e.type == EventType.MouseDown || e.type == EventType.MouseDrag) && cellRect.Contains(mousePos))
+                    {
+                        Vector2Int cellPos = new Vector2Int(x, y);
+                        if (e.type == EventType.MouseDown || _lastPaintedCell != cellPos)
+                        {
+                            HandleCellClick(x, y);
+                            _lastPaintedCell = cellPos;
+                            e.Use();
+                        }
+                    }
+
+                    if (isBridge)
+                    {
+                        Vector2 center = cellRect.center;
+                        Handles.BeginGUI();
+                        Handles.color = new Color(0.35f, 0.35f, 0.4f, 1f);
+                        Handles.DrawAAPolyLine(4f, new Vector3(center.x - cellSize * 0.4f, center.y), new Vector3(center.x + cellSize * 0.4f, center.y));
+                        Handles.DrawAAPolyLine(4f, new Vector3(center.x, center.y - cellSize * 0.4f), new Vector3(center.x, center.y + cellSize * 0.4f));
+                        Handles.EndGUI();
+                    }
+
+                    if (isNode)
+                    {
+                        Vector2 center = cellRect.center;
+                        Color nodeColor = GetVisualColor(node.color);
+                        Handles.BeginGUI();
+                        Handles.color = Color.black;
+                        Handles.DrawSolidDisc(new Vector3(center.x, center.y, 0), Vector3.forward, cellSize * 0.32f);
+                        Handles.color = nodeColor;
+                        Handles.DrawSolidDisc(new Vector3(center.x, center.y, 0), Vector3.forward, cellSize * 0.26f);
+                        Handles.EndGUI();
+                    }
                 }
             }
 

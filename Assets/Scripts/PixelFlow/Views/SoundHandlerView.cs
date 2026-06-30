@@ -25,8 +25,8 @@ namespace PixelFlow.Views
 
             if (_audioSource.clip == null)
             {
-                Debug.LogWarning("[SoundHandler] AudioSource has no clip assigned. " +
-                    "Assign an AudioClip in the Inspector for draw sounds to play.");
+                Debug.Log("[SoundHandler] No AudioClip assigned – draw sounds disabled. " +
+                    "Assign an AudioClip in the Inspector or via Resources to enable.");
             }
 
             SoundModel.OnPlayDrawSound += HandlePlayDrawSound;
