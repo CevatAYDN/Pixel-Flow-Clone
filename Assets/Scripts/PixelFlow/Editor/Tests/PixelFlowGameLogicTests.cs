@@ -862,7 +862,8 @@ namespace PixelFlow.Editor.Tests
             Assert.AreEqual(2, grid.Paths[ColorType.Red].Count);
 
             _ctx.Dispatch(new UndoSignal());
-            Assert.IsFalse(grid.Paths.ContainsKey(ColorType.Red), "Path should be removed after undo");
+            Assert.IsTrue(grid.Paths.ContainsKey(ColorType.Red), "Path should still exist after single undo");
+            Assert.AreEqual(1, grid.Paths[ColorType.Red].Count, "Path should have 1 cell after undo (restored to pre-drag state)");
         }
 
         [Test]
@@ -884,10 +885,12 @@ namespace PixelFlow.Editor.Tests
             });
 
             _ctx.Dispatch(new UndoSignal());
-            Assert.IsFalse(grid.Paths.ContainsKey(ColorType.Red), "Path removed after undo");
+            Assert.IsTrue(grid.Paths.ContainsKey(ColorType.Red), "Path should still exist after undo");
+            Assert.AreEqual(1, grid.Paths[ColorType.Red].Count, "Path should have 1 cell after undo");
 
             _ctx.Dispatch(new RedoSignal());
             Assert.IsTrue(grid.Paths.ContainsKey(ColorType.Red), "Path restored after redo");
+            Assert.AreEqual(2, grid.Paths[ColorType.Red].Count, "Path should have 2 cells after redo");
         }
 
         [Test]

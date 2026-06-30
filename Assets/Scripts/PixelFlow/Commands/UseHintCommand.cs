@@ -21,13 +21,27 @@ namespace PixelFlow.Commands
 
         public void Execute(RequestHintSignal signal)
         {
-            if (HintModel.HintsRemaining <= 0) return;
+            if (HintModel.HintsRemaining <= 0)
+            {
+                Debug.LogWarning("[UseHintCommand] Abort: no hints remaining.");
+                return;
+            }
 
             var level = LevelModel.CurrentLevel;
-            if (level == null) return;
+            if (level == null)
+            {
+                Debug.LogWarning("[UseHintCommand] Abort: LevelModel.CurrentLevel is null.");
+                return;
+            }
 
             var hintPath = HintService.GetNextUnsolvedHint(level, GridModel, steps: 3);
-            if (hintPath == null || hintPath.Count == 0) return;
+            if (hintPath == null || hintPath.Count == 0)
+            {
+                Debug.LogWarning($"[UseHintCommand] Abort: GetNextUnsolvedHint returned {(hintPath == null ? "null" : "empty")}. Grid has {GridModel.Paths.Count} paths.");
+                return;
+            }
+
+            Debug.Log($"[UseHintCommand] Hint path: {hintPath.Count} cells. Applying...");
 
             HistoryService.Record(GridModel);
 
@@ -69,14 +83,32 @@ namespace PixelFlow.Commands
         private ColorType ResolveHintColor(LevelData level, List<Vector2Int> hintPath)
         {
             if (hintPath == null || hintPath.Count == 0) return ColorType.None;
-            var firstPos = hintPath[0];
 
+            // Check if any hint position is adjacent to an existing path's endpoint
+            foreach (var kvp in GridModel.Paths)
+            {
+                if (kvp.Value.Count == 0) continue;
+                var lastPos = kvp.Value[kvp.Value.Count - 1];
+                foreach (var pos in hintPath)
+                {
+                    int dist = Mathf.Abs(pos.x - lastPos.x) + Mathf.Abs(pos.y - lastPos.y);
+                    if (dist == 1)
+                        return kvp.Key;
+                }
+            }
+
+            // Check if first hint position is adjacent to an unsolved start node
+            var firstHint = hintPath[0];
             foreach (var node in level.initialNodes)
             {
-                if (node.position == firstPos)
+                if (node.color == ColorType.None) continue;
+                if (GridModel.Paths.ContainsKey(node.color)) continue;
+                int dist = Mathf.Abs(firstHint.x - node.position.x) + Mathf.Abs(firstHint.y - node.position.y);
+                if (dist == 1)
                     return node.color;
             }
 
+            // Fallback: check if any hint position matches a node position
             foreach (var node in level.initialNodes)
             {
                 foreach (var pos in hintPath)

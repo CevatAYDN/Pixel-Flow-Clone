@@ -47,23 +47,14 @@ namespace PixelFlow.Services
                 if (group.Key == ColorType.None) continue;
                 if (!grid.Paths.ContainsKey(group.Key) || grid.Paths[group.Key].Count < 2)
                 {
-                    return GetHint(level, group.Key, steps);
-                }
-
-                var nodes = group.ToList();
-                if (nodes.Count < 2) continue;
-                var path = grid.Paths[group.Key];
-                var startPos = path[0];
-                var endPos = path[path.Count - 1];
-                var node1 = nodes[0].position;
-                var node2 = nodes[1].position;
-                bool solved = (startPos == node1 && endPos == node2) || (startPos == node2 && endPos == node1);
-                if (!solved)
-                {
-                    return GetHint(level, group.Key, steps);
+                    Debug.Log($"[HintService] Unsolved color '{group.Key}' found. Requesting hint (steps={steps})...");
+                    var result = GetHint(level, group.Key, steps);
+                    Debug.Log($"[HintService] GetHint for '{group.Key}' returned {(result != null ? result.Count + " positions" : "null")}");
+                    if (result != null) return result;
                 }
             }
 
+            Debug.LogWarning($"[HintService] GetNextUnsolvedHint: no unsolved colors found. Grid has {grid.Paths.Count} paths.");
             return null;
         }
 
