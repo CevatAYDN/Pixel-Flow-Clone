@@ -14,6 +14,7 @@ namespace Nexus.Generated
 {
     public static class NexusGeneratedBinder
     {
+
         [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
         public static void Initialize()
         {
