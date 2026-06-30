@@ -15,13 +15,17 @@ namespace PixelFlow
             // PlayerPrefs servisini singleton olarak bağla; kalıcı state kullanan tüm
             // modeller bunu constructor injection ile alır (test edilebilir).
             builder.Bind<IPlayerPrefsService, UnityPlayerPrefsService>();
-
             builder.Bind<IPathService, PathService>();
+            builder.Bind<IGameHistoryService, GameHistoryService>();
+            builder.Bind<IPathSolver, RuntimePathSolver>();
+            builder.Bind<IHintService, HintService>();
+            builder.Bind<ILevelProgressionService, LevelProgressionService>();
 
             builder.BindModel<IGridModel, GridModel>();
             builder.BindModel<ILevelModel, LevelModel>();
             builder.BindModel<IProgressModel, ProgressModel>();
             builder.BindModel<IGameStateModel, GameStateModel>();
+            builder.BindModel<IGameSessionModel, GameSessionModel>();
             builder.BindModel<IHintModel, HintModel>();
             builder.BindModel<ISettingsModel, SettingsModel>();
             builder.BindModel<ISoundModel, SoundModel>();
@@ -32,6 +36,9 @@ namespace PixelFlow
             builder.BindSignal<PixelFlow.Signals.RequestHintSignal>().To<PixelFlow.Commands.UseHintCommand>();
             builder.BindSignal<PixelFlow.Commands.ChangeThemeSignal>().To<PixelFlow.Commands.ChangeThemeCommand>();
             builder.BindCommand<PixelFlow.Signals.LevelCompletedSignal, PixelFlow.Commands.SaveProgressCommand>(ExecutionMode.Exclusive, priority: 0);
+            builder.BindSignal<PixelFlow.Signals.UndoSignal>().To<PixelFlow.Commands.UndoCommand>();
+            builder.BindSignal<PixelFlow.Signals.RedoSignal>().To<PixelFlow.Commands.RedoCommand>();
+            builder.BindSignal<PixelFlow.Signals.TimerTickSignal>().To<PixelFlow.Commands.TimerCommand>();
         }
 
         public ValueTask OnInitializeAsync(CancellationToken ct) => default;

@@ -1,6 +1,8 @@
 using Nexus.Core;
+using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Signals;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace PixelFlow.Views
@@ -10,14 +12,12 @@ namespace PixelFlow.Views
         [Inject] public IGridModel GridModel { get; set; }
         [Inject] public ISettingsModel SettingsModel { get; set; }
 
+        private CellState[,] _previousCellStates;
+        private ColorType[,] _previousCellColors;
+        private readonly HashSet<Vector2Int> _changedCells = new HashSet<Vector2Int>();
+
         protected override void OnBind()
         {
-            // Input akışı: Pointer olayları GridView.Update'ten geliyor,
-            // oradan GridMediator event'lere düşüyor. View'in kendi OnMouse
-            // callback'leri artık kullanılmıyor (CellView tarafında kaldırıldı).
-
-            // Tek kaynak: SignalBus. GridModel.OnGridUpdated event'i kaldırıldı,
-            // tüm bildirimler artık GridUpdatedSignal üzerinden geçiyor.
             Subscribe<GridUpdatedSignal>(HandleGridUpdated);
             Subscribe<ThemeChangedSignal>(HandleThemeChanged);
 
@@ -25,8 +25,8 @@ namespace PixelFlow.Views
             View.OnGlobalPointerDrag += HandleGlobalPointerDrag;
             View.OnGlobalPointerUp += HandleGlobalPointerUp;
 
-            // İlk bind sırasında model daha initialize edilmemiş olabilir;
-            // Width==0 ise sadece abone olup ilk sinyal gelince grid'i kur.
+            CacheCellState();
+
             if (GridModel.Width > 0 && GridModel.Height > 0)
             {
                 InitializeAndCenter();
@@ -35,9 +35,6 @@ namespace PixelFlow.Views
 
         protected override void OnUnbind()
         {
-            // Subscribe<T> ile alınanlar Mediator.Unbind tarafından otomatik dispose edilir.
-            // View event aboneliklerini de elle temizliyoruz çünkü View kaynağı
-            // (GridView) başka bir yerde de tutuluyor olabilir.
             View.OnGlobalPointerDown -= HandleGlobalPointerDown;
             View.OnGlobalPointerDrag -= HandleGlobalPointerDrag;
             View.OnGlobalPointerUp -= HandleGlobalPointerUp;
@@ -73,18 +70,73 @@ namespace PixelFlow.Views
                 InitializeAndCenter();
                 return;
             }
-            // View yoksa (level henüz yüklenmemiş) ve grid boyutu sıfır değilse kur.
-            if (GridModel.Width > 0 && GridModel.Height > 0)
+
+            if (GridModel.Width <= 0 || GridModel.Height <= 0) return;
+
+            ComputeChangedCells();
+            if (_changedCells.Count > 0)
             {
-                View.UpdateGridVisuals(GridModel.Grid, GridModel.Width, GridModel.Height, SettingsModel.CurrentTheme, GridModel.Paths);
+                View.UpdateDifferential(GridModel.Grid, SettingsModel.CurrentTheme, _changedCells);
+            }
+
+            View.UpdatePathVisuals(GridModel.Paths);
+            CacheCellState();
+        }
+
+        private void ComputeChangedCells()
+        {
+            _changedCells.Clear();
+            int w = GridModel.Width;
+            int h = GridModel.Height;
+
+            if (_previousCellStates == null || _previousCellStates.GetLength(0) != w || _previousCellStates.GetLength(1) != h)
+            {
+                for (int x = 0; x < w; x++)
+                    for (int y = 0; y < h; y++)
+                        _changedCells.Add(new Vector2Int(x, y));
+                return;
+            }
+
+            for (int x = 0; x < w; x++)
+            {
+                for (int y = 0; y < h; y++)
+                {
+                    var current = GridModel.Grid[x, y];
+                    if (_previousCellStates[x, y] != current.State || _previousCellColors[x, y] != current.Color)
+                    {
+                        _changedCells.Add(new Vector2Int(x, y));
+                    }
+                }
+            }
+        }
+
+        private void CacheCellState()
+        {
+            int w = GridModel.Width;
+            int h = GridModel.Height;
+            if (w <= 0 || h <= 0) return;
+
+            if (_previousCellStates == null || _previousCellStates.GetLength(0) != w || _previousCellStates.GetLength(1) != h)
+            {
+                _previousCellStates = new CellState[w, h];
+                _previousCellColors = new ColorType[w, h];
+            }
+
+            for (int x = 0; x < w; x++)
+            {
+                for (int y = 0; y < h; y++)
+                {
+                    _previousCellStates[x, y] = GridModel.Grid[x, y].State;
+                    _previousCellColors[x, y] = GridModel.Grid[x, y].Color;
+                }
             }
         }
 
         private void InitializeAndCenter()
         {
+            CacheCellState();
             View.InitializeGrid(GridModel.Width, GridModel.Height);
             View.UpdateGridVisuals(GridModel.Grid, GridModel.Width, GridModel.Height, SettingsModel.CurrentTheme, GridModel.Paths);
-            // Kamera konumlandırma View üzerinden yapılır (cache + null-safe).
             View.CenterCamera(GridModel.Width, GridModel.Height);
         }
     }

@@ -6,9 +6,11 @@ namespace PixelFlow.Models
     public interface IHintModel
     {
         int HintsRemaining { get; }
+        int TotalHintsUsed { get; }
         event Action<int> OnHintCountChanged;
         void UseHint();
         void AddHints(int amount);
+        void ResetSessionHints();
     }
 
     /// <summary>
@@ -22,8 +24,10 @@ namespace PixelFlow.Models
 
         private readonly IPlayerPrefsService _prefs;
         private int _hintsRemaining;
+        private int _totalHintsUsed;
 
         public int HintsRemaining => _hintsRemaining;
+        public int TotalHintsUsed => _totalHintsUsed;
         public event Action<int> OnHintCountChanged;
 
         public HintModel(IPlayerPrefsService prefs)
@@ -37,6 +41,7 @@ namespace PixelFlow.Models
             if (_hintsRemaining > 0)
             {
                 _hintsRemaining--;
+                _totalHintsUsed++;
                 _prefs.SetInt(Key, _hintsRemaining);
                 OnHintCountChanged?.Invoke(_hintsRemaining);
             }
@@ -48,6 +53,11 @@ namespace PixelFlow.Models
             _hintsRemaining += amount;
             _prefs.SetInt(Key, _hintsRemaining);
             OnHintCountChanged?.Invoke(_hintsRemaining);
+        }
+
+        public void ResetSessionHints()
+        {
+            _totalHintsUsed = 0;
         }
     }
 }

@@ -178,10 +178,10 @@ namespace PixelFlow.Views
         }
 
         private Dictionary<ColorType, LineRenderer> _pathLines = new Dictionary<ColorType, LineRenderer>();
+        private HashSet<ColorType> _previousPathColors = new HashSet<ColorType>();
 
         public void UpdateGridVisuals(CellData[,] gridData, int width, int height, AppTheme theme, Dictionary<ColorType, List<Vector2Int>> paths)
         {
-            UnityEngine.Debug.Log($"[GridView] UpdateGridVisuals called.");
             if (_cells == null) return;
             for (int x = 0; x < width; x++)
             {
@@ -193,21 +193,45 @@ namespace PixelFlow.Views
             UpdatePathVisuals(paths);
         }
 
+        /// <summary>
+        /// Sadece belirtilen hücrelerin görselini günceller. Tüm grid'i yeniden çizmez.
+        /// </summary>
+        public void UpdateDifferential(CellData[,] gridData, AppTheme theme, HashSet<Vector2Int> changedCells)
+        {
+            if (_cells == null || changedCells == null) return;
+            foreach (var pos in changedCells)
+            {
+                if (pos.x >= 0 && pos.x < _cells.GetLength(0) && pos.y >= 0 && pos.y < _cells.GetLength(1))
+                {
+                    _cells[pos.x, pos.y].UpdateVisuals(gridData[pos.x, pos.y].Color, gridData[pos.x, pos.y].State, theme);
+                }
+            }
+        }
+
         public void UpdatePathVisuals(Dictionary<ColorType, List<Vector2Int>> paths)
         {
-            foreach (var lr in _pathLines.Values)
-            {
-                lr.gameObject.SetActive(false);
-            }
-
             if (paths == null) return;
+
+            // Önce kaldırılan renkleri bul ve gizle
+            foreach (var prevColor in _previousPathColors)
+            {
+                if (!paths.ContainsKey(prevColor) && _pathLines.TryGetValue(prevColor, out var oldLr))
+                {
+                    oldLr.gameObject.SetActive(false);
+                }
+            }
 
             foreach (var kvp in paths)
             {
                 ColorType colorType = kvp.Key;
                 List<Vector2Int> pathPositions = kvp.Value;
 
-                if (pathPositions == null || pathPositions.Count < 2) continue;
+                if (pathPositions == null || pathPositions.Count < 2)
+                {
+                    if (_pathLines.TryGetValue(colorType, out var inactiveLr))
+                        inactiveLr.gameObject.SetActive(false);
+                    continue;
+                }
 
                 if (!_pathLines.TryGetValue(colorType, out var lineRenderer))
                 {
@@ -241,6 +265,14 @@ namespace PixelFlow.Views
                     Vector2Int gridPos = pathPositions[i];
                     lineRenderer.SetPosition(i, new Vector3(gridPos.x, gridPos.y, -0.1f));
                 }
+            }
+
+            // Güncel path renklerini kaydet
+            _previousPathColors.Clear();
+            foreach (var kvp in paths)
+            {
+                if (kvp.Value != null && kvp.Value.Count >= 2)
+                    _previousPathColors.Add(kvp.Key);
             }
         }
 

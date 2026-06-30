@@ -1,6 +1,7 @@
 using Nexus.Core;
 using PixelFlow.Models;
 using PixelFlow.Signals;
+using PixelFlow.Services;
 
 namespace PixelFlow.Commands
 {
@@ -10,7 +11,10 @@ namespace PixelFlow.Commands
         [Inject] public IGridModel GridModel { get; set; }
         [Inject] public ILevelModel LevelModel { get; set; }
         [Inject] public IGameStateModel GameStateModel { get; set; }
+        [Inject] public IGameSessionModel GameSessionModel { get; set; }
+        [Inject] public IHintModel HintModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
+        [Inject] public IGameHistoryService HistoryService { get; set; }
 
         public void Execute(LoadLevelSignal signal)
         {
@@ -44,8 +48,10 @@ namespace PixelFlow.Commands
                 }
             }
 
-            // Tek kanal: signal. GridModel event'i kaldırıldı, görsel güncelleme için
-            // GridMediator bu sinyali dinler.
+            HistoryService.Clear();
+            GameSessionModel.StartSession();
+            HintModel.ResetSessionHints();
+
             SignalBus.Fire(new GridUpdatedSignal());
             GameStateModel.SetState(GameState.Playing);
         }

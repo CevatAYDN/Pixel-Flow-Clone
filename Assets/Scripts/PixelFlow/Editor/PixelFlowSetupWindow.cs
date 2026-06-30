@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using Nexus.Core;
 using PixelFlow.Views;
 using PixelFlow.Data;
+using PixelFlow.Services;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,6 +38,14 @@ namespace PixelFlow.Editor
         private int _newLevelIndex = 1;
         private int _newWidth = 5;
         private int _newHeight = 5;
+
+        // Procedural Generation Fields
+        private int _procSeed = 0;
+        private bool _procUseSeed = false;
+        private int _procBatchCount = 5;
+        private int _procStartIndex = 1;
+        private string _procDifficultyNames = "Easy|Medium|Hard|Expert|Master";
+        private int _procSelectedDifficulty = 0;
 
         // Level List state
         private List<LevelData> _cachedLevels = new List<LevelData>();
@@ -194,6 +203,39 @@ namespace PixelFlow.Editor
                 CreateCustomLevel(_newLevelIndex, _newWidth, _newHeight);
                 RefreshData();
             }
+            GUILayout.EndVertical();
+
+            GUILayout.Space(10);
+
+            // 2-B. Procedural Level Generation Panel
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label("Procedural Level Generator", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+
+            _procSelectedDifficulty = GUILayout.SelectionGrid(
+                _procSelectedDifficulty,
+                _procDifficultyNames.Split('|'),
+                5, GUILayout.Height(22));
+
+            _procUseSeed = EditorGUILayout.Toggle("Use Fixed Seed", _procUseSeed);
+            if (_procUseSeed)
+                _procSeed = EditorGUILayout.IntField("Seed", _procSeed);
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Generate Single", GUILayout.Height(28)))
+            {
+                GenerateProceduralLevel(_procSelectedDifficulty, _procUseSeed ? _procSeed : (int?)null, _newLevelIndex);
+                RefreshData();
+            }
+            _procStartIndex = EditorGUILayout.IntField("Start Index", _procStartIndex, GUILayout.Width(80));
+            _procBatchCount = EditorGUILayout.IntField("Count", _procBatchCount, GUILayout.Width(60));
+            if (GUILayout.Button("Generate Batch", GUILayout.Height(28)))
+            {
+                GenerateProceduralBatch(_procSelectedDifficulty, _procUseSeed ? _procSeed : (int?)null,
+                    _procStartIndex, _procBatchCount);
+                RefreshData();
+            }
+            GUILayout.EndHorizontal();
             GUILayout.EndVertical();
 
             GUILayout.Space(10);
@@ -818,6 +860,78 @@ namespace PixelFlow.Editor
 
             AssetDatabase.SaveAssets();
             Debug.Log("[PixelFlowSetupWindow] Generated Level 1, Level 2, Level 3, and MainLevelPack.asset successfully.");
+        }
+
+        private void GenerateProceduralLevel(int difficultyIndex, int? seed, int levelIndex)
+        {
+            var param = GetDifficultyParam(difficultyIndex);
+            var solver = new RuntimePathSolver();
+            var generator = seed.HasValue
+                ? new ProceduralLevelGenerator(solver, seed.Value)
+                : new ProceduralLevelGenerator(solver);
+
+            var level = generator.Generate(param);
+            if (level == null)
+            {
+                Debug.LogError($"[PixelFlowSetupWindow] Failed to generate level at difficulty {difficultyIndex}.");
+                return;
+            }
+
+            level.levelIndex = levelIndex;
+
+            string folder = "Assets/Resources/Levels";
+            if (!Directory.Exists(folder))
+                Directory.CreateDirectory(folder);
+
+            string path = AssetDatabase.GenerateUniqueAssetPath($"{folder}/ProcLevel_{levelIndex}.asset");
+            AssetDatabase.CreateAsset(level, path);
+            AssetDatabase.SaveAssets();
+
+            Debug.Log($"[PixelFlowSetupWindow] Generated procedural level {levelIndex} ({param.gridWidth}x{param.gridHeight}, {param.colorCount} colors, {param.bridgeCount} bridges) at {path}");
+            Selection.activeObject = level;
+            EditorGUIUtility.PingObject(level);
+        }
+
+        private void GenerateProceduralBatch(int difficultyIndex, int? seed, int startIndex, int count)
+        {
+            var param = GetDifficultyParam(difficultyIndex);
+            var solver = new RuntimePathSolver();
+            var generator = seed.HasValue
+                ? new ProceduralLevelGenerator(solver, seed.Value)
+                : new ProceduralLevelGenerator(solver);
+
+            string folder = "Assets/Resources/Levels";
+            if (!Directory.Exists(folder))
+                Directory.CreateDirectory(folder);
+
+            int successCount = 0;
+            for (int i = 0; i < count; i++)
+            {
+                int idx = startIndex + i;
+                var level = generator.Generate(param);
+                if (level == null) continue;
+
+                level.levelIndex = idx;
+
+                string path = AssetDatabase.GenerateUniqueAssetPath($"{folder}/ProcLevel_{idx}.asset");
+                AssetDatabase.CreateAsset(level, path);
+                successCount++;
+            }
+
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[PixelFlowSetupWindow] Generated {successCount}/{count} procedural levels (difficulty {difficultyIndex}, start={startIndex}).");
+        }
+
+        private static Services.DifficultyParams GetDifficultyParam(int index)
+        {
+            switch (index)
+            {
+                case 0: return Services.DifficultyParams.Easy;
+                case 1: return Services.DifficultyParams.Medium;
+                case 2: return Services.DifficultyParams.Hard;
+                case 3: return Services.DifficultyParams.Expert;
+                default: return Services.DifficultyParams.Master;
+            }
         }
     }
 }

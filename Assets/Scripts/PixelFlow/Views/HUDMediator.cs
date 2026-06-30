@@ -3,6 +3,7 @@ using PixelFlow.Commands;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Data;
+using PixelFlow.Services;
 using UnityEngine;
 using System;
 
@@ -14,14 +15,12 @@ namespace PixelFlow.Views
         [Inject] public ILevelModel LevelModel { get; set; }
         [Inject] public ISettingsModel SettingsModel { get; set; }
         [Inject] public IGameStateModel GameStateModel { get; set; }
+        [Inject] public IGameSessionModel GameSessionModel { get; set; }
+        [Inject] public IGameHistoryService HistoryService { get; set; }
+        [Inject] public ILevelProgressionService ProgressionService { get; set; }
 
-        // Level pack opsiyonel: inspector'dan atanabilir veya Resources'tan yüklenebilir.
-        // Hiçbiri yoksa "next level" sessizce yok sayılır.
         [SerializeField] private LevelPack _fallbackLevelPack;
 
-        // Closure'lar field olarak saklanır; OnBind'de eklenip OnUnbind'de
-        // aynı instance çıkarılır. Aksi halde her bind'da yeni closure oluşur
-        // ve -= eski referansı bulamaz → event sızıntısı.
         private Action _themeDarkHandler;
         private Action _themeLightHandler;
         private Action _themeNeonHandler;
@@ -34,24 +33,38 @@ namespace PixelFlow.Views
 
             View.OnHintClicked += HandleHintClicked;
             View.OnNextLevelClicked += HandleNextLevelClicked;
+            View.OnUndoClicked += HandleUndoClicked;
+            View.OnRedoClicked += HandleRedoClicked;
             View.OnThemeDarkClicked += _themeDarkHandler;
             View.OnThemeLightClicked += _themeLightHandler;
             View.OnThemeNeonClicked += _themeNeonHandler;
 
             HintModel.OnHintCountChanged += HandleHintCountChanged;
+            GameSessionModel.OnScoreChanged += HandleScoreChanged;
+            GameSessionModel.OnTimeChanged += HandleTimeChanged;
+            GameSessionModel.OnStarsChanged += HandleStarsChanged;
+
             View.HideCompletion();
             View.UpdateHintCount(HintModel.HintsRemaining);
+            View.UpdateScore(GameSessionModel.Score);
+            View.UpdateTimer(GameSessionModel.ElapsedTime);
+            View.UpdateStars(GameSessionModel.StarsEarned);
             View.HighlightActiveTheme(SettingsModel.CurrentTheme);
 
             Subscribe<LevelCompletedSignal>(HandleLevelCompleted);
             Subscribe<LoadLevelSignal>(HandleLoadLevel);
             Subscribe<ThemeChangedSignal>(HandleThemeChanged);
+            Subscribe<GridUpdatedSignal>(HandleGridUpdated);
+
+            RefreshUndoRedoButtons();
         }
 
         protected override void OnUnbind()
         {
             View.OnHintClicked -= HandleHintClicked;
             View.OnNextLevelClicked -= HandleNextLevelClicked;
+            View.OnUndoClicked -= HandleUndoClicked;
+            View.OnRedoClicked -= HandleRedoClicked;
 
             if (_themeDarkHandler != null) View.OnThemeDarkClicked -= _themeDarkHandler;
             if (_themeLightHandler != null) View.OnThemeLightClicked -= _themeLightHandler;
@@ -61,7 +74,9 @@ namespace PixelFlow.Views
             _themeNeonHandler = null;
 
             HintModel.OnHintCountChanged -= HandleHintCountChanged;
-            // Subscribe<T> ile alınanlar Mediator.Unbind'de otomatik dispose edilir.
+            GameSessionModel.OnScoreChanged -= HandleScoreChanged;
+            GameSessionModel.OnTimeChanged -= HandleTimeChanged;
+            GameSessionModel.OnStarsChanged -= HandleStarsChanged;
         }
 
         private void FireTheme(PixelFlow.Models.AppTheme theme)
@@ -85,9 +100,31 @@ namespace PixelFlow.Views
             SignalBus.Fire(new RequestHintSignal());
         }
 
+        private void HandleUndoClicked()
+        {
+            if (GameStateModel.CurrentState != GameState.Playing) return;
+            SignalBus.Fire(new UndoSignal());
+        }
+
+        private void HandleRedoClicked()
+        {
+            if (GameStateModel.CurrentState != GameState.Playing) return;
+            SignalBus.Fire(new RedoSignal());
+        }
+
+        private void HandleGridUpdated(GridUpdatedSignal signal)
+        {
+            RefreshUndoRedoButtons();
+        }
+
+        private void RefreshUndoRedoButtons()
+        {
+            View.SetUndoInteractable(HistoryService.CanUndo);
+            View.SetRedoInteractable(HistoryService.CanRedo);
+        }
+
         private void HandleNextLevelClicked()
         {
-            // Yalnızca oyun tamamlandıktan sonra next level mantıklı.
             if (GameStateModel.CurrentState != GameState.LevelCompleted)
             {
                 Debug.Log($"[HUDMediator] Next level ignored: state={GameStateModel.CurrentState}");
@@ -109,9 +146,21 @@ namespace PixelFlow.Views
             }
 
             int currentIndex = pack.levels.FindIndex(l => l.levelIndex == current.levelIndex);
-            // Bulunamadıysa (-1) ilk level'a dön; son level'daysa başa sar.
-            int nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % pack.levels.Count;
-            SignalBus.Fire(new LoadLevelSignal { LevelToLoad = pack.levels[nextIndex] });
+            int nextLevelIndex = current.levelIndex + 1;
+
+            LevelData nextLevel = null;
+            if (currentIndex >= 0 && currentIndex + 1 < pack.levels.Count)
+            {
+                nextLevel = pack.levels[currentIndex + 1];
+            }
+
+            if (nextLevel == null)
+            {
+                nextLevel = ProgressionService.GetOrGenerateLevel(nextLevelIndex);
+            }
+
+            if (nextLevel != null)
+                SignalBus.Fire(new LoadLevelSignal { LevelToLoad = nextLevel });
         }
 
         private LevelPack ResolveLevelPack()
@@ -125,9 +174,24 @@ namespace PixelFlow.Views
             View.UpdateHintCount(count);
         }
 
+        private void HandleScoreChanged(int score)
+        {
+            View.UpdateScore(score);
+        }
+
+        private void HandleTimeChanged(float time)
+        {
+            View.UpdateTimer(time);
+        }
+
+        private void HandleStarsChanged(int stars)
+        {
+            View.UpdateStars(stars);
+        }
+
         private void HandleLevelCompleted(LevelCompletedSignal signal)
         {
-            View.ShowCompletion();
+            View.ShowCompletion(GameSessionModel.Score, GameSessionModel.StarsEarned);
         }
 
         private void HandleThemeChanged(ThemeChangedSignal signal)

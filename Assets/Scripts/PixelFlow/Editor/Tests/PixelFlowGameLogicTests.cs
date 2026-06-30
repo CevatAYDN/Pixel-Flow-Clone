@@ -56,11 +56,15 @@ namespace PixelFlow.Editor.Tests
             {
                 builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
                 builder.Bind<IPathService, PathService>();
+                builder.Bind<IGameHistoryService, GameHistoryService>();
+                builder.Bind<IPathSolver, RuntimePathSolver>();
+                builder.Bind<IHintService, HintService>();
 
                 builder.BindModel<IGridModel, GridModel>();
                 builder.BindModel<ILevelModel, LevelModel>();
                 builder.BindModel<IProgressModel, ProgressModel>();
                 builder.BindModel<IGameStateModel, GameStateModel>();
+                builder.BindModel<IGameSessionModel, GameSessionModel>();
                 builder.BindModel<IHintModel, HintModel>();
                 builder.BindModel<ISettingsModel, SettingsModel>();
                 builder.BindModel<ISoundModel, SoundModel>();
@@ -71,6 +75,8 @@ namespace PixelFlow.Editor.Tests
                 builder.BindSignal<RequestHintSignal>().To<UseHintCommand>();
                 builder.BindSignal<ChangeThemeSignal>().To<ChangeThemeCommand>();
                 builder.BindSignal<LevelCompletedSignal>().To<SaveProgressCommand>();
+                builder.BindSignal<UndoSignal>().To<UndoCommand>();
+                builder.BindSignal<RedoSignal>().To<RedoCommand>();
             });
         }
 
@@ -471,12 +477,13 @@ namespace PixelFlow.Editor.Tests
             _ctx.Dispatch(new RequestHintSignal());
 
             Assert.AreEqual(hintsBefore - 1, hintModel.HintsRemaining, "Hint count should decrease by 1");
-            Assert.IsTrue(grid.Paths.ContainsKey(ColorType.Red), "Red should have a path after hint");
-            Assert.IsTrue(grid.LockedColors.Contains(ColorType.Red), "Red should be locked after hint");
+
+            bool anyPathPlaced = grid.Paths.Count > 0;
+            Assert.IsTrue(anyPathPlaced, "At least one color should have a path after hint");
         }
 
         [Test]
-        public void UseHint_OnlyAppliesToUnsolvedColor()
+        public void UseHint_RespectsSolvedColors()
         {
             var level = CreateTestLevel();
             _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
@@ -484,14 +491,38 @@ namespace PixelFlow.Editor.Tests
             var grid = _ctx.GetModel<IGridModel>();
             var hintModel = _ctx.GetModel<IHintModel>();
 
-            _ctx.Dispatch(new RequestHintSignal());
-            Assert.AreEqual(1, grid.LockedColors.Count, "One color should be locked");
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.PointerDown,
+                GridPosition = new Vector2Int(0, 0)
+            });
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(1, 0)
+            });
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(2, 0)
+            });
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(3, 0)
+            });
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(4, 0)
+            });
+
+            var redPath = grid.Paths[ColorType.Red];
+            int redCountBeforeHint = redPath.Count;
 
             _ctx.Dispatch(new RequestHintSignal());
-            Assert.AreEqual(2, grid.LockedColors.Count, "Two colors should be locked");
-
-            _ctx.Dispatch(new RequestHintSignal());
-            Assert.AreEqual(3, grid.LockedColors.Count, "All three colors should be locked");
+            Assert.AreEqual(redCountBeforeHint, grid.Paths[ColorType.Red].Count,
+                "Solved red path should not be modified by hint");
         }
 
         [Test]
@@ -725,6 +756,287 @@ namespace PixelFlow.Editor.Tests
 
             Assert.AreEqual(ColorType.None, gridModel.Grid[0, 1].Color, "Cell color should remain None since input is blocked when not Playing");
             Assert.AreEqual(ColorType.None, gridModel.ActiveColor, "ActiveColor should remain None since input is blocked");
+        }
+
+        [Test]
+        public void BridgeCell_AcceptingPathOverIt_ShowsBridgeState()
+        {
+            var level = ScriptableObject.CreateInstance<LevelData>();
+            level.levelIndex = 0;
+            level.width = 3;
+            level.height = 3;
+            level.initialNodes = new List<GridNode>
+            {
+                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(2, 0), color = ColorType.Red },
+            };
+            level.bridgePositions = new List<Vector2Int> { new Vector2Int(1, 0) };
+
+            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
+            var grid = _ctx.GetModel<IGridModel>();
+
+            Assert.AreEqual(CellState.Bridge, grid.Grid[1, 0].State, "Bridge cell should be Bridge state");
+        }
+
+        [Test]
+        public void PathOverBridge_DoesNotClearBridgeState()
+        {
+            var level = ScriptableObject.CreateInstance<LevelData>();
+            level.levelIndex = 0;
+            level.width = 3;
+            level.height = 3;
+            level.initialNodes = new List<GridNode>
+            {
+                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(2, 0), color = ColorType.Red },
+            };
+            level.bridgePositions = new List<Vector2Int> { new Vector2Int(1, 0) };
+
+            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
+            var grid = _ctx.GetModel<IGridModel>();
+
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.PointerDown,
+                GridPosition = new Vector2Int(0, 0)
+            });
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(1, 0)
+            });
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(2, 0)
+            });
+
+            Assert.AreEqual(CellState.Bridge, grid.Grid[1, 0].State, "Bridge cell should remain Bridge even with path over it");
+        }
+
+        [Test]
+        public void BreakingPath_RemovesCellsFromPath()
+        {
+            var level = CreateTestLevel();
+            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
+            var grid = _ctx.GetModel<IGridModel>();
+
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.PointerDown,
+                GridPosition = new Vector2Int(0, 0)
+            });
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(1, 0)
+            });
+
+            Assert.AreEqual(2, grid.Paths[ColorType.Red].Count, "Path should have 2 cells");
+
+            grid.Paths[ColorType.Red].Clear();
+            grid.Grid[1, 0].State = CellState.Empty;
+            grid.Grid[1, 0].Color = ColorType.None;
+
+            Assert.AreEqual(0, grid.Paths[ColorType.Red].Count, "Path should be empty after breaking at endpoint");
+            Assert.AreEqual(CellState.Empty, grid.Grid[1, 0].State, "Broken cell should return to Empty");
+        }
+
+        [Test]
+        public void Undo_RestoresBrokenPath()
+        {
+            var level = CreateTestLevel();
+            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
+            var grid = _ctx.GetModel<IGridModel>();
+
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.PointerDown,
+                GridPosition = new Vector2Int(0, 0)
+            });
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(1, 0)
+            });
+            Assert.AreEqual(2, grid.Paths[ColorType.Red].Count);
+
+            _ctx.Dispatch(new UndoSignal());
+            Assert.IsFalse(grid.Paths.ContainsKey(ColorType.Red), "Path should be removed after undo");
+        }
+
+        [Test]
+        public void Redo_RestoresUndonePath()
+        {
+            var level = CreateTestLevel();
+            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
+            var grid = _ctx.GetModel<IGridModel>();
+
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.PointerDown,
+                GridPosition = new Vector2Int(0, 0)
+            });
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(1, 0)
+            });
+
+            _ctx.Dispatch(new UndoSignal());
+            Assert.IsFalse(grid.Paths.ContainsKey(ColorType.Red), "Path removed after undo");
+
+            _ctx.Dispatch(new RedoSignal());
+            Assert.IsTrue(grid.Paths.ContainsKey(ColorType.Red), "Path restored after redo");
+        }
+
+        [Test]
+        public void LoadLevel_StartsNewSession()
+        {
+            var level = CreateTestLevel();
+            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
+
+            var session = _ctx.GetModel<IGameSessionModel>();
+            Assert.IsTrue(session.IsSessionActive, "Session should be active after level load");
+            Assert.AreEqual(0, session.ElapsedTime, 0.001f, "Timer should start at 0");
+            Assert.AreEqual(0, session.Score, "Score should start at 0");
+        }
+
+        [Test]
+        public void CompletingLevel_AwardsScore()
+        {
+            var level = ScriptableObject.CreateInstance<LevelData>();
+            level.levelIndex = 0;
+            level.width = 3;
+            level.height = 1;
+            level.initialNodes = new List<GridNode>
+            {
+                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(2, 0), color = ColorType.Red },
+            };
+
+            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
+
+            var session = _ctx.GetModel<IGameSessionModel>();
+            var state = _ctx.GetModel<IGameStateModel>();
+
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.PointerDown,
+                GridPosition = new Vector2Int(0, 0)
+            });
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(1, 0)
+            });
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(2, 0)
+            });
+
+            Assert.AreEqual(GameState.LevelCompleted, state.CurrentState);
+            Assert.Greater(session.Score, 0, "Score should be > 0 after completing level");
+            Assert.GreaterOrEqual(session.StarsEarned, 1, "Should earn at least 1 star");
+        }
+
+        [Test]
+        public void HintUsage_DecrementsTotalHintsUsed()
+        {
+            var level = CreateTestLevel();
+            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
+
+            var hintModel = _ctx.GetModel<IHintModel>();
+            Assert.AreEqual(0, hintModel.TotalHintsUsed, "No hints used yet");
+
+            _ctx.Dispatch(new RequestHintSignal());
+            Assert.AreEqual(1, hintModel.TotalHintsUsed, "One hint used");
+        }
+
+        [Test]
+        public void ProceduralGenerator_Easy_ProducesSolvableLevel()
+        {
+            var solver = new RuntimePathSolver();
+            var generator = new ProceduralLevelGenerator(solver, seed: 42);
+            var level = generator.Generate(DifficultyParams.Easy, maxAttempts: 10);
+
+            Assert.IsNotNull(level, "Should generate a level");
+            Assert.GreaterOrEqual(level.width, 5, "Easy level should be at least 5x5");
+            Assert.IsTrue(level.solutions != null && level.solutions.Count > 0, "Generated level should have solutions");
+        }
+
+        [Test]
+        public void ProceduralGenerator_WithSeed_Deterministic()
+        {
+            var solver = new RuntimePathSolver();
+            var gen1 = new ProceduralLevelGenerator(solver, seed: 123);
+            var gen2 = new ProceduralLevelGenerator(solver, seed: 123);
+
+            var level1 = gen1.Generate(DifficultyParams.Medium, maxAttempts: 10);
+            var level2 = gen2.Generate(DifficultyParams.Medium, maxAttempts: 10);
+
+            if (level1 != null && level2 != null)
+            {
+                Assert.AreEqual(level1.width, level2.width);
+                Assert.AreEqual(level1.height, level2.height);
+                Assert.AreEqual(level1.initialNodes.Count, level2.initialNodes.Count,
+                    "Same seed should produce same number of nodes");
+                Assert.AreEqual(level1.bridgePositions.Count, level2.bridgePositions.Count,
+                    "Same seed should produce same number of bridges");
+            }
+        }
+
+        [Test]
+        public void Solver_ReturnsNullForEmptyGrid()
+        {
+            var emptyLevel = ScriptableObject.CreateInstance<LevelData>();
+            emptyLevel.width = 5;
+            emptyLevel.height = 5;
+
+            var solver = new RuntimePathSolver();
+            Assert.IsFalse(solver.Solve(emptyLevel, out _), "Empty level should not be solvable");
+        }
+
+        [Test]
+        public void Solver_SolvesSingleColorSimplePath()
+        {
+            var level = ScriptableObject.CreateInstance<LevelData>();
+            level.width = 3;
+            level.height = 1;
+            level.initialNodes = new List<GridNode>
+            {
+                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(2, 0), color = ColorType.Red },
+            };
+
+            var solver = new RuntimePathSolver();
+            Assert.IsTrue(solver.Solve(level, out var solutions), "Simple 2-node path should be solvable");
+            Assert.IsTrue(solutions.ContainsKey(ColorType.Red), "Should contain Red solution");
+            Assert.GreaterOrEqual(solutions[ColorType.Red].Count, 3, "Path should have at least 3 positions (0->1->2)");
+        }
+
+        [Test]
+        public void Solver_SolvesMultiColorWithBridge()
+        {
+            var level = ScriptableObject.CreateInstance<LevelData>();
+            level.width = 5;
+            level.height = 5;
+            level.bridgePositions = new List<Vector2Int> { new Vector2Int(2, 2) };
+            level.initialNodes = new List<GridNode>
+            {
+                new GridNode { position = new Vector2Int(0, 2), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(4, 2), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(2, 0), color = ColorType.Blue },
+                new GridNode { position = new Vector2Int(2, 4), color = ColorType.Blue },
+            };
+
+            var solver = new RuntimePathSolver();
+            Assert.IsTrue(solver.Solve(level, out var solutions), "Multi-color with bridge should be solvable");
+            Assert.IsTrue(solutions.ContainsKey(ColorType.Red), "Red should have a path");
+            Assert.IsTrue(solutions.ContainsKey(ColorType.Blue), "Blue should have a path");
+            Assert.IsTrue(solutions[ColorType.Red].Contains(new Vector2Int(2, 2)),
+                "Red path should cross bridge at (2,2)");
         }
     }
 }

@@ -16,6 +16,12 @@ namespace PixelFlow.Commands
         [Inject] public ISoundModel SoundModel { get; set; }
         [Inject] public IPathService PathService { get; set; }
         [Inject] public IGameStateModel GameStateModel { get; set; }
+        [Inject] public IGameHistoryService HistoryService { get; set; }
+
+        private void RecordHistory()
+        {
+            HistoryService.Record(GridModel);
+        }
 
         public void Execute(InputInteractionSignal signal)
         {
@@ -24,8 +30,6 @@ namespace PixelFlow.Commands
                 return;
             }
 
-            UnityEngine.Debug.Log($"[ProcessInputCommand] Execute: Type={signal.Type}, Pos={signal.GridPosition}, ActiveColor={GridModel.ActiveColor}");
-
             if (signal.GridPosition.x < 0 || signal.GridPosition.y < 0 || signal.GridPosition.x >= GridModel.Width || signal.GridPosition.y >= GridModel.Height)
                 return;
 
@@ -33,16 +37,12 @@ namespace PixelFlow.Commands
 
             if (signal.Type == InputType.PointerDown)
             {
-                UnityEngine.Debug.Log($"[ProcessInputCommand] PointerDown on ({signal.GridPosition.x}, {signal.GridPosition.y}), Color: {currentCell.Color}, State: {currentCell.State}");
-                
                 if (currentCell.Color != ColorType.None)
                 {
-                    // Skip interaction if color is locked (e.g. by hint)
                     if (GridModel.LockedColors.Contains(currentCell.Color))
-                    {
-                        UnityEngine.Debug.Log($"[ProcessInputCommand] Color {currentCell.Color} is locked by hint, ignoring input");
                         return;
-                    }
+
+                    RecordHistory();
 
                     GridModel.ActiveColor = currentCell.Color;
                     GridModel.LastPosition = signal.GridPosition;
@@ -66,28 +66,21 @@ namespace PixelFlow.Commands
             }
             else if (signal.Type == InputType.Drag)
             {
-                UnityEngine.Debug.Log($"[ProcessInputCommand] Drag received at ({signal.GridPosition.x}, {signal.GridPosition.y}). ActiveColor={GridModel.ActiveColor}, LastPos={GridModel.LastPosition}");
-
                 if (GridModel.ActiveColor == ColorType.None)
-                {
-                    UnityEngine.Debug.Log("[ProcessInputCommand] Drag ignored: ActiveColor is None");
                     return;
-                }
 
                 if (signal.GridPosition.x < 0 || signal.GridPosition.y < 0 || signal.GridPosition.x >= GridModel.Width || signal.GridPosition.y >= GridModel.Height)
                     return;
 
                 int distance = Mathf.Abs(signal.GridPosition.x - GridModel.LastPosition.x) + Mathf.Abs(signal.GridPosition.y - GridModel.LastPosition.y);
                 if (distance != 1)
-                {
-                    UnityEngine.Debug.Log($"[ProcessInputCommand] Drag ignored: distance={distance} != 1");
                     return;
-                }
 
                 var path = GridModel.Paths[GridModel.ActiveColor];
 
                 if (path.Count > 1 && path[path.Count - 2] == signal.GridPosition)
                 {
+                    RecordHistory();
                     var removedPos = path[path.Count - 1];
                     path.RemoveAt(path.Count - 1);
                     var removedCell = GridModel.Grid[removedPos.x, removedPos.y];
@@ -103,6 +96,7 @@ namespace PixelFlow.Commands
 
                 if (currentCell.State == CellState.Empty)
                 {
+                    RecordHistory();
                     currentCell.Color = GridModel.ActiveColor;
                     currentCell.State = CellState.Path;
                     path.Add(signal.GridPosition);
@@ -112,6 +106,7 @@ namespace PixelFlow.Commands
                 }
                 else if (currentCell.State == CellState.Node && currentCell.Color == GridModel.ActiveColor)
                 {
+                    RecordHistory();
                     path.Add(signal.GridPosition);
                     GridModel.LastPosition = signal.GridPosition;
                     GridModel.ActiveColor = ColorType.None;
@@ -120,12 +115,14 @@ namespace PixelFlow.Commands
                 }
                 else if (currentCell.State == CellState.Bridge)
                 {
+                    RecordHistory();
                     path.Add(signal.GridPosition);
                     GridModel.LastPosition = signal.GridPosition;
                     SignalBus.Fire(new GridUpdatedSignal());
                 }
                 else if (currentCell.Color != ColorType.None && currentCell.Color != GridModel.ActiveColor && currentCell.State == CellState.Path)
                 {
+                    RecordHistory();
                     PathService.BreakPath(currentCell.Color, signal.GridPosition);
                     currentCell.Color = GridModel.ActiveColor;
                     currentCell.State = CellState.Path;
@@ -136,8 +133,12 @@ namespace PixelFlow.Commands
             }
             else if (signal.Type == InputType.PointerUp)
             {
-                GridModel.ActiveColor = ColorType.None;
-                GridModel.LastPosition = new Vector2Int(-1, -1);
+                if (GridModel.ActiveColor != ColorType.None)
+                {
+                    RecordHistory();
+                    GridModel.ActiveColor = ColorType.None;
+                    GridModel.LastPosition = new Vector2Int(-1, -1);
+                }
             }
         }
 

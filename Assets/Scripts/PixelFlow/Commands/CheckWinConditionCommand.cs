@@ -2,6 +2,7 @@ using Nexus.Core;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Data;
+using PixelFlow.Services;
 using System.Linq;
 
 namespace PixelFlow.Commands
@@ -12,6 +13,8 @@ namespace PixelFlow.Commands
         [Inject] public IGridModel GridModel { get; set; }
         [Inject] public ILevelModel LevelModel { get; set; }
         [Inject] public IGameStateModel GameStateModel { get; set; }
+        [Inject] public IGameSessionModel GameSessionModel { get; set; }
+        [Inject] public IHintModel HintModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
 
         public void Execute(CheckWinConditionSignal signal)
@@ -85,6 +88,22 @@ namespace PixelFlow.Commands
             }
 
             UnityEngine.Debug.Log("[CheckWinConditionCommand] WIN CONDITION MET! Level Completed!");
+
+            int hintsUsed = HintModel != null
+                ? HintModel.TotalHintsUsed
+                : 0;
+            int totalHints = HintModel != null
+                ? HintModel.HintsRemaining + hintsUsed
+                : 3;
+
+            var (finalScore, stars) = ScoreCalculator.Calculate(
+                GridModel.Width, GridModel.Height,
+                GameSessionModel.ElapsedTime,
+                hintsUsed, totalHints);
+
+            GameSessionModel.AddScore(finalScore);
+            GameSessionModel.SetStars(stars);
+
             GameStateModel.SetState(GameState.LevelCompleted);
             SignalBus.Fire(new LevelCompletedSignal());
         }
