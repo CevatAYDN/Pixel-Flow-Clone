@@ -18,4 +18,4 @@ MonoBehaviour:
   EnableAnalytics: 0
   EnableDebugSignals: 0
   CommandPoolInitialSize: 4
-  ScopeTag: 
+   ScopeTag: PixelFlow
