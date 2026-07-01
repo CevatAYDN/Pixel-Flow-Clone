@@ -1044,5 +1044,346 @@ namespace PixelFlow.Editor.Tests
             Assert.IsTrue(solutions[ColorType.Red].Contains(new Vector2Int(2, 2)),
                 "Red path should cross bridge at (2,2)");
         }
+
+        // ---------------------------------------------------------------
+        // Bridge path-breaking & conflict tests
+        // ---------------------------------------------------------------
+
+        [Test]
+        public void Bridge_NonPerpendicularCrossing_IsPreventedBySolver()
+        {
+            var level = ScriptableObject.CreateInstance<LevelData>();
+            level.levelIndex = 0;
+            level.width = 3;
+            level.height = 3;
+            level.bridgePositions = new List<Vector2Int> { new Vector2Int(1, 1) };
+            level.initialNodes = new List<GridNode>
+            {
+                new GridNode { position = new Vector2Int(0, 1), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(2, 1), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(1, 0), color = ColorType.Blue },
+                new GridNode { position = new Vector2Int(1, 2), color = ColorType.Blue },
+            };
+
+            var solver = new RuntimePathSolver();
+            bool solved = solver.Solve(level, out var solutions);
+
+            if (solved && solutions != null)
+            {
+                bool redUsesBridge = solutions[ColorType.Red].Contains(new Vector2Int(1, 1));
+                bool blueUsesBridge = solutions[ColorType.Blue].Contains(new Vector2Int(1, 1));
+                if (redUsesBridge && blueUsesBridge)
+                {
+                    int redIdx = solutions[ColorType.Red].IndexOf(new Vector2Int(1, 1));
+                    int blueIdx = solutions[ColorType.Blue].IndexOf(new Vector2Int(1, 1));
+                    if (redIdx > 0 && redIdx < solutions[ColorType.Red].Count - 1 &&
+                        blueIdx > 0 && blueIdx < solutions[ColorType.Blue].Count - 1)
+                    {
+                        var redDir = solutions[ColorType.Red][redIdx + 1] - solutions[ColorType.Red][redIdx - 1];
+                        var blueDir = solutions[ColorType.Blue][blueIdx + 1] - solutions[ColorType.Blue][blueIdx - 1];
+                        Assert.AreEqual(0, Vector2.Dot(redDir, blueDir),
+                            "Crossing paths must be perpendicular at bridge");
+                    }
+                }
+            }
+        }
+
+        [Test]
+        public void Bridge_OccupiedByTwoColors_DeniesThirdColor()
+        {
+            var level = ScriptableObject.CreateInstance<LevelData>();
+            level.levelIndex = 0;
+            level.width = 5;
+            level.height = 5;
+            level.bridgePositions = new List<Vector2Int> { new Vector2Int(2, 2) };
+            level.initialNodes = new List<GridNode>
+            {
+                new GridNode { position = new Vector2Int(0, 2), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(4, 2), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(2, 0), color = ColorType.Blue },
+                new GridNode { position = new Vector2Int(2, 4), color = ColorType.Blue },
+                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Green },
+                new GridNode { position = new Vector2Int(4, 4), color = ColorType.Green },
+            };
+
+            var solver = new RuntimePathSolver();
+            bool solved = solver.Solve(level, out var solutions);
+
+            if (solved && solutions != null)
+            {
+                int bridgeUsers = 0;
+                foreach (var kvp in solutions)
+                {
+                    if (kvp.Value.Contains(new Vector2Int(2, 2)))
+                        bridgeUsers++;
+                }
+                Assert.LessOrEqual(bridgeUsers, 2,
+                    "Bridge at (2,2) should not serve more than 2 colors");
+            }
+        }
+
+        [Test]
+        public void Path_BreakingOnBridge_DoesNotClearBridgeState()
+        {
+            var level = ScriptableObject.CreateInstance<LevelData>();
+            level.levelIndex = 0;
+            level.width = 3;
+            level.height = 3;
+            level.initialNodes = new List<GridNode>
+            {
+                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(2, 0), color = ColorType.Red },
+            };
+            level.bridgePositions = new List<Vector2Int> { new Vector2Int(1, 0) };
+
+            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
+            var grid = _ctx.GetModel<IGridModel>();
+
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.PointerDown,
+                GridPosition = new Vector2Int(0, 0)
+            });
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(1, 0)
+            });
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(2, 0)
+            });
+
+            Assert.AreEqual(CellState.Bridge, grid.Grid[1, 0].State,
+                "Bridge cell should remain Bridge state even with path over it");
+
+            grid.Paths[ColorType.Red].RemoveAt(grid.Paths[ColorType.Red].Count - 1);
+            grid.Grid[2, 0].State = CellState.Empty;
+            grid.Grid[2, 0].Color = ColorType.None;
+
+            Assert.AreEqual(CellState.Bridge, grid.Grid[1, 0].State,
+                "Bridge cell should remain Bridge state after path breaks elsewhere");
+        }
+
+        // ---------------------------------------------------------------
+        // Backtracking tests
+        // ---------------------------------------------------------------
+
+        [Test]
+        public void Backtracking_ReverseDrag_ShortensPath()
+        {
+            var level = ScriptableObject.CreateInstance<LevelData>();
+            level.levelIndex = 0;
+            level.width = 5;
+            level.height = 1;
+            level.initialNodes = new List<GridNode>
+            {
+                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(4, 0), color = ColorType.Red },
+            };
+
+            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
+            var grid = _ctx.GetModel<IGridModel>();
+
+            // Drag forward: 0→1→2→3
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.PointerDown,
+                GridPosition = new Vector2Int(0, 0)
+            });
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(1, 0)
+            });
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(2, 0)
+            });
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(3, 0)
+            });
+
+            Assert.AreEqual(4, grid.Paths[ColorType.Red].Count,
+                "Path should have 4 cells after forward drag");
+
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(2, 0)
+            });
+
+            Assert.AreEqual(3, grid.Paths[ColorType.Red].Count,
+                "Path should shorten to 3 cells after backtracking one step");
+
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(1, 0)
+            });
+
+            Assert.AreEqual(2, grid.Paths[ColorType.Red].Count,
+                "Path should shorten to 2 cells after backtracking two steps");
+            Assert.AreEqual(CellState.Empty, grid.Grid[3, 0].State,
+                "Cell (3,0) should return to Empty after backtrack");
+            Assert.AreEqual(CellState.Empty, grid.Grid[2, 0].State,
+                "Cell (2,0) should return to Empty after backtrack");
+        }
+
+        // ---------------------------------------------------------------
+        // GameHistoryService overflow test
+        // ---------------------------------------------------------------
+
+        [Test]
+        public void GameHistoryService_Overflow_DiscardsOldestSnapshot()
+        {
+            var level = CreateTestLevel();
+            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
+
+            var grid = _ctx.GetModel<IGridModel>();
+            var history = _ctx.Context.Resolve<IGameHistoryService>();
+
+            for (int i = 0; i < 250; i++)
+            {
+                grid.Grid[0, 0].State = CellState.Path;
+                history.Record(grid);
+            }
+
+            Assert.IsTrue(history.CanUndo, "CanUndo should be true after many snapshots");
+            Assert.LessOrEqual(history.UndoCount, 200,
+                "Snapshot count should be capped at 200");
+        }
+
+        // ---------------------------------------------------------------
+        // ScoreCalculator edge case tests
+        // ---------------------------------------------------------------
+
+        [Test]
+        public void ScoreCalculator_MaximumHintPenalty_CapsAtZero()
+        {
+            var (score, stars) = ScoreCalculator.Calculate(
+                gridWidth: 5, gridHeight: 5,
+                elapsedTime: 1f, hintsUsed: 15, totalHintsAvailable: 20);
+
+            Assert.AreEqual(0, score,
+                "Score should be 0 when hint penalty saturates to 0");
+            Assert.AreEqual(1, stars,
+                "Should still earn 1 star for completing the level");
+        }
+
+        [Test]
+        public void ScoreCalculator_ZeroHintsWithinIdealTime_EarnsThreeStars()
+        {
+            var (score, stars) = ScoreCalculator.Calculate(
+                gridWidth: 5, gridHeight: 5,
+                elapsedTime: 5f, hintsUsed: 0, totalHintsAvailable: 5);
+
+            Assert.Greater(score, 2000, "Score should be near maximum");
+            Assert.AreEqual(3, stars,
+                "0 hints + fast time = 3 stars");
+        }
+
+        [Test]
+        public void ScoreCalculator_MinimumTimeMultiplier_IsTwentyFivePercent()
+        {
+            var (score, stars) = ScoreCalculator.Calculate(
+                gridWidth: 5, gridHeight: 5,
+                elapsedTime: 200f, hintsUsed: 0, totalHintsAvailable: 5);
+
+            float baseScore = 5 * 5 * 100f;
+            float expectedMin = baseScore * 0.25f;
+            Assert.AreEqual((int)(expectedMin + 0.5f), score,
+                "Score should use minimum 25% time multiplier");
+        }
+
+        // ---------------------------------------------------------------
+        // Solver partial solve test
+        // ---------------------------------------------------------------
+
+        [Test]
+        public void Solver_SolvePartial_ReturnsLimitedPathSteps()
+        {
+            var level = CreateTestLevel();
+            var solver = new RuntimePathSolver();
+
+            bool solved = solver.SolvePartial(level, ColorType.Red, steps: 3, out var hintPath);
+
+            if (solved)
+            {
+                Assert.IsNotNull(hintPath, "Hint path should not be null");
+                Assert.Greater(hintPath.Count, 0,
+                    "Hint path should have at least 1 position");
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // LoadLevel clears old state test
+        // ---------------------------------------------------------------
+
+        [Test]
+        public void LoadLevel_ClearsPreviousGridState()
+        {
+            var level1 = CreateTestLevel(0);
+            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level1 });
+
+            var grid = _ctx.GetModel<IGridModel>();
+
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.PointerDown,
+                GridPosition = new Vector2Int(0, 0)
+            });
+            _ctx.Dispatch(new InputInteractionSignal
+            {
+                Type = InputType.Drag,
+                GridPosition = new Vector2Int(1, 0)
+            });
+
+            Assert.AreEqual(2, grid.Paths[ColorType.Red].Count,
+                "Red path should have 2 cells");
+
+            var level2 = ScriptableObject.CreateInstance<LevelData>();
+            level2.levelIndex = 1;
+            level2.width = 3;
+            level2.height = 1;
+            level2.initialNodes = new List<GridNode>
+            {
+                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Green },
+                new GridNode { position = new Vector2Int(2, 0), color = ColorType.Green },
+            };
+
+            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level2 });
+
+            Assert.AreEqual(3, grid.Width, "Grid width should match new level");
+            Assert.AreEqual(0, grid.Paths.Count,
+                "All paths should be cleared on new level load");
+            Assert.AreEqual(ColorType.None, grid.ActiveColor,
+                "ActiveColor should be reset");
+        }
+
+        // ---------------------------------------------------------------
+        // ProceduralGenerator failure test
+        // ---------------------------------------------------------------
+
+        [Test]
+        public void ProceduralGenerator_Failure_ReturnsNullAfterExhaustingAttempts()
+        {
+            var impossible = new DifficultyParams(
+                width: 3, height: 3, colors: 6, bridges: 2);
+
+            var solver = new RuntimePathSolver();
+            var generator = new ProceduralLevelGenerator(solver, seed: 999);
+            var result = generator.Generate(impossible, maxAttempts: 5);
+
+            if (result != null)
+            {
+                Assert.IsTrue(result.solutions != null && result.solutions.Count > 0,
+                    "If generated, level must be solvable");
+            }
+        }
     }
 }

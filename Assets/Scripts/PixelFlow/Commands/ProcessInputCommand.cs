@@ -136,21 +136,13 @@ namespace PixelFlow.Commands
                     {
                         if (GridModel.Paths.TryGetValue(currentCell.Color, out var otherPath))
                         {
-                            int bridgeIdx = otherPath.IndexOf(signal.GridPosition);
-                            if (bridgeIdx > 0 && bridgeIdx < otherPath.Count - 1)
+                            if (BridgeValidationUtility.IsValidBridgeCrossing(
+                                otherPath, path, signal.GridPosition, entryDir))
                             {
-                                var otherPrev = otherPath[bridgeIdx - 1];
-                                var otherNext = otherPath[bridgeIdx + 1];
-                                bool otherHorizontal = otherPrev.y == otherNext.y;
-                                bool weHorizontal = entryDir.y == 0;
-
-                                if (otherHorizontal != weHorizontal)
-                                {
-                                    RecordHistory();
-                                    path.Add(signal.GridPosition);
-                                    GridModel.LastPosition = signal.GridPosition;
-                                    SignalBus.Fire(new GridUpdatedSignal());
-                                }
+                                RecordHistory();
+                                path.Add(signal.GridPosition);
+                                GridModel.LastPosition = signal.GridPosition;
+                                SignalBus.Fire(new GridUpdatedSignal());
                             }
                         }
                         return;

@@ -242,15 +242,9 @@ namespace PixelFlow.Services
                                 canMove = true;
                             else if (otherUse == 1)
                             {
-                                var otherPath = solutions[otherColor];
-                                int idx = otherPath.IndexOf(next);
-                                if (idx > 0 && idx < otherPath.Count - 1)
-                                {
-                                    var inDir = next - otherPath[idx - 1];
-                                    var outDir = otherPath[idx + 1] - next;
-                                    if (inDir == outDir && Vector2.Dot(dir, inDir) == 0)
-                                        canMove = true;
-                                }
+                                if (BridgeValidationUtility.IsValidBridgeCrossing(
+                                    solutions[otherColor], path, next, dir))
+                                    canMove = true;
                             }
                         }
                     }

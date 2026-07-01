@@ -2,6 +2,7 @@
 using UnityEditor;
 using UnityEngine;
 using PixelFlow.Data;
+using PixelFlow.Services;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -628,7 +629,6 @@ namespace PixelFlow.Editor
         // ================= AUTO SOLVER IMPLEMENTATION =================
         private bool SolveLevel(LevelData level)
         {
-            // Collect node groups
             var colorNodes = new Dictionary<ColorType, List<Vector2Int>>();
             foreach (var node in level.initialNodes)
             {
@@ -638,9 +638,6 @@ namespace PixelFlow.Editor
                 colorNodes[node.color].Add(node.position);
             }
 
-            List<ColorType> colorsToSolve = colorNodes.Keys.ToList();
-
-            // Sanity checks
             foreach (var kvp in colorNodes)
             {
                 if (kvp.Value.Count != 2)
@@ -650,197 +647,37 @@ namespace PixelFlow.Editor
                 }
             }
 
-            int w = level.width;
-            int h = level.height;
-
-            ColorType[,] gridOccupancy = new ColorType[w, h];
-            HashSet<Vector2Int> bridges = new HashSet<Vector2Int>(level.bridgePositions);
-
-            var pathSolutions = new Dictionary<ColorType, List<Vector2Int>>();
-            foreach (var color in colorsToSolve)
-            {
-                pathSolutions[color] = new List<Vector2Int>();
-            }
-
-            // Mark nodes on occupancy grid
-            foreach (var node in level.initialNodes)
-            {
-                gridOccupancy[node.position.x, node.position.y] = node.color;
-            }
-
-            if (SolveRecursive(0, colorsToSolve, colorNodes, pathSolutions, gridOccupancy, bridges, w, h))
-            {
-                // Apply solutions
-                Undo.RecordObject(level, "Auto-Solve Level");
-                level.solutions.Clear();
-                foreach (var kvp in pathSolutions)
-                {
-                    level.solutions.Add(new PathSolution
-                    {
-                        color = kvp.Key,
-                        pathPositions = new List<Vector2Int>(kvp.Value)
-                    });
-                }
-                return true;
-            }
-            return false;
-        }
-
-        private bool SolveRecursive(int colorIndex, List<ColorType> colors, Dictionary<ColorType, List<Vector2Int>> colorNodes, Dictionary<ColorType, List<Vector2Int>> solutions, ColorType[,] grid, HashSet<Vector2Int> bridges, int w, int h)
-        {
-            if (colorIndex >= colors.Count)
-            {
-                if (_requireFullGridCoverage)
-                {
-                    // Check if all cells are filled, except maybe bridge cells that can be double crossed or crossed once
-                    for (int x = 0; x < w; x++)
-                    {
-                        for (int y = 0; y < h; y++)
-                        {
-                            if (grid[x, y] == ColorType.None && !bridges.Contains(new Vector2Int(x, y)))
-                                return false; // Found an empty, uncovered cell
-                        }
-                    }
-                }
-                return true;
-            }
-
-            ColorType color = colors[colorIndex];
-            Vector2Int start = colorNodes[color][0];
-            Vector2Int end = colorNodes[color][1];
-
-            List<Vector2Int> currentPath = new List<Vector2Int> { start };
-            return FindPathRecursive(start, end, color, currentPath, colorIndex, colors, colorNodes, solutions, grid, bridges, w, h);
-        }
-
-        private bool FindPathRecursive(Vector2Int current, Vector2Int end, ColorType color, List<Vector2Int> path, int colorIndex, List<ColorType> colors, Dictionary<ColorType, List<Vector2Int>> colorNodes, Dictionary<ColorType, List<Vector2Int>> solutions, ColorType[,] grid, HashSet<Vector2Int> bridges, int w, int h)
-        {
-            if (current == end)
-            {
-                solutions[color] = new List<Vector2Int>(path);
-                if (SolveRecursive(colorIndex + 1, colors, colorNodes, solutions, grid, bridges, w, h))
-                    return true;
-                
-                solutions[color].Clear();
+            var solver = new RuntimePathSolver();
+            if (!solver.Solve(level, out var solutions))
                 return false;
-            }
 
-            Vector2Int[] dirs = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
-
-            // Sort directions by heuristic distance to end node
-            System.Array.Sort(dirs, (d1, d2) => {
-                int dist1 = Mathf.Abs((current + d1).x - end.x) + Mathf.Abs((current + d1).y - end.y);
-                int dist2 = Mathf.Abs((current + d2).x - end.x) + Mathf.Abs((current + d2).y - end.y);
-                return dist1.CompareTo(dist2);
-            });
-
-            foreach (var dir in dirs)
+            if (_requireFullGridCoverage)
             {
-                Vector2Int next = current + dir;
+                var coverage = new HashSet<Vector2Int>();
+                foreach (var path in solutions.Values)
+                    foreach (var p in path)
+                        coverage.Add(p);
 
-                if (next.x < 0 || next.x >= w || next.y < 0 || next.y >= h)
-                    continue;
-
-                // Path cannot intersect itself
-                if (path.Contains(next))
-                    continue;
-
-                bool isBridge = bridges.Contains(next);
-                bool isValid = false;
-
-                if (next == end)
-                {
-                    isValid = true;
-                }
-                else if (isBridge)
-                {
-                    // Bridge rule: must cross straight (next + dir)
-                    Vector2Int bridgeExit = next + dir;
-                    if (bridgeExit.x >= 0 && bridgeExit.x < w && bridgeExit.y >= 0 && bridgeExit.y < h && !path.Contains(bridgeExit))
+                for (int x = 0; x < level.width; x++)
+                    for (int y = 0; y < level.height; y++)
                     {
-                        // Check occupancy on next + dir
-                        if (grid[bridgeExit.x, bridgeExit.y] == ColorType.None || bridgeExit == end)
-                        {
-                            // Check bridge usage: can cross if it's empty, or crossed perpendicularly by exactly 1 other path
-                            int otherUseCount = 0;
-                            ColorType otherColor = ColorType.None;
-                            for (int i = 0; i < colorIndex; i++)
-                            {
-                                var otherPath = solutions[colors[i]];
-                                if (otherPath.Contains(next))
-                                {
-                                    otherUseCount++;
-                                    otherColor = colors[i];
-                                }
-                            }
-
-                            if (otherUseCount == 0)
-                            {
-                                isValid = true;
-                            }
-                            else if (otherUseCount == 1)
-                            {
-                                // Verify perpendicular crossing direction
-                                var otherPath = solutions[otherColor];
-                                int otherIdx = otherPath.IndexOf(next);
-                                if (otherIdx > 0 && otherIdx < otherPath.Count - 1)
-                                {
-                                    Vector2Int otherIn = next - otherPath[otherIdx - 1];
-                                    Vector2Int otherOut = otherPath[otherIdx + 1] - next;
-                                    if (otherIn == otherOut && Vector2.Dot(dir, otherIn) == 0)
-                                    {
-                                        isValid = true;
-                                    }
-                                }
-                            }
-                        }
+                        var pos = new Vector2Int(x, y);
+                        if (!coverage.Contains(pos) && !level.bridgePositions.Contains(pos))
+                            return false;
                     }
-                }
-                else
-                {
-                    // Regular cell: must be empty
-                    if (grid[next.x, next.y] == ColorType.None)
-                    {
-                        isValid = true;
-                    }
-                }
-
-                if (isValid)
-                {
-                    if (isBridge)
-                    {
-                        Vector2Int bridgeExit = next + dir;
-                        ColorType oldNext = grid[next.x, next.y];
-                        ColorType oldExit = grid[bridgeExit.x, bridgeExit.y];
-
-                        grid[next.x, next.y] = color;
-                        grid[bridgeExit.x, bridgeExit.y] = color;
-                        path.Add(next);
-                        path.Add(bridgeExit);
-
-                        if (FindPathRecursive(bridgeExit, end, color, path, colorIndex, colors, colorNodes, solutions, grid, bridges, w, h))
-                            return true;
-
-                        path.RemoveAt(path.Count - 1);
-                        path.RemoveAt(path.Count - 1);
-                        grid[next.x, next.y] = oldNext;
-                        grid[bridgeExit.x, bridgeExit.y] = oldExit;
-                    }
-                    else
-                    {
-                        grid[next.x, next.y] = color;
-                        path.Add(next);
-
-                        if (FindPathRecursive(next, end, color, path, colorIndex, colors, colorNodes, solutions, grid, bridges, w, h))
-                            return true;
-
-                        path.RemoveAt(path.Count - 1);
-                        grid[next.x, next.y] = ColorType.None;
-                    }
-                }
             }
 
-            return false;
+            Undo.RecordObject(level, "Auto-Solve Level");
+            level.solutions.Clear();
+            foreach (var kvp in solutions)
+            {
+                level.solutions.Add(new PathSolution
+                {
+                    color = kvp.Key,
+                    pathPositions = new List<Vector2Int>(kvp.Value)
+                });
+            }
+            return true;
         }
 
         // ================= LEVEL TEMPLATES =================
