@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Nexus.Core;
 using PixelFlow.Data;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PixelFlow.Services
 {
@@ -22,7 +24,7 @@ namespace PixelFlow.Services
     ///   Expert  (13-18) : 8x8,  6 renk, 3 bridge
     ///   Master  (19+)   : 10x10, 8 renk, 4 bridge
     /// </summary>
-    public sealed class LevelProgressionService : ILevelProgressionService
+    public sealed class LevelProgressionService : ILevelProgressionService, INexusService
     {
         private readonly ProceduralLevelGenerator _generator;
         private readonly Dictionary<int, LevelData> _generatedCache;
@@ -69,7 +71,10 @@ namespace PixelFlow.Services
                 _generatedCache[levelIndex] = level;
             }
 
-            return level;
+                return level;
         }
+
+        public ValueTask InitializeAsync(CancellationToken ct) => default;
+        public void OnDispose() { _generatedCache.Clear(); }
     }
 }

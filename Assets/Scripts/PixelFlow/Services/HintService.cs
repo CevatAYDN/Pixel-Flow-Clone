@@ -3,10 +3,13 @@ using System.Linq;
 using PixelFlow.Data;
 using PixelFlow.Models;
 using UnityEngine;
+using Nexus.Core;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PixelFlow.Services
 {
-    public sealed class HintService : IHintService
+    public sealed class HintService : IHintService, INexusService
     {
         private readonly IPathSolver _solver;
 
@@ -58,7 +61,7 @@ namespace PixelFlow.Services
             return null;
         }
 
-
-      
+        public ValueTask InitializeAsync(CancellationToken ct) => default;
+        public void OnDispose() { }
     }
 }

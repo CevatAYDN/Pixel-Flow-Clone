@@ -1,5 +1,8 @@
 using System;
 using PixelFlow.Services;
+using System.Threading;
+using System.Threading.Tasks;
+using Nexus.Core;
 
 namespace PixelFlow.Models
 {
@@ -16,7 +19,7 @@ namespace PixelFlow.Models
     /// Tema tercihini IPlayerPrefsService üzerinden kalıcı saklar.
     /// Geçersiz kayıtlı değer gelirse varsayılan (Dark) kullanılır.
     /// </summary>
-    public class SettingsModel : ISettingsModel
+    public class SettingsModel : ISettingsModel, IReactiveModel
     {
         private const string Key = "AppTheme";
         private const AppTheme DefaultTheme = AppTheme.Dark;
@@ -45,5 +48,7 @@ namespace PixelFlow.Models
         {
             return value >= (int)AppTheme.Dark && value <= (int)AppTheme.Neon;
         }
+
+        public ValueTask OnBind(CancellationToken ct) => default;
     }
 }

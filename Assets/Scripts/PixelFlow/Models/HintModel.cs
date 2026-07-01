@@ -1,5 +1,8 @@
 using System;
 using PixelFlow.Services;
+using System.Threading;
+using System.Threading.Tasks;
+using Nexus.Core;
 
 namespace PixelFlow.Models
 {
@@ -17,7 +20,7 @@ namespace PixelFlow.Models
     /// İpucu sayısını IPlayerPrefsService üzerinden kalıcı saklar.
     /// Testlerde InMemoryPlayerPrefsService ile değiştirilebilir.
     /// </summary>
-    public class HintModel : IHintModel
+    public class HintModel : IHintModel, IReactiveModel
     {
         private const string Key = "HintCount";
         private const int DefaultHints = 3;
@@ -59,5 +62,7 @@ namespace PixelFlow.Models
         {
             _totalHintsUsed = 0;
         }
+
+        public ValueTask OnBind(CancellationToken ct) => default;
     }
 }

@@ -1,4 +1,7 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Nexus.Core;
 
 namespace PixelFlow.Models
 {
@@ -11,7 +14,7 @@ namespace PixelFlow.Models
         void SetState(GameState state);
     }
 
-    public class GameStateModel : IGameStateModel
+    public class GameStateModel : IGameStateModel, IReactiveModel
     {
         public GameState CurrentState { get; private set; }
         public event Action<GameState> OnStateChanged;
@@ -24,5 +27,7 @@ namespace PixelFlow.Models
                 OnStateChanged?.Invoke(CurrentState);
             }
         }
+
+        public ValueTask OnBind(CancellationToken ct) => default;
     }
 }

@@ -69,6 +69,9 @@ namespace PixelFlow.Editor.Tests
                 builder.BindModel<ISettingsModel, SettingsModel>();
                 builder.BindModel<ISoundModel, SoundModel>();
 
+                // Recovery: komut hatalarında 3 kez dene
+                builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));
+
                 builder.BindSignal<InputInteractionSignal>().To<ProcessInputCommand>();
                 builder.BindSignal<CheckWinConditionSignal>().To<CheckWinConditionCommand>();
                 builder.BindSignal<LoadLevelSignal>().To<LoadLevelCommand>();

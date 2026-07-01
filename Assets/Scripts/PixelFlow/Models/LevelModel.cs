@@ -1,4 +1,7 @@
 using PixelFlow.Data;
+using System.Threading;
+using System.Threading.Tasks;
+using Nexus.Core;
 
 namespace PixelFlow.Models
 {
@@ -8,7 +11,7 @@ namespace PixelFlow.Models
         void SetLevel(LevelData level);
     }
 
-    public class LevelModel : ILevelModel
+    public class LevelModel : ILevelModel, IReactiveModel
     {
         public LevelData CurrentLevel { get; private set; }
 
@@ -16,5 +19,7 @@ namespace PixelFlow.Models
         {
             CurrentLevel = level;
         }
+
+        public ValueTask OnBind(CancellationToken ct) => default;
     }
 }

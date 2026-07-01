@@ -1,6 +1,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 using PixelFlow.Data;
+using System.Threading;
+using System.Threading.Tasks;
+using Nexus.Core;
 
 namespace PixelFlow.Models
 {
@@ -31,7 +34,7 @@ namespace PixelFlow.Models
     /// tek kanaldan (sinyal) geçer, debug/trace tutarlı olur ve state değişikliği
     /// Nerede olursa olsun tek bir yerde gözlemlenebilir.
     /// </summary>
-    public class GridModel : IGridModel
+    public class GridModel : IGridModel, IReactiveModel
     {
         public int Width { get; private set; }
         public int Height { get; private set; }
@@ -61,5 +64,7 @@ namespace PixelFlow.Models
             ActiveColor = ColorType.None;
             LastPosition = new Vector2Int(-1, -1);
         }
+
+        public ValueTask OnBind(CancellationToken ct) => default;
     }
 }

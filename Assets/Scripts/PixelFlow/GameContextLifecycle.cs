@@ -15,20 +15,23 @@ namespace PixelFlow
             // PlayerPrefs servisini singleton olarak bağla; kalıcı state kullanan tüm
             // modeller bunu constructor injection ile alır (test edilebilir).
             builder.Bind<IPlayerPrefsService, UnityPlayerPrefsService>();
-            builder.Bind<IPathService, PathService>();
-            builder.Bind<IGameHistoryService, GameHistoryService>();
+            builder.BindService<IPathService, PathService>();
+            builder.BindService<IGameHistoryService, GameHistoryService>();
             builder.Bind<IPathSolver, RuntimePathSolver>();
             builder.Bind<IHintService, HintService>();
             builder.Bind<ILevelProgressionService, LevelProgressionService>();
 
-            builder.BindModel<IGridModel, GridModel>();
-            builder.BindModel<ILevelModel, LevelModel>();
-            builder.BindModel<IProgressModel, ProgressModel>();
-            builder.BindModel<IGameStateModel, GameStateModel>();
-            builder.BindModel<IGameSessionModel, GameSessionModel>();
-            builder.BindModel<IHintModel, HintModel>();
-            builder.BindModel<ISettingsModel, SettingsModel>();
-            builder.BindModel<ISoundModel, SoundModel>();
+            // Default recovery: 3 retry → skip on failure
+            builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));
+
+            builder.BindReactiveModel<IGridModel, GridModel>();
+            builder.BindReactiveModel<ILevelModel, LevelModel>();
+            builder.BindReactiveModel<IProgressModel, ProgressModel>();
+            builder.BindReactiveModel<IGameStateModel, GameStateModel>();
+            builder.BindReactiveModel<IGameSessionModel, GameSessionModel>();
+            builder.BindReactiveModel<IHintModel, HintModel>();
+            builder.BindReactiveModel<ISettingsModel, SettingsModel>();
+            builder.BindReactiveModel<ISoundModel, SoundModel>();
 
             builder.BindSignal<PixelFlow.Signals.InputInteractionSignal>().To<PixelFlow.Commands.ProcessInputCommand>();
             builder.BindSignal<PixelFlow.Signals.CheckWinConditionSignal>().To<PixelFlow.Commands.CheckWinConditionCommand>();

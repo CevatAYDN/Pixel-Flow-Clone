@@ -1,4 +1,7 @@
 using PixelFlow.Services;
+using System.Threading;
+using System.Threading.Tasks;
+using Nexus.Core;
 
 namespace PixelFlow.Models
 {
@@ -12,7 +15,7 @@ namespace PixelFlow.Models
     /// Açılan level'ları IPlayerPrefsService üzerinden kalıcı saklar.
     /// Constructor injection ile prefs servisi alır; testlerde fake ile değiştirilebilir.
     /// </summary>
-    public class ProgressModel : IProgressModel
+    public class ProgressModel : IProgressModel, IReactiveModel
     {
         private const string Key = "UnlockedLevels";
         private const int DefaultUnlocked = 1;
@@ -38,5 +41,7 @@ namespace PixelFlow.Models
                 _prefs.SetInt(Key, UnlockedLevels);
             }
         }
+
+        public ValueTask OnBind(CancellationToken ct) => default;
     }
 }

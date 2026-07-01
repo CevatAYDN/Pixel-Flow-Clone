@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Nexus.Core;
 using PixelFlow.Models;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PixelFlow.Services
 {
@@ -8,7 +10,7 @@ namespace PixelFlow.Services
     /// Undo/Redo yığınları. MaxDepth aşılınca en eski snapshot atılır.
     /// Test edilebilirlik için interface üzerinden bağlanır.
     /// </summary>
-    public sealed class GameHistoryService : IGameHistoryService
+    public sealed class GameHistoryService : IGameHistoryService, INexusService
     {
         private const int DefaultMaxDepth = 200;
 
@@ -81,5 +83,8 @@ namespace PixelFlow.Services
             _undoStack.Clear();
             _redoStack.Clear();
         }
+
+        public ValueTask InitializeAsync(CancellationToken ct) => default;
+        public void OnDispose() { Clear(); }
     }
 }

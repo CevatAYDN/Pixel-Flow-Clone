@@ -1,5 +1,8 @@
 using System;
 using PixelFlow.Services;
+using System.Threading;
+using System.Threading.Tasks;
+using Nexus.Core;
 
 namespace PixelFlow.Models
 {
@@ -17,7 +20,7 @@ namespace PixelFlow.Models
     /// Ses tercihlerini IPlayerPrefsService üzerinden kalıcı saklar.
     /// PlayDrawSound çağrısı mute durumunda event fırlatmaz.
     /// </summary>
-    public class SoundModel : ISoundModel
+    public class SoundModel : ISoundModel, IReactiveModel
     {
         private const string MuteKey = "IsMuted";
 
@@ -45,5 +48,7 @@ namespace PixelFlow.Models
             if (IsMuted) return;
             OnPlayDrawSound?.Invoke(currentPathLength);
         }
+
+        public ValueTask OnBind(CancellationToken ct) => default;
     }
 }

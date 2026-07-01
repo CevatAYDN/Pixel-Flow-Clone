@@ -1,5 +1,8 @@
 using System;
 using PixelFlow.Services;
+using System.Threading;
+using System.Threading.Tasks;
+using Nexus.Core;
 
 namespace PixelFlow.Models
 {
@@ -21,7 +24,7 @@ namespace PixelFlow.Models
         void ResetSession();
     }
 
-    public class GameSessionModel : IGameSessionModel
+    public class GameSessionModel : IGameSessionModel, IReactiveModel
     {
         public int Score { get; private set; }
         public float ElapsedTime { get; private set; }
@@ -68,5 +71,7 @@ namespace PixelFlow.Models
             StarsEarned = 0;
             IsSessionActive = false;
         }
+
+        public ValueTask OnBind(CancellationToken ct) => default;
     }
 }

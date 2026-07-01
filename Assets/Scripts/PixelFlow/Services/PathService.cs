@@ -2,10 +2,12 @@ using UnityEngine;
 using PixelFlow.Models;
 using PixelFlow.Data;
 using Nexus.Core;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PixelFlow.Services
 {
-    public class PathService : IPathService
+    public class PathService : IPathService, INexusService
     {
         [Inject] public IGridModel GridModel { get; set; }
 
@@ -49,5 +51,8 @@ namespace PixelFlow.Services
         {
             BacktrackPath(color, breakPos);
         }
+
+        public ValueTask InitializeAsync(CancellationToken ct) => default;
+        public void OnDispose() { }
     }
 }
