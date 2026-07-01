@@ -94,7 +94,7 @@ namespace PixelFlow.Views
         {
             if (GameStateModel.CurrentState != GameState.Playing)
             {
-                Debug.Log("[HUDMediator] Hint ignored: oyun Playing durumunda değil.");
+                Debug.Log("[HUDMediator] Hint ignored: game is not in Playing state.");
                 return;
             }
             SignalBus.Fire(new RequestHintSignal());

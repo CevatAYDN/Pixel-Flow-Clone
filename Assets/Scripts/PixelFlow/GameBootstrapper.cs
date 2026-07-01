@@ -76,7 +76,7 @@ namespace PixelFlow
             var any = Resources.LoadAll<LevelData>("Levels");
             if (any != null && any.Length > 0)
             {
-                Debug.LogWarning($"[PixelFlow] Levels/Level1 bulunamadı; ilk bulunan LevelData kullanılıyor: {any[0].name}");
+                Debug.LogWarning($"[PixelFlow] Levels/Level1 not found; using first available LevelData: {any[0].name}");
                 return any[0];
             }
 

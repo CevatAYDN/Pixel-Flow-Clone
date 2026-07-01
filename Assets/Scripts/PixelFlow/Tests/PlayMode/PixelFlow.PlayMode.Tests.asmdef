@@ -4,9 +4,7 @@
     "references": [
         "PixelFlow",
         "com.nexus.core",
-        "UnityEngine.TestRunner",
-        "Unity.InputSystem",
-        "Unity.InputSystem.TestFramework"
+        "UnityEngine.TestRunner"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
