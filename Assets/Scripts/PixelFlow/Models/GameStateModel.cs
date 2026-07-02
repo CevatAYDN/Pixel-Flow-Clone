@@ -5,11 +5,12 @@ using Nexus.Core;
 
 namespace PixelFlow.Models
 {
-    public enum GameState { MainMenu, Playing, Paused, LevelCompleted }
+    public enum GameState { MainMenu, Playing, Simulating, Paused, LevelCompleted }
 
     public interface IGameStateModel
     {
         GameState CurrentState { get; }
+        GameState PreviousState { get; }
         event Action<GameState> OnStateChanged;
         void SetState(GameState state);
     }
@@ -17,12 +18,14 @@ namespace PixelFlow.Models
     public class GameStateModel : IGameStateModel, IReactiveModel
     {
         public GameState CurrentState { get; private set; }
+        public GameState PreviousState { get; private set; }
         public event Action<GameState> OnStateChanged;
 
         public void SetState(GameState state)
         {
             if (CurrentState != state)
             {
+                PreviousState = CurrentState;
                 CurrentState = state;
                 OnStateChanged?.Invoke(CurrentState);
             }

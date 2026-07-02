@@ -104,8 +104,8 @@ namespace PixelFlow.Commands
             GameSessionModel.AddScore(finalScore);
             GameSessionModel.SetStars(stars);
 
-            GameStateModel.SetState(GameState.LevelCompleted);
-            SignalBus.Fire(new LevelCompletedSignal());
+            UnityEngine.Debug.Log("[CheckWinConditionCommand] Paths completed! Transitioning to Simulation Phase...");
+            GameStateModel.SetState(GameState.Simulating);
         }
 
         public void Reset()

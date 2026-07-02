@@ -17,6 +17,8 @@ namespace PixelFlow
             builder.Bind<IPlayerPrefsService, UnityPlayerPrefsService>();
             builder.BindService<IPathService, PathService>();
             builder.BindService<IGameHistoryService, GameHistoryService>();
+            builder.BindService<IVehicleSimulator, VehicleSimulator>();
+            builder.BindService<ITaxCollectionService, TaxCollectionService>();
             builder.Bind<IPathSolver, RuntimePathSolver>();
             builder.Bind<IHintService, HintService>();
             builder.Bind<ILevelProgressionService, LevelProgressionService>();
@@ -32,6 +34,7 @@ namespace PixelFlow
             builder.BindReactiveModel<IHintModel, HintModel>();
             builder.BindReactiveModel<ISettingsModel, SettingsModel>();
             builder.BindReactiveModel<ISoundModel, SoundModel>();
+            builder.BindReactiveModel<ICityEconomyModel, CityEconomyModel>();
 
             builder.BindSignal<PixelFlow.Signals.InputInteractionSignal>().To<PixelFlow.Commands.ProcessInputCommand>();
             builder.BindSignal<PixelFlow.Signals.CheckWinConditionSignal>().To<PixelFlow.Commands.CheckWinConditionCommand>();
@@ -42,6 +45,8 @@ namespace PixelFlow
             builder.BindSignal<PixelFlow.Signals.UndoSignal>().To<PixelFlow.Commands.UndoCommand>();
             builder.BindSignal<PixelFlow.Signals.RedoSignal>().To<PixelFlow.Commands.RedoCommand>();
             builder.BindSignal<PixelFlow.Signals.TimerTickSignal>().To<PixelFlow.Commands.TimerCommand>();
+            builder.BindSignal<PixelFlow.Signals.PlaceViaductSignal>().To<PixelFlow.Commands.PlaceViaductCommand>();
+            builder.BindSignal<PixelFlow.Signals.UpgradeSignal>().To<PixelFlow.Commands.UpgradeCommand>();
         }
 
         public ValueTask OnInitializeAsync(CancellationToken ct) => default;

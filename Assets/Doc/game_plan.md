@@ -119,7 +119,7 @@ Geçiş: Seamless Zoom-in — Kamera 2D'den 3D'ye sinematik bir Lerp animasyonu 
 2.3 Çizim ve Akış (Path Drawing)
 Oyuncu parmağıyla aynı renkteki kaynak ve hedef düğümü birleştirir. Çizim mantığı şu şekilde işler:
 Dokunma: Oyuncu bir kaynak düğüme (ev) parmağını koyar.
-Sürükleme: Parmağını sürükledikçe hat grid hücreleri üzerinden pürüzsüz bir neon yol olarak oluşur. Hat, grid hücrelerinin kenarlarından geçer (orthogonal + diagonal movement serbest).
+Sürükleme: Parmağını sürükledikçe hat grid hücreleri üzerinden pürüzsüz bir neon yol olarak oluşur. Hat, grid hücrelerinin kenarlarından geçer (yalnızca orthogonal movement — yukarı/aşağı/sağ/sol). Çapraz hareket desteklenmez.
 Bağlantı: Hat, aynı renk hedef düğüme ulaştığında bağlantı tamamlanır.
 Anında Simülasyon: Bağlantı kurulduğu anda minik vektörel araçlar hat üzerinde akmaya başlar. Araçlar *Hayalet Modu*nda — yarı şeffaf, parlama efektli — çalışır.
 Onay: Oyuncu tüm bağlantıları kurup *Başlat* butonuna bastığında (veya otomatik olarak tüm düğümler eşleştiğinde), hayalet modu kalkar ve araçlar gerçek simülasyona geçer.

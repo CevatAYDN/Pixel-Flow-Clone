@@ -10,6 +10,7 @@ namespace PixelFlow.Services
     public class PathService : IPathService, INexusService
     {
         [Inject] public IGridModel GridModel { get; set; }
+        [Inject] public IGameSessionModel GameSessionModel { get; set; }
 
         public void ClearPath(ColorType color)
         {
@@ -18,10 +19,38 @@ namespace PixelFlow.Services
             foreach (var pos in path)
             {
                 var cell = GridModel.Grid[pos.x, pos.y];
-                if (cell.State == CellState.Path)
+                
+                if (cell.PathColors.Contains(color))
                 {
-                    cell.State = CellState.Empty;
-                    cell.Color = ColorType.None;
+                    cell.PathColors.Remove(color);
+                }
+
+                if (cell.HasViaduct)
+                {
+                    cell.HasViaduct = false;
+                    cell.UnderColor = ColorType.None;
+                    cell.OverColor = ColorType.None;
+                    if (cell.State == CellState.Bridge)
+                    {
+                        cell.State = cell.PathColors.Count > 0 ? CellState.Path : CellState.Empty;
+                    }
+                    GameSessionModel.RefundViaduct();
+                }
+
+                if (cell.PathColors.Count == 0)
+                {
+                    if (cell.State == CellState.Path || cell.State == CellState.Bridge)
+                    {
+                        cell.State = CellState.Empty;
+                        cell.Color = ColorType.None;
+                    }
+                }
+                else
+                {
+                    if (cell.Color == color && cell.State != CellState.Node)
+                    {
+                        cell.Color = cell.PathColors[0];
+                    }
                 }
             }
             path.Clear();
@@ -38,10 +67,38 @@ namespace PixelFlow.Services
             {
                 var pos = path[i];
                 var cell = GridModel.Grid[pos.x, pos.y];
-                if (cell.State == CellState.Path)
+                
+                if (cell.PathColors.Contains(color))
                 {
-                    cell.State = CellState.Empty;
-                    cell.Color = ColorType.None;
+                    cell.PathColors.Remove(color);
+                }
+
+                if (cell.HasViaduct)
+                {
+                    cell.HasViaduct = false;
+                    cell.UnderColor = ColorType.None;
+                    cell.OverColor = ColorType.None;
+                    if (cell.State == CellState.Bridge)
+                    {
+                        cell.State = cell.PathColors.Count > 0 ? CellState.Path : CellState.Empty;
+                    }
+                    GameSessionModel.RefundViaduct();
+                }
+
+                if (cell.PathColors.Count == 0)
+                {
+                    if (cell.State == CellState.Path || cell.State == CellState.Bridge)
+                    {
+                        cell.State = CellState.Empty;
+                        cell.Color = ColorType.None;
+                    }
+                }
+                else
+                {
+                    if (cell.Color == color && cell.State != CellState.Node)
+                    {
+                        cell.Color = cell.PathColors[0];
+                    }
                 }
                 path.RemoveAt(i);
             }

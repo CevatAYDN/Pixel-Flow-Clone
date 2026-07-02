@@ -24,6 +24,7 @@ namespace PixelFlow.Views
         private Action _themeDarkHandler;
         private Action _themeLightHandler;
         private Action _themeNeonHandler;
+        private Vector2Int _lastCrashPosition;
 
         protected override void OnBind()
         {
@@ -38,6 +39,9 @@ namespace PixelFlow.Views
             View.OnThemeDarkClicked += _themeDarkHandler;
             View.OnThemeLightClicked += _themeLightHandler;
             View.OnThemeNeonClicked += _themeNeonHandler;
+            View.OnSimulateDebugPressed += HandleSimulateDebugPressed;
+            View.OnCrisisViaductClicked += HandleCrisisViaductClicked;
+            View.OnCrisisUndoClicked += HandleCrisisUndoClicked;
 
             HintModel.OnHintCountChanged += HandleHintCountChanged;
             GameSessionModel.OnScoreChanged += HandleScoreChanged;
@@ -55,6 +59,10 @@ namespace PixelFlow.Views
             Subscribe<LoadLevelSignal>(HandleLoadLevel);
             Subscribe<ThemeChangedSignal>(HandleThemeChanged);
             Subscribe<GridUpdatedSignal>(HandleGridUpdated);
+            Subscribe<CrashDetectedSignal>(HandleCrashDetected);
+
+            GameStateModel.OnStateChanged += HandleStateChanged;
+            UpdateVisibility();
 
             RefreshUndoRedoButtons();
         }
@@ -65,6 +73,9 @@ namespace PixelFlow.Views
             View.OnNextLevelClicked -= HandleNextLevelClicked;
             View.OnUndoClicked -= HandleUndoClicked;
             View.OnRedoClicked -= HandleRedoClicked;
+            View.OnSimulateDebugPressed -= HandleSimulateDebugPressed;
+            View.OnCrisisViaductClicked -= HandleCrisisViaductClicked;
+            View.OnCrisisUndoClicked -= HandleCrisisUndoClicked;
 
             if (_themeDarkHandler != null) View.OnThemeDarkClicked -= _themeDarkHandler;
             if (_themeLightHandler != null) View.OnThemeLightClicked -= _themeLightHandler;
@@ -77,6 +88,7 @@ namespace PixelFlow.Views
             GameSessionModel.OnScoreChanged -= HandleScoreChanged;
             GameSessionModel.OnTimeChanged -= HandleTimeChanged;
             GameSessionModel.OnStarsChanged -= HandleStarsChanged;
+            GameStateModel.OnStateChanged -= HandleStateChanged;
         }
 
         private void FireTheme(PixelFlow.Models.AppTheme theme)
@@ -88,6 +100,7 @@ namespace PixelFlow.Views
         private void HandleLoadLevel(LoadLevelSignal signal)
         {
             View.HideCompletion();
+            View.HideCrisis();
         }
 
         private void HandleHintClicked()
@@ -102,40 +115,78 @@ namespace PixelFlow.Views
 
         private void HandleUndoClicked()
         {
-            if (GameStateModel.CurrentState != GameState.Playing) return;
+            var state = GameStateModel.CurrentState;
+            if (state != GameState.Playing && state != GameState.Paused) return;
             SignalBus.Fire(new UndoSignal());
         }
 
         private void HandleRedoClicked()
         {
-            if (GameStateModel.CurrentState != GameState.Playing) return;
+            var state = GameStateModel.CurrentState;
+            if (state != GameState.Playing && state != GameState.Paused) return;
             SignalBus.Fire(new RedoSignal());
         }
 
         private void HandleGridUpdated(GridUpdatedSignal signal)
         {
             RefreshUndoRedoButtons();
+            var state = GameStateModel.CurrentState;
+            if (state == GameState.Playing || state == GameState.Simulating)
+            {
+                View.HideCrisis();
+            }
+        }
+
+        private void HandleCrashDetected(CrashDetectedSignal signal)
+        {
+            _lastCrashPosition = signal.Position;
+            View.ShowCrisis(GameSessionModel.AvailableViaducts);
+        }
+
+        private void HandleCrisisViaductClicked()
+        {
+            Debug.Log($"[HUDMediator] Crisis Viaduct Clicked. Placing viaduct at {_lastCrashPosition}");
+            SignalBus.Fire(new PlaceViaductSignal { Position = _lastCrashPosition });
+        }
+
+        private void HandleCrisisUndoClicked()
+        {
+            Debug.Log("[HUDMediator] Crisis Undo Clicked. Reverting path.");
+            SignalBus.Fire(new UndoSignal());
         }
 
         private void RefreshUndoRedoButtons()
         {
-            View.SetUndoInteractable(HistoryService.CanUndo);
-            View.SetRedoInteractable(HistoryService.CanRedo);
+            if (View == null) return;
+            if (HistoryService != null)
+            {
+                View.SetUndoInteractable(HistoryService.CanUndo);
+                View.SetRedoInteractable(HistoryService.CanRedo);
+            }
+            else
+            {
+                View.SetUndoInteractable(false);
+                View.SetRedoInteractable(false);
+            }
         }
 
         private void HandleNextLevelClicked()
         {
+            Debug.Log($"[HUDMediator] HandleNextLevelClicked() called. Current State: {GameStateModel.CurrentState}");
             if (GameStateModel.CurrentState != GameState.LevelCompleted)
             {
-                Debug.Log($"[HUDMediator] Next level ignored: state={GameStateModel.CurrentState}");
+                Debug.LogWarning($"[HUDMediator] Next level ignored: state={GameStateModel.CurrentState}");
                 return;
             }
 
             var pack = ResolveLevelPack();
-            if (pack == null || pack.levels == null || pack.levels.Count == 0)
+            if (pack == null)
             {
-                Debug.LogWarning("[HUDMediator] No level pack available; cannot load next level.");
-                return;
+                Debug.LogWarning("[HUDMediator] ResolveLevelPack returned null.");
+            }
+            else
+            {
+                Debug.Log($"[HUDMediator] LevelPack found. Total levels: {pack.levels?.Count ?? 0}");
             }
 
             var current = LevelModel.CurrentLevel;
@@ -145,22 +196,35 @@ namespace PixelFlow.Views
                 return;
             }
 
-            int currentIndex = pack.levels.FindIndex(l => l.levelIndex == current.levelIndex);
+            int currentIndex = pack != null && pack.levels != null ? pack.levels.FindIndex(l => l != null && l.levelIndex == current.levelIndex) : -1;
             int nextLevelIndex = current.levelIndex + 1;
+            Debug.Log($"[HUDMediator] Current Level Index: {current.levelIndex}, Position in Pack: {currentIndex}, Next Target Index: {nextLevelIndex}");
 
             LevelData nextLevel = null;
-            if (currentIndex >= 0 && currentIndex + 1 < pack.levels.Count)
+            if (pack != null && pack.levels != null && currentIndex >= 0 && currentIndex + 1 < pack.levels.Count)
             {
                 nextLevel = pack.levels[currentIndex + 1];
+                if (nextLevel != null)
+                {
+                    Debug.Log($"[HUDMediator] Found next level in LevelPack: {nextLevel.name}");
+                }
             }
 
             if (nextLevel == null)
             {
+                Debug.Log($"[HUDMediator] Next level not in pack. Generating procedurally for index {nextLevelIndex}...");
                 nextLevel = ProgressionService.GetOrGenerateLevel(nextLevelIndex);
             }
 
             if (nextLevel != null)
+            {
+                Debug.Log($"[HUDMediator] Firing LoadLevelSignal for level index: {nextLevel.levelIndex} ({nextLevel.name})");
                 SignalBus.Fire(new LoadLevelSignal { LevelToLoad = nextLevel });
+            }
+            else
+            {
+                Debug.LogError("[HUDMediator] Failed to load or generate next level! nextLevel is null.");
+            }
         }
 
         private LevelPack ResolveLevelPack()
@@ -189,14 +253,70 @@ namespace PixelFlow.Views
             View.UpdateStars(stars);
         }
 
-        private void HandleLevelCompleted(LevelCompletedSignal signal)
+        private async void HandleLevelCompleted(LevelCompletedSignal signal)
         {
             View.ShowCompletion(GameSessionModel.Score, GameSessionModel.StarsEarned);
+
+            try
+            {
+                // 3 saniye bekle ve sonraki seviyeye otomatik geç
+                await System.Threading.Tasks.Task.Delay(3000);
+                HandleNextLevelClicked();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[HUDMediator] Auto progression failed: {ex.Message}");
+            }
         }
 
         private void HandleThemeChanged(ThemeChangedSignal signal)
         {
             View.HighlightActiveTheme(SettingsModel.CurrentTheme);
+        }
+
+        private void HandleStateChanged(GameState state)
+        {
+            UpdateVisibility();
+        }
+
+        private void UpdateVisibility()
+        {
+            var state = GameStateModel.CurrentState;
+            bool isGameplay = state == GameState.Playing || state == GameState.Simulating || state == GameState.Paused || state == GameState.LevelCompleted;
+            
+            // Do not disable the GameObject itself, as that unregisters the View and destroys the Mediator binding.
+            // Instead, disable/enable the Canvas component, or control CanvasGroup alpha/interactivity.
+            var canvas = View.GetComponent<Canvas>();
+            if (canvas != null)
+            {
+                canvas.enabled = isGameplay;
+            }
+            else
+            {
+                var canvasGroup = View.GetComponent<CanvasGroup>();
+                if (canvasGroup == null)
+                {
+                    canvasGroup = View.gameObject.AddComponent<CanvasGroup>();
+                }
+                canvasGroup.alpha = isGameplay ? 1f : 0f;
+                canvasGroup.blocksRaycasts = isGameplay;
+                canvasGroup.interactable = isGameplay;
+            }
+        }
+
+        private void HandleSimulateDebugPressed()
+        {
+            var state = GameStateModel.CurrentState;
+            if (state == GameState.Playing)
+            {
+                Debug.Log("[HUDMediator] Debug: Manually starting simulation phase (Simulating).");
+                GameStateModel.SetState(GameState.Simulating);
+            }
+            else if (state == GameState.Simulating)
+            {
+                Debug.Log("[HUDMediator] Debug: Manually stopping simulation phase (Playing).");
+                GameStateModel.SetState(GameState.Playing);
+            }
         }
     }
 }

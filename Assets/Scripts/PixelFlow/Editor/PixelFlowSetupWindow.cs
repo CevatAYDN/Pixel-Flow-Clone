@@ -372,6 +372,7 @@ namespace PixelFlow.Editor
             asset.levelIndex = index;
             asset.width = w;
             asset.height = h;
+            asset.viaductLimit = 3;
 
             string path = AssetDatabase.GenerateUniqueAssetPath($"{folder}/Level{index}.asset");
             AssetDatabase.CreateAsset(asset, path);
@@ -878,6 +879,7 @@ namespace PixelFlow.Editor
             }
 
             level.levelIndex = levelIndex;
+            level.viaductLimit = param.bridgeCount;
 
             string folder = "Assets/Resources/Levels";
             if (!Directory.Exists(folder))
@@ -912,6 +914,7 @@ namespace PixelFlow.Editor
                 if (level == null) continue;
 
                 level.levelIndex = idx;
+                level.viaductLimit = param.bridgeCount;
 
                 string path = AssetDatabase.GenerateUniqueAssetPath($"{folder}/ProcLevel_{idx}.asset");
                 AssetDatabase.CreateAsset(level, path);

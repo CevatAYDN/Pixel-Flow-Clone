@@ -18,11 +18,16 @@ namespace PixelFlow.Commands
 
         public void Execute(UndoSignal signal)
         {
-            if (GameStateModel.CurrentState != GameState.Playing)
+            var state = GameStateModel.CurrentState;
+            if (state != GameState.Playing && state != GameState.Paused)
                 return;
 
             if (HistoryService.Undo(GridModel))
             {
+                if (state == GameState.Paused)
+                {
+                    GameStateModel.SetState(GameState.Playing);
+                }
                 SignalBus.Fire(new GridUpdatedSignal());
             }
         }

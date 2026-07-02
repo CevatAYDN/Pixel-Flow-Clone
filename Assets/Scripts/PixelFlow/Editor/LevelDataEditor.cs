@@ -57,12 +57,14 @@ namespace PixelFlow.Editor
             int newLevelIndex = EditorGUILayout.IntField("Level Index", _data.levelIndex);
             int newWidth = EditorGUILayout.IntSlider("Width", _data.width, 3, 10);
             int newHeight = EditorGUILayout.IntSlider("Height", _data.height, 3, 10);
+            int newViaductLimit = EditorGUILayout.IntSlider("Viaduct Limit", _data.viaductLimit, 0, 10);
             if (EditorGUI.EndChangeCheck())
             {
                 Undo.RecordObject(_data, "Change Level Settings");
                 _data.levelIndex = newLevelIndex;
                 _data.width = newWidth;
                 _data.height = newHeight;
+                _data.viaductLimit = newViaductLimit;
                 SanitizeGridBounds();
                 EditorUtility.SetDirty(_data);
             }
@@ -559,6 +561,11 @@ namespace PixelFlow.Editor
                 {
                     warnings.Add($"Bridge at {bridge} is not crossed by any path in this solution.");
                 }
+            }
+
+            if (_data.bridgePositions.Count > _data.viaductLimit)
+            {
+                warnings.Add($"Bridge positions ({_data.bridgePositions.Count}) exceed viaduct limit ({_data.viaductLimit}). Players won't have enough viaducts to place at all crossings.");
             }
 
             // 4. Verify Perfect Grid Coverage (if toggled)

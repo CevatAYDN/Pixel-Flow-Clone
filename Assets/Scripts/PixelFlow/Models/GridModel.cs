@@ -12,7 +12,11 @@ namespace PixelFlow.Models
     public class CellData
     {
         public CellState State;
-        public ColorType Color;
+        public ColorType Color; // Node rengi veya tekil yol rengi (Geriye uyumluluk için)
+        public List<ColorType> PathColors = new List<ColorType>(); // Bu hücreden geçen tüm yolların renkleri
+        public bool HasViaduct; // Bu hücrede viyadük var mı?
+        public ColorType UnderColor = ColorType.None; // Alttan geçen yolun rengi
+        public ColorType OverColor = ColorType.None;  // Üstten geçen yolun rengi
     }
 
     public interface IGridModel

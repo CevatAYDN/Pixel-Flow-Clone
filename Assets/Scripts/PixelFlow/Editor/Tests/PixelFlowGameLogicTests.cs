@@ -59,6 +59,8 @@ namespace PixelFlow.Editor.Tests
                 builder.Bind<IGameHistoryService, GameHistoryService>();
                 builder.Bind<IPathSolver, RuntimePathSolver>();
                 builder.Bind<IHintService, HintService>();
+                builder.Bind<IVehicleSimulator, VehicleSimulator>();
+                builder.Bind<ITaxCollectionService, TaxCollectionService>();
 
                 builder.BindModel<IGridModel, GridModel>();
                 builder.BindModel<ILevelModel, LevelModel>();
@@ -68,6 +70,8 @@ namespace PixelFlow.Editor.Tests
                 builder.BindModel<IHintModel, HintModel>();
                 builder.BindModel<ISettingsModel, SettingsModel>();
                 builder.BindModel<ISoundModel, SoundModel>();
+                builder.BindModel<ICityEconomyModel, CityEconomyModel>();
+                builder.Bind<ILevelProgressionService, LevelProgressionService>();
 
                 // Recovery: komut hatalarında 3 kez dene
                 builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));
@@ -406,8 +410,8 @@ namespace PixelFlow.Editor.Tests
                 GridPosition = new Vector2Int(2, 0)
             });
 
-            Assert.AreEqual(GameState.LevelCompleted, state.CurrentState,
-                "Should be LevelCompleted after connecting all nodes and filling grid");
+            Assert.AreEqual(GameState.Simulating, state.CurrentState,
+                "Should be Simulating after connecting all nodes and filling grid");
         }
 
         [Test]
@@ -457,8 +461,8 @@ namespace PixelFlow.Editor.Tests
                 GridPosition = new Vector2Int(1, 1)
             });
 
-            Assert.AreEqual(GameState.LevelCompleted, state.CurrentState,
-                "Should be LevelCompleted after both colors connected");
+            Assert.AreEqual(GameState.Simulating, state.CurrentState,
+                "Should be Simulating after both colors connected");
         }
 
         // ---------------------------------------------------------------
@@ -941,6 +945,12 @@ namespace PixelFlow.Editor.Tests
                 Type = InputType.Drag,
                 GridPosition = new Vector2Int(2, 0)
             });
+
+            Assert.AreEqual(GameState.Simulating, state.CurrentState);
+
+            // Manually finish simulation for the test
+            state.SetState(GameState.LevelCompleted);
+            _ctx.Dispatch(new LevelCompletedSignal());
 
             Assert.AreEqual(GameState.LevelCompleted, state.CurrentState);
             Assert.Greater(session.Score, 0, "Score should be > 0 after completing level");

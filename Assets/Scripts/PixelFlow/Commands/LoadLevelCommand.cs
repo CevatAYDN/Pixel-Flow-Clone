@@ -32,6 +32,10 @@ namespace PixelFlow.Commands
                         var cell = GridModel.Grid[node.position.x, node.position.y];
                         cell.State = CellState.Node;
                         cell.Color = node.color;
+                        if (!cell.PathColors.Contains(node.color))
+                        {
+                            cell.PathColors.Add(node.color);
+                        }
                     }
                 }
             }
@@ -43,13 +47,15 @@ namespace PixelFlow.Commands
                     if (bridgePos.x >= 0 && bridgePos.x < GridModel.Width &&
                         bridgePos.y >= 0 && bridgePos.y < GridModel.Height)
                     {
-                        GridModel.Grid[bridgePos.x, bridgePos.y].State = CellState.Bridge;
+                        var cell = GridModel.Grid[bridgePos.x, bridgePos.y];
+                        cell.State = CellState.Bridge;
+                        cell.HasViaduct = true;
                     }
                 }
             }
 
             HistoryService.Clear();
-            GameSessionModel.StartSession();
+            GameSessionModel.StartSession(signal.LevelToLoad.viaductLimit);
             HintModel.ResetSessionHints();
 
             SignalBus.Fire(new GridUpdatedSignal());

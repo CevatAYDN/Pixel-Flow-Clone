@@ -71,7 +71,7 @@ namespace PixelFlow.Services
                 _generatedCache[levelIndex] = level;
             }
 
-                return level;
+            return level;
         }
 
         public ValueTask InitializeAsync(CancellationToken ct) => default;

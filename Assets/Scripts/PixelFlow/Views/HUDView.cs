@@ -39,6 +39,12 @@ namespace PixelFlow.Views
         public event Action OnThemeDarkClicked;
         public event Action OnThemeLightClicked;
         public event Action OnThemeNeonClicked;
+        public event Action OnSimulateDebugPressed;
+        public event Action OnCrisisViaductClicked;
+        public event Action OnCrisisUndoClicked;
+
+        private Button _crisisViaductButton;
+        private Button _crisisUndoButton;
 
         protected override void OnBind(IContext context)
         {
@@ -79,6 +85,19 @@ namespace PixelFlow.Views
                 _themeLightButton.onClick.RemoveAllListeners();
             if (_themeNeonButton != null)
                 _themeNeonButton.onClick.RemoveAllListeners();
+
+            if (_crisisViaductButton != null)
+            {
+                _crisisViaductButton.onClick.RemoveAllListeners();
+                Destroy(_crisisViaductButton.gameObject);
+                _crisisViaductButton = null;
+            }
+            if (_crisisUndoButton != null)
+            {
+                _crisisUndoButton.onClick.RemoveAllListeners();
+                Destroy(_crisisUndoButton.gameObject);
+                _crisisUndoButton = null;
+            }
         }
 
         public void SetUndoInteractable(bool interactable)
@@ -127,15 +146,28 @@ namespace PixelFlow.Views
 
         public void ShowCompletion(int score, int stars)
         {
+            if (_crisisViaductButton != null)
+                _crisisViaductButton.gameObject.SetActive(false);
+            if (_crisisUndoButton != null)
+                _crisisUndoButton.gameObject.SetActive(false);
+
             if (_completionPanel != null)
             {
                 _completionPanel.SetActive(true);
                 if (_completionText != null)
-                    _completionText.text = "Tebrikler! Seviye Tamamland\u0131!";
+                    _completionText.text = "Tebrikler! Seviye Tamamlandı!";
                 if (_completionScoreText != null)
                     _completionScoreText.text = $"Skor: {score}";
                 if (_completionStarsText != null)
-                    _completionStarsText.text = $"Y\u0131ld\u0131z: {new string('\u2605', stars)}{new string('\u2606', 3 - stars)}";
+                    _completionStarsText.text = $"Yıldız: {new string('★', stars)}{new string('☆', 3 - stars)}";
+                if (_nextLevelButton != null)
+                    _nextLevelButton.gameObject.SetActive(true);
+                else
+                    Debug.LogWarning("[HUDView] _nextLevelButton is null in Inspector!");
+            }
+            else
+            {
+                Debug.LogWarning("[HUDView] _completionPanel is null in Inspector! Cannot show level completed panel.");
             }
         }
 
@@ -143,6 +175,92 @@ namespace PixelFlow.Views
         {
             if (_completionPanel != null)
                 _completionPanel.SetActive(false);
+        }
+
+        private void CreateCrisisButtonsIfNeeded()
+        {
+            if (_nextLevelButton == null || _completionPanel == null) return;
+
+            if (_crisisViaductButton == null)
+            {
+                _crisisViaductButton = Instantiate(_nextLevelButton, _completionPanel.transform);
+                _crisisViaductButton.name = "CrisisViaductButton";
+                
+                // Konumu ayarla (Sol taraf)
+                RectTransform rt = _crisisViaductButton.GetComponent<RectTransform>();
+                if (rt != null)
+                {
+                    rt.anchoredPosition = new Vector2(-120f, -120f);
+                    rt.sizeDelta = new Vector2(200f, 50f);
+                }
+                
+                Text btnText = _crisisViaductButton.GetComponentInChildren<Text>();
+                if (btnText != null) btnText.text = "Viyadük Kullan";
+
+                _crisisViaductButton.onClick.AddListener(() => OnCrisisViaductClicked?.Invoke());
+            }
+
+            if (_crisisUndoButton == null)
+            {
+                _crisisUndoButton = Instantiate(_nextLevelButton, _completionPanel.transform);
+                _crisisUndoButton.name = "CrisisUndoButton";
+                
+                // Konumu ayarla (Sağ taraf)
+                RectTransform rt = _crisisUndoButton.GetComponent<RectTransform>();
+                if (rt != null)
+                {
+                    rt.anchoredPosition = new Vector2(120f, -120f);
+                    rt.sizeDelta = new Vector2(200f, 50f);
+                }
+                
+                Text btnText = _crisisUndoButton.GetComponentInChildren<Text>();
+                if (btnText != null) btnText.text = "Geri Al / Geri Dön";
+
+                _crisisUndoButton.onClick.AddListener(() => OnCrisisUndoClicked?.Invoke());
+            }
+        }
+
+        public void ShowCrisis(int availableViaducts)
+        {
+            if (_completionPanel != null)
+            {
+                _completionPanel.SetActive(true);
+                if (_completionText != null)
+                    _completionText.text = "TRAFİK KRİZİ! 🚨";
+                if (_completionScoreText != null)
+                    _completionScoreText.text = "Çarpışmayı çözmek için viyadük köprüsü yerleştirin!";
+                if (_completionStarsText != null)
+                    _completionStarsText.text = $"Kalan Viyadük: {availableViaducts}";
+                if (_nextLevelButton != null)
+                    _nextLevelButton.gameObject.SetActive(false);
+
+                CreateCrisisButtonsIfNeeded();
+
+                if (_crisisViaductButton != null)
+                {
+                    _crisisViaductButton.gameObject.SetActive(true);
+                    _crisisViaductButton.interactable = availableViaducts > 0;
+                }
+                if (_crisisUndoButton != null)
+                {
+                    _crisisUndoButton.gameObject.SetActive(true);
+                }
+            }
+        }
+
+        public void HideCrisis()
+        {
+            if (_crisisViaductButton != null)
+                _crisisViaductButton.gameObject.SetActive(false);
+            if (_crisisUndoButton != null)
+                _crisisUndoButton.gameObject.SetActive(false);
+
+            if (_completionPanel != null)
+            {
+                _completionPanel.SetActive(false);
+                if (_nextLevelButton != null)
+                    _nextLevelButton.gameObject.SetActive(true);
+            }
         }
 
         public void HighlightActiveTheme(PixelFlow.Models.AppTheme theme)
@@ -162,5 +280,26 @@ namespace PixelFlow.Views
                 : new Color(0.15f, 0.15f, 0.18f, 1f);  // pasif: koyu gri
         }
 
+        private void Update()
+        {
+            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            if (keyboard != null)
+            {
+                // S tuşu ile simülasyonu manuel başlat/durdur (Test amaçlı debug)
+                if (keyboard.sKey.wasPressedThisFrame)
+                {
+                    OnSimulateDebugPressed?.Invoke();
+                }
+
+                if (_completionPanel != null && _completionPanel.activeSelf)
+                {
+                    if (keyboard.spaceKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame || keyboard.nKey.wasPressedThisFrame)
+                    {
+                        Debug.Log("[HUDView] Next level keyboard shortcut triggered (Space/Enter/N).");
+                        OnNextLevelClicked?.Invoke();
+                    }
+                }
+            }
+        }
     }
 }

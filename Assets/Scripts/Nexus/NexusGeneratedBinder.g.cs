@@ -18,6 +18,12 @@ namespace Nexus.Generated
         [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
         public static void Initialize()
         {
+            NexusDI.RegisterInjector<PixelFlow.Views.CityHubMediator>((instance, di) =>
+            {
+                instance.CityEconomyModel = di.Resolve<PixelFlow.Models.ICityEconomyModel>();
+                instance.GameStateModel = di.Resolve<PixelFlow.Models.IGameStateModel>();
+                instance.SettingsModel = di.Resolve<PixelFlow.Models.ISettingsModel>();
+            });
             NexusDI.RegisterInjector<PixelFlow.Views.GridMediator>((instance, di) =>
             {
                 instance.GridModel = di.Resolve<PixelFlow.Models.IGridModel>();
@@ -31,6 +37,14 @@ namespace Nexus.Generated
                 instance.GameStateModel = di.Resolve<PixelFlow.Models.IGameStateModel>();
                 instance.GameSessionModel = di.Resolve<PixelFlow.Models.IGameSessionModel>();
                 instance.HistoryService = di.Resolve<PixelFlow.Services.IGameHistoryService>();
+                instance.ProgressionService = di.Resolve<PixelFlow.Services.ILevelProgressionService>();
+            });
+            NexusDI.RegisterInjector<PixelFlow.Views.HubHUDMediator>((instance, di) =>
+            {
+                instance.CityEconomyModel = di.Resolve<PixelFlow.Models.ICityEconomyModel>();
+                instance.GameStateModel = di.Resolve<PixelFlow.Models.IGameStateModel>();
+                instance.LevelModel = di.Resolve<PixelFlow.Models.ILevelModel>();
+                instance.ProgressModel = di.Resolve<PixelFlow.Models.IProgressModel>();
                 instance.ProgressionService = di.Resolve<PixelFlow.Services.ILevelProgressionService>();
             });
             NexusDI.RegisterInjector<PixelFlow.Views.LevelPackMediator>((instance, di) =>
@@ -48,6 +62,27 @@ namespace Nexus.Generated
             NexusDI.RegisterInjector<PixelFlow.Services.PathService>((instance, di) =>
             {
                 instance.GridModel = di.Resolve<PixelFlow.Models.IGridModel>();
+                instance.GameSessionModel = di.Resolve<PixelFlow.Models.IGameSessionModel>();
+            });
+            NexusDI.RegisterInjector<PixelFlow.Services.TaxCollectionService>((instance, di) =>
+            {
+                instance.CityEconomyModel = di.Resolve<PixelFlow.Models.ICityEconomyModel>();
+                instance.GameStateModel = di.Resolve<PixelFlow.Models.IGameStateModel>();
+            });
+            NexusDI.RegisterInjector<PixelFlow.Services.VehicleSimulator>((instance, di) =>
+            {
+                instance.GridModel = di.Resolve<PixelFlow.Models.IGridModel>();
+                instance.LevelModel = di.Resolve<PixelFlow.Models.ILevelModel>();
+                instance.GameStateModel = di.Resolve<PixelFlow.Models.IGameStateModel>();
+                instance.GameSessionModel = di.Resolve<PixelFlow.Models.IGameSessionModel>();
+                instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
+                instance.HintModel = di.Resolve<PixelFlow.Models.IHintModel>();
+            });
+            NexusDI.RegisterInjector<PixelFlow.Models.CityEconomyModel>((instance, di) =>
+            {
+                instance.PlayerPrefsService = di.Resolve<PixelFlow.Services.IPlayerPrefsService>();
+                instance.ProgressionService = di.Resolve<PixelFlow.Services.ILevelProgressionService>();
+                instance.GameStateModel = di.Resolve<PixelFlow.Models.IGameStateModel>();
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.ChangeThemeCommand>((instance, di) =>
             {
@@ -73,6 +108,13 @@ namespace Nexus.Generated
                 instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
                 instance.HistoryService = di.Resolve<PixelFlow.Services.IGameHistoryService>();
             });
+            NexusDI.RegisterInjector<PixelFlow.Commands.PlaceViaductCommand>((instance, di) =>
+            {
+                instance.GridModel = di.Resolve<PixelFlow.Models.IGridModel>();
+                instance.GameSessionModel = di.Resolve<PixelFlow.Models.IGameSessionModel>();
+                instance.GameStateModel = di.Resolve<PixelFlow.Models.IGameStateModel>();
+                instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
+            });
             NexusDI.RegisterInjector<PixelFlow.Commands.ProcessInputCommand>((instance, di) =>
             {
                 instance.GridModel = di.Resolve<PixelFlow.Models.IGridModel>();
@@ -94,6 +136,7 @@ namespace Nexus.Generated
                 instance.ProgressModel = di.Resolve<PixelFlow.Models.IProgressModel>();
                 instance.LevelModel = di.Resolve<PixelFlow.Models.ILevelModel>();
                 instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
+                instance.PlayerPrefsService = di.Resolve<PixelFlow.Services.IPlayerPrefsService>();
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.TimerCommand>((instance, di) =>
             {
@@ -106,6 +149,10 @@ namespace Nexus.Generated
                 instance.HistoryService = di.Resolve<PixelFlow.Services.IGameHistoryService>();
                 instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
                 instance.GameStateModel = di.Resolve<PixelFlow.Models.IGameStateModel>();
+            });
+            NexusDI.RegisterInjector<PixelFlow.Commands.UpgradeCommand>((instance, di) =>
+            {
+                instance.CityEconomyModel = di.Resolve<PixelFlow.Models.ICityEconomyModel>();
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.UseHintCommand>((instance, di) =>
             {
@@ -125,6 +172,9 @@ namespace Nexus.Generated
             #pragma warning disable 0169, 0414, 0219
             if (false)
             {
+                var _p_CityHubMediator_CityEconomyModel = default(PixelFlow.Views.CityHubMediator).CityEconomyModel;
+                var _p_CityHubMediator_GameStateModel = default(PixelFlow.Views.CityHubMediator).GameStateModel;
+                var _p_CityHubMediator_SettingsModel = default(PixelFlow.Views.CityHubMediator).SettingsModel;
                 var _p_GridMediator_GridModel = default(PixelFlow.Views.GridMediator).GridModel;
                 var _p_GridMediator_SettingsModel = default(PixelFlow.Views.GridMediator).SettingsModel;
                 var _p_HUDMediator_HintModel = default(PixelFlow.Views.HUDMediator).HintModel;
@@ -134,10 +184,27 @@ namespace Nexus.Generated
                 var _p_HUDMediator_GameSessionModel = default(PixelFlow.Views.HUDMediator).GameSessionModel;
                 var _p_HUDMediator_HistoryService = default(PixelFlow.Views.HUDMediator).HistoryService;
                 var _p_HUDMediator_ProgressionService = default(PixelFlow.Views.HUDMediator).ProgressionService;
+                var _p_HubHUDMediator_CityEconomyModel = default(PixelFlow.Views.HubHUDMediator).CityEconomyModel;
+                var _p_HubHUDMediator_GameStateModel = default(PixelFlow.Views.HubHUDMediator).GameStateModel;
+                var _p_HubHUDMediator_LevelModel = default(PixelFlow.Views.HubHUDMediator).LevelModel;
+                var _p_HubHUDMediator_ProgressModel = default(PixelFlow.Views.HubHUDMediator).ProgressModel;
+                var _p_HubHUDMediator_ProgressionService = default(PixelFlow.Views.HubHUDMediator).ProgressionService;
                 var _p_LevelPackMediator_ProgressModel = default(PixelFlow.Views.LevelPackMediator).ProgressModel;
                 var _p_SoundHandlerMediator_SoundModel = default(PixelFlow.Views.SoundHandlerMediator).SoundModel;
                 var _p_ThemeHandlerMediator_SettingsModel = default(PixelFlow.Views.ThemeHandlerMediator).SettingsModel;
                 var _p_PathService_GridModel = default(PixelFlow.Services.PathService).GridModel;
+                var _p_PathService_GameSessionModel = default(PixelFlow.Services.PathService).GameSessionModel;
+                var _p_TaxCollectionService_CityEconomyModel = default(PixelFlow.Services.TaxCollectionService).CityEconomyModel;
+                var _p_TaxCollectionService_GameStateModel = default(PixelFlow.Services.TaxCollectionService).GameStateModel;
+                var _p_VehicleSimulator_GridModel = default(PixelFlow.Services.VehicleSimulator).GridModel;
+                var _p_VehicleSimulator_LevelModel = default(PixelFlow.Services.VehicleSimulator).LevelModel;
+                var _p_VehicleSimulator_GameStateModel = default(PixelFlow.Services.VehicleSimulator).GameStateModel;
+                var _p_VehicleSimulator_GameSessionModel = default(PixelFlow.Services.VehicleSimulator).GameSessionModel;
+                var _p_VehicleSimulator_SignalBus = default(PixelFlow.Services.VehicleSimulator).SignalBus;
+                var _p_VehicleSimulator_HintModel = default(PixelFlow.Services.VehicleSimulator).HintModel;
+                var _p_CityEconomyModel_PlayerPrefsService = default(PixelFlow.Models.CityEconomyModel).PlayerPrefsService;
+                var _p_CityEconomyModel_ProgressionService = default(PixelFlow.Models.CityEconomyModel).ProgressionService;
+                var _p_CityEconomyModel_GameStateModel = default(PixelFlow.Models.CityEconomyModel).GameStateModel;
                 var _p_ChangeThemeCommand_SettingsModel = default(PixelFlow.Commands.ChangeThemeCommand).SettingsModel;
                 var _p_ChangeThemeCommand_SignalBus = default(PixelFlow.Commands.ChangeThemeCommand).SignalBus;
                 var _p_CheckWinConditionCommand_GridModel = default(PixelFlow.Commands.CheckWinConditionCommand).GridModel;
@@ -153,6 +220,10 @@ namespace Nexus.Generated
                 var _p_LoadLevelCommand_HintModel = default(PixelFlow.Commands.LoadLevelCommand).HintModel;
                 var _p_LoadLevelCommand_SignalBus = default(PixelFlow.Commands.LoadLevelCommand).SignalBus;
                 var _p_LoadLevelCommand_HistoryService = default(PixelFlow.Commands.LoadLevelCommand).HistoryService;
+                var _p_PlaceViaductCommand_GridModel = default(PixelFlow.Commands.PlaceViaductCommand).GridModel;
+                var _p_PlaceViaductCommand_GameSessionModel = default(PixelFlow.Commands.PlaceViaductCommand).GameSessionModel;
+                var _p_PlaceViaductCommand_GameStateModel = default(PixelFlow.Commands.PlaceViaductCommand).GameStateModel;
+                var _p_PlaceViaductCommand_SignalBus = default(PixelFlow.Commands.PlaceViaductCommand).SignalBus;
                 var _p_ProcessInputCommand_GridModel = default(PixelFlow.Commands.ProcessInputCommand).GridModel;
                 var _p_ProcessInputCommand_SignalBus = default(PixelFlow.Commands.ProcessInputCommand).SignalBus;
                 var _p_ProcessInputCommand_SoundModel = default(PixelFlow.Commands.ProcessInputCommand).SoundModel;
@@ -166,12 +237,14 @@ namespace Nexus.Generated
                 var _p_SaveProgressCommand_ProgressModel = default(PixelFlow.Commands.SaveProgressCommand).ProgressModel;
                 var _p_SaveProgressCommand_LevelModel = default(PixelFlow.Commands.SaveProgressCommand).LevelModel;
                 var _p_SaveProgressCommand_SignalBus = default(PixelFlow.Commands.SaveProgressCommand).SignalBus;
+                var _p_SaveProgressCommand_PlayerPrefsService = default(PixelFlow.Commands.SaveProgressCommand).PlayerPrefsService;
                 var _p_TimerCommand_GameSessionModel = default(PixelFlow.Commands.TimerCommand).GameSessionModel;
                 var _p_TimerCommand_GameStateModel = default(PixelFlow.Commands.TimerCommand).GameStateModel;
                 var _p_UndoCommand_GridModel = default(PixelFlow.Commands.UndoCommand).GridModel;
                 var _p_UndoCommand_HistoryService = default(PixelFlow.Commands.UndoCommand).HistoryService;
                 var _p_UndoCommand_SignalBus = default(PixelFlow.Commands.UndoCommand).SignalBus;
                 var _p_UndoCommand_GameStateModel = default(PixelFlow.Commands.UndoCommand).GameStateModel;
+                var _p_UpgradeCommand_CityEconomyModel = default(PixelFlow.Commands.UpgradeCommand).CityEconomyModel;
                 var _p_UseHintCommand_HintModel = default(PixelFlow.Commands.UseHintCommand).HintModel;
                 var _p_UseHintCommand_GridModel = default(PixelFlow.Commands.UseHintCommand).GridModel;
                 var _p_UseHintCommand_LevelModel = default(PixelFlow.Commands.UseHintCommand).LevelModel;

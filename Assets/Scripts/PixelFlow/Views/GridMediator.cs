@@ -79,7 +79,7 @@ namespace PixelFlow.Views
                 View.UpdateDifferential(GridModel.Grid, SettingsModel.CurrentTheme, _changedCells);
             }
 
-            View.UpdatePathVisuals(GridModel.Paths);
+            View.UpdatePathVisuals(GridModel.Paths, GridModel.Grid);
             CacheCellState();
         }
 

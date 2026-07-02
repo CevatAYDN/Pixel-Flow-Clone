@@ -28,5 +28,6 @@ namespace PixelFlow.Data
         public List<GridNode> initialNodes = new List<GridNode>();
         public List<PathSolution> solutions = new List<PathSolution>();
         public List<Vector2Int> bridgePositions = new List<Vector2Int>();
+        public int viaductLimit = 3;
     }
 }

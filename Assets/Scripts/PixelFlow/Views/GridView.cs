@@ -187,10 +187,10 @@ namespace PixelFlow.Views
             {
                 for (int y = 0; y < height; y++)
                 {
-                    _cells[x, y].UpdateVisuals(gridData[x, y].Color, gridData[x, y].State, theme);
+                    _cells[x, y].UpdateVisuals(gridData[x, y], theme);
                 }
             }
-            UpdatePathVisuals(paths);
+            UpdatePathVisuals(paths, gridData);
         }
 
         /// <summary>
@@ -203,12 +203,12 @@ namespace PixelFlow.Views
             {
                 if (pos.x >= 0 && pos.x < _cells.GetLength(0) && pos.y >= 0 && pos.y < _cells.GetLength(1))
                 {
-                    _cells[pos.x, pos.y].UpdateVisuals(gridData[pos.x, pos.y].Color, gridData[pos.x, pos.y].State, theme);
+                    _cells[pos.x, pos.y].UpdateVisuals(gridData[pos.x, pos.y], theme);
                 }
             }
         }
 
-        public void UpdatePathVisuals(Dictionary<ColorType, List<Vector2Int>> paths)
+        public void UpdatePathVisuals(Dictionary<ColorType, List<Vector2Int>> paths, CellData[,] gridData = null)
         {
             if (paths == null) return;
 
@@ -263,7 +263,16 @@ namespace PixelFlow.Views
                 for (int i = 0; i < pathPositions.Count; i++)
                 {
                     Vector2Int gridPos = pathPositions[i];
-                    lineRenderer.SetPosition(i, new Vector3(gridPos.x, gridPos.y, -0.1f));
+                    float z = -0.1f;
+                    if (gridData != null && gridPos.x >= 0 && gridPos.x < gridData.GetLength(0) && gridPos.y >= 0 && gridPos.y < gridData.GetLength(1))
+                    {
+                        var cell = gridData[gridPos.x, gridPos.y];
+                        if (cell.HasViaduct && cell.OverColor == colorType)
+                        {
+                            z = -0.4f; // Viyadük üstünden geçen yolu yükselt
+                        }
+                    }
+                    lineRenderer.SetPosition(i, new Vector3(gridPos.x, gridPos.y, z));
                 }
             }
 

@@ -47,6 +47,7 @@ namespace PixelFlow.PlayMode.Tests
                 builder.Bind<IGameHistoryService, GameHistoryService>();
                 builder.Bind<IPathSolver, RuntimePathSolver>();
                 builder.Bind<IHintService, HintService>();
+                builder.Bind<IVehicleSimulator, VehicleSimulator>();
 
                 builder.BindModel<IGridModel, GridModel>();
                 builder.BindModel<ILevelModel, LevelModel>();
@@ -56,6 +57,8 @@ namespace PixelFlow.PlayMode.Tests
                 builder.BindModel<IHintModel, HintModel>();
                 builder.BindModel<ISettingsModel, SettingsModel>();
                 builder.BindModel<ISoundModel, SoundModel>();
+                builder.BindModel<ICityEconomyModel, CityEconomyModel>();
+                builder.Bind<ILevelProgressionService, LevelProgressionService>();
 
                 builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));
 
@@ -67,6 +70,7 @@ namespace PixelFlow.PlayMode.Tests
                 builder.BindSignal<LevelCompletedSignal>().To<SaveProgressCommand>();
                 builder.BindSignal<UndoSignal>().To<UndoCommand>();
                 builder.BindSignal<RedoSignal>().To<RedoCommand>();
+                builder.BindSignal<PlaceViaductSignal>().To<PlaceViaductCommand>();
             });
         }
 
@@ -181,8 +185,15 @@ namespace PixelFlow.PlayMode.Tests
                 GridPosition = new Vector2Int(2, 0)
             });
 
+            Assert.AreEqual(GameState.Simulating, state.CurrentState,
+                "Should be Simulating after connecting nodes");
+
+            // Manually finish simulation for the test
+            state.SetState(GameState.LevelCompleted);
+            _ctx.Dispatch(new LevelCompletedSignal());
+
             Assert.AreEqual(GameState.LevelCompleted, state.CurrentState,
-                "Should be LevelCompleted after connecting nodes");
+                "Should be LevelCompleted after finishing simulation");
             Assert.Greater(session.Score, 0, "Score should be > 0");
             Assert.GreaterOrEqual(session.StarsEarned, 1, "Should earn at least 1 star");
         }
@@ -329,6 +340,11 @@ namespace PixelFlow.PlayMode.Tests
                 GridPosition = new Vector2Int(2, 0)
             });
 
+            // Manually finish simulation for the test
+            var stateModel = _ctx.GetModel<IGameStateModel>();
+            stateModel.SetState(GameState.LevelCompleted);
+            _ctx.Dispatch(new LevelCompletedSignal());
+
             Assert.GreaterOrEqual(progress.UnlockedLevels, before + 1,
                 "Completing level 0 should unlock at least level 1");
         }
@@ -441,6 +457,61 @@ namespace PixelFlow.PlayMode.Tests
                 "Red path should still exist after undo");
             Assert.AreEqual(1, grid.Paths[ColorType.Red].Count,
                 "Red path should have 1 cell after undo (restored to node-only state)");
+        }
+
+        // ──────────────────────────────────────────────
+        // Test 9: Viaduct placement reduces limits and modifies cell state
+        // ──────────────────────────────────────────────
+
+        [Test]
+        public void PlaceViaduct_ReducesAvailableViaducts_AndSetsCellBridgeState()
+        {
+            var level = CreateTestLevel();
+            level.bridgePositions.Clear();
+            level.viaductLimit = 3;
+            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
+
+            var session = _ctx.GetModel<IGameSessionModel>();
+            var grid = _ctx.GetModel<IGridModel>();
+
+            Assert.AreEqual(3, session.AvailableViaducts, "Should start with 3 viaducts");
+
+            // Setup a crossing at (2,2) by drawing two paths
+            var cell = grid.Grid[2, 2];
+            cell.PathColors.Add(ColorType.Red);
+            cell.PathColors.Add(ColorType.Blue);
+
+            // Place viaduct
+            _ctx.Dispatch(new PlaceViaductSignal { Position = new Vector2Int(2, 2) });
+
+            Assert.IsTrue(cell.HasViaduct, "Cell should have a viaduct");
+            Assert.AreEqual(CellState.Bridge, cell.State, "Cell state should be Bridge");
+            Assert.AreEqual(2, session.AvailableViaducts, "Remaining viaducts count should be 2");
+        }
+
+        // ──────────────────────────────────────────────
+        // Test 10: City Economy passive tax generation and upgrades
+        // ──────────────────────────────────────────────
+
+        [Test]
+        public void CityEconomy_AccumulatesTaxes_AndAllowsUpgrades()
+        {
+            var economy = _ctx.GetModel<ICityEconomyModel>();
+            
+            // Add coins
+            int beforeCoins = economy.Coins;
+            economy.AddCoins(500);
+            Assert.AreEqual(beforeCoins + 500, economy.Coins, "Coins should increase by 500");
+
+            // Check upgrade purchase
+            int beforeLvl = economy.StorageUpgradeLevel;
+            int cost = economy.GetUpgradeCost(UpgradeType.Storage);
+            
+            // Spend coins on upgrade
+            economy.PurchaseUpgrade(UpgradeType.Storage);
+
+            Assert.AreEqual(beforeLvl + 1, economy.StorageUpgradeLevel, "Storage level should increment");
+            Assert.AreEqual(beforeCoins + 500 - cost, economy.Coins, "Coins should decrease by upgrade cost");
         }
     }
 }
