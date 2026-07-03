@@ -11,14 +11,18 @@ namespace PixelFlow.Editor
     [CustomEditor(typeof(LevelData))]
     public class LevelDataEditor : UnityEditor.Editor
     {
-        private enum EditMode { None, Node, Path, Bridge, Eraser }
+        private enum EditMode { None, Node, Path, Bridge, Obstacle, Eraser }
         private EditMode _currentMode = EditMode.Node;
         private ColorType _currentColor = ColorType.Red;
+        private ObstacleType _currentObstacleType = ObstacleType.Construction;
         
         private LevelData _data;
         private Vector2Int _lastPaintedCell = new Vector2Int(-1, -1);
         private bool _requireFullGridCoverage = true;
         private bool _showValidator = true;
+        private bool _mirrorHorizontal = false;
+        private bool _mirrorVertical = false;
+        private float _cellSizeSlider = 38f;
         private string _solveStatus = "";
 
         // UI Styles
@@ -39,11 +43,20 @@ namespace PixelFlow.Editor
             serializedObject.Update();
             InitStyles();
 
+            int complexityScore = CalculateComplexityScore(_data);
+            string tierName = GetDifficultyTierName(complexityScore);
+            Color tierColor = GetDifficultyTierColor(complexityScore);
+            GUIStyle tierBadgeStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = tierColor }
+            };
+
             // Header Banner
             GUILayout.BeginVertical(_cardStyle);
             GUILayout.Space(5);
-            GUILayout.Label("Pixel Flow Level Editor", _headerStyle);
-            GUILayout.Label("Create and validate grid levels with ease.", EditorStyles.miniLabel);
+            GUILayout.Label("Pixel Flow Level Editor (Master Studio)", _headerStyle);
+            GUILayout.Label($"Difficulty: {tierName} ({complexityScore} pts) | Rule: {(_data.requireFullGridCoverage ? "Full Grid" : "Flexible")}", tierBadgeStyle);
             GUILayout.Space(5);
             GUILayout.EndVertical();
 
@@ -58,6 +71,7 @@ namespace PixelFlow.Editor
             int newWidth = EditorGUILayout.IntSlider("Width", _data.width, 3, 10);
             int newHeight = EditorGUILayout.IntSlider("Height", _data.height, 3, 10);
             int newViaductLimit = EditorGUILayout.IntSlider("Viaduct Limit", _data.viaductLimit, 0, 10);
+            bool newCoverage = EditorGUILayout.Toggle("Require Full Grid Coverage", _data.requireFullGridCoverage);
             if (EditorGUI.EndChangeCheck())
             {
                 Undo.RecordObject(_data, "Change Level Settings");
@@ -65,6 +79,8 @@ namespace PixelFlow.Editor
                 _data.width = newWidth;
                 _data.height = newHeight;
                 _data.viaductLimit = newViaductLimit;
+                _data.requireFullGridCoverage = newCoverage;
+                _requireFullGridCoverage = newCoverage;
                 SanitizeGridBounds();
                 EditorUtility.SetDirty(_data);
             }
@@ -84,13 +100,13 @@ namespace PixelFlow.Editor
 
             // Editing Tools Card
             GUILayout.BeginVertical(_cardStyle);
-            GUILayout.Label("Editor Controls", EditorStyles.boldLabel);
+            GUILayout.Label("Editor Controls & Symmetry Tools", EditorStyles.boldLabel);
             GUILayout.Space(5);
 
             // Edit Mode Selector (Horizontal Buttons)
             GUILayout.Label("Select Tool:", EditorStyles.miniLabel);
             GUILayout.BeginHorizontal();
-            EditMode[] modes = { EditMode.Node, EditMode.Path, EditMode.Bridge, EditMode.Eraser };
+            EditMode[] modes = { EditMode.Node, EditMode.Path, EditMode.Bridge, EditMode.Obstacle, EditMode.Eraser };
             foreach (var m in modes)
             {
                 bool isSelected = _currentMode == m;
@@ -104,7 +120,25 @@ namespace PixelFlow.Editor
             GUI.backgroundColor = Color.white; // Reset
             GUILayout.EndHorizontal();
 
-            GUILayout.Space(10);
+            GUILayout.Space(6);
+
+            // Symmetry & Zoom Toolbar
+            GUILayout.BeginHorizontal();
+            _mirrorHorizontal = GUILayout.Toggle(_mirrorHorizontal, "Mirror Horizontal (X)", GUILayout.Width(150));
+            _mirrorVertical = GUILayout.Toggle(_mirrorVertical, "Mirror Vertical (Y)", GUILayout.Width(140));
+            GUILayout.EndHorizontal();
+
+            _cellSizeSlider = EditorGUILayout.Slider("Cell Zoom Size", _cellSizeSlider, 24f, 60f);
+
+            GUILayout.Space(8);
+
+            // Obstacle Type Selector
+            if (_currentMode == EditMode.Obstacle)
+            {
+                GUILayout.Label("Select Obstacle Type:", EditorStyles.miniLabel);
+                _currentObstacleType = (ObstacleType)EditorGUILayout.EnumPopup("Obstacle Type", _currentObstacleType);
+                GUILayout.Space(5);
+            }
 
             // Color Selector (Horizontal Palette)
             if (_currentMode == EditMode.Node || _currentMode == EditMode.Path)
@@ -139,6 +173,14 @@ namespace PixelFlow.Editor
                 GUI.backgroundColor = Color.white; // Reset
                 GUILayout.EndHorizontal();
                 GUILayout.Space(5);
+
+                if (_currentMode == EditMode.Path)
+                {
+                    if (GUILayout.Button($"Auto-Path Selected Color ({_currentColor})", GUILayout.Height(24)))
+                    {
+                        AutoSolveSelectedColor(_currentColor);
+                    }
+                }
             }
 
             GUILayout.EndVertical();
@@ -292,7 +334,7 @@ namespace PixelFlow.Editor
 
         private void DrawVisualGrid()
         {
-            float cellSize = 38f;
+            float cellSize = _cellSizeSlider;
             float spacing = 3f;
 
             // Centers the grid container in the inspector width
@@ -348,7 +390,7 @@ namespace PixelFlow.Editor
                 }
             }
 
-            // === PASS 3: Bridge + Node (en üstte) ===
+            // === PASS 3: Obstacle + Bridge + Node (en üstte) ===
             for (int y = _data.height - 1; y >= 0; y--)
             {
                 for (int x = 0; x < _data.width; x++)
@@ -359,19 +401,27 @@ namespace PixelFlow.Editor
                         gridRect.y + drawY * (cellSize + spacing),
                         cellSize, cellSize);
 
-                    bool isBridge = _data.bridgePositions.Contains(new Vector2Int(x, y));
-                    var node = _data.initialNodes.Find(n => n.position.x == x && n.position.y == y);
+                    Vector2Int pos = new Vector2Int(x, y);
+                    bool isBridge = _data.bridgePositions.Contains(pos);
+                    var node = _data.initialNodes.Find(n => n.position == pos);
                     bool isNode = node.color != ColorType.None;
+                    var obstacle = _data.obstacles != null ? _data.obstacles.Find(o => o.position == pos) : default;
+                    bool hasObstacle = _data.obstacles != null && _data.obstacles.Any(o => o.position == pos);
 
                     if ((e.type == EventType.MouseDown || e.type == EventType.MouseDrag) && cellRect.Contains(mousePos))
                     {
-                        Vector2Int cellPos = new Vector2Int(x, y);
-                        if (e.type == EventType.MouseDown || _lastPaintedCell != cellPos)
+                        if (e.type == EventType.MouseDown || _lastPaintedCell != pos)
                         {
                             HandleCellClick(x, y);
-                            _lastPaintedCell = cellPos;
+                            _lastPaintedCell = pos;
                             e.Use();
                         }
+                    }
+
+                    if (hasObstacle)
+                    {
+                        Color obsColor = GetObstacleColor(obstacle.type);
+                        EditorGUI.DrawRect(new Rect(cellRect.x + 2, cellRect.y + 2, cellSize - 4, cellSize - 4), obsColor);
                     }
 
                     if (isBridge)
@@ -408,11 +458,33 @@ namespace PixelFlow.Editor
         private void HandleCellClick(int x, int y)
         {
             Undo.RecordObject(_data, "Edit Grid");
+            ApplyCellAction(x, y);
+
+            if (_mirrorHorizontal)
+            {
+                ApplyCellAction(_data.width - 1 - x, y);
+            }
+            if (_mirrorVertical)
+            {
+                ApplyCellAction(x, _data.height - 1 - y);
+            }
+            if (_mirrorHorizontal && _mirrorVertical)
+            {
+                ApplyCellAction(_data.width - 1 - x, _data.height - 1 - y);
+            }
+
+            EditorUtility.SetDirty(_data);
+        }
+
+        private void ApplyCellAction(int x, int y)
+        {
+            if (x < 0 || y < 0 || x >= _data.width || y >= _data.height) return;
             Vector2Int pos = new Vector2Int(x, y);
 
             if (_currentMode == EditMode.Eraser)
             {
                 _data.initialNodes.RemoveAll(n => n.position == pos);
+                if (_data.obstacles != null) _data.obstacles.RemoveAll(o => o.position == pos);
                 foreach (var sol in _data.solutions)
                 {
                     if (sol.pathPositions != null)
@@ -423,13 +495,20 @@ namespace PixelFlow.Editor
             else if (_currentMode == EditMode.Node)
             {
                 _data.initialNodes.RemoveAll(n => n.position == pos);
-                // Erase any solution path node under this new node
+                if (_data.obstacles != null) _data.obstacles.RemoveAll(o => o.position == pos);
                 foreach (var sol in _data.solutions)
                 {
                     if (sol.pathPositions != null)
                         sol.pathPositions.Remove(pos);
                 }
                 _data.initialNodes.Add(new GridNode { position = pos, color = _currentColor });
+            }
+            else if (_currentMode == EditMode.Obstacle)
+            {
+                _data.initialNodes.RemoveAll(n => n.position == pos);
+                if (_data.obstacles == null) _data.obstacles = new List<ObstacleData>();
+                _data.obstacles.RemoveAll(o => o.position == pos);
+                _data.obstacles.Add(new ObstacleData { position = pos, type = _currentObstacleType });
             }
             else if (_currentMode == EditMode.Bridge)
             {
@@ -441,7 +520,6 @@ namespace PixelFlow.Editor
             }
             else if (_currentMode == EditMode.Path)
             {
-                // Path Mode allows editing a solution manually cell-by-cell
                 int solIndex = _data.solutions.FindIndex(s => s.color == _currentColor);
                 if (solIndex == -1)
                 {
@@ -464,13 +542,10 @@ namespace PixelFlow.Editor
                     }
                     else
                     {
-                        // Remove if clicked again to allow backtracking
                         _data.solutions[solIndex].pathPositions.Remove(pos);
                     }
                 }
             }
-
-            EditorUtility.SetDirty(_data);
         }
 
         private void RunLevelValidation()
@@ -760,6 +835,71 @@ namespace PixelFlow.Editor
             _data.initialNodes.Add(new GridNode { position = new Vector2Int(3, 5), color = ColorType.Yellow });
 
             EditorUtility.SetDirty(_data);
+        }
+
+        private void AutoSolveSelectedColor(ColorType targetColor)
+        {
+            var solver = new RuntimePathSolver();
+            if (solver.Solve(_data, out var solutions))
+            {
+                if (solutions.TryGetValue(targetColor, out var path))
+                {
+                    Undo.RecordObject(_data, "Auto-Solve Selected Color");
+                    int solIdx = _data.solutions.FindIndex(s => s.color == targetColor);
+                    if (solIdx != -1)
+                    {
+                        var sol = _data.solutions[solIdx];
+                        sol.pathPositions = new List<Vector2Int>(path);
+                        _data.solutions[solIdx] = sol;
+                    }
+                    else
+                    {
+                        _data.solutions.Add(new PathSolution { color = targetColor, pathPositions = new List<Vector2Int>(path) });
+                    }
+                    EditorUtility.SetDirty(_data);
+                    Debug.Log($"[LevelDataEditor] Auto-solved path for color {targetColor}");
+                }
+            }
+        }
+
+        private static Color GetObstacleColor(ObstacleType obstacleType)
+        {
+            switch (obstacleType)
+            {
+                case ObstacleType.Construction: return new Color(0.85f, 0.65f, 0.15f, 0.85f); // Construction Yellow
+                case ObstacleType.Lake: return new Color(0.15f, 0.55f, 0.85f, 0.85f);        // Water Blue
+                case ObstacleType.Park: return new Color(0.2f, 0.65f, 0.3f, 0.85f);          // Park Green
+                case ObstacleType.OneWay: return new Color(0.8f, 0.3f, 0.3f, 0.85f);         // Red OneWay
+                case ObstacleType.Ferry: return new Color(0.4f, 0.7f, 0.9f, 0.85f);          // Cyan Ferry
+                case ObstacleType.NarrowPass: return new Color(0.4f, 0.4f, 0.45f, 0.85f);     // Dark Steel
+                default: return new Color(0.5f, 0.5f, 0.5f, 0.85f);
+            }
+        }
+
+        private static int CalculateComplexityScore(LevelData lvl)
+        {
+            int area = lvl.width * lvl.height;
+            int nodes = lvl.initialNodes != null ? lvl.initialNodes.Count : 0;
+            int bridges = lvl.bridgePositions != null ? lvl.bridgePositions.Count : 0;
+            int obstacles = lvl.obstacles != null ? lvl.obstacles.Count : 0;
+            return (area * 2) + (nodes * 8) + (bridges * 6) + (obstacles * 4) - (lvl.viaductLimit * 3);
+        }
+
+        private static string GetDifficultyTierName(int score)
+        {
+            if (score < 25) return "Easy";
+            if (score < 42) return "Medium";
+            if (score < 62) return "Hard";
+            if (score < 85) return "Expert";
+            return "Master";
+        }
+
+        private static Color GetDifficultyTierColor(int score)
+        {
+            if (score < 25) return new Color(0.12f, 0.65f, 0.22f);
+            if (score < 42) return new Color(0.2f, 0.6f, 1f);
+            if (score < 62) return new Color(0.9f, 0.6f, 0.1f);
+            return new Color(0.85f, 0.2f, 0.18f);
         }
     }
 }

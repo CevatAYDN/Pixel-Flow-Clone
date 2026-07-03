@@ -138,18 +138,51 @@ namespace PixelFlow.Editor
             _cachedLevels = _cachedLevels.OrderBy(l => l.levelIndex).ToList();
         }
 
+        private int _selectedTab = 0;
+        private readonly string[] _tabNames = { "🛠️ Diagnostics", "🎮 Level Studio", "🧩 Batch Solver", "💰 Economy & Heatmap" };
+
+        private Dictionary<LevelData, bool> _solvabilityCache = new Dictionary<LevelData, bool>();
+        private string _batchSolveStatusMessage = "";
+
         private void OnGUI()
         {
             InitStyles();
 
             // Banner Title Card
             GUILayout.BeginVertical(_titleBannerStyle);
-            GUILayout.Label("PIXEL FLOW SETUP DASHBOARD", _headerStyle);
-            GUILayout.Label("One-click workspace setup & level builder manager.", EditorStyles.miniLabel);
+            GUILayout.Label("PIXEL FLOW SETUP & LEVEL STUDIO DASHBOARD", _headerStyle);
+            GUILayout.Label("AAA+ Workspace Setup, Batch Auto-Solver & Economy Analytics.", EditorStyles.miniLabel);
             GUILayout.EndVertical();
+
+            GUILayout.Space(5);
+
+            // Tab Navigation Bar
+            _selectedTab = GUILayout.Toolbar(_selectedTab, _tabNames, GUILayout.Height(28));
+            GUILayout.Space(8);
 
             _scrollPos = GUILayout.BeginScrollView(_scrollPos);
 
+            switch (_selectedTab)
+            {
+                case 0:
+                    DrawDiagnosticsTab();
+                    break;
+                case 1:
+                    DrawLevelStudioTab();
+                    break;
+                case 2:
+                    DrawBatchSolverTab();
+                    break;
+                case 3:
+                    DrawEconomyAnalyticsTab();
+                    break;
+            }
+
+            GUILayout.EndScrollView();
+        }
+
+        private void DrawDiagnosticsTab()
+        {
             // 1. Scene setup and Diagnostics Card
             GUILayout.BeginVertical(_cardStyle);
             GUILayout.Label("Scene Status & Diagnostics", EditorStyles.boldLabel);
@@ -188,9 +221,37 @@ namespace PixelFlow.Editor
 
             GUILayout.Space(10);
 
-            // 2. Level Creation panel
+            // Quick Developer Tools Card
             GUILayout.BeginVertical(_cardStyle);
-            GUILayout.Label("Create New Level", EditorStyles.boldLabel);
+            GUILayout.Label("Developer Quick Utilities", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Clear PlayerPrefs & Save Data", GUILayout.Height(28)))
+            {
+                if (EditorUtility.DisplayDialog("Clear PlayerPrefs", "Are you sure you want to delete all saved progress and player prefs?", "Yes", "No"))
+                {
+                    PlayerPrefs.DeleteAll();
+                    PlayerPrefs.Save();
+                    Debug.Log("[PixelFlowSetupWindow] PlayerPrefs wiped clean.");
+                }
+            }
+            if (GUILayout.Button("Add +50,000 Test Coins", GUILayout.Height(28)))
+            {
+                int current = PlayerPrefs.GetInt("NT_Coins", 0);
+                PlayerPrefs.SetInt("NT_Coins", current + 50000);
+                PlayerPrefs.Save();
+                Debug.Log($"[PixelFlowSetupWindow] Coins increased to {current + 50000}");
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.EndVertical();
+        }
+
+        private void DrawLevelStudioTab()
+        {
+            // 1. Level Creation panel
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label("Create Custom Level", EditorStyles.boldLabel);
             GUILayout.Space(5);
 
             _newLevelIndex = EditorGUILayout.IntField("New Level Index", _newLevelIndex);
@@ -207,7 +268,7 @@ namespace PixelFlow.Editor
 
             GUILayout.Space(10);
 
-            // 2-B. Procedural Level Generation Panel
+            // 2. Procedural Level Generation Panel
             GUILayout.BeginVertical(_cardStyle);
             GUILayout.Label("Procedural Level Generator", EditorStyles.boldLabel);
             GUILayout.Space(5);
@@ -259,11 +320,11 @@ namespace PixelFlow.Editor
             {
                 // Level list table header
                 GUILayout.BeginHorizontal();
-                GUILayout.Label("Index", EditorStyles.boldLabel, GUILayout.Width(50));
+                GUILayout.Label("Index", EditorStyles.boldLabel, GUILayout.Width(45));
                 GUILayout.Label("Name", EditorStyles.boldLabel, GUILayout.Width(130));
-                GUILayout.Label("Grid Size", EditorStyles.boldLabel, GUILayout.Width(70));
-                GUILayout.Label("Nodes", EditorStyles.boldLabel, GUILayout.Width(50));
-                GUILayout.Label("Bridges", EditorStyles.boldLabel, GUILayout.Width(55));
+                GUILayout.Label("Grid", EditorStyles.boldLabel, GUILayout.Width(50));
+                GUILayout.Label("Nodes", EditorStyles.boldLabel, GUILayout.Width(45));
+                GUILayout.Label("Bridges", EditorStyles.boldLabel, GUILayout.Width(50));
                 GUILayout.Label("Actions", EditorStyles.boldLabel);
                 GUILayout.EndHorizontal();
 
@@ -274,13 +335,18 @@ namespace PixelFlow.Editor
                     if (lvl == null) continue;
 
                     GUILayout.BeginHorizontal();
-                    GUILayout.Label(lvl.levelIndex.ToString(), GUILayout.Width(50));
+                    GUILayout.Label(lvl.levelIndex.ToString(), GUILayout.Width(45));
                     GUILayout.Label(lvl.name, GUILayout.Width(130));
-                    GUILayout.Label($"{lvl.width}x{lvl.height}", GUILayout.Width(70));
-                    GUILayout.Label(lvl.initialNodes.Count.ToString(), GUILayout.Width(50));
-                    GUILayout.Label(lvl.bridgePositions.Count.ToString(), GUILayout.Width(55));
+                    GUILayout.Label($"{lvl.width}x{lvl.height}", GUILayout.Width(50));
+                    GUILayout.Label(lvl.initialNodes.Count.ToString(), GUILayout.Width(45));
+                    GUILayout.Label(lvl.bridgePositions.Count.ToString(), GUILayout.Width(50));
 
-                    if (GUILayout.Button("Select", GUILayout.Height(18)))
+                    if (GUILayout.Button("Select", GUILayout.Height(18), GUILayout.Width(55)))
+                    {
+                        Selection.activeObject = lvl;
+                        EditorGUIUtility.PingObject(lvl);
+                    }
+                    if (GUILayout.Button("Edit", GUILayout.Height(18), GUILayout.Width(45)))
                     {
                         Selection.activeObject = lvl;
                         EditorGUIUtility.PingObject(lvl);
@@ -289,8 +355,237 @@ namespace PixelFlow.Editor
                 }
             }
             GUILayout.EndVertical();
+        }
 
-            GUILayout.EndScrollView();
+        private void DrawBatchSolverTab()
+        {
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label("Batch Auto-Solver & Level Integrity Auditor", EditorStyles.boldLabel);
+            GUILayout.Label("Validate mathematically that all levels in the project can be solved.", EditorStyles.miniLabel);
+            GUILayout.Space(8);
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Run Batch Solver on ALL Levels", GUILayout.Height(32)))
+            {
+                RunBatchSolver();
+            }
+            if (GUILayout.Button("Auto-Fix & Generate Missing Solutions", GUILayout.Height(32)))
+            {
+                AutoFixMissingSolutions();
+            }
+            GUILayout.EndHorizontal();
+
+            if (!string.IsNullOrEmpty(_batchSolveStatusMessage))
+            {
+                GUILayout.Space(6);
+                EditorGUILayout.HelpBox(_batchSolveStatusMessage, MessageType.Info);
+            }
+
+            GUILayout.EndVertical();
+
+            GUILayout.Space(10);
+
+            // Solver Results Table
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label($"Solvability Status Audit ({_cachedLevels.Count} Levels)", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+
+            if (_cachedLevels.Count > 0)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Level", EditorStyles.boldLabel, GUILayout.Width(60));
+                GUILayout.Label("Grid Size", EditorStyles.boldLabel, GUILayout.Width(60));
+                GUILayout.Label("Solvability Status", EditorStyles.boldLabel, GUILayout.Width(160));
+                GUILayout.Label("Solution Count", EditorStyles.boldLabel, GUILayout.Width(100));
+                GUILayout.Label("Action", EditorStyles.boldLabel);
+                GUILayout.EndHorizontal();
+
+                var solver = new RuntimePathSolver();
+
+                foreach (var lvl in _cachedLevels)
+                {
+                    if (lvl == null) continue;
+
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label($"Lvl {lvl.levelIndex}", GUILayout.Width(60));
+                    GUILayout.Label($"{lvl.width}x{lvl.height}", GUILayout.Width(60));
+
+                    if (!_solvabilityCache.TryGetValue(lvl, out bool isSolvable))
+                    {
+                        isSolvable = solver.Solve(lvl, out _);
+                        _solvabilityCache[lvl] = isSolvable;
+                    }
+
+                    if (isSolvable)
+                    {
+                        GUILayout.Label("✔ SOLVABLE", _okBadgeStyle, GUILayout.Width(160));
+                    }
+                    else
+                    {
+                        GUILayout.Label("✖ UNSOLVABLE!", _errorBadgeStyle, GUILayout.Width(160));
+                    }
+
+                    int solutionCount = lvl.solutions != null ? lvl.solutions.Count : 0;
+                    string solLabel = solutionCount > 0 ? $"{solutionCount} colors solved" : "No saved solution";
+                    GUILayout.Label(solLabel, GUILayout.Width(100));
+
+                    if (GUILayout.Button("Inspect", GUILayout.Height(18), GUILayout.Width(60)))
+                    {
+                        Selection.activeObject = lvl;
+                        EditorGUIUtility.PingObject(lvl);
+                    }
+
+                    GUILayout.EndHorizontal();
+                }
+            }
+            GUILayout.EndVertical();
+        }
+
+        private void DrawEconomyAnalyticsTab()
+        {
+            // Level Difficulty Heatmap & Score
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label("Level Complexity & Difficulty Heatmap", EditorStyles.boldLabel);
+            GUILayout.Label("Calculated score based on grid area, node count, and bridge density.", EditorStyles.miniLabel);
+            GUILayout.Space(8);
+
+            if (_cachedLevels.Count > 0)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Level", EditorStyles.boldLabel, GUILayout.Width(60));
+                GUILayout.Label("Grid Area", EditorStyles.boldLabel, GUILayout.Width(70));
+                GUILayout.Label("Complexity Score", EditorStyles.boldLabel, GUILayout.Width(110));
+                GUILayout.Label("Difficulty Tier", EditorStyles.boldLabel, GUILayout.Width(110));
+                GUILayout.Label("Coverage Rule", EditorStyles.boldLabel);
+                GUILayout.EndHorizontal();
+
+                foreach (var lvl in _cachedLevels)
+                {
+                    if (lvl == null) continue;
+                    int score = CalculateComplexityScore(lvl);
+                    string tierName = GetDifficultyTierName(score);
+                    Color tierColor = GetDifficultyTierColor(score);
+
+                    GUIStyle tierStyle = new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = tierColor } };
+
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label($"Lvl {lvl.levelIndex}", GUILayout.Width(60));
+                    GUILayout.Label($"{lvl.width}x{lvl.height} ({lvl.width * lvl.height})", GUILayout.Width(70));
+                    GUILayout.Label($"{score} pts", GUILayout.Width(110));
+                    GUILayout.Label(tierName, tierStyle, GUILayout.Width(110));
+                    GUILayout.Label(lvl.requireFullGridCoverage ? "Full Grid (100%)" : "Flexible Connect");
+                    GUILayout.EndHorizontal();
+                }
+            }
+            GUILayout.EndVertical();
+
+            GUILayout.Space(10);
+
+            // Economy Simulation Breakdown Table
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label("Idle Economy Balance Sheet (Tier 1-10 Cost Projection)", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Tier", EditorStyles.boldLabel, GUILayout.Width(40));
+            GUILayout.Label("Storage Cap", EditorStyles.boldLabel, GUILayout.Width(90));
+            GUILayout.Label("Rate Cost", EditorStyles.boldLabel, GUILayout.Width(90));
+            GUILayout.Label("Storage Cost", EditorStyles.boldLabel, GUILayout.Width(90));
+            GUILayout.Label("Viaduct Cost", EditorStyles.boldLabel);
+            GUILayout.EndHorizontal();
+
+            float baseRateCost = 250f;
+            float baseStorageCost = 150f;
+            float baseViaductCost = 500f;
+            int[] storageCaps = { 1000, 2500, 5000, 10000, 25000, 50000, 100000, 200000, 500000, 1000000 };
+
+            for (int lvl = 0; lvl < 10; lvl++)
+            {
+                int rateC = Mathf.RoundToInt(baseRateCost * Mathf.Pow(1.35f, lvl));
+                int storageC = Mathf.RoundToInt(baseStorageCost * Mathf.Pow(1.35f, lvl));
+                int viaductC = Mathf.RoundToInt(baseViaductCost * Mathf.Pow(1.35f, lvl));
+
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"T{lvl + 1}", GUILayout.Width(40));
+                GUILayout.Label($"{storageCaps[lvl]:N0}", GUILayout.Width(90));
+                GUILayout.Label($"{rateC:N0} c", GUILayout.Width(90));
+                GUILayout.Label($"{storageC:N0} c", GUILayout.Width(90));
+                GUILayout.Label($"{viaductC:N0} c");
+                GUILayout.EndHorizontal();
+            }
+
+            GUILayout.EndVertical();
+        }
+
+        private void RunBatchSolver()
+        {
+            var solver = new RuntimePathSolver();
+            int solvableCount = 0;
+            _solvabilityCache.Clear();
+
+            foreach (var lvl in _cachedLevels)
+            {
+                if (lvl == null) continue;
+                bool ok = solver.Solve(lvl, out _);
+                _solvabilityCache[lvl] = ok;
+                if (ok) solvableCount++;
+            }
+
+            _batchSolveStatusMessage = $"Batch Solver finished: {solvableCount} / {_cachedLevels.Count} levels are solvable.";
+            Debug.Log($"[PixelFlowSetupWindow] {_batchSolveStatusMessage}");
+        }
+
+        private void AutoFixMissingSolutions()
+        {
+            var solver = new RuntimePathSolver();
+            int fixedCount = 0;
+
+            foreach (var lvl in _cachedLevels)
+            {
+                if (lvl == null) continue;
+                if (solver.Solve(lvl, out var solutions))
+                {
+                    Undo.RecordObject(lvl, "Auto-Solve Level");
+                    lvl.solutions = solutions.Select(kvp => new PathSolution
+                    {
+                        color = kvp.Key,
+                        pathPositions = new List<Vector2Int>(kvp.Value)
+                    }).ToList();
+                    EditorUtility.SetDirty(lvl);
+                    fixedCount++;
+                }
+            }
+
+            AssetDatabase.SaveAssets();
+            _batchSolveStatusMessage = $"Successfully solved & wrote solutions to {fixedCount} LevelData assets.";
+            Debug.Log($"[PixelFlowSetupWindow] {_batchSolveStatusMessage}");
+            RunBatchSolver();
+        }
+
+        private static int CalculateComplexityScore(LevelData lvl)
+        {
+            int area = lvl.width * lvl.height;
+            int nodes = lvl.initialNodes != null ? lvl.initialNodes.Count : 0;
+            int bridges = lvl.bridgePositions != null ? lvl.bridgePositions.Count : 0;
+            int obstacles = lvl.obstacles != null ? lvl.obstacles.Count : 0;
+            return (area * 2) + (nodes * 8) + (bridges * 6) + (obstacles * 4) - (lvl.viaductLimit * 3);
+        }
+
+        private static string GetDifficultyTierName(int score)
+        {
+            if (score < 25) return "Easy";
+            if (score < 42) return "Medium";
+            if (score < 62) return "Hard";
+            if (score < 85) return "Expert";
+            return "Master";
+        }
+
+        private static Color GetDifficultyTierColor(int score)
+        {
+            if (score < 25) return new Color(0.12f, 0.65f, 0.22f); // Green
+            if (score < 42) return new Color(0.2f, 0.6f, 1f);     // Blue
+            if (score < 62) return new Color(0.9f, 0.6f, 0.1f);    // Orange
+            return new Color(0.85f, 0.2f, 0.18f);                  // Red
         }
 
         private void DrawDiagnosticRow(string name, bool status, System.Action fixAction)
