@@ -148,6 +148,7 @@ namespace PixelFlow.Services
 
         private IEnumerator DoCrashFocus(Vector2Int gridPos)
         {
+            if (_cam == null) yield break;
             Vector3 originalPos = _cam.transform.position;
             Vector3 target = new Vector3(gridPos.x, gridPos.y, originalPos.z);
             Vector3 dir = (target - originalPos).normalized * 0.4f;
@@ -156,19 +157,21 @@ namespace PixelFlow.Services
             const float dur = 0.18f;
             while (t < dur)
             {
+                if (_cam == null) yield break;
                 t += Time.deltaTime;
                 _cam.transform.position = Vector3.Lerp(originalPos, focused, t / dur);
                 yield return null;
             }
-            // Kısa süre sonra geri dön — TriggerShake zaten sarsıntıyı yaptı.
             t = 0f;
             while (t < dur)
             {
+                if (_cam == null) yield break;
                 t += Time.deltaTime;
                 _cam.transform.position = Vector3.Lerp(focused, originalPos, t / dur);
                 yield return null;
             }
-            _cam.transform.position = originalPos;
+            if (_cam != null)
+                _cam.transform.position = originalPos;
         }
 
         private IEnumerator LerpCamera(Vector3 targetPos, Quaternion targetRot, float targetSize, float duration)

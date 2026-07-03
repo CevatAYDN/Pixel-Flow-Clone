@@ -38,8 +38,6 @@ namespace PixelFlow.Views
             CityEconomyModel.OnEconomyUpdated -= HandleEconomyUpdated;
             GameStateModel.OnStateChanged -= HandleStateChanged;
 
-            Unsubscribe<ProgressUpdatedSignal>(HandleProgressUpdated);
-
             View.OnCollectTaxesClicked -= HandleCollectTaxes;
             View.OnPlayLevelClicked -= HandlePlayLevel;
             View.OnUpgradeClicked -= HandleUpgrade;

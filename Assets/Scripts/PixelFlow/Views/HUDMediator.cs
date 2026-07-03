@@ -64,6 +64,8 @@ namespace PixelFlow.Views
             Subscribe<GridUpdatedSignal>(HandleGridUpdated);
             Subscribe<CrashDetectedSignal>(HandleCrashDetected);
             Subscribe<PathIntersectionWarningSignal>(HandleIntersectionWarning);
+            Subscribe<ViaductExhaustedSignal>(HandleViaductExhausted);
+            Subscribe<CrisisRetryExhaustedSignal>(HandleCrisisRetryExhausted);
 
             GameStateModel.OnStateChanged += HandleStateChanged;
             UpdateVisibility();
@@ -308,6 +310,16 @@ namespace PixelFlow.Views
         private void HandleThemeChanged(ThemeChangedSignal signal)
         {
             View.HighlightActiveTheme(SettingsModel.CurrentTheme);
+        }
+
+        private void HandleViaductExhausted(ViaductExhaustedSignal signal)
+        {
+            Debug.Log("[HUDMediator] Viaducts exhausted! Showing crisis prompt.");
+        }
+
+        private void HandleCrisisRetryExhausted(CrisisRetryExhaustedSignal signal)
+        {
+            Debug.Log($"[HUDMediator] Crisis retries exhausted ({signal.RetryCount}). Requesting ad/skip.");
         }
 
         private void HandleStateChanged(GameState state)
