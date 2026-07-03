@@ -240,7 +240,7 @@ namespace PixelFlow.Services
 
                 // Minimum mesafe kontrolü
                 int dist = Mathf.Abs(x1 - x2) + Mathf.Abs(y1 - y2);
-                if (dist < System.Math.Max(w, h) / 2) continue;
+                if (dist < 2) continue;
 
                 return (p1, p2);
             }

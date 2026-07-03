@@ -30,10 +30,19 @@ namespace PixelFlow.Services
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
-            GameObject updaterObj = new GameObject("[TaxAutoCollector]");
-            updaterObj.hideFlags = HideFlags.DontSave;
-            _updater = updaterObj.AddComponent<SimulationUpdater>();
-            _updater.OnUpdate = Update;
+#if UNITY_EDITOR
+            if (!UnityEditor.EditorApplication.isPlaying)
+            {
+                // EditMode test: SimulationUpdater GameObject'i yaratma.
+            }
+            else
+#endif
+            {
+                GameObject updaterObj = new GameObject("[TaxAutoCollector]");
+                updaterObj.hideFlags = HideFlags.DontSave;
+                _updater = updaterObj.AddComponent<SimulationUpdater>();
+                _updater.OnUpdate = Update;
+            }
 
             return default;
         }

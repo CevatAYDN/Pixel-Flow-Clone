@@ -13,6 +13,8 @@ namespace PixelFlow.Services
         void SetBool(string key, bool value);
         string GetString(string key, string defaultValue = "");
         void SetString(string key, string value);
+        bool HasKey(string key);
+        void DeleteKey(string key);
         void Save();
     }
 }

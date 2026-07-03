@@ -38,6 +38,8 @@ namespace PixelFlow.Models
             (GameState.Paused, GameState.Playing),
             // Playing → Simulating
             (GameState.Playing, GameState.Simulating),
+            // Playing → LevelCompleted (grace skip, debug shortcuts)
+            (GameState.Playing, GameState.LevelCompleted),
             // Simulating transitions
             (GameState.Simulating, GameState.Playing),
             (GameState.Simulating, GameState.Paused),

@@ -13,14 +13,17 @@ namespace PixelFlow.Services
     /// </summary>
     public sealed class RuntimePathSolver : IPathSolver
     {
-        private const int MaxIterations = 500000;
+        private const int MaxIterations = 200000;
+
+        private bool _requireFullCoverage;
 
         public bool Solve(LevelData level, out Dictionary<ColorType, List<Vector2Int>> solutions)
         {
             solutions = null;
+            _requireFullCoverage = level.requireFullGridCoverage;
 
             var colorNodes = CollectColorNodes(level);
-            if (colorNodes == null) return false;
+            if (colorNodes == null || colorNodes.Count == 0) return false;
 
             var bridges = new HashSet<Vector2Int>(level.bridgePositions ?? Enumerable.Empty<Vector2Int>());
             var grid = new ColorType[level.width, level.height];
@@ -74,7 +77,8 @@ namespace PixelFlow.Services
             var end = colorNodes[color][1];
             var currentPath = new List<Vector2Int> { start };
 
-            var resultPath = FindPartialPath(start, end, color, currentPath, grid, bridges, level.width, level.height, steps);
+            int iterationCount = 0;
+            var resultPath = FindPartialPath(start, end, color, currentPath, grid, bridges, level.width, level.height, steps, ref iterationCount);
             if (resultPath != null)
             {
                 partialPath = resultPath;
@@ -87,8 +91,11 @@ namespace PixelFlow.Services
         private List<Vector2Int> FindPartialPath(
             Vector2Int current, Vector2Int end, ColorType color,
             List<Vector2Int> path, ColorType[,] grid, HashSet<Vector2Int> bridges,
-            int w, int h, int maxSteps)
+            int w, int h, int maxSteps, ref int iterationCount)
         {
+            if (iterationCount > MaxIterations) return null;
+            iterationCount++;
+
             if (path.Count - 1 >= maxSteps || current == end)
                 return new List<Vector2Int>(path);
 
@@ -134,7 +141,7 @@ namespace PixelFlow.Services
                         path.Add(next);
                         path.Add(exit);
 
-                        var sub = FindPartialPath(exit, end, color, path, grid, bridges, w, h, maxSteps);
+                        var sub = FindPartialPath(exit, end, color, path, grid, bridges, w, h, maxSteps, ref iterationCount);
                         if (sub != null) return sub;
 
                         path.RemoveAt(path.Count - 1);
@@ -148,7 +155,7 @@ namespace PixelFlow.Services
                         grid[next.x, next.y] = color;
                         path.Add(next);
 
-                        var sub = FindPartialPath(next, end, color, path, grid, bridges, w, h, maxSteps);
+                        var sub = FindPartialPath(next, end, color, path, grid, bridges, w, h, maxSteps, ref iterationCount);
                         if (sub != null) return sub;
 
                         path.RemoveAt(path.Count - 1);
@@ -169,6 +176,8 @@ namespace PixelFlow.Services
         {
             if (colorIndex >= colors.Count)
             {
+                if (!_requireFullCoverage)
+                    return true;
                 for (int x = 0; x < w; x++)
                     for (int y = 0; y < h; y++)
                         if (grid[x, y] == ColorType.None && !bridges.Contains(new Vector2Int(x, y)))
@@ -196,6 +205,9 @@ namespace PixelFlow.Services
             ColorType[,] grid, HashSet<Vector2Int> bridges,
             int w, int h, ref int iterationCount)
         {
+            if (iterationCount > MaxIterations) return false;
+            iterationCount++;
+
             if (current == end)
             {
                 solutions[color] = new List<Vector2Int>(path);

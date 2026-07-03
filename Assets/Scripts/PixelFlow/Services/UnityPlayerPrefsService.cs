@@ -44,6 +44,17 @@ namespace PixelFlow.Services
             PlayerPrefs.Save();
         }
 
+        public bool HasKey(string key)
+        {
+            return PlayerPrefs.HasKey(key);
+        }
+
+        public void DeleteKey(string key)
+        {
+            PlayerPrefs.DeleteKey(key);
+            PlayerPrefs.Save();
+        }
+
         public void Save()
         {
             PlayerPrefs.Save();

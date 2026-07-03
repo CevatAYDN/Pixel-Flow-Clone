@@ -49,7 +49,7 @@ namespace PixelFlow.Services
             public List<Vector2Int> positions = new List<Vector2Int>();
         }
 
-        public static void Save(IGridModel grid, IGameSessionModel session, ILevelModel level)
+        public static void Save(IGridModel grid, IGameSessionModel session, ILevelModel level, IPlayerPrefsService prefs = null)
         {
             var data = new GridSaveData
             {
@@ -100,18 +100,27 @@ namespace PixelFlow.Services
             }
 
             string json = JsonUtility.ToJson(data);
-            PlayerPrefs.SetString(PrefKey, json);
-            PlayerPrefs.Save();
+            if (prefs != null)
+            {
+                prefs.SetString(PrefKey, json);
+                prefs.Save();
+            }
+            else
+            {
+                PlayerPrefs.SetString(PrefKey, json);
+                PlayerPrefs.Save();
+            }
         }
 
         /// <summary>
         /// Kayıtlı oyun state'ini yükler. Kayıt yoksa null döner.
         /// Çağıran, GridModel/GameSessionModel'a uygulamakla yükümlüdür.
         /// </summary>
-        public static GridSaveData Load()
+        public static GridSaveData Load(IPlayerPrefsService prefs = null)
         {
-            if (!PlayerPrefs.HasKey(PrefKey)) return null;
-            string json = PlayerPrefs.GetString(PrefKey, "");
+            bool hasKey = prefs != null ? prefs.HasKey(PrefKey) : PlayerPrefs.HasKey(PrefKey);
+            if (!hasKey) return null;
+            string json = prefs != null ? prefs.GetString(PrefKey, "") : PlayerPrefs.GetString(PrefKey, "");
             if (string.IsNullOrEmpty(json)) return null;
             try
             {
@@ -163,15 +172,23 @@ namespace PixelFlow.Services
             grid.LastPosition = new Vector2Int(data.lastPosX, data.lastPosY);
         }
 
-        public static bool HasSavedGame()
+        public static bool HasSavedGame(IPlayerPrefsService prefs = null)
         {
-            return PlayerPrefs.HasKey(PrefKey);
+            return prefs != null ? prefs.HasKey(PrefKey) : PlayerPrefs.HasKey(PrefKey);
         }
 
-        public static void ClearSave()
+        public static void ClearSave(IPlayerPrefsService prefs = null)
         {
-            PlayerPrefs.DeleteKey(PrefKey);
-            PlayerPrefs.Save();
+            if (prefs != null)
+            {
+                prefs.DeleteKey(PrefKey);
+                prefs.Save();
+            }
+            else
+            {
+                PlayerPrefs.DeleteKey(PrefKey);
+                PlayerPrefs.Save();
+            }
         }
     }
 }

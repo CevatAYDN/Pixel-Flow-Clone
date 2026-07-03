@@ -282,6 +282,7 @@ namespace PixelFlow.Views
 
         private async void HandleLevelCompleted(LevelCompletedSignal signal)
         {
+            if (!Application.isPlaying) return; // Skip async delay in EditMode tests to prevent TestRunner freeze
             if (View == null || GameSessionModel == null) return;
             View.ShowCompletion(GameSessionModel.Score, GameSessionModel.StarsEarned);
 

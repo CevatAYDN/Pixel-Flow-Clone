@@ -115,6 +115,10 @@ namespace Nexus.Generated
                 instance.GridModel = di.Resolve<PixelFlow.Models.IGridModel>();
                 instance.GameSessionModel = di.Resolve<PixelFlow.Models.IGameSessionModel>();
             });
+            NexusDI.RegisterInjector<PixelFlow.Services.SaveThrottler>((instance, di) =>
+            {
+                instance.PlayerPrefsService = di.Resolve<PixelFlow.Services.IPlayerPrefsService>();
+            });
             NexusDI.RegisterInjector<PixelFlow.Services.TaxCollectionService>((instance, di) =>
             {
                 instance.CityEconomyModel = di.Resolve<PixelFlow.Models.ICityEconomyModel>();
@@ -311,6 +315,7 @@ namespace Nexus.Generated
                 var _p_OverclockService_CityEconomyModel = default(PixelFlow.Services.OverclockService).CityEconomyModel;
                 var _p_PathService_GridModel = default(PixelFlow.Services.PathService).GridModel;
                 var _p_PathService_GameSessionModel = default(PixelFlow.Services.PathService).GameSessionModel;
+                var _p_SaveThrottler_PlayerPrefsService = default(PixelFlow.Services.SaveThrottler).PlayerPrefsService;
                 var _p_TaxCollectionService_CityEconomyModel = default(PixelFlow.Services.TaxCollectionService).CityEconomyModel;
                 var _p_TaxCollectionService_GameStateModel = default(PixelFlow.Services.TaxCollectionService).GameStateModel;
                 var _p_TutorialDriver_TutorialModel = default(PixelFlow.Services.TutorialDriver).TutorialModel;

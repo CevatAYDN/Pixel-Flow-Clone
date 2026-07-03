@@ -1339,6 +1339,8 @@ MonoBehaviour:
   _completionScoreText: {fileID: 0}
   _completionStarsText: {fileID: 0}
   _nextLevelButton: {fileID: 522711642}
+  _returnToHubButton: {fileID: 0}
+  _bloomFlashOverlay: {fileID: 0}
   _undoButton: {fileID: 0}
   _redoButton: {fileID: 0}
   _themeDarkButton: {fileID: 0}
@@ -1495,7 +1497,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1c5213db48bc2b04ab100c5119532d4a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PixelFlow.GameBootstrapper
-  initialLevel: {fileID: 11400000, guid: 689214afa7b54b84db204ac91f72ed7f, type: 2}
+  initialLevel: {fileID: 11400000, guid: d850ed9e62ee3764aa703d696622aeb5, type: 2}
   nexusRoot: {fileID: 1090863685}
 --- !u!4 &2102934989
 Transform:

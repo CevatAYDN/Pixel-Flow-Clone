@@ -34,6 +34,13 @@ namespace PixelFlow.Services
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
+#if UNITY_EDITOR
+            if (!UnityEditor.EditorApplication.isPlaying)
+            {
+                // EditMode: no GameObject creation, no audio.
+                return default;
+            }
+#endif
             _audioRoot = new GameObject("[AudioService]");
             _audioRoot.hideFlags = HideFlags.DontSave;
             UnityEngine.Object.DontDestroyOnLoad(_audioRoot);

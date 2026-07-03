@@ -19,13 +19,17 @@ namespace PixelFlow.Services
             float hintMultiplier = 1f - (hintsUsed * 0.10f);
             if (hintMultiplier < 0f) hintMultiplier = 0f;
 
-            float finalScore = baseScore * timeMultiplier * hintMultiplier;
+            float viaductPenalty = viaductsUsed * 0.08f;
+            if (viaductPenalty > 1f) viaductPenalty = 1f;
+
+            float finalScore = baseScore * timeMultiplier * hintMultiplier * (1f - viaductPenalty);
             int roundedScore = (int)(finalScore + 0.5f);
 
+            float scoreRatio = cellCount > 0 ? finalScore / baseScore : 0f;
             int stars;
-            if (viaductsUsed == 0)
+            if (scoreRatio >= 0.8f)
                 stars = 3;
-            else if (viaductsUsed <= 2)
+            else if (roundedScore > 0)
                 stars = 2;
             else
                 stars = 1;

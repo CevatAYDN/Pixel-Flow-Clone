@@ -22,6 +22,8 @@ namespace PixelFlow.Services
 
     public class SaveThrottler : ISaveThrottler, INexusService
     {
+        [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
+
         private const float ThrottleSeconds = 2f;
 
         private IGridModel _lastGrid;
@@ -89,7 +91,7 @@ namespace PixelFlow.Services
             if (_lastGrid == null || _lastSession == null || _lastLevel == null) return;
             try
             {
-                GridStateSerializer.Save(_lastGrid, _lastSession, _lastLevel);
+                GridStateSerializer.Save(_lastGrid, _lastSession, _lastLevel, PlayerPrefsService);
                 _lastSaveTime = Time.realtimeSinceStartup;
                 _pendingSave = false;
             }

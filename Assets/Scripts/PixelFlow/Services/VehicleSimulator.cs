@@ -16,6 +16,7 @@ namespace PixelFlow.Services
         void StartSimulationPhase();
         void StopSimulationPhase();
         void ClearAllVehicles();
+        void Tick(float deltaTime);
     }
 
     public class VehicleSimulator : IVehicleSimulator, INexusService
@@ -69,15 +70,26 @@ namespace PixelFlow.Services
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
-            GameObject updaterObj = new GameObject("[VehicleSimulatorUpdater]");
-            updaterObj.hideFlags = HideFlags.DontSave;
-            _updater = updaterObj.AddComponent<SimulationUpdater>();
-            _updater.OnUpdate = Update;
+#if UNITY_EDITOR
+            if (!UnityEditor.EditorApplication.isPlaying)
+            {
+                // EditMode test: SimulationUpdater GameObject'i yaratma — Tick() manuel çağrılır.
+                _vehicleContainer = null;
+            }
+            else
+#endif
+            {
+                GameObject updaterObj = new GameObject("[VehicleSimulatorUpdater]");
+                updaterObj.hideFlags = HideFlags.DontSave;
+                _updater = updaterObj.AddComponent<SimulationUpdater>();
+                _updater.OnUpdate = Update;
 
-            _vehicleContainer = new GameObject("[Vehicles]").transform;
-            _vehicleContainer.gameObject.hideFlags = HideFlags.DontSave;
+                _vehicleContainer = new GameObject("[Vehicles]").transform;
+                _vehicleContainer.gameObject.hideFlags = HideFlags.DontSave;
+            }
 
-            GameStateModel.OnStateChanged += HandleStateChanged;
+            if (GameStateModel != null)
+                GameStateModel.OnStateChanged += HandleStateChanged;
 
             _undoSubscription = SignalBus.Subscribe<UndoSignal>(sig => ClearAllVehicles());
             _redoSubscription = SignalBus.Subscribe<RedoSignal>(sig => ClearAllVehicles());
@@ -85,17 +97,27 @@ namespace PixelFlow.Services
             return default;
         }
 
+        private void SafeDestroy(UnityEngine.Object obj)
+        {
+            if (obj == null) return;
+            if (Application.isPlaying)
+                UnityEngine.Object.Destroy(obj);
+            else
+                UnityEngine.Object.DestroyImmediate(obj);
+        }
+
         public void OnDispose()
         {
             if (_updater != null)
             {
-                UnityEngine.Object.Destroy(_updater.gameObject);
+                SafeDestroy(_updater.gameObject);
             }
             if (_vehicleContainer != null)
             {
-                UnityEngine.Object.Destroy(_vehicleContainer.gameObject);
+                SafeDestroy(_vehicleContainer.gameObject);
             }
-            GameStateModel.OnStateChanged -= HandleStateChanged;
+            if (GameStateModel != null)
+                GameStateModel.OnStateChanged -= HandleStateChanged;
             _undoSubscription?.Dispose();
             _redoSubscription?.Dispose();
             ClearAllVehicles();
@@ -149,10 +171,10 @@ namespace PixelFlow.Services
                         for (int i = 0; i < v.CachedRenderers.Length; i++)
                         {
                             if (v.CachedRenderers[i]?.material != null)
-                                UnityEngine.Object.Destroy(v.CachedRenderers[i].material);
+                                SafeDestroy(v.CachedRenderers[i].material);
                         }
                     }
-                    UnityEngine.Object.Destroy(v.Visual);
+                    SafeDestroy(v.Visual);
                 }
             }
             _activeVehicles.Clear();
@@ -161,10 +183,25 @@ namespace PixelFlow.Services
 
         private void Update()
         {
+            if (GameStateModel == null) return;
+            Tick(Time.deltaTime);
+        }
+
+        public void Tick(float deltaTime)
+        {
             var state = GameStateModel.CurrentState;
             if (state != GameState.Playing && state != GameState.Simulating)
-            {
                 return;
+
+            if (state == GameState.Simulating)
+            {
+                _simulationPhaseTimer += deltaTime;
+                if (_simulationPhaseTimer >= SimulationPhaseDuration)
+                {
+                    SignalBus.Fire(new LevelCompletedSignal());
+                    StopSimulationPhase();
+                    return;
+                }
             }
 
             // Fire TimerTickSignal every frame so GameSessionModel.ElapsedTime stays accurate
@@ -172,20 +209,20 @@ namespace PixelFlow.Services
 
             if (ObstacleService != null)
             {
-                ObstacleService.Tick(Time.deltaTime);
+                ObstacleService.Tick(deltaTime);
             }
 
-            UpdateSpawning();
-            UpdateMovement();
+            UpdateSpawning(deltaTime);
+            UpdateMovement(deltaTime);
             // Collision detection ONLY in Simulating state (ghost vehicles in Playing should NOT crash)
             if (state == GameState.Simulating)
             {
                 UpdateCollisionDetection();
-                UpdateCompletionTimer();
+                UpdateCompletionTimer(deltaTime);
             }
         }
 
-        private void UpdateSpawning()
+        private void UpdateSpawning(float deltaTime)
         {
             for (int i = 0; i < AllColors.Length; i++)
             {
@@ -199,7 +236,7 @@ namespace PixelFlow.Services
                         _spawnTimers[color] = SpawnInterval; // Spawn first vehicle immediately
                     }
 
-                    _spawnTimers[color] += Time.deltaTime;
+                    _spawnTimers[color] += deltaTime;
                     if (_spawnTimers[color] >= SpawnInterval)
                     {
                         _spawnTimers[color] = 0f;
@@ -225,16 +262,16 @@ namespace PixelFlow.Services
 
                 Vector2Int n1 = new Vector2Int(-1, -1), n2 = new Vector2Int(-1, -1);
                 int found = 0;
-                for (int i = 0; i < currentLevel.initialNodes.Count && found < 2; i++)
+                for (int i = 0; i < currentLevel.initialNodes.Count; i++)
                 {
                     if (currentLevel.initialNodes[i].color == color)
                     {
                         if (found == 0) n1 = currentLevel.initialNodes[i].position;
-                        else n2 = currentLevel.initialNodes[i].position;
+                        else if (found == 1) n2 = currentLevel.initialNodes[i].position;
                         found++;
                     }
                 }
-                if (found < 2) return false;
+                if (found != 2) return false;
                 endpoints = (n1, n2);
                 _cachedEndpoints[color] = endpoints;
             }
@@ -289,6 +326,8 @@ namespace PixelFlow.Services
         private static List<Renderer> CreateProceduralVehicle3D(GameObject root, ColorType color)
         {
             var renderers = new List<Renderer>();
+            if (!Application.isPlaying) return renderers; // Skip heavy 3D primitives during EditMode unit tests
+
             Shader shader = Shader.Find("Sprites/Default") ?? Shader.Find("Standard");
 
             Color carColor = CellView.GetColor(color);
@@ -374,7 +413,7 @@ namespace PixelFlow.Services
             return renderers;
         }
 
-        private void UpdateMovement()
+        private void UpdateMovement(float deltaTime)
         {
             bool isPlaying = GameStateModel.CurrentState == GameState.Playing;
             float baseAlpha = isPlaying ? (0.45f + Mathf.Sin(Time.time * 6f) * 0.25f) : 1f;
@@ -416,7 +455,7 @@ namespace PixelFlow.Services
                     }
                 }
 
-                v.Progress += Mathf.Min(v.Speed * Time.deltaTime, MaxProgressPerFrame);
+                v.Progress += Mathf.Min(v.Speed * deltaTime, MaxProgressPerFrame);
                 if (v.Progress >= 1f)
                 {
                     v.Progress = 0f;
@@ -438,10 +477,10 @@ namespace PixelFlow.Services
                         for (int ri = 0; ri < v.CachedRenderers.Length; ri++)
                         {
                             if (v.CachedRenderers[ri]?.material != null)
-                                UnityEngine.Object.Destroy(v.CachedRenderers[ri].material);
+                                SafeDestroy(v.CachedRenderers[ri].material);
                         }
                     }
-                    UnityEngine.Object.Destroy(v.Visual);
+                    SafeDestroy(v.Visual);
                     _activeVehicles.RemoveAt(i);
                     continue;
                 }
@@ -592,9 +631,9 @@ namespace PixelFlow.Services
             });
         }
 
-        private void UpdateCompletionTimer()
+        private void UpdateCompletionTimer(float deltaTime)
         {
-            _simulationPhaseTimer += Time.deltaTime;
+            _simulationPhaseTimer += deltaTime;
             float remaining = SimulationPhaseDuration - _simulationPhaseTimer;
             GameSessionModel.SetSimulationTimer(remaining);
 

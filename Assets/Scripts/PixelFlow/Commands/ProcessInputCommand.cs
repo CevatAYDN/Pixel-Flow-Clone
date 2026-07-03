@@ -207,26 +207,8 @@ namespace PixelFlow.Commands
                     }
                     else
                     {
-                        RecordHistory();
-                        if (!currentCell.PathColors.Contains(GridModel.ActiveColor))
-                        {
-                            currentCell.PathColors.Add(GridModel.ActiveColor);
-                        }
-                        if (currentCell.Color == ColorType.None)
-                        {
-                            currentCell.Color = GridModel.ActiveColor;
-                        }
-                        path.Add(signal.GridPosition);
-                        GridModel.LastPosition = signal.GridPosition;
-
-                        if (currentCell.PathColors.Count >= 2 && !currentCell.HasViaduct)
-                        {
-                            SignalBus.Fire(new PathIntersectionWarningSignal { Position = signal.GridPosition });
-                        }
-
-                        SignalBus.Fire(new GridUpdatedSignal());
-                        SoundModel.PlayDrawSound(path.Count);
-                        RequestSave();
+                        // Non-bridge path cell occupied by another color — block extension
+                        return;
                     }
                 }
             }

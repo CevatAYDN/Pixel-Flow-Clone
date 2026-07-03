@@ -34,16 +34,16 @@ namespace PixelFlow.Editor.Tests
                 builder.BindService<ICrisisAdService, CrisisAdService>();
                 builder.BindService<ITutorialDriver, TutorialDriver>();
 
-                builder.BindModel<IGridModel, GridModel>();
-                builder.BindModel<ILevelModel, LevelModel>();
-                builder.BindModel<IProgressModel, ProgressModel>();
-                builder.BindModel<IGameStateModel, GameStateModel>();
-                builder.BindModel<IGameSessionModel, GameSessionModel>();
-                builder.BindModel<IHintModel, HintModel>();
-                builder.BindModel<ISettingsModel, SettingsModel>();
-                builder.BindModel<ISoundModel, SoundModel>();
-                builder.BindModel<ICityEconomyModel, CityEconomyModel>();
-                builder.BindModel<ITutorialModel, TutorialModel>();
+                builder.BindReactiveModel<IGridModel, GridModel>();
+                builder.BindReactiveModel<ILevelModel, LevelModel>();
+                builder.BindReactiveModel<IProgressModel, ProgressModel>();
+                builder.BindReactiveModel<IGameStateModel, GameStateModel>();
+                builder.BindReactiveModel<IGameSessionModel, GameSessionModel>();
+                builder.BindReactiveModel<IHintModel, HintModel>();
+                builder.BindReactiveModel<ISettingsModel, SettingsModel>();
+                builder.BindReactiveModel<ISoundModel, SoundModel>();
+                builder.BindReactiveModel<ICityEconomyModel, CityEconomyModel>();
+                builder.BindReactiveModel<ITutorialModel, TutorialModel>();
 
                 builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));
             });
@@ -217,7 +217,7 @@ namespace PixelFlow.Editor.Tests
 
             var throttler = _ctx.Context.Container.Resolve<ISaveThrottler>();
             throttler.ForceSave(grid, session, level);
-            Assert.IsTrue(GridStateSerializer.HasSavedGame());
+            Assert.IsTrue(GridStateSerializer.HasSavedGame(_ctx.Context.Container.Resolve<IPlayerPrefsService>()));
 
             GridStateSerializer.ClearSave();
         }

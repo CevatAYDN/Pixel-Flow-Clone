@@ -59,10 +59,7 @@ namespace PixelFlow.Services
         public void ResetRetryCount()
         {
             if (GameSessionModel == null) return;
-            for (int i = 0; i < GameSessionModel.RetryCount; i++)
-            {
-                GameSessionModel.IncrementRetryCount();
-            }
+            GameSessionModel.ResetRetryCount();
         }
     }
 }

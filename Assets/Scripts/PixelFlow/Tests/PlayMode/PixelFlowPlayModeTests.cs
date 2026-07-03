@@ -34,6 +34,14 @@ namespace PixelFlow.PlayMode.Tests
 
         public void SetString(string key, string value) => _strings[key] = value;
 
+        public bool HasKey(string key) => _store.ContainsKey(key) || _strings.ContainsKey(key);
+
+        public void DeleteKey(string key)
+        {
+            _store.Remove(key);
+            _strings.Remove(key);
+        }
+
         public void Save() { }
     }
 

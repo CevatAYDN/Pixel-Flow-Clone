@@ -34,6 +34,7 @@ namespace PixelFlow.Models
         void RefundViaduct();
         void SetSimulationTimer(float remaining);
         void IncrementRetryCount();
+        void ResetRetryCount();
         void MarkCrisisUndoUsed();
         void AddBonusViaduct(int amount);
         void ApplySave(int availableViaducts, int maxViaducts, float elapsedTime, int score, int stars);
@@ -133,6 +134,12 @@ namespace PixelFlow.Models
         public void IncrementRetryCount()
         {
             RetryCount++;
+            OnRetryCountChanged?.Invoke(RetryCount);
+        }
+
+        public void ResetRetryCount()
+        {
+            RetryCount = 0;
             OnRetryCountChanged?.Invoke(RetryCount);
         }
 

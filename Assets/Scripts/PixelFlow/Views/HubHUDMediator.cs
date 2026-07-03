@@ -23,6 +23,7 @@ namespace PixelFlow.Views
             GameStateModel.OnStateChanged += HandleStateChanged;
 
             Subscribe<ProgressUpdatedSignal>(HandleProgressUpdated);
+            Subscribe<EnterHubSignal>(HandleEnterHub);
 
             View.OnCollectTaxesClicked += HandleCollectTaxes;
             View.OnPlayLevelClicked += HandlePlayLevel;
@@ -44,6 +45,11 @@ namespace PixelFlow.Views
         }
 
         private void HandleProgressUpdated(ProgressUpdatedSignal signal)
+        {
+            UpdateView();
+        }
+
+        private void HandleEnterHub(EnterHubSignal signal)
         {
             UpdateView();
         }

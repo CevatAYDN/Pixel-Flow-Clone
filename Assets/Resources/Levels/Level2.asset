@@ -68,3 +68,5 @@ MonoBehaviour:
     - {x: 4, y: 2}
   bridgePositions: []
   viaductLimit: 3
+  requireFullGridCoverage: 0
+  obstacles: []

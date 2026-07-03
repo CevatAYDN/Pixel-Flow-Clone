@@ -83,7 +83,7 @@ namespace PixelFlow
                         saved = GridStateSerializer.Load();
                     }
 
-                    if (saved != null)
+                    if (saved != null && saved.cells != null && saved.cells.Count > 0)
                     {
                         var level = ResolveLevelByIndex(saved.levelIndex);
                         if (level != null)
@@ -133,8 +133,12 @@ namespace PixelFlow
 
         private void SaveGameState()
         {
-            if (_gridModel == null || _sessionModel == null || _levelModel == null) return;
+            if (_gridModel == null || _sessionModel == null || _levelModel == null || _stateModel == null) return;
             if (_levelModel.CurrentLevel == null) return;
+            
+            // Eğer Hub ekranındaysak, Grid arka plan için boş olarak yaratıldığından bunu save etmemeliyiz.
+            if (_stateModel.CurrentState == GameState.MainMenu) return;
+
             try
             {
                 GridStateSerializer.Save(_gridModel, _sessionModel, _levelModel);
