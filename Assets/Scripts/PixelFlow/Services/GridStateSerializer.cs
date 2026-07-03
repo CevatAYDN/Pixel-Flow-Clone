@@ -110,6 +110,7 @@ namespace PixelFlow.Services
                 PlayerPrefs.SetString(PrefKey, json);
                 PlayerPrefs.Save();
             }
+            Debug.Log($"[PixelFlow.GridStateSerializer] 💾 Game state saved: Level {data.levelIndex + 1} ({data.width}x{data.height}, Cells: {data.cells.Count}, Active Paths: {data.paths.Count}, Score: {data.score})");
         }
 
         /// <summary>
@@ -124,10 +125,16 @@ namespace PixelFlow.Services
             if (string.IsNullOrEmpty(json)) return null;
             try
             {
-                return JsonUtility.FromJson<GridSaveData>(json);
+                var loaded = JsonUtility.FromJson<GridSaveData>(json);
+                if (loaded != null)
+                {
+                    Debug.Log($"[PixelFlow.GridStateSerializer] 📖 Save file loaded successfully: Level {loaded.levelIndex + 1} ({loaded.width}x{loaded.height}, Cells: {loaded.cells.Count}, Paths: {loaded.paths.Count})");
+                }
+                return loaded;
             }
-            catch
+            catch (System.Exception ex)
             {
+                Debug.LogWarning($"[PixelFlow.GridStateSerializer] Failed to parse save JSON: {ex.Message}");
                 return null;
             }
         }
@@ -151,7 +158,7 @@ namespace PixelFlow.Services
                 cell.HasViaduct = csd.hasViaduct;
                 cell.UnderColor = (ColorType)csd.underColor;
                 cell.OverColor = (ColorType)csd.overColor;
-                    cell.PathColors.Clear();
+                cell.PathColors.Clear();
                 foreach (var pc in csd.pathColors)
                     cell.PathColors.Add((ColorType)pc);
                 cell.ObstacleType = (ObstacleType)csd.obstacleType;
@@ -170,6 +177,29 @@ namespace PixelFlow.Services
 
             grid.ActiveColor.Value = (ColorType)data.activeColor;
             grid.LastPosition.Value = new Vector2Int(data.lastPosX, data.lastPosY);
+        }
+
+        public static void EnsureInitialNodesOnGrid(LevelData level, IGridModel grid)
+        {
+            if (level == null || level.initialNodes == null || grid == null || grid.Grid == null) return;
+
+            foreach (var node in level.initialNodes)
+            {
+                if (node.position.x >= 0 && node.position.x < grid.Width &&
+                    node.position.y >= 0 && node.position.y < grid.Height)
+                {
+                    var cell = grid.Grid[node.position.x, node.position.y];
+                    if (cell.State == CellState.Empty)
+                    {
+                        cell.State = CellState.Node;
+                        cell.Color = node.color;
+                    }
+                    if (!cell.PathColors.Contains(node.color))
+                    {
+                        cell.PathColors.Add(node.color);
+                    }
+                }
+            }
         }
 
         public static bool HasSavedGame(IPlayerPrefsService prefs = null)

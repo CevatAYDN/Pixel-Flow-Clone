@@ -22,7 +22,18 @@ namespace PixelFlow.Commands
 
         public void Execute(LoadLevelSignal signal)
         {
-            UnityEngine.Debug.Log($"[LoadLevelCommand] Loading level: {signal.LevelToLoad.name} ({signal.LevelToLoad.width}x{signal.LevelToLoad.height})");
+            if (signal.LevelToLoad == null)
+            {
+                UnityEngine.Debug.LogError("[PixelFlow.LoadLevelCommand] ERROR: LoadLevelSignal received with null LevelToLoad.");
+                return;
+            }
+
+            int nodeCount = signal.LevelToLoad.initialNodes != null ? signal.LevelToLoad.initialNodes.Count : 0;
+            int bridgeCount = signal.LevelToLoad.bridgePositions != null ? signal.LevelToLoad.bridgePositions.Count : 0;
+            int obstacleCount = signal.LevelToLoad.obstacles != null ? signal.LevelToLoad.obstacles.Count : 0;
+
+            UnityEngine.Debug.Log($"[PixelFlow.LoadLevelCommand] ▶ Executing LoadLevel: Level {signal.LevelToLoad.levelIndex + 1} ({signal.LevelToLoad.name}, Grid: {signal.LevelToLoad.width}x{signal.LevelToLoad.height}, Nodes: {nodeCount}, Bridges: {bridgeCount}, Obstacles: {obstacleCount})");
+            
             LevelModel.SetLevel(signal.LevelToLoad);
             GridModel.Initialize(signal.LevelToLoad.width, signal.LevelToLoad.height);
 
@@ -82,6 +93,7 @@ namespace PixelFlow.Commands
             SignalBus.Fire(new GridUpdatedSignal());
             GameStateModel.SetState(GameState.Playing);
             SaveThrottler?.TryRequestSave(GridModel, GameSessionModel, LevelModel);
+            UnityEngine.Debug.Log($"[PixelFlow.LoadLevelCommand] ✔ Level {signal.LevelToLoad.levelIndex + 1} loaded successfully. State: GameState.Playing.");
         }
 
         public void Reset()

@@ -28,15 +28,18 @@ namespace PixelFlow
 
         private IEnumerator Start()
         {
+            Debug.Log("[PixelFlow] GameBootstrapper starting initialization...");
             yield return WaitForRoot();
             if (nexusRoot == null)
             {
-                Debug.LogError("[PixelFlow] Nexus Root not found after retries. Game cannot start.");
+                Debug.LogError("[PixelFlow] ERROR: Nexus Root not found after retries. Game cannot start.");
                 yield break;
             }
 
             while (!nexusRoot.IsInitialized)
                 yield return null;
+
+            Debug.Log("[PixelFlow] Nexus Root initialized successfully. Resolving services...");
 
             // Container'dan kritik servisleri çözümle.
             try
@@ -47,23 +50,27 @@ namespace PixelFlow
                 _gridModel = container.Resolve<IGridModel>();
                 _sessionModel = container.Resolve<IGameSessionModel>();
                 _levelModel = container.Resolve<ILevelModel>();
+                Debug.Log("[PixelFlow] DI Services resolved successfully (SignalBus, StateModel, GridModel, SessionModel, LevelModel).");
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[PixelFlow] DI resolve failed: {ex.Message}");
+                Debug.LogError($"[PixelFlow] ERROR: DI resolve failed: {ex.Message}");
                 yield break;
             }
 
             var splash = FindAnyObjectByType<Views.SplashView>();
             if (splash != null)
             {
+                Debug.Log("[PixelFlow] Waiting for Splash screen completion...");
                 bool splashDone = false;
                 splash.OnSplashComplete += () => splashDone = true;
                 yield return new WaitUntil(() => splashDone);
+                Debug.Log("[PixelFlow] Splash screen complete.");
             }
 
             if (GridStateSerializer.HasSavedGame())
             {
+                Debug.Log("[PixelFlow] Saved game detected in PlayerPrefs. Checking save validity...");
                 var saved = GridStateSerializer.Load();
                 if (saved != null)
                 {
@@ -85,24 +92,39 @@ namespace PixelFlow
 
                     if (saved != null && saved.cells != null && saved.cells.Count > 0)
                     {
-                        var level = ResolveLevelByIndex(saved.levelIndex);
-                        if (level != null)
+                        bool hasNodesOrPaths = saved.cells.Exists(c => c.state == (int)Models.CellState.Node) || (saved.paths != null && saved.paths.Count > 0);
+                        if (hasNodesOrPaths)
                         {
-                            Debug.Log($"[PixelFlow] Restoring saved level {saved.levelIndex} ({saved.width}x{saved.height})");
-                            _levelModel.SetLevel(level);
-                            GridStateSerializer.ApplyToGrid(saved, _gridModel);
-                            _sessionModel.ApplySave(saved.availableViaducts, saved.maxViaducts,
-                                saved.elapsedTime, saved.score, saved.stars);
-                            _signalBus.Fire(new GridUpdatedSignal());
-                            _stateModel.SetState(GameState.Playing);
-                            yield break;
+                            var level = ResolveLevelByIndex(saved.levelIndex);
+                            if (level != null)
+                            {
+                                Debug.Log($"[PixelFlow] Restoring valid saved game: Level {saved.levelIndex + 1} ({level.name}, Grid: {saved.width}x{saved.height}, Cells: {saved.cells.Count}, Paths: {saved.paths.Count})");
+                                _levelModel.SetLevel(level);
+                                GridStateSerializer.ApplyToGrid(saved, _gridModel);
+                                GridStateSerializer.EnsureInitialNodesOnGrid(level, _gridModel);
+                                _sessionModel.ApplySave(saved.availableViaducts, saved.maxViaducts,
+                                    saved.elapsedTime, saved.score, saved.stars);
+                                _signalBus.Fire(new GridUpdatedSignal());
+                                _stateModel.SetState(GameState.Playing);
+                                Debug.Log($"[PixelFlow] Game state transitioned to Playing. Level {level.levelIndex + 1} restored.");
+                                yield break;
+                            }
+                            else
+                            {
+                                Debug.LogWarning($"[PixelFlow] Could not resolve LevelData asset for index {saved.levelIndex}. Falling back to Hub.");
+                            }
+                        }
+                        else
+                        {
+                            Debug.LogWarning("[PixelFlow] Saved game snapshot had 0 nodes/paths. Clearing empty save file.");
+                            GridStateSerializer.ClearSave();
                         }
                     }
                 }
             }
 
             // İlk çalıştırma veya save bozuk → Hub'a gir.
-            Debug.Log("[PixelFlow] No save — entering Hub.");
+            Debug.Log("[PixelFlow] No valid save file found — entering Hub (MainMenu).");
             EnterHub();
         }
 
@@ -198,9 +220,13 @@ namespace PixelFlow
             if (byName != null) return byName;
             // Sonra diğer asset isimlerini
             var all = Resources.LoadAll<LevelData>("Levels");
-            foreach (var lvl in all)
+            if (all != null && all.Length > 0)
             {
-                if (lvl != null && lvl.levelIndex == index) return lvl;
+                System.Array.Sort(all, (a, b) => a.levelIndex.CompareTo(b.levelIndex));
+                foreach (var lvl in all)
+                {
+                    if (lvl != null && lvl.levelIndex == index) return lvl;
+                }
             }
             return ResolveInitialLevel();
         }
@@ -215,7 +241,8 @@ namespace PixelFlow
             var any = Resources.LoadAll<LevelData>("Levels");
             if (any != null && any.Length > 0)
             {
-                Debug.LogWarning($"[PixelFlow] Levels/Level1 not found; using first available LevelData: {any[0].name}");
+                System.Array.Sort(any, (a, b) => a.levelIndex.CompareTo(b.levelIndex));
+                Debug.LogWarning($"[PixelFlow] Levels/Level1 not found; using lowest levelIndex asset: {any[0].name} (Index: {any[0].levelIndex})");
                 return any[0];
             }
 

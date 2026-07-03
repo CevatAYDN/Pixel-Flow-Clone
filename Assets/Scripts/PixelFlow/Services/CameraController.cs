@@ -66,26 +66,13 @@ namespace PixelFlow.Services
 
         private void HandleStateChanged(GameState state)
         {
-            if (!_initialApplied)
-            {
-                _initialApplied = true;
-                return;
-            }
-
-            // GDD §5.1: "Oyuncu Hub ekranında bir mahalleye tıkladığında, kamera gökyüzündeki
-            // izometrik geniş açıdan pürüzsüz bir şekilde aşağı süzülerek doğrudan bulmaca alanına
-            // odaklanır. Geri dönüşte aynı animasyon ters yönde çalışır."
             if (state == GameState.MainMenu)
             {
                 TransitionToHub();
             }
             else if (state == GameState.Playing || state == GameState.Simulating || state == GameState.Paused)
             {
-                // Puzzle görünümüne geçiş sadece bir kez GridMediator tarafından SetPuzzleView ile ayarlanır.
-                if (_puzzleSize > 0f)
-                {
-                    TransitionToPuzzle();
-                }
+                TransitionToPuzzle();
             }
         }
 
@@ -103,9 +90,14 @@ namespace PixelFlow.Services
 
         public void TransitionToPuzzle()
         {
-            if (_puzzleSize <= 0f) return;
+            if (_puzzleSize <= 0f)
+            {
+                _puzzlePosition = new Vector3(2f, 2f, -10f);
+                _puzzleSize = 5f;
+            }
+            _puzzleRotation = Quaternion.Euler(0f, 0f, 0f);
             if (_transition != null) StopCoroutine(_transition);
-            _transition = StartCoroutine(LerpCamera(_puzzlePosition, _puzzleRotation, _puzzleSize, 0.8f));
+            _transition = StartCoroutine(LerpCamera(_puzzlePosition, _puzzleRotation, _puzzleSize, 0.5f));
         }
 
         private Coroutine _shakeCoroutine;

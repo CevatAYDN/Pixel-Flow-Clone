@@ -42,9 +42,14 @@ namespace PixelFlow.Views
 
         private void HandleStateChanged(GameState state)
         {
-            View.SetupCamera(state == GameState.MainMenu);
-            if (state == GameState.MainMenu)
+            bool isHubActive = state == GameState.MainMenu;
+            if (View != null && View.gameObject != null)
             {
+                View.gameObject.SetActive(isHubActive);
+            }
+            if (isHubActive)
+            {
+                View.SetupCamera(true);
                 RefreshHub();
             }
         }

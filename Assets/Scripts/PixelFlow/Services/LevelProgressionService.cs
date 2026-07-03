@@ -74,11 +74,69 @@ namespace PixelFlow.Services
             if (_generatedCache.TryGetValue(levelIndex, out var cached))
                 return cached;
 
-            var param = GetDifficultyForLevel(levelIndex);
-            var level = _generator.Generate(param);
+            LevelData level = Resources.Load<LevelData>($"Levels/Level{levelIndex + 1}");
+            if (level == null)
+            {
+                level = Resources.Load<LevelData>($"Levels/Level{levelIndex}");
+            }
+            if (level == null)
+            {
+                var allLevels = Resources.LoadAll<LevelData>("Levels");
+                foreach (var l in allLevels)
+                {
+                    if (l != null && l.levelIndex == levelIndex)
+                    {
+                        level = l;
+                        break;
+                    }
+                }
+            }
+            if (level == null)
+            {
+                var packs = Resources.LoadAll<LevelPack>("Levels");
+                if (packs != null)
+                {
+                    foreach (var pack in packs)
+                    {
+                        if (pack != null && pack.levels != null)
+                        {
+                            foreach (var l in pack.levels)
+                            {
+                                if (l != null && l.levelIndex == levelIndex)
+                                {
+                                    level = l;
+                                    break;
+                                }
+                            }
+                        }
+                        if (level != null) break;
+                    }
+                }
+            }
+
             if (level != null)
             {
-                level.levelIndex = levelIndex;
+                Debug.Log($"[PixelFlow.LevelProgressionService] Loaded handcrafted LevelData asset for index {levelIndex}: '{level.name}' ({level.width}x{level.height})");
+            }
+
+            if (level == null)
+            {
+                Debug.Log($"[PixelFlow.LevelProgressionService] No handcrafted LevelData asset found for index {levelIndex}. Generating procedurally...");
+                var param = GetDifficultyForLevel(levelIndex);
+                level = _generator.Generate(param);
+                if (level != null)
+                {
+                    level.levelIndex = levelIndex;
+                    Debug.Log($"[PixelFlow.LevelProgressionService] Procedurally generated Level {levelIndex + 1} ({param.gridWidth}x{param.gridHeight}, {param.colorCount} colors).");
+                }
+                else
+                {
+                    Debug.LogError($"[PixelFlow.LevelProgressionService] ERROR: Procedural generator failed to generate level for index {levelIndex}.");
+                }
+            }
+
+            if (level != null)
+            {
                 _generatedCache[levelIndex] = level;
             }
 

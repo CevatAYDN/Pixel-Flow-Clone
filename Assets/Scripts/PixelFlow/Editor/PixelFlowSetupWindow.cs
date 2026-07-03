@@ -6,6 +6,8 @@ using Nexus.Core;
 using PixelFlow.Views;
 using PixelFlow.Data;
 using PixelFlow.Services;
+using PixelFlow.Models;
+using PixelFlow.Signals;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,7 +20,7 @@ namespace PixelFlow.Editor
         public static void ShowWindow()
         {
             var window = GetWindow<PixelFlowSetupWindow>("Pixel Flow Setup");
-            window.minSize = new Vector2(480, 580);
+            window.minSize = new Vector2(520, 640);
             window.RefreshData();
         }
 
@@ -33,6 +35,7 @@ namespace PixelFlow.Editor
         private bool _soundOk = false;
         private bool _themeOk = false;
         private bool _bootstrapperOk = false;
+        private bool _levelsOk = false;
 
         // Level Creator Fields
         private int _newLevelIndex = 1;
@@ -59,6 +62,18 @@ namespace PixelFlow.Editor
         private GUIStyle _errorBadgeStyle;
         private GUIStyle _titleBannerStyle;
 
+        private int _selectedTab = 0;
+        private readonly string[] _tabNames = {
+            "🕹️ Game Controller",
+            "🛠️ Diagnostics",
+            "🎮 Level Studio",
+            "🧩 Batch Solver",
+            "💰 Economy & Heatmap"
+        };
+
+        private Dictionary<LevelData, bool> _solvabilityCache = new Dictionary<LevelData, bool>();
+        private string _batchSolveStatusMessage = "";
+
         private void OnEnable()
         {
             RefreshData();
@@ -69,10 +84,18 @@ namespace PixelFlow.Editor
             RefreshData();
         }
 
+        private void OnInspectorUpdate()
+        {
+            if (Application.isPlaying)
+            {
+                Repaint();
+            }
+        }
+
         private void RefreshData()
         {
-            RunDiagnostics();
             RefreshLevelsCache();
+            RunDiagnostics();
         }
 
         private void RunDiagnostics()
@@ -120,6 +143,7 @@ namespace PixelFlow.Editor
 
             var boot = Object.FindAnyObjectByType<GameBootstrapper>();
             _bootstrapperOk = boot != null && boot.initialLevel != null;
+            _levelsOk = _cachedLevels.Count > 0 && boot != null && boot.initialLevel != null;
         }
 
         private void RefreshLevelsCache()
@@ -138,20 +162,14 @@ namespace PixelFlow.Editor
             _cachedLevels = _cachedLevels.OrderBy(l => l.levelIndex).ToList();
         }
 
-        private int _selectedTab = 0;
-        private readonly string[] _tabNames = { "🛠️ Diagnostics", "🎮 Level Studio", "🧩 Batch Solver", "💰 Economy & Heatmap" };
-
-        private Dictionary<LevelData, bool> _solvabilityCache = new Dictionary<LevelData, bool>();
-        private string _batchSolveStatusMessage = "";
-
         private void OnGUI()
         {
             InitStyles();
 
             // Banner Title Card
             GUILayout.BeginVertical(_titleBannerStyle);
-            GUILayout.Label("PIXEL FLOW SETUP & LEVEL STUDIO DASHBOARD", _headerStyle);
-            GUILayout.Label("AAA+ Workspace Setup, Batch Auto-Solver & Economy Analytics.", EditorStyles.miniLabel);
+            GUILayout.Label("PIXEL FLOW SETUP & GAME ITERATION DASHBOARD", _headerStyle);
+            GUILayout.Label("Live Game Management, AAA+ Scene Setup, Level Studio & Auto-Solver.", EditorStyles.miniLabel);
             GUILayout.EndVertical();
 
             GUILayout.Space(5);
@@ -165,15 +183,18 @@ namespace PixelFlow.Editor
             switch (_selectedTab)
             {
                 case 0:
-                    DrawDiagnosticsTab();
+                    DrawGameControllerTab();
                     break;
                 case 1:
-                    DrawLevelStudioTab();
+                    DrawDiagnosticsTab();
                     break;
                 case 2:
-                    DrawBatchSolverTab();
+                    DrawLevelStudioTab();
                     break;
                 case 3:
+                    DrawBatchSolverTab();
+                    break;
+                case 4:
                     DrawEconomyAnalyticsTab();
                     break;
             }
@@ -181,11 +202,244 @@ namespace PixelFlow.Editor
             GUILayout.EndScrollView();
         }
 
+        // ─────────────────────────────────────────────────────────
+        // TAB 0: GAME ITERATION & CANLI YÖNETİM
+        // ─────────────────────────────────────────────────────────
+
+        private void DrawGameControllerTab()
+        {
+            // 1. Live Runtime Status Card
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label("Live Runtime & Game State Monitor", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+
+            bool isPlaying = Application.isPlaying;
+            string playStatus = isPlaying ? "PLAYING (Live)" : "EDIT MODE (Stopped)";
+            Color statusColor = isPlaying ? new Color(0.2f, 0.8f, 0.3f) : new Color(0.9f, 0.6f, 0.1f);
+
+            GUIStyle statusStyle = new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = statusColor } };
+            
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Engine Mode:", GUILayout.Width(110));
+            GUILayout.Label(playStatus, statusStyle);
+            GUILayout.EndHorizontal();
+
+            var stateModel = GetModel<IGameStateModel>();
+            var levelModel = GetModel<ILevelModel>();
+            var progressModel = GetModel<IProgressModel>();
+            var economyModel = GetModel<ICityEconomyModel>();
+
+            string currentState = stateModel != null ? stateModel.CurrentState.ToString() : "Not Initialized";
+            string currentLvlInfo = levelModel != null && levelModel.CurrentLevel != null
+                ? $"Level {levelModel.CurrentLevel.levelIndex + 1} ({levelModel.CurrentLevel.name})"
+                : (Object.FindAnyObjectByType<GameBootstrapper>()?.initialLevel != null
+                    ? $"Boot Initial: {Object.FindAnyObjectByType<GameBootstrapper>().initialLevel.name}"
+                    : "None");
+
+            int unlockedLvl = progressModel != null ? progressModel.UnlockedLevels : PlayerPrefs.GetInt("NT_UnlockedLevels", 1);
+            int coins = economyModel != null ? economyModel.Coins : PlayerPrefs.GetInt("NT_Coins", 0);
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Game State:", GUILayout.Width(110));
+            GUILayout.Label(currentState, EditorStyles.boldLabel);
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Loaded Level:", GUILayout.Width(110));
+            GUILayout.Label(currentLvlInfo);
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Unlocked Level:", GUILayout.Width(110));
+            GUILayout.Label($"Level {unlockedLvl + 1}");
+            GUILayout.Label("Coins:", GUILayout.Width(50));
+            GUILayout.Label($"{coins:N0} c");
+            GUILayout.EndHorizontal();
+
+            GUILayout.EndVertical();
+
+            GUILayout.Space(10);
+
+            // 2. Live Game Controller & Triggers Card
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label("Live Gameplay Controls & Triggers", EditorStyles.boldLabel);
+            GUILayout.Space(6);
+
+            GUILayout.BeginHorizontal();
+            GUI.backgroundColor = isPlaying ? new Color(0.2f, 0.7f, 1f) : new Color(0.2f, 0.8f, 0.3f);
+            if (GUILayout.Button(isPlaying ? "▶ Reload Unlocked Level" : "▶ Start Play Mode (Level 1)", GUILayout.Height(32)))
+            {
+                if (!isPlaying)
+                {
+                    EditorApplication.isPlaying = true;
+                }
+                else
+                {
+                    int idx = progressModel != null ? progressModel.UnlockedLevels : 0;
+                    var lvl = ResolveLevelByIndex(idx);
+                    if (lvl != null) PlayLevel(lvl);
+                }
+            }
+            GUI.backgroundColor = new Color(0.2f, 0.85f, 0.3f);
+            if (GUILayout.Button("⏭️ Complete Level (Simulate Win)", GUILayout.Height(32)))
+            {
+                CompleteCurrentLevel();
+            }
+            GUI.backgroundColor = Color.white;
+            if (GUILayout.Button("🔄 Restart Level", GUILayout.Height(32)))
+            {
+                RestartCurrentLevel();
+            }
+            if (GUILayout.Button("🏠 Return to Hub", GUILayout.Height(32)))
+            {
+                ReturnToHub();
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(6);
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("💡 Give Free Hint", GUILayout.Height(28)))
+            {
+                DispatchSignal(new RequestHintSignal());
+            }
+            if (GUILayout.Button("↩️ Undo", GUILayout.Height(28)))
+            {
+                DispatchSignal(new UndoSignal());
+            }
+            if (GUILayout.Button("↪️ Redo", GUILayout.Height(28)))
+            {
+                DispatchSignal(new RedoSignal());
+            }
+            if (GUILayout.Button("➕ Add +50,000 Coins", GUILayout.Height(28)))
+            {
+                AddTestCoins(50000);
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(6);
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("🔓 Unlock All Levels", GUILayout.Height(28)))
+            {
+                UnlockAllLevels();
+            }
+            if (GUILayout.Button("🔒 Reset Progress to Lvl 1", GUILayout.Height(28)))
+            {
+                ResetProgress();
+            }
+            if (GUILayout.Button("💾 Force Save State", GUILayout.Height(28)))
+            {
+                ForceSaveGame();
+            }
+            if (GUILayout.Button("🗑️ Wipe PlayerPrefs & Save", GUILayout.Height(28)))
+            {
+                WipeSaveData();
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.EndVertical();
+
+            GUILayout.Space(10);
+
+            // 3. Direct Level Selector & Launcher Panel
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label($"Quick Level Launcher ({_cachedLevels.Count} Levels)", EditorStyles.boldLabel);
+            GUILayout.Label("Click 'Launch' to play any level immediately in Play Mode.", EditorStyles.miniLabel);
+            GUILayout.Space(6);
+
+            if (_cachedLevels.Count == 0)
+            {
+                EditorGUILayout.HelpBox("No LevelData assets found. Click below to generate default levels.", MessageType.Warning);
+                if (GUILayout.Button("Create Phase 1+2 Level Pack (12 Levels)", GUILayout.Height(30)))
+                {
+                    CreatePhase1And2HandCraftedPack();
+                    RefreshData();
+                }
+            }
+            else
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Lvl", EditorStyles.boldLabel, GUILayout.Width(35));
+                GUILayout.Label("Name", EditorStyles.boldLabel, GUILayout.Width(130));
+                GUILayout.Label("Grid", EditorStyles.boldLabel, GUILayout.Width(50));
+                GUILayout.Label("Nodes", EditorStyles.boldLabel, GUILayout.Width(45));
+                GUILayout.Label("Bridges", EditorStyles.boldLabel, GUILayout.Width(50));
+                GUILayout.Label("Direct Launch Action", EditorStyles.boldLabel);
+                GUILayout.EndHorizontal();
+
+                for (int i = 0; i < _cachedLevels.Count; i++)
+                {
+                    var lvl = _cachedLevels[i];
+                    if (lvl == null) continue;
+
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label((lvl.levelIndex + 1).ToString(), GUILayout.Width(35));
+                    GUILayout.Label(lvl.name, GUILayout.Width(130));
+                    GUILayout.Label($"{lvl.width}x{lvl.height}", GUILayout.Width(50));
+                    GUILayout.Label(lvl.initialNodes != null ? lvl.initialNodes.Count.ToString() : "0", GUILayout.Width(45));
+                    GUILayout.Label(lvl.bridgePositions != null ? lvl.bridgePositions.Count.ToString() : "0", GUILayout.Width(50));
+
+                    GUI.backgroundColor = new Color(0.2f, 0.7f, 1f);
+                    if (GUILayout.Button($"▶ Launch & Play Level {lvl.levelIndex + 1}", GUILayout.Height(20)))
+                    {
+                        PlayLevel(lvl);
+                    }
+                    GUI.backgroundColor = Color.white;
+                    GUILayout.EndHorizontal();
+                }
+            }
+
+            GUILayout.EndVertical();
+
+            GUILayout.Space(10);
+
+            // 4. Bootstrapper Target Configuration Card
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label("Bootstrapper Target Configuration", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+
+            var bootstrapper = Object.FindAnyObjectByType<GameBootstrapper>();
+            if (bootstrapper != null)
+            {
+                EditorGUI.BeginChangeCheck();
+                var newInitial = (LevelData)EditorGUILayout.ObjectField("Bootstrapper Initial Level", bootstrapper.initialLevel, typeof(LevelData), false);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    Undo.RecordObject(bootstrapper, "Change Initial Level");
+                    bootstrapper.initialLevel = newInitial;
+                    EditorUtility.SetDirty(bootstrapper);
+                }
+
+                if (GUILayout.Button("Assign Level 1 as Bootstrapper Target", GUILayout.Height(24)))
+                {
+                    var lvl1 = ResolveLevelByIndex(0);
+                    if (lvl1 != null)
+                    {
+                        Undo.RecordObject(bootstrapper, "Assign Level 1");
+                        bootstrapper.initialLevel = lvl1;
+                        EditorUtility.SetDirty(bootstrapper);
+                        Debug.Log($"[PixelFlowSetupWindow] Assigned {lvl1.name} to GameBootstrapper.initialLevel");
+                        RefreshData();
+                    }
+                }
+            }
+            else
+            {
+                EditorGUILayout.HelpBox("GameBootstrapper component missing in current scene. Go to Diagnostics tab to auto-create.", MessageType.Warning);
+            }
+            GUILayout.EndVertical();
+        }
+
+        // ─────────────────────────────────────────────────────────
+        // TAB 1: DIAGNOSTICS & SAHNE KURULUMU
+        // ─────────────────────────────────────────────────────────
+
         private void DrawDiagnosticsTab()
         {
             // 1. Scene setup and Diagnostics Card
             GUILayout.BeginVertical(_cardStyle);
-            GUILayout.Label("Scene Status & Diagnostics", EditorStyles.boldLabel);
+            GUILayout.Label("Scene Health & System Diagnostics", EditorStyles.boldLabel);
             GUILayout.Space(5);
 
             DrawDiagnosticRow("Base Prefabs (CellView)", _prefabsOk, GeneratePrefabs);
@@ -198,10 +452,11 @@ namespace PixelFlow.Editor
             DrawDiagnosticRow("Audio & Sound System Handler", _soundOk, SetupScene);
             DrawDiagnosticRow("Color Theme Handler", _themeOk, SetupScene);
             DrawDiagnosticRow("Game Lifecycle Bootstrapper", _bootstrapperOk, SetupScene);
+            DrawDiagnosticRow("Level Data Registry & Initial Level", _levelsOk, SetupScene);
 
             GUILayout.Space(12);
 
-            bool allOk = _prefabsOk && _rootOk && _contextDataOk && _gridViewOk && _canvasOk && _hudOk && _eventSystemOk && _soundOk && _themeOk && _bootstrapperOk;
+            bool allOk = _prefabsOk && _rootOk && _contextDataOk && _gridViewOk && _canvasOk && _hudOk && _eventSystemOk && _soundOk && _themeOk && _bootstrapperOk && _levelsOk;
             if (allOk)
             {
                 EditorGUILayout.HelpBox("✔ Everything is configured perfectly. Ready to play!", MessageType.Info);
@@ -229,29 +484,25 @@ namespace PixelFlow.Editor
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Clear PlayerPrefs & Save Data", GUILayout.Height(28)))
             {
-                if (EditorUtility.DisplayDialog("Clear PlayerPrefs", "Are you sure you want to delete all saved progress and player prefs?", "Yes", "No"))
-                {
-                    PlayerPrefs.DeleteAll();
-                    PlayerPrefs.Save();
-                    Debug.Log("[PixelFlowSetupWindow] PlayerPrefs wiped clean.");
-                }
+                WipeSaveData();
             }
             if (GUILayout.Button("Add +50,000 Test Coins", GUILayout.Height(28)))
             {
-                int current = PlayerPrefs.GetInt("NT_Coins", 0);
-                PlayerPrefs.SetInt("NT_Coins", current + 50000);
-                PlayerPrefs.Save();
-                Debug.Log($"[PixelFlowSetupWindow] Coins increased to {current + 50000}");
+                AddTestCoins(50000);
             }
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
         }
 
+        // ─────────────────────────────────────────────────────────
+        // TAB 2: LEVEL STUDIO & CREATOR
+        // ─────────────────────────────────────────────────────────
+
         private void DrawLevelStudioTab()
         {
             // 1. Level Creation panel
             GUILayout.BeginVertical(_cardStyle);
-            GUILayout.Label("Create Custom Level", EditorStyles.boldLabel);
+            GUILayout.Label("Create Custom Level Asset", EditorStyles.boldLabel);
             GUILayout.Space(5);
 
             _newLevelIndex = EditorGUILayout.IntField("New Level Index", _newLevelIndex);
@@ -344,8 +595,15 @@ namespace PixelFlow.Editor
                     GUILayout.Label(lvl.levelIndex.ToString(), GUILayout.Width(45));
                     GUILayout.Label(lvl.name, GUILayout.Width(130));
                     GUILayout.Label($"{lvl.width}x{lvl.height}", GUILayout.Width(50));
-                    GUILayout.Label(lvl.initialNodes.Count.ToString(), GUILayout.Width(45));
-                    GUILayout.Label(lvl.bridgePositions.Count.ToString(), GUILayout.Width(50));
+                    GUILayout.Label(lvl.initialNodes != null ? lvl.initialNodes.Count.ToString() : "0", GUILayout.Width(45));
+                    GUILayout.Label(lvl.bridgePositions != null ? lvl.bridgePositions.Count.ToString() : "0", GUILayout.Width(50));
+
+                    GUI.backgroundColor = new Color(0.2f, 0.7f, 1f);
+                    if (GUILayout.Button("▶ Play", GUILayout.Height(18), GUILayout.Width(50)))
+                    {
+                        PlayLevel(lvl);
+                    }
+                    GUI.backgroundColor = Color.white;
 
                     if (GUILayout.Button("Select", GUILayout.Height(18), GUILayout.Width(55)))
                     {
@@ -362,6 +620,10 @@ namespace PixelFlow.Editor
             }
             GUILayout.EndVertical();
         }
+
+        // ─────────────────────────────────────────────────────────
+        // TAB 3: BATCH SOLVER & AUDITOR
+        // ─────────────────────────────────────────────────────────
 
         private void DrawBatchSolverTab()
         {
@@ -447,6 +709,10 @@ namespace PixelFlow.Editor
             GUILayout.EndVertical();
         }
 
+        // ─────────────────────────────────────────────────────────
+        // TAB 4: ECONOMY ANALYTICS & HEATMAP
+        // ─────────────────────────────────────────────────────────
+
         private void DrawEconomyAnalyticsTab()
         {
             // Level Difficulty Heatmap & Score
@@ -523,6 +789,169 @@ namespace PixelFlow.Editor
             GUILayout.EndVertical();
         }
 
+        // ─────────────────────────────────────────────────────────
+        // HELPER FUNCTIONS & ACTIONS
+        // ─────────────────────────────────────────────────────────
+
+        private void PlayLevel(LevelData level)
+        {
+            if (level == null) return;
+
+            if (Application.isPlaying)
+            {
+                DispatchSignal(new LoadLevelSignal { LevelToLoad = level });
+                Debug.Log($"[PixelFlowSetupWindow] Dispatched LoadLevelSignal for level {level.levelIndex} ({level.name})");
+            }
+            else
+            {
+                var bootstrapper = Object.FindAnyObjectByType<GameBootstrapper>();
+                if (bootstrapper == null)
+                {
+                    SetupScene();
+                    bootstrapper = Object.FindAnyObjectByType<GameBootstrapper>();
+                }
+                if (bootstrapper != null)
+                {
+                    Undo.RecordObject(bootstrapper, "Set Initial Level");
+                    bootstrapper.initialLevel = level;
+                    EditorUtility.SetDirty(bootstrapper);
+                }
+                EditorApplication.isPlaying = true;
+                Debug.Log($"[PixelFlowSetupWindow] Assigned {level.name} to GameBootstrapper and started PlayMode.");
+            }
+        }
+
+        private void CompleteCurrentLevel()
+        {
+            if (!Application.isPlaying)
+            {
+                Debug.LogWarning("[PixelFlowSetupWindow] Win simulation requires PlayMode.");
+                return;
+            }
+            var stateModel = GetModel<IGameStateModel>();
+            if (stateModel != null)
+            {
+                stateModel.SetState(GameState.LevelCompleted);
+                DispatchSignal(new LevelCompletedSignal());
+                Debug.Log("[PixelFlowSetupWindow] Level completed signal fired.");
+            }
+        }
+
+        private void RestartCurrentLevel()
+        {
+            if (!Application.isPlaying) return;
+            var levelModel = GetModel<ILevelModel>();
+            if (levelModel != null && levelModel.CurrentLevel != null)
+            {
+                DispatchSignal(new LoadLevelSignal { LevelToLoad = levelModel.CurrentLevel });
+            }
+        }
+
+        private void ReturnToHub()
+        {
+            if (Application.isPlaying)
+            {
+                DispatchSignal(new RequestReturnToHubSignal());
+            }
+        }
+
+        private void AddTestCoins(int amount)
+        {
+            var economyModel = GetModel<ICityEconomyModel>();
+            if (economyModel != null)
+            {
+                economyModel.AddCoins(amount);
+            }
+            else
+            {
+                int current = PlayerPrefs.GetInt("NT_Coins", 0);
+                PlayerPrefs.SetInt("NT_Coins", current + amount);
+                PlayerPrefs.Save();
+            }
+            Debug.Log($"[PixelFlowSetupWindow] Added +{amount} coins.");
+        }
+
+        private void UnlockAllLevels()
+        {
+            int maxCount = Mathf.Max(1, _cachedLevels.Count);
+            var progressModel = GetModel<IProgressModel>();
+            if (progressModel != null)
+            {
+                progressModel.UnlockLevel(maxCount);
+            }
+            PlayerPrefs.SetInt("UnlockedLevels", maxCount);
+            PlayerPrefs.SetInt("NT_UnlockedLevels", maxCount);
+            PlayerPrefs.Save();
+            Debug.Log($"[PixelFlowSetupWindow] Unlocked all {maxCount} levels.");
+        }
+
+        private void ResetProgress()
+        {
+            PlayerPrefs.SetInt("UnlockedLevels", 1);
+            PlayerPrefs.SetInt("NT_UnlockedLevels", 1);
+            PlayerPrefs.DeleteKey("NT_PuzzleSave_");
+            PlayerPrefs.Save();
+            Debug.Log("[PixelFlowSetupWindow] Progress reset to Level 1.");
+        }
+
+        private void ForceSaveGame()
+        {
+            var grid = GetModel<IGridModel>();
+            var session = GetModel<IGameSessionModel>();
+            var level = GetModel<ILevelModel>();
+            if (grid != null && session != null && level != null && level.CurrentLevel != null)
+            {
+                GridStateSerializer.Save(grid, session, level);
+                Debug.Log("[PixelFlowSetupWindow] Game state forcibly saved.");
+            }
+        }
+
+        private void WipeSaveData()
+        {
+            if (EditorUtility.DisplayDialog("Clear Save & PlayerPrefs", "Are you sure you want to delete all saved progress and player prefs?", "Yes", "No"))
+            {
+                PlayerPrefs.DeleteAll();
+                PlayerPrefs.Save();
+                Debug.Log("[PixelFlowSetupWindow] PlayerPrefs wiped clean.");
+            }
+        }
+
+        private void DispatchSignal<TSignal>(TSignal signal) where TSignal : struct
+        {
+            var root = Object.FindAnyObjectByType<Root>();
+            if (root != null && root.IsInitialized && root.Context != null)
+            {
+                var bus = root.Context.Container.Resolve<ISignalBus>();
+                if (bus != null)
+                {
+                    bus.Fire(signal);
+                    return;
+                }
+            }
+            Debug.LogWarning("[PixelFlowSetupWindow] Nexus Root not initialized or signal bus not found.");
+        }
+
+        private TModel GetModel<TModel>() where TModel : class
+        {
+            var root = Object.FindAnyObjectByType<Root>();
+            if (root != null && root.IsInitialized && root.Context != null)
+            {
+                return root.Context.Container.Resolve<TModel>();
+            }
+            return null;
+        }
+
+        private LevelData ResolveLevelByIndex(int index)
+        {
+            if (_cachedLevels.Count > 0)
+            {
+                var match = _cachedLevels.FirstOrDefault(l => l != null && l.levelIndex == index);
+                if (match != null) return match;
+                return _cachedLevels[0];
+            }
+            return Resources.Load<LevelData>("Levels/Level1");
+        }
+
         private void RunBatchSolver()
         {
             var solver = new RuntimePathSolver();
@@ -597,7 +1026,7 @@ namespace PixelFlow.Editor
         private void DrawDiagnosticRow(string name, bool status, System.Action fixAction)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, GUILayout.Width(240));
+            GUILayout.Label(name, GUILayout.Width(250));
 
             if (status)
             {
@@ -727,6 +1156,14 @@ namespace PixelFlow.Editor
         {
             Debug.Log("[PixelFlowSetupWindow] Starting scene setup...");
 
+            // 0. Ensure levels exist
+            RefreshLevelsCache();
+            if (_cachedLevels.Count == 0)
+            {
+                CreatePhase1And2HandCraftedPack();
+                RefreshLevelsCache();
+            }
+
             // 1. Context setup
             Root context = Object.FindAnyObjectByType<Root>();
             if (context == null)
@@ -850,23 +1287,12 @@ namespace PixelFlow.Editor
 
             // Hint Button setup
             Transform hintBtnTransform = hudObj.transform.Find("HintButton");
-            GameObject hintBtnObj;
-            if (hintBtnTransform == null)
-            {
-                hintBtnObj = new GameObject("HintButton", typeof(RectTransform));
-                hintBtnObj.transform.SetParent(hudObj.transform, false);
-            }
-            else
-            {
-                hintBtnObj = hintBtnTransform.gameObject;
-            }
+            GameObject hintBtnObj = hintBtnTransform != null ? hintBtnTransform.gameObject : new GameObject("HintButton", typeof(RectTransform));
+            hintBtnObj.transform.SetParent(hudObj.transform, false);
 
-            Image hintImg = hintBtnObj.GetComponent<Image>();
-            if (hintImg == null) hintImg = hintBtnObj.AddComponent<Image>();
+            Image hintImg = hintBtnObj.GetComponent<Image>() ?? hintBtnObj.AddComponent<Image>();
             hintImg.color = new Color(0.15f, 0.15f, 0.18f, 1f);
-
-            Button hintBtn = hintBtnObj.GetComponent<Button>();
-            if (hintBtn == null) hintBtn = hintBtnObj.AddComponent<Button>();
+            Button hintBtn = hintBtnObj.GetComponent<Button>() ?? hintBtnObj.AddComponent<Button>();
 
             RectTransform hintRect = hintBtnObj.GetComponent<RectTransform>();
             hintRect.anchorMin = new Vector2(0.5f, 0f);
@@ -877,19 +1303,10 @@ namespace PixelFlow.Editor
 
             // Hint Count Text setup
             Transform hintTextTransform = hintBtnObj.transform.Find("HintCountText");
-            GameObject hintTextObj;
-            if (hintTextTransform == null)
-            {
-                hintTextObj = new GameObject("HintCountText", typeof(RectTransform));
-                hintTextObj.transform.SetParent(hintBtnObj.transform, false);
-            }
-            else
-            {
-                hintTextObj = hintTextTransform.gameObject;
-            }
+            GameObject hintTextObj = hintTextTransform != null ? hintTextTransform.gameObject : new GameObject("HintCountText", typeof(RectTransform));
+            hintTextObj.transform.SetParent(hintBtnObj.transform, false);
 
-            Text hintText = hintTextObj.GetComponent<Text>();
-            if (hintText == null) hintText = hintTextObj.AddComponent<Text>();
+            Text hintText = hintTextObj.GetComponent<Text>() ?? hintTextObj.AddComponent<Text>();
             hintText.text = "HINT (3)";
             hintText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf") ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
             hintText.fontSize = 18;
@@ -903,19 +1320,10 @@ namespace PixelFlow.Editor
 
             // Completion Panel setup
             Transform compPanelTransform = hudObj.transform.Find("CompletionPanel");
-            GameObject completionPanel;
-            if (compPanelTransform == null)
-            {
-                completionPanel = new GameObject("CompletionPanel", typeof(RectTransform));
-                completionPanel.transform.SetParent(hudObj.transform, false);
-            }
-            else
-            {
-                completionPanel = compPanelTransform.gameObject;
-            }
+            GameObject completionPanel = compPanelTransform != null ? compPanelTransform.gameObject : new GameObject("CompletionPanel", typeof(RectTransform));
+            completionPanel.transform.SetParent(hudObj.transform, false);
 
-            Image panelImg = completionPanel.GetComponent<Image>();
-            if (panelImg == null) panelImg = completionPanel.AddComponent<Image>();
+            Image panelImg = completionPanel.GetComponent<Image>() ?? completionPanel.AddComponent<Image>();
             panelImg.color = new Color(0.08f, 0.08f, 0.1f, 0.85f);
 
             RectTransform panelRect = completionPanel.GetComponent<RectTransform>();
@@ -926,19 +1334,10 @@ namespace PixelFlow.Editor
 
             // Completion Text setup
             Transform compTextTransform = completionPanel.transform.Find("CompletionText");
-            GameObject completionTextObj;
-            if (compTextTransform == null)
-            {
-                completionTextObj = new GameObject("CompletionText", typeof(RectTransform));
-                completionTextObj.transform.SetParent(completionPanel.transform, false);
-            }
-            else
-            {
-                completionTextObj = compTextTransform.gameObject;
-            }
+            GameObject completionTextObj = compTextTransform != null ? compTextTransform.gameObject : new GameObject("CompletionText", typeof(RectTransform));
+            completionTextObj.transform.SetParent(completionPanel.transform, false);
 
-            Text compText = completionTextObj.GetComponent<Text>();
-            if (compText == null) compText = completionTextObj.AddComponent<Text>();
+            Text compText = completionTextObj.GetComponent<Text>() ?? completionTextObj.AddComponent<Text>();
             compText.text = "Tebrikler!";
             compText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf") ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
             compText.fontSize = 32;
@@ -952,23 +1351,13 @@ namespace PixelFlow.Editor
 
             // Next Level Button setup
             Transform nextLvlBtnTransform = completionPanel.transform.Find("NextLevelButton");
-            GameObject nextLvlBtnObj;
-            if (nextLvlBtnTransform == null)
-            {
-                nextLvlBtnObj = new GameObject("NextLevelButton", typeof(RectTransform));
-                nextLvlBtnObj.transform.SetParent(completionPanel.transform, false);
-            }
-            else
-            {
-                nextLvlBtnObj = nextLvlBtnTransform.gameObject;
-            }
+            GameObject nextLvlBtnObj = nextLvlBtnTransform != null ? nextLvlBtnTransform.gameObject : new GameObject("NextLevelButton", typeof(RectTransform));
+            nextLvlBtnObj.transform.SetParent(completionPanel.transform, false);
 
-            Image nextLvlImg = nextLvlBtnObj.GetComponent<Image>();
-            if (nextLvlImg == null) nextLvlImg = nextLvlBtnObj.AddComponent<Image>();
+            Image nextLvlImg = nextLvlBtnObj.GetComponent<Image>() ?? nextLvlBtnObj.AddComponent<Image>();
             nextLvlImg.color = new Color(0.15f, 0.6f, 0.25f, 1f);
 
-            Button nextLvlBtn = nextLvlBtnObj.GetComponent<Button>();
-            if (nextLvlBtn == null) nextLvlBtn = nextLvlBtnObj.AddComponent<Button>();
+            Button nextLvlBtn = nextLvlBtnObj.GetComponent<Button>() ?? nextLvlBtnObj.AddComponent<Button>();
 
             RectTransform nextLvlRect = nextLvlBtnObj.GetComponent<RectTransform>();
             nextLvlRect.anchorMin = new Vector2(0.5f, 0.4f);
@@ -981,8 +1370,7 @@ namespace PixelFlow.Editor
             GameObject nextLvlTextObj = nextLvlTextTransform != null ? nextLvlTextTransform.gameObject : new GameObject("Text", typeof(RectTransform));
             nextLvlTextObj.transform.SetParent(nextLvlBtnObj.transform, false);
 
-            Text nextLvlText = nextLvlTextObj.GetComponent<Text>();
-            if (nextLvlText == null) nextLvlText = nextLvlTextObj.AddComponent<Text>();
+            Text nextLvlText = nextLvlTextObj.GetComponent<Text>() ?? nextLvlTextObj.AddComponent<Text>();
             nextLvlText.text = "SONRAKİ SEVİYE";
             nextLvlText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf") ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
             nextLvlText.fontSize = 18;
@@ -1030,17 +1418,7 @@ namespace PixelFlow.Editor
                 Undo.RegisterCreatedObjectUndo(bootObj, "Create GameBootstrapper");
             }
 
-            // 7. CameraController setup (seamless zoom-in)
-            if (Camera.main != null)
-            {
-                Camera.main.orthographic = true;
-                Camera.main.orthographicSize = 5;
-                if (Camera.main.GetComponent<PixelFlow.Services.CameraController>() == null)
-                    Camera.main.gameObject.AddComponent<PixelFlow.Services.CameraController>();
-                EditorUtility.SetDirty(Camera.main);
-            }
-
-            // 8. SplashView setup
+            // 7. SplashView setup
             SplashView splashView = Object.FindAnyObjectByType<SplashView>();
             if (splashView == null)
             {
@@ -1068,7 +1446,7 @@ namespace PixelFlow.Editor
                 splashSo.ApplyModifiedProperties();
             }
 
-            // 9. CityHubView + HubHUDView setup
+            // 8. CityHubView + HubHUDView setup
             CityHubView cityHub = Object.FindAnyObjectByType<CityHubView>();
             if (cityHub == null)
             {
@@ -1089,15 +1467,8 @@ namespace PixelFlow.Editor
                 hubHUDRect.sizeDelta = Vector2.zero;
             }
 
-            if (bootstrapper.initialLevel == null)
-            {
-                string[] guids = AssetDatabase.FindAssets("t:LevelData");
-                if (guids.Length > 0)
-                {
-                    string path = AssetDatabase.GUIDToAssetPath(guids[0]);
-                    bootstrapper.initialLevel = AssetDatabase.LoadAssetAtPath<LevelData>(path);
-                }
-            }
+            // Always target Level 1 (levelIndex == 0) as bootstrapper initial level
+            bootstrapper.initialLevel = ResolveLevelByIndex(0);
             
             if (bootstrapper.nexusRoot == null)
             {
@@ -1105,11 +1476,13 @@ namespace PixelFlow.Editor
             }
             EditorUtility.SetDirty(bootstrapper);
 
-            // 7. Main Camera setup
+            // 9. Main Camera setup
             if (Camera.main != null)
             {
                 Camera.main.orthographic = true;
                 Camera.main.orthographicSize = 5;
+                if (Camera.main.GetComponent<PixelFlow.Services.CameraController>() == null)
+                    Camera.main.gameObject.AddComponent<PixelFlow.Services.CameraController>();
                 EditorUtility.SetDirty(Camera.main);
             }
 
