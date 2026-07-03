@@ -22,6 +22,8 @@ namespace PixelFlow.Views
             CityEconomyModel.OnEconomyUpdated += HandleEconomyUpdated;
             GameStateModel.OnStateChanged += HandleStateChanged;
 
+            Subscribe<ProgressUpdatedSignal>(HandleProgressUpdated);
+
             View.OnCollectTaxesClicked += HandleCollectTaxes;
             View.OnPlayLevelClicked += HandlePlayLevel;
             View.OnUpgradeClicked += HandleUpgrade;
@@ -36,9 +38,16 @@ namespace PixelFlow.Views
             CityEconomyModel.OnEconomyUpdated -= HandleEconomyUpdated;
             GameStateModel.OnStateChanged -= HandleStateChanged;
 
+            Unsubscribe<ProgressUpdatedSignal>(HandleProgressUpdated);
+
             View.OnCollectTaxesClicked -= HandleCollectTaxes;
             View.OnPlayLevelClicked -= HandlePlayLevel;
             View.OnUpgradeClicked -= HandleUpgrade;
+        }
+
+        private void HandleProgressUpdated(ProgressUpdatedSignal signal)
+        {
+            UpdateView();
         }
 
         private void HandleCoinsChanged(int coins)

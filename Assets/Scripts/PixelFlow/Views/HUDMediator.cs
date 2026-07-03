@@ -280,15 +280,15 @@ namespace PixelFlow.Views
 
         private async void HandleLevelCompleted(LevelCompletedSignal signal)
         {
+            if (View == null || GameSessionModel == null) return;
             View.ShowCompletion(GameSessionModel.Score, GameSessionModel.StarsEarned);
 
             try
             {
                 // GDD §5.1: Bölüm tamamlandıktan sonra oyuncu "Hub'a Dön" seçebilir
                 // veya 3 saniye sonra otomatik hub'a dönüş yapılır.
-                // "Sonraki" butonu açıkça basılırsa HandleNextLevelClicked çağrılır.
                 await System.Threading.Tasks.Task.Delay(3000);
-                if (GameStateModel.CurrentState == GameState.LevelCompleted)
+                if (this != null && View != null && GameStateModel != null && SignalBus != null && GameStateModel.CurrentState == GameState.LevelCompleted)
                 {
                     SignalBus.Fire(new RequestReturnToHubSignal());
                 }
