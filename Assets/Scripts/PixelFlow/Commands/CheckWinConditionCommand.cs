@@ -25,21 +25,25 @@ namespace PixelFlow.Commands
                 return;
             }
 
-            // 1. Check no empty cells remain
-            for (int x = 0; x < GridModel.Width; x++)
+            var currentLevel = LevelModel.CurrentLevel;
+
+            // 1. Check no empty cells remain (only if level explicitly requires full grid coverage)
+            if (currentLevel != null && currentLevel.requireFullGridCoverage)
             {
-                for (int y = 0; y < GridModel.Height; y++)
+                for (int x = 0; x < GridModel.Width; x++)
                 {
-                    if (GridModel.Grid[x, y].State == CellState.Empty)
+                    for (int y = 0; y < GridModel.Height; y++)
                     {
-                        UnityEngine.Debug.Log($"[CheckWinConditionCommand] Win check failed: empty cell remaining at ({x}, {y})");
-                        return;
+                        if (GridModel.Grid[x, y].State == CellState.Empty)
+                        {
+                            UnityEngine.Debug.Log($"[CheckWinConditionCommand] Win check failed: empty cell remaining at ({x}, {y})");
+                            return;
+                        }
                     }
                 }
             }
 
             // 2. Check every color with nodes has a connected path
-            var currentLevel = LevelModel.CurrentLevel;
             if (currentLevel?.initialNodes != null)
             {
                 var colorNodes = new Dictionary<ColorType, List<GridNode>>();

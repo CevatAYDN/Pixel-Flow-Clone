@@ -50,6 +50,7 @@ namespace PixelFlow.Services
             var level = ScriptableObject.CreateInstance<LevelData>();
             level.width = param.gridWidth;
             level.height = param.gridHeight;
+            level.requireFullGridCoverage = param.requireFullGridCoverage;
 
             // Bridge pozisyonlarını seç
             var bridges = new HashSet<Vector2Int>();
@@ -188,19 +189,21 @@ namespace PixelFlow.Services
         public int gridHeight;
         public int colorCount;
         public int bridgeCount;
+        public bool requireFullGridCoverage;
 
-        public DifficultyParams(int width, int height, int colors, int bridges)
+        public DifficultyParams(int width, int height, int colors, int bridges, bool fullCoverage = false)
         {
             gridWidth = width;
             gridHeight = height;
             colorCount = colors;
             bridgeCount = bridges;
+            requireFullGridCoverage = fullCoverage;
         }
 
-        public static readonly DifficultyParams Easy = new DifficultyParams(5, 5, 3, 0);
-        public static readonly DifficultyParams Medium = new DifficultyParams(6, 6, 4, 1);
-        public static readonly DifficultyParams Hard = new DifficultyParams(7, 7, 5, 2);
-        public static readonly DifficultyParams Expert = new DifficultyParams(8, 8, 6, 3);
-        public static readonly DifficultyParams Master = new DifficultyParams(10, 10, 8, 4);
+        public static readonly DifficultyParams Easy = new DifficultyParams(5, 5, 3, 0, false);
+        public static readonly DifficultyParams Medium = new DifficultyParams(6, 6, 4, 1, false);
+        public static readonly DifficultyParams Hard = new DifficultyParams(7, 7, 5, 2, true);
+        public static readonly DifficultyParams Expert = new DifficultyParams(8, 8, 6, 3, true);
+        public static readonly DifficultyParams Master = new DifficultyParams(10, 10, 8, 4, true);
     }
 }

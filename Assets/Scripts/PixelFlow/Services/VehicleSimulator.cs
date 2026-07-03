@@ -255,14 +255,7 @@ namespace PixelFlow.Services
             GameObject visual = new GameObject($"V_{color}");
             visual.transform.SetParent(_vehicleContainer);
 
-            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            body.name = "Body";
-            body.transform.SetParent(visual.transform, false);
-            var r = body.GetComponent<Renderer>();
-            if (r != null)
-                r.material.color = CellView.GetColor(color);
-
-            body.transform.localScale = new Vector3(0.4f, 0.4f, 0.25f);
+            List<Renderer> renderers = CreateProceduralVehicle3D(visual, color);
 
             var inst = new VehicleInstance
             {
@@ -272,17 +265,101 @@ namespace PixelFlow.Services
                 Progress = 0f,
                 Visual = visual,
                 CurrentPosition = new Vector3(path[0].x, path[0].y, GetZOffset(path[0], color)),
-                Speed = VehicleSpeed + UnityEngine.Random.Range(-0.4f, 0.4f),
-                CachedRenderers = new Renderer[] { r }
+                Speed = VehicleSpeed + UnityEngine.Random.Range(-0.3f, 0.3f),
+                CachedRenderers = renderers.ToArray()
             };
 
             visual.transform.localPosition = inst.CurrentPosition;
             _activeVehicles.Add(inst);
         }
 
+        private static List<Renderer> CreateProceduralVehicle3D(GameObject root, ColorType color)
+        {
+            var renderers = new List<Renderer>();
+            Shader shader = Shader.Find("Sprites/Default") ?? Shader.Find("Standard");
+
+            Color carColor = CellView.GetColor(color);
+
+            // 1. Main Chassis / Body
+            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            body.name = "Chassis";
+            body.transform.SetParent(root.transform, false);
+            body.transform.localScale = new Vector3(0.44f, 0.26f, 0.16f);
+            var rBody = body.GetComponent<Renderer>();
+            if (rBody != null)
+            {
+                rBody.material = new Material(shader) { color = carColor };
+                renderers.Add(rBody);
+            }
+
+            // 2. Cabin / Windshield
+            var cabin = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cabin.name = "Cabin";
+            cabin.transform.SetParent(root.transform, false);
+            cabin.transform.localScale = new Vector3(0.24f, 0.20f, 0.12f);
+            cabin.transform.localPosition = new Vector3(-0.03f, 0f, -0.12f);
+            var rCabin = cabin.GetComponent<Renderer>();
+            if (rCabin != null)
+            {
+                rCabin.material = new Material(shader) { color = new Color(0.15f, 0.2f, 0.3f, 0.9f) };
+                renderers.Add(rCabin);
+            }
+
+            // 3. Headlights (Bright Cyan/White at front bumper +X)
+            var headL = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            headL.name = "Headlights";
+            headL.transform.SetParent(root.transform, false);
+            headL.transform.localScale = new Vector3(0.04f, 0.20f, 0.06f);
+            headL.transform.localPosition = new Vector3(0.22f, 0f, -0.02f);
+            var rHead = headL.GetComponent<Renderer>();
+            if (rHead != null)
+            {
+                rHead.material = new Material(shader) { color = new Color(0.9f, 1f, 1f, 1f) };
+                renderers.Add(rHead);
+            }
+
+            // 4. Taillights (Red at rear bumper -X)
+            var tailL = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            tailL.name = "Taillights";
+            tailL.transform.SetParent(root.transform, false);
+            tailL.transform.localScale = new Vector3(0.04f, 0.20f, 0.05f);
+            tailL.transform.localPosition = new Vector3(-0.22f, 0f, -0.02f);
+            var rTail = tailL.GetComponent<Renderer>();
+            if (rTail != null)
+            {
+                rTail.material = new Material(shader) { color = new Color(1f, 0.15f, 0.15f, 1f) };
+                renderers.Add(rTail);
+            }
+
+            // 5. 4 Wheels (Dark Cylinders)
+            float[] wx = { -0.14f, 0.14f };
+            float[] wy = { -0.12f, 0.12f };
+            foreach (float x in wx)
+            {
+                foreach (float y in wy)
+                {
+                    var wheel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    wheel.name = "Wheel";
+                    wheel.transform.SetParent(root.transform, false);
+                    wheel.transform.localScale = new Vector3(0.09f, 0.02f, 0.09f);
+                    wheel.transform.localPosition = new Vector3(x, y, 0.06f);
+                    wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    var rWheel = wheel.GetComponent<Renderer>();
+                    if (rWheel != null)
+                    {
+                        rWheel.material = new Material(shader) { color = new Color(0.12f, 0.12f, 0.14f, 1f) };
+                        renderers.Add(rWheel);
+                    }
+                }
+            }
+
+            return renderers;
+        }
+
         private void UpdateMovement()
         {
-            float alpha = GameStateModel.CurrentState == GameState.Playing ? 0.6f : 1f;
+            bool isPlaying = GameStateModel.CurrentState == GameState.Playing;
+            float baseAlpha = isPlaying ? (0.45f + Mathf.Sin(Time.time * 6f) * 0.25f) : 1f;
 
             for (int i = _activeVehicles.Count - 1; i >= 0; i--)
             {
@@ -300,7 +377,7 @@ namespace PixelFlow.Services
                     {
                         if (v.CachedRenderers[ri] == null) continue;
                         Color c = v.CachedRenderers[ri].material.color;
-                        c.a = alpha;
+                        c.a = baseAlpha;
                         v.CachedRenderers[ri].material.color = c;
                     }
                 }
@@ -334,13 +411,25 @@ namespace PixelFlow.Services
                 Vector3 p3 = GetSplineControlPoint(v.Path, v.SegmentIndex + 2, v.Color);
 
                 v.CurrentPosition = CatmullRom(p0, p1, p2, p3, v.Progress);
-                v.Visual.transform.localPosition = v.CurrentPosition;
+
+                // Add slight suspension bounce
+                float bobbing = Mathf.Sin(Time.time * 12f + v.GetHashCode()) * 0.02f;
+                Vector3 finalPos = v.CurrentPosition;
+                finalPos.z += bobbing;
+                v.Visual.transform.localPosition = finalPos;
 
                 Vector3 tangent = CatmullRomTangent(p0, p1, p2, p3, v.Progress);
                 if (tangent.sqrMagnitude > 0.001f)
                 {
                     float angle = Mathf.Atan2(tangent.y, tangent.x) * Mathf.Rad2Deg;
-                    v.Visual.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+
+                    // Corner roll banking (lean into curve)
+                    Vector3 nextTangent = CatmullRomTangent(p0, p1, p2, p3, Mathf.Min(v.Progress + 0.1f, 1f));
+                    float nextAngle = Mathf.Atan2(nextTangent.y, nextTangent.x) * Mathf.Rad2Deg;
+                    float deltaAngle = Mathf.DeltaAngle(angle, nextAngle);
+                    float rollBank = Mathf.Clamp(-deltaAngle * 0.5f, -20f, 20f);
+
+                    v.Visual.transform.rotation = Quaternion.Euler(rollBank, 0f, angle);
                 }
             }
         }
@@ -406,6 +495,12 @@ namespace PixelFlow.Services
             GridModel.LastCrashPosition = crashPos;
             GridModel.CrashColorA = colorA;
             GridModel.CrashColorB = colorB;
+
+            var camCtrl = UnityEngine.Object.FindAnyObjectByType<CameraController>();
+            if (camCtrl != null)
+            {
+                camCtrl.FocusOnCrash(crashPos);
+            }
 
             GameStateModel.SetState(GameState.Paused);
 

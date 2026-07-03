@@ -416,6 +416,40 @@ namespace PixelFlow.Views
             }
         }
 
+        private Coroutine _bounceCoroutine;
+
+        public void TriggerBounceAnimation(float popScale = 1.22f, float duration = 0.15f)
+        {
+            if (_bounceCoroutine != null) StopCoroutine(_bounceCoroutine);
+            _bounceCoroutine = StartCoroutine(DoBounceAnimation(popScale, duration));
+        }
+
+        private System.Collections.IEnumerator DoBounceAnimation(float popScale, float duration)
+        {
+            Vector3 originalScale = Vector3.one;
+            float elapsed = 0f;
+            float halfDuration = duration * 0.5f;
+
+            while (elapsed < halfDuration)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / halfDuration;
+                transform.localScale = Vector3.Lerp(originalScale, originalScale * popScale, t);
+                yield return null;
+            }
+
+            elapsed = 0f;
+            while (elapsed < halfDuration)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / halfDuration;
+                transform.localScale = Vector3.Lerp(originalScale * popScale, originalScale, t);
+                yield return null;
+            }
+
+            transform.localScale = originalScale;
+        }
+
         public static Color GetColor(ColorType colorType)
         {
             switch (colorType)

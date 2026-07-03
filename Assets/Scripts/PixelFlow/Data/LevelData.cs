@@ -38,6 +38,7 @@ namespace PixelFlow.Data
         public List<PathSolution> solutions = new List<PathSolution>();
         public List<Vector2Int> bridgePositions = new List<Vector2Int>();
         public int viaductLimit = 3;
+        public bool requireFullGridCoverage = false;
         public List<ObstacleData> obstacles = new List<ObstacleData>();
     }
 }

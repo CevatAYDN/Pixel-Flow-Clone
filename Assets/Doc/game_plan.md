@@ -17,55 +17,13 @@ Hazırladığımız **Neon Transit** GDD'sini, bu `com.nexus.core` mimarisine ot
 3. **Models (Veri Katmanı):** Ana ekrandaki şehir vergisi veya grid'in durumu gibi verileri, paketteki `IReactiveModel` arayüzünü uygulayan ve `ObservableProperty` kullanan modellerde tutacağız. Böylece veri değiştiğinde UI otomatik güncellenecek.
 
 
-4. **Views & Mediators (Görsel Katman):** Arayüzü ve oyun alanını yönetmek için paketteki `Mediator` sınıfından türeyen sınıflar yazacak ve bunları `ViewBinder` ile sahnedeki View'lara (MonoBehaviour) bağlayacağız.
-
-
-
----
-
-### 📂 Önerilen Unity Klasör Yapısı (Neon Transit)
-
-Mevcut `Nexus` dizininin yanına, oyuna özel kodlarımızı barındıracak modüler bir yapı kurmalıyız. Projeni `Assets/Scripts/NeonTransit/` altında şu şekilde organize etmeliyiz:
+4. **Views & Mediators (Görsel Katman):** Arayüzü ve oyun alanını yönetmek için paketteki `Mediator` sınıfından türetilen sınıflar yazılacak ve bunlar `ViewBinder` ile sahnedeki View'lara (MonoBehaviour) bağlanacaktır. Mevcut `Nexus` dizininin yanına, oyuna özel kodlarımızı barındıran modüler yapımız kurulmuştur. Kod yapısı `Assets/Scripts/PixelFlow/` altında şu şekilde organize edilmiştir:
 
 ```text
 Assets/
 ├── Plugins/
-├── Nexus/                          <-- Senin Core Paketin (Dokunulmayacak)
+├── Nexus/                          <-- Nexus Core Paketi (Framework)
 └── Scripts/
-    └── NeonTransit/
-        ├── Contexts/               <-- NexusDI ve ContextBuilder kurulumları
-        │   ├── AppContext.cs       <-- Global servisler (Save, Audio vb.)
-        │   ├── HubContext.cs       <-- Ana Menü (Şehir) DI bağlamı
-        │   └── PuzzleContext.cs    <-- Grid ve Bulmaca DI bağlamı
-        │
-        ├── Core/                   <-- Çekirdek Oynanış (Bulmaca)
-        │   ├── Commands/
-        │   │   ├── DrawPathCommand.cs
-        │   │   ├── PlaceViaductCommand.cs
-        │   │   └── UndoPathCommand.cs
-        │   ├── Models/
-        │   │   ├── GridModel.cs    <-- IReactiveModel kullanacak
-        │   │   └── PathModel.cs
-        │   ├── Signals/
-        │   │   ├── CellTouchedSignal.cs
-        │   │   ├── CrashDetectedSignal.cs
-        │   │   └── LevelCompletedSignal.cs
-        │   └── Services/
-        │       ├── GridValidationService.cs
-        │       └── PathfindingService.cs
-        │
-        ├── Meta/                   <-- Idle Şehir ve Ekonomi
-        │   ├── Models/
-        │   │   └── CityEconomyModel.cs  <-- Vergi/Jeton ObservableProperty'leri
-        │   └── Services/
-        │       └── IdleTaxService.cs
-        │
-        └── UI/                     <-- Bento-Glass Arayüzler
-            ├── Mediators/          <-- Mediator sınıfından türetilenler
-            │   ├── HubHUDMediator.cs
-            │   ├── PuzzleHUDMediator.cs
-            │   └── CrashPopupMediator.cs
-            └── Views/              <-- ViewBinder ile bağlanacak MonoBehaviour'lar
                 ├── HubHUDView.cs
                 └── CellView.cs
 
@@ -181,16 +139,18 @@ Bu, yolların kesişmesine (intersection) izin verir — oyuncu stratejik olarak
 Çakışma noktasında viyadük yoksa, simülasyon sırasında araçlar çarpışır (kaza).
 Viyadük yerleştirildiğinde: bir yol "üstten" (OverColor — yükseltilmiş Z-offset), diğeri "alttan" (UnderColor) geçer.
 Bir hücrede maksimum 2 farklı renk kesişebilir (viyadük limiti). 3+ renk kesişimi desteklenmez.
-2.8 Kazanma Koşulu
-Grid üzerindeki tüm araç renkleri, birbirine kaza yapmadan bağlandığında.
-Tüm kaynak-hedef çiftleri eşleştiğinde.
-Araçlar gerçek simülasyona geçtiğinde en az 10 saniye boyunca kesintisiz aktığında.
-Başlangıçta: *Perfect Clear* (verimsiz boş alan kalmaması) kriteri aktif değildir — bu ileri fazlarda bonus hedef olarak eklenebilir.
+2.8 Kazanma Koşulu ve Izgara Kaplama Mantığı (Win Conditions & Grid Coverage)
+- **Temel Kazanma Koşulu**: Grid üzerindeki tüm araç renkleri/düğümleri birbirine kaza yapmadan bağlandığında ve araçlar simülasyon fazında 10 saniye boyunca pürüzsüz aktığında bölüm tamamlanır.
+- **Kademeli Izgara Kaplama Kuralı (`requireFullGridCoverage`)**:
+  - **Erken ve Orta Seviyeler (Seviye 1–28)**: `requireFullGridCoverage = false` geçerlidir. Oyuncu grid üzerinde boş alan bıraksa dahi tüm renkleri kaza yapmadan eşleştirdiğinde bölüm kazanılır. Bu sayede düşük frustrasyon ve yüksek dopamin hedeflenir.
+  - **İleri Zorluk Seviyeleri (Seviye 29+ & Zor Günlük Krizler)**: `requireFullGridCoverage = true` kuralı devreye girer. Tüm düğümler bağlansa dahi grid üzerinde tek bir boş hücre (`CellState.Empty`) kaldığı sürece zafer tetiklenmez. Oyuncu grid'in %100'ünü kaplamak zorundadır (*Perfect Flow Clear*).
+
 Bonus Yıldız Sistemi (Seviye Başına):
-Yıldız	Kriter
-⭐	Bölümü tamamlamak
-⭐⭐	2 veya daha az viyadük kullanarak tamamlamak
-## ⭐⭐⭐	Hiç viyadük kullanmadan tamamlamak (Perfect Flow)
+| Yıldız | Kriter |
+| --- | --- |
+| ⭐ | Bölümü tamamlamak (tüm renk düğümlerini kazasız bağlamak) |
+| ⭐⭐ | 2 veya daha az viyadük kullanarak tamamlamak |
+| ⭐⭐⭐ | Hiç viyadük kullanmadan tamamlamak (Perfect Flow) |
 ## Meta Oyun ve Idle Ekonomi Raporu
 Bulmaca ekranı oyuncunun *Altyapı Planlama Masası*dır. Buradaki başarılar, oyunun ana omurgası olan şehir ekranını besler.
 3.1 İzometrik Hub (Ana Ekran)

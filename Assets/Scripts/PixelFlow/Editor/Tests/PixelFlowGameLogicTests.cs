@@ -363,9 +363,10 @@ namespace PixelFlow.Editor.Tests
         // ---------------------------------------------------------------
 
         [Test]
-        public void CheckWinCondition_EmptyCellsRemaining_DoesNotWin()
+        public void CheckWinCondition_EmptyCellsRemaining_WithFullCoverageRequired_DoesNotWin()
         {
             var level = CreateTestLevel();
+            level.requireFullGridCoverage = true;
             _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
 
             var state = _ctx.GetModel<IGameStateModel>();
@@ -373,7 +374,34 @@ namespace PixelFlow.Editor.Tests
             _ctx.Dispatch(new CheckWinConditionSignal());
 
             Assert.AreEqual(GameState.Playing, state.CurrentState,
-                "Should still be Playing when grid is not complete");
+                "Should still be Playing when grid is not complete and requireFullGridCoverage is true");
+        }
+
+        [Test]
+        public void CheckWinCondition_EmptyCellsRemaining_WithoutFullCoverageRequired_WinsWhenColorsConnected()
+        {
+            var level = ScriptableObject.CreateInstance<LevelData>();
+            level.levelIndex = 0;
+            level.width = 3;
+            level.height = 2; // 6 cells total
+            level.requireFullGridCoverage = false;
+            level.initialNodes = new List<GridNode>
+            {
+                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(2, 0), color = ColorType.Red },
+            };
+
+            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
+
+            var state = _ctx.GetModel<IGameStateModel>();
+
+            // Connect Red along row 0 (cells at y=1 remain empty)
+            _ctx.Dispatch(new InputInteractionSignal { Type = InputType.PointerDown, GridPosition = new Vector2Int(0, 0) });
+            _ctx.Dispatch(new InputInteractionSignal { Type = InputType.Drag, GridPosition = new Vector2Int(1, 0) });
+            _ctx.Dispatch(new InputInteractionSignal { Type = InputType.Drag, GridPosition = new Vector2Int(2, 0) });
+
+            Assert.AreEqual(GameState.Simulating, state.CurrentState,
+                "Should be Simulating when colors are connected even if empty cells exist (requireFullGridCoverage is false)");
         }
 
         [Test]

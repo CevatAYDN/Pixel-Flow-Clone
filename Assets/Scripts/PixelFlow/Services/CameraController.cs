@@ -43,6 +43,37 @@ namespace PixelFlow.Services
             _transition = StartCoroutine(LerpCamera(_puzzlePosition, _puzzleRotation, _puzzleSize, 0.8f));
         }
 
+        private Coroutine _shakeCoroutine;
+
+        public void TriggerShake(float intensity = 0.25f, float duration = 0.35f)
+        {
+            if (_shakeCoroutine != null) StopCoroutine(_shakeCoroutine);
+            _shakeCoroutine = StartCoroutine(DoShake(intensity, duration));
+        }
+
+        private IEnumerator DoShake(float intensity, float duration)
+        {
+            if (_cam == null) yield break;
+            Vector3 originalPos = _cam.transform.position;
+            float elapsed = 0f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float damp = 1f - (elapsed / duration);
+                Vector3 offset = (Vector3)Random.insideUnitCircle * intensity * damp;
+                _cam.transform.position = originalPos + offset;
+                yield return null;
+            }
+
+            _cam.transform.position = originalPos;
+        }
+
+        public void FocusOnCrash(Vector2Int gridPos)
+        {
+            TriggerShake(0.35f, 0.45f);
+        }
+
         private IEnumerator LerpCamera(Vector3 targetPos, Quaternion targetRot, float targetSize, float duration)
         {
             if (_cam == null) yield break;
