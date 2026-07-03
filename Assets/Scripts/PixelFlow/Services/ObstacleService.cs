@@ -63,7 +63,7 @@ namespace PixelFlow.Services
                 switch (obs.type)
                 {
                     case ObstacleType.OneWay:
-                        _oneWayDirs[obs.position] = Vector2Int.right;
+                        _oneWayDirs[obs.position] = obs.oneWayDirection != Vector2Int.zero ? obs.oneWayDirection : Vector2Int.right;
                         break;
                     case ObstacleType.Ferry:
                         _ferryBlocked[obs.position] = false;

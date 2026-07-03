@@ -24,6 +24,7 @@ namespace PixelFlow.Views
         private bool _isPointerDown;
         private bool _clickedOutside;
         private Vector2Int _lastGridPos = new Vector2Int(-1, -1);
+        private int _activePointerId = -1;
 
         // Camera.main her frame FindObjectByType çağırır (yavaş). Scene boyunca değişmediği
         // için bir kez çözüp cache'liyoruz. Kamera yoksa fallback olarak Update'te tekrar deneriz.
@@ -47,10 +48,14 @@ namespace PixelFlow.Views
             if (pointer == null) return;
 
             bool isPressed = pointer.press.isPressed;
+            int pointerId = pointer.deviceId;
             Vector2 screenPos = pointer.position.ReadValue();
 
             if (isPressed)
             {
+                // Only respond to the pointer that started the interaction (multi-touch guard)
+                if (_isPointerDown && pointerId != _activePointerId) return;
+
                 if (_cachedCamera == null) _cachedCamera = Camera.main;
                 var cam = _cachedCamera;
                 if (cam != null)
@@ -69,6 +74,7 @@ namespace PixelFlow.Views
                         if (!_isPointerDown)
                         {
                             _isPointerDown = true;
+                            _activePointerId = pointerId;
                             _clickedOutside = false;
                             _lastGridPos = currentGridPos;
                             OnGlobalPointerDown?.Invoke(currentGridPos);
@@ -100,6 +106,7 @@ namespace PixelFlow.Views
                         if (!_isPointerDown)
                         {
                             _isPointerDown = true;
+                            _activePointerId = pointerId;
                             _clickedOutside = true;
                         }
                     }
@@ -107,9 +114,11 @@ namespace PixelFlow.Views
             }
             else
             {
-                if (_isPointerDown)
+                // Only release if this is the tracked pointer
+                if (_isPointerDown && pointerId == _activePointerId)
                 {
                     _isPointerDown = false;
+                    _activePointerId = -1;
                     if (!_clickedOutside)
                     {
                         OnGlobalPointerUp?.Invoke(_lastGridPos);
@@ -257,7 +266,7 @@ namespace PixelFlow.Views
                     lineRenderer.numCornerVertices = 8;
                     lineRenderer.numCapVertices = 8;
                     lineRenderer.useWorldSpace = false;
-                    lineRenderer.sortingOrder = 1;
+                    lineRenderer.sortingOrder = 0;
                     
                     Shader spriteShader = _cachedSpriteShader ?? (_cachedSpriteShader = Shader.Find("Sprites/Default"));
                     Material mat = new Material(spriteShader != null ? spriteShader : Shader.Find("Unlit/Color"));
@@ -283,13 +292,13 @@ namespace PixelFlow.Views
                 for (int i = 0; i < pathPositions.Count; i++)
                 {
                     Vector2Int gridPos = pathPositions[i];
-                    float z = -0.1f;
+                    float z = -0.05f;
                     if (gridPos.x >= 0 && gridPos.x < gw && gridPos.y >= 0 && gridPos.y < gh)
                     {
                         var cell = gridData[gridPos.x, gridPos.y];
                         if (cell.HasViaduct && cell.OverColor == colorType)
                         {
-                            z = -0.4f;
+                            z = -0.35f;
                         }
                     }
 

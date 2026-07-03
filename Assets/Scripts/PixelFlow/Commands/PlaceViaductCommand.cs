@@ -47,29 +47,30 @@ namespace PixelFlow.Commands
                 cell.HasViaduct = true;
                 cell.State = CellState.Bridge;
 
+                var colors = System.Linq.Enumerable.ToArray(cell.PathColors);
                 List<Vector2Int> pathA = null;
                 List<Vector2Int> pathB = null;
-                bool hasPathA = GridModel.Paths != null && GridModel.Paths.TryGetValue(cell.PathColors[0], out pathA);
-                bool hasPathB = GridModel.Paths != null && GridModel.Paths.TryGetValue(cell.PathColors[1], out pathB);
+                bool hasPathA = GridModel.Paths != null && GridModel.Paths.TryGetValue(colors[0], out pathA);
+                bool hasPathB = GridModel.Paths != null && GridModel.Paths.TryGetValue(colors[1], out pathB);
 
                 if (hasPathA && pathA != null)
                 {
                     var dirA = BridgeValidationUtility.GetCrossingDirection(pathA, pos);
                     if (dirA.x != 0)
                     {
-                        cell.UnderColor = cell.PathColors[0];
-                        cell.OverColor = cell.PathColors[1];
+                        cell.UnderColor = colors[0];
+                        cell.OverColor = colors[1];
                     }
                     else
                     {
-                        cell.UnderColor = cell.PathColors[1];
-                        cell.OverColor = cell.PathColors[0];
+                        cell.UnderColor = colors[1];
+                        cell.OverColor = colors[0];
                     }
                 }
                 else
                 {
-                    cell.UnderColor = cell.PathColors[0];
-                    cell.OverColor = cell.PathColors[1];
+                    cell.UnderColor = colors[0];
+                    cell.OverColor = colors[1];
                 }
 
                 Debug.Log($"[PlaceViaductCommand] Placed viaduct at {pos}. Under: {cell.UnderColor}, Over: {cell.OverColor}. Remaining viaducts: {GameSessionModel.AvailableViaducts}");

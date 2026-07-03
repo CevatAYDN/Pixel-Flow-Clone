@@ -39,6 +39,7 @@ namespace PixelFlow.Services
             public bool hasViaduct;
             public int underColor;
             public int overColor;
+            public int obstacleType;
         }
 
         [System.Serializable]
@@ -80,7 +81,8 @@ namespace PixelFlow.Services
                         color = (int)cell.Color,
                         hasViaduct = cell.HasViaduct,
                         underColor = (int)cell.UnderColor,
-                        overColor = (int)cell.OverColor
+                        overColor = (int)cell.OverColor,
+                        obstacleType = (int)cell.ObstacleType
                     };
                     foreach (var pc in cell.PathColors)
                         csd.pathColors.Add((int)pc);
@@ -140,9 +142,10 @@ namespace PixelFlow.Services
                 cell.HasViaduct = csd.hasViaduct;
                 cell.UnderColor = (ColorType)csd.underColor;
                 cell.OverColor = (ColorType)csd.overColor;
-                cell.PathColors.Clear();
+                    cell.PathColors.Clear();
                 foreach (var pc in csd.pathColors)
                     cell.PathColors.Add((ColorType)pc);
+                cell.ObstacleType = (ObstacleType)csd.obstacleType;
             }
 
             grid.Paths.Clear();

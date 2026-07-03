@@ -57,23 +57,20 @@ namespace PixelFlow.Services
             if (GameStateModel == null || CityEconomyModel == null)
                 return;
 
-            if (GameStateModel.CurrentState != GameState.MainMenu)
+            int cityLevel = CityEconomyModel.CityLevel;
+            int completedCount = CityEconomyModel.CompletedLevelsCount;
+            if (cityLevel != _lastCityLevel || completedCount != _lastLevelCount)
             {
-                int cityLevel = CityEconomyModel.CityLevel;
-                int completedCount = CityEconomyModel.CompletedLevelsCount;
-                if (cityLevel != _lastCityLevel || completedCount != _lastLevelCount)
-                {
-                    _cachedTaxRate = CityEconomyModel.TaxRatePerSecond;
-                    _cachedMaxStorage = CityEconomyModel.MaxStorage;
-                    _lastCityLevel = cityLevel;
-                    _lastLevelCount = completedCount;
-                }
-
-                float dt = Time.deltaTime;
-                float accumulated = CityEconomyModel.GetAccumulatedTaxes();
-                accumulated = Mathf.Min(accumulated + _cachedTaxRate * dt, _cachedMaxStorage);
-                CityEconomyModel.SetAccumulatedTaxes(accumulated);
+                _cachedTaxRate = CityEconomyModel.TaxRatePerSecond;
+                _cachedMaxStorage = CityEconomyModel.MaxStorage;
+                _lastCityLevel = cityLevel;
+                _lastLevelCount = completedCount;
             }
+
+            float dt = Time.deltaTime;
+            float accumulated = CityEconomyModel.GetAccumulatedTaxes();
+            accumulated = Mathf.Min(accumulated + _cachedTaxRate * dt, _cachedMaxStorage);
+            CityEconomyModel.SetAccumulatedTaxes(accumulated);
         }
     }
 

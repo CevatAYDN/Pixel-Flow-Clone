@@ -12,6 +12,8 @@ namespace PixelFlow.Data
     {
         public Vector2Int position;
         public ObstacleType type;
+        [Tooltip("Direction for OneWay obstacles. Use (1,0) for right, (-1,0) for left, (0,1) for up, (0,-1) for down. Defaults to right if zero.")]
+        public Vector2Int oneWayDirection;
     }
 
     [System.Serializable]

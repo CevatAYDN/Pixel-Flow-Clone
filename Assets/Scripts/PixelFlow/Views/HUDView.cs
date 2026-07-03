@@ -355,7 +355,10 @@ namespace PixelFlow.Views
                 // S tuşu ile simülasyonu manuel başlat/durdur (Test amaçlı debug)
                 if (keyboard.sKey.wasPressedThisFrame)
                 {
-                    OnSimulateDebugPressed?.Invoke();
+                    if (Debug.isDebugBuild)
+                    {
+                        OnSimulateDebugPressed?.Invoke();
+                    }
                 }
 
                 if (_completionPanel != null && _completionPanel.activeSelf)

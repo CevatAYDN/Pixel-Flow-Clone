@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Nexus.Core;
+using UnityEngine;
 
 namespace PixelFlow.Models
 {
@@ -21,14 +23,45 @@ namespace PixelFlow.Models
         public GameState PreviousState { get; private set; }
         public event Action<GameState> OnStateChanged;
 
+        private static readonly HashSet<(GameState from, GameState to)> AllowedTransitions = new HashSet<(GameState, GameState)>
+        {
+            // Same-state (no-op)
+            (GameState.MainMenu, GameState.MainMenu),
+            (GameState.Playing, GameState.Playing),
+            (GameState.Simulating, GameState.Simulating),
+            (GameState.Paused, GameState.Paused),
+            (GameState.LevelCompleted, GameState.LevelCompleted),
+            // Hub → Gameplay
+            (GameState.MainMenu, GameState.Playing),
+            // Playing ↔ Paused
+            (GameState.Playing, GameState.Paused),
+            (GameState.Paused, GameState.Playing),
+            // Playing → Simulating
+            (GameState.Playing, GameState.Simulating),
+            // Simulating transitions
+            (GameState.Simulating, GameState.Playing),
+            (GameState.Simulating, GameState.Paused),
+            (GameState.Simulating, GameState.LevelCompleted),
+            // Paused → Simulating (crisis viaduct resolution restores sim)
+            (GameState.Paused, GameState.Simulating),
+            // LevelCompleted → Hub or next level
+            (GameState.LevelCompleted, GameState.MainMenu),
+            (GameState.LevelCompleted, GameState.Playing),
+        };
+
         public void SetState(GameState state)
         {
-            if (CurrentState != state)
+            if (CurrentState == state) return;
+
+            if (!AllowedTransitions.Contains((CurrentState, state)))
             {
-                PreviousState = CurrentState;
-                CurrentState = state;
-                OnStateChanged?.Invoke(CurrentState);
+                Debug.LogError($"[GameStateModel] Illegal transition: {CurrentState} → {state}. Blocked.");
+                return;
             }
+
+            PreviousState = CurrentState;
+            CurrentState = state;
+            OnStateChanged?.Invoke(CurrentState);
         }
 
         public ValueTask OnBind(CancellationToken ct) => default;

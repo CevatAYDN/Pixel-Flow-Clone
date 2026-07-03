@@ -245,14 +245,15 @@ namespace PixelFlow.Models
                 case UpgradeType.District: currentLevel = DistrictUnlockLevel; break;
             }
 
-            // Logarithmic upgrade cost: Cost = BaseCost * (1.35 ^ Level)
+            // Logarithmic upgrade cost: Cost = BaseCost * (CategoryMultiplier ^ Level)
             float baseCost = 200f;
+            float categoryMultiplier = 1.35f;
             switch (type)
             {
-                case UpgradeType.Storage: baseCost = 150f; break;
-                case UpgradeType.Rate: baseCost = 250f; break;
-                case UpgradeType.Viaduct: baseCost = 500f; break;
-                case UpgradeType.Offline: baseCost = 200f; break;
+                case UpgradeType.Storage: baseCost = 150f; categoryMultiplier = 1.5f; break;
+                case UpgradeType.Rate: baseCost = 250f; categoryMultiplier = 1.4f; break;
+                case UpgradeType.Viaduct: baseCost = 500f; categoryMultiplier = 1.6f; break;
+                case UpgradeType.Offline: baseCost = 200f; categoryMultiplier = 2.0f; break;
                 case UpgradeType.District: baseCost = 1000f; break; // Fixed increments
             }
 
@@ -264,7 +265,7 @@ namespace PixelFlow.Models
                 return districtCosts[idx];
             }
 
-            return Mathf.RoundToInt(baseCost * Mathf.Pow(1.35f, currentLevel));
+            return Mathf.RoundToInt(baseCost * Mathf.Pow(categoryMultiplier, currentLevel));
         }
 
         public void PurchaseUpgrade(UpgradeType type)

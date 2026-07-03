@@ -62,7 +62,7 @@ namespace PixelFlow.Commands
             if (signal.Type == InputType.PointerDown)
             {
                 ColorType clickedColor = currentCell.Color != ColorType.None ? currentCell.Color
-                    : currentCell.PathColors.Count > 0 ? currentCell.PathColors[0]
+                    : currentCell.PathColors.Count > 0 ? System.Linq.Enumerable.First(currentCell.PathColors)
                     : ColorType.None;
 
                 if (clickedColor != ColorType.None)
@@ -178,9 +178,12 @@ namespace PixelFlow.Commands
 
                     if (currentCell.HasViaduct || currentCell.State == CellState.Bridge)
                     {
+                        if (currentCell.PathColors.Count >= BridgeValidationUtility.MaxPathsPerBridge)
+                            return;
+
                         if (currentCell.PathColors.Count > 0)
                         {
-                            ColorType existingColor = currentCell.PathColors[0];
+                            ColorType existingColor = System.Linq.Enumerable.First(currentCell.PathColors);
                             if (GridModel.Paths.TryGetValue(existingColor, out var otherPath))
                             {
                                 if (!BridgeValidationUtility.IsValidBridgeCrossing(

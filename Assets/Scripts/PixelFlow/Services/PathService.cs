@@ -42,7 +42,7 @@ namespace PixelFlow.Services
                 }
                 else if (cell.Color == color && cell.State != CellState.Node)
                 {
-                    cell.Color = cell.PathColors[0];
+                    cell.Color = System.Linq.Enumerable.First(cell.PathColors);
                 }
             }
             path.Clear();
@@ -52,7 +52,7 @@ namespace PixelFlow.Services
         {
             if (GridModel == null || !GridModel.Paths.ContainsKey(color)) return;
             var path = GridModel.Paths[color];
-            int idx = path.IndexOf(toPos);
+            int idx = path.LastIndexOf(toPos);
             if (idx == -1) return;
 
             for (int i = path.Count - 1; i > idx; i--)
@@ -82,7 +82,7 @@ namespace PixelFlow.Services
                 }
                 else if (cell.Color == color && cell.State != CellState.Node)
                 {
-                    cell.Color = cell.PathColors[0];
+                    cell.Color = System.Linq.Enumerable.First(cell.PathColors);
                 }
                 path.RemoveAt(i);
             }
@@ -90,7 +90,42 @@ namespace PixelFlow.Services
 
         public void BreakPath(ColorType color, Vector2Int breakPos)
         {
-            BacktrackPath(color, breakPos);
+            if (GridModel == null || !GridModel.Paths.ContainsKey(color)) return;
+            var path = GridModel.Paths[color];
+            int idx = path.LastIndexOf(breakPos);
+            if (idx == -1) return;
+
+            for (int i = path.Count - 1; i > idx; i--)
+            {
+                var pos = path[i];
+                var cell = GridModel.Grid[pos.x, pos.y];
+                if (cell.PathColors.Contains(color))
+                    cell.PathColors.Remove(color);
+
+                if (cell.HasViaduct && cell.PathColors.Count < 2)
+                {
+                    cell.HasViaduct = false;
+                    cell.UnderColor = ColorType.None;
+                    cell.OverColor = ColorType.None;
+                    if (cell.State == CellState.Bridge)
+                        cell.State = cell.PathColors.Count > 0 ? CellState.Path : CellState.Empty;
+                    GameSessionModel.RefundViaduct();
+                }
+
+                if (cell.PathColors.Count == 0)
+                {
+                    if (cell.State == CellState.Path || cell.State == CellState.Bridge)
+                    {
+                        cell.State = CellState.Empty;
+                        cell.Color = ColorType.None;
+                    }
+                }
+                else if (cell.Color == color && cell.State != CellState.Node)
+                {
+                    cell.Color = System.Linq.Enumerable.First(cell.PathColors);
+                }
+                path.RemoveAt(i);
+            }
         }
 
         public ValueTask InitializeAsync(CancellationToken ct) => default;

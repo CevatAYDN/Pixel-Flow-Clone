@@ -50,6 +50,7 @@ namespace PixelFlow.Services
         public void RequestGraceSkip()
         {
             if (!CanGraceSkip) return;
+            if (GameStateModel.CurrentState != GameState.Playing) return;
 
             _graceSkipCount++;
             _idleTimer = 0f;

@@ -13,7 +13,7 @@ namespace PixelFlow.Models
     {
         public CellState State;
         public ColorType Color;
-        public List<ColorType> PathColors = new List<ColorType>();
+        public HashSet<ColorType> PathColors = new HashSet<ColorType>();
         public bool HasViaduct;
         public ColorType UnderColor = ColorType.None;
         public ColorType OverColor = ColorType.None;

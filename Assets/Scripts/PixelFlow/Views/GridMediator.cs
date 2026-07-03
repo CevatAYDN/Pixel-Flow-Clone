@@ -14,6 +14,7 @@ namespace PixelFlow.Views
 
         private CellState[,] _previousCellStates;
         private ColorType[,] _previousCellColors;
+        private HashSet<ColorType>[,] _previousCellPathColors;
         private readonly HashSet<Vector2Int> _changedCells = new HashSet<Vector2Int>();
 
         protected override void OnBind()
@@ -105,7 +106,12 @@ namespace PixelFlow.Views
                 for (int y = 0; y < h; y++)
                 {
                     var current = GridModel.Grid[x, y];
-                    if (_previousCellStates[x, y] != current.State || _previousCellColors[x, y] != current.Color)
+                    bool stateChanged = _previousCellStates[x, y] != current.State;
+                    bool colorChanged = _previousCellColors[x, y] != current.Color;
+                    bool pathColorsChanged = _previousCellPathColors != null
+                        && _previousCellPathColors[x, y] != null
+                        && !_previousCellPathColors[x, y].SetEquals(current.PathColors);
+                    if (stateChanged || colorChanged || pathColorsChanged)
                     {
                         _changedCells.Add(new Vector2Int(x, y));
                     }
@@ -123,6 +129,7 @@ namespace PixelFlow.Views
             {
                 _previousCellStates = new CellState[w, h];
                 _previousCellColors = new ColorType[w, h];
+                _previousCellPathColors = new HashSet<ColorType>[w, h];
             }
 
             for (int x = 0; x < w; x++)
@@ -131,6 +138,17 @@ namespace PixelFlow.Views
                 {
                     _previousCellStates[x, y] = GridModel.Grid[x, y].State;
                     _previousCellColors[x, y] = GridModel.Grid[x, y].Color;
+                    var prev = _previousCellPathColors[x, y];
+                    if (prev == null)
+                    {
+                        _previousCellPathColors[x, y] = new HashSet<ColorType>(GridModel.Grid[x, y].PathColors);
+                    }
+                    else
+                    {
+                        prev.Clear();
+                        foreach (var pc in GridModel.Grid[x, y].PathColors)
+                            prev.Add(pc);
+                    }
                 }
             }
         }

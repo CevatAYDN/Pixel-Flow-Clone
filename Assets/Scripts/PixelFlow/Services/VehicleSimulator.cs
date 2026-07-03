@@ -63,6 +63,7 @@ namespace PixelFlow.Services
         private const float SimulationPhaseDuration = 10f;
         private const float VehicleSpeed = 3f;
         private const float SpawnInterval = 1.2f;
+        private const float MaxProgressPerFrame = 0.25f;
         private ISignalSubscription _undoSubscription;
         private ISignalSubscription _redoSubscription;
 
@@ -105,10 +106,6 @@ namespace PixelFlow.Services
             // Eğer duraklatılmış (Paused) durumdan çıkıyorsak (unpausing), araçları temizleme!
             if (GameStateModel.PreviousState == GameState.Paused)
             {
-                if (state == GameState.Playing)
-                {
-                    _simulationPhaseTimer = 0f;
-                }
                 return;
             }
 
@@ -170,6 +167,9 @@ namespace PixelFlow.Services
                 return;
             }
 
+            // Fire TimerTickSignal every frame so GameSessionModel.ElapsedTime stays accurate
+            SignalBus.Fire(new PixelFlow.Signals.TimerTickSignal());
+
             if (ObstacleService != null)
             {
                 ObstacleService.Tick(Time.deltaTime);
@@ -177,10 +177,10 @@ namespace PixelFlow.Services
 
             UpdateSpawning();
             UpdateMovement();
-            UpdateCollisionDetection();
-
+            // Collision detection ONLY in Simulating state (ghost vehicles in Playing should NOT crash)
             if (state == GameState.Simulating)
             {
+                UpdateCollisionDetection();
                 UpdateCompletionTimer();
             }
         }
@@ -302,6 +302,7 @@ namespace PixelFlow.Services
             if (rBody != null)
             {
                 rBody.material = new Material(shader) { color = carColor };
+                rBody.sortingOrder = 10;
                 renderers.Add(rBody);
             }
 
@@ -315,6 +316,7 @@ namespace PixelFlow.Services
             if (rCabin != null)
             {
                 rCabin.material = new Material(shader) { color = new Color(0.15f, 0.2f, 0.3f, 0.9f) };
+                rCabin.sortingOrder = 10;
                 renderers.Add(rCabin);
             }
 
@@ -328,6 +330,7 @@ namespace PixelFlow.Services
             if (rHead != null)
             {
                 rHead.material = new Material(shader) { color = new Color(0.9f, 1f, 1f, 1f) };
+                rHead.sortingOrder = 10;
                 renderers.Add(rHead);
             }
 
@@ -341,6 +344,7 @@ namespace PixelFlow.Services
             if (rTail != null)
             {
                 rTail.material = new Material(shader) { color = new Color(1f, 0.15f, 0.15f, 1f) };
+                rTail.sortingOrder = 10;
                 renderers.Add(rTail);
             }
 
@@ -361,6 +365,7 @@ namespace PixelFlow.Services
                     if (rWheel != null)
                     {
                         rWheel.material = new Material(shader) { color = new Color(0.12f, 0.12f, 0.14f, 1f) };
+                        rWheel.sortingOrder = 10;
                         renderers.Add(rWheel);
                     }
                 }
@@ -411,7 +416,7 @@ namespace PixelFlow.Services
                     }
                 }
 
-                v.Progress += v.Speed * Time.deltaTime;
+                v.Progress += Mathf.Min(v.Speed * Time.deltaTime, MaxProgressPerFrame);
                 if (v.Progress >= 1f)
                 {
                     v.Progress = 0f;
@@ -451,8 +456,8 @@ namespace PixelFlow.Services
                 Vector3 tangent = CatmullRomTangent(p0, p1, p2, p3, v.Progress);
                 Vector3 nextTangent = CatmullRomTangent(p0, p1, p2, p3, Mathf.Min(v.Progress + 0.1f, 1f));
 
-                float baseAngle = tangent.sqrMagnitude > 0.001f ? Mathf.Atan2(tangent.y, tangent.x) : 0f;
-                float nextAngle = nextTangent.sqrMagnitude > 0.001f ? Mathf.Atan2(nextTangent.y, nextTangent.x) : baseAngle;
+                float baseAngle = tangent.sqrMagnitude > 0.001f ? Mathf.Atan2(tangent.y, tangent.x) * Mathf.Rad2Deg : 0f;
+                float nextAngle = nextTangent.sqrMagnitude > 0.001f ? Mathf.Atan2(nextTangent.y, nextTangent.x) * Mathf.Rad2Deg : baseAngle;
                 float deltaAngle = Mathf.DeltaAngle(baseAngle, nextAngle);
 
                 float cornerProximity = Mathf.Min(v.Progress, 1f - v.Progress);
@@ -492,7 +497,7 @@ namespace PixelFlow.Services
                 {
                     float angle = Mathf.Atan2(tangent2.y, tangent2.x) * Mathf.Rad2Deg;
                     float rollBank = Mathf.Clamp(-deltaAngle * 0.5f, -20f, 20f);
-                    v.Visual.transform.rotation = Quaternion.Euler(rollBank, 0f, angle);
+                    v.Visual.transform.rotation = Quaternion.Euler(0f, 0f, angle + rollBank);
                 }
             }
         }
@@ -504,15 +509,14 @@ namespace PixelFlow.Services
                 var cell = GridModel.Grid[gridPos.x, gridPos.y];
                 if (cell.HasViaduct && cell.OverColor == color)
                 {
-                    return -0.4f; // Yükseltilmiş yol
+                    return -0.5f; // Yükseltilmiş yol (araç yoldan daha yakın)
                 }
             }
-            return -0.1f; // Normal yol
+            return -0.2f; // Normal yol (araç yoldan daha yakın)
         }
 
         private void UpdateCollisionDetection()
         {
-            // Check for physical distance collisions between vehicles (distance < 0.5f)
             for (int i = 0; i < _activeVehicles.Count; i++)
             {
                 var v1 = _activeVehicles[i];
@@ -527,15 +531,25 @@ namespace PixelFlow.Services
 
                     if (dist < collisionThreshold)
                     {
+                        Vector3 midPos = (v1.CurrentPosition + v2.CurrentPosition) * 0.5f;
                         Vector2Int cellPos = new Vector2Int(
-                            Mathf.RoundToInt(v1.CurrentPosition.x),
-                            Mathf.RoundToInt(v1.CurrentPosition.y));
+                            Mathf.RoundToInt(midPos.x),
+                            Mathf.RoundToInt(midPos.y));
 
                         if (cellPos.x >= 0 && cellPos.x < GridModel.Width &&
                             cellPos.y >= 0 && cellPos.y < GridModel.Height)
                         {
                             var cell = GridModel.Grid[cellPos.x, cellPos.y];
-                            if (!cell.HasViaduct)
+                            if (cell.HasViaduct)
+                            {
+                                float zDiff = Mathf.Abs(v1.CurrentPosition.z - v2.CurrentPosition.z);
+                                if (zDiff < 0.15f)
+                                {
+                                    TriggerCrash(cellPos, v1.Color, v2.Color);
+                                    return;
+                                }
+                            }
+                            else
                             {
                                 TriggerCrash(cellPos, v1.Color, v2.Color);
                                 return;
