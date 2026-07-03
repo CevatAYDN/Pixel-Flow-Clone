@@ -30,17 +30,26 @@ namespace PixelFlow.Services
         [Inject] public IHapticService HapticService { get; set; }
         [Inject] public IAudioService AudioService { get; set; }
         [Inject] public IObstacleService ObstacleService { get; set; }
+        [Inject] public ISettingsModel SettingsModel { get; set; }
 
         private class VehicleInstance
         {
             public ColorType Color;
+            public VehicleStyle Style;
             public List<Vector2Int> Path;
             public int SegmentIndex;
             public float Progress;
+            public float TotalDistance;
             public GameObject Visual;
             public Vector3 CurrentPosition;
             public float Speed;
             public Renderer[] CachedRenderers;
+
+            public Transform LocoTransform;
+            public Transform Wagon1Transform;
+            public Transform Wagon2Transform;
+            public Transform Coupler1Transform;
+            public Transform Coupler2Transform;
         }
 
         private static readonly ColorType[] AllColors;
@@ -305,22 +314,191 @@ namespace PixelFlow.Services
             GameObject visual = new GameObject($"V_{color}");
             visual.transform.SetParent(_vehicleContainer);
 
-            List<Renderer> renderers = CreateProceduralVehicle3D(visual, color);
+            VehicleStyle vehicleStyle = SettingsModel != null ? SettingsModel.CurrentVehicleStyle : (VehicleStyle)PlayerPrefs.GetInt("VehicleStyle", 0);
+            
+            Transform loco = null, wagon1 = null, wagon2 = null, coupler1 = null, coupler2 = null;
+            List<Renderer> renderers = vehicleStyle == VehicleStyle.Train 
+                ? CreateProceduralTrain3D(visual, color, out loco, out wagon1, out wagon2, out coupler1, out coupler2) 
+                : CreateProceduralVehicle3D(visual, color);
 
             var inst = new VehicleInstance
             {
                 Color = color,
+                Style = vehicleStyle,
                 Path = path,
                 SegmentIndex = 0,
                 Progress = 0f,
                 Visual = visual,
                 CurrentPosition = new Vector3(path[0].x, path[0].y, GetZOffset(path[0], color)),
                 Speed = VehicleSpeed + UnityEngine.Random.Range(-0.3f, 0.3f),
-                CachedRenderers = renderers.ToArray()
+                CachedRenderers = renderers.ToArray(),
+                LocoTransform = loco,
+                Wagon1Transform = wagon1,
+                Wagon2Transform = wagon2,
+                Coupler1Transform = coupler1,
+                Coupler2Transform = coupler2
             };
 
-            visual.transform.localPosition = inst.CurrentPosition;
+            visual.transform.localPosition = vehicleStyle == VehicleStyle.Train ? Vector3.zero : inst.CurrentPosition;
             _activeVehicles.Add(inst);
+        }
+
+        private static List<Renderer> CreateProceduralTrain3D(GameObject root, ColorType color, out Transform loco, out Transform wagon1, out Transform wagon2, out Transform coupler1, out Transform coupler2)
+        {
+            var renderers = new List<Renderer>();
+            loco = null; wagon1 = null; wagon2 = null; coupler1 = null; coupler2 = null;
+            if (!Application.isPlaying) return renderers;
+
+            Shader shader = Shader.Find("Sprites/Default") ?? Shader.Find("Standard");
+            Color trainColor = CellView.GetColor(color);
+            Color darkMetal = new Color(0.15f, 0.15f, 0.18f, 1f);
+            Color windowColor = new Color(0.2f, 0.9f, 1f, 0.9f);
+            Color headlightColor = new Color(1f, 0.95f, 0.5f, 1f);
+
+            // 1. LOCOMOTIVE ENGINE HEAD
+            var locoObj = new GameObject("Locomotive");
+            locoObj.transform.SetParent(root.transform, false);
+            loco = locoObj.transform;
+
+            var locoBody = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            locoBody.name = "EngineBody";
+            locoBody.transform.SetParent(loco, false);
+            locoBody.transform.localScale = new Vector3(0.38f, 0.22f, 0.18f);
+            var rLoco = locoBody.GetComponent<Renderer>();
+            if (rLoco != null) { rLoco.material = new Material(shader) { color = trainColor }; rLoco.sortingOrder = 10; renderers.Add(rLoco); }
+
+            var locoCab = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            locoCab.name = "EngineCabin";
+            locoCab.transform.SetParent(loco, false);
+            locoCab.transform.localScale = new Vector3(0.18f, 0.20f, 0.16f);
+            locoCab.transform.localPosition = new Vector3(-0.06f, 0f, -0.10f);
+            var rCab = locoCab.GetComponent<Renderer>();
+            if (rCab != null) { rCab.material = new Material(shader) { color = trainColor * 0.85f }; rCab.sortingOrder = 10; renderers.Add(rCab); }
+
+            var windshield = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            windshield.name = "Windshield";
+            windshield.transform.SetParent(loco, false);
+            windshield.transform.localScale = new Vector3(0.04f, 0.18f, 0.08f);
+            windshield.transform.localPosition = new Vector3(0.19f, 0f, -0.06f);
+            var rWin = windshield.GetComponent<Renderer>();
+            if (rWin != null) { rWin.material = new Material(shader) { color = windowColor }; rWin.sortingOrder = 10; renderers.Add(rWin); }
+
+            var headlight = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            headlight.name = "TrainHeadlight";
+            headlight.transform.SetParent(loco, false);
+            headlight.transform.localScale = new Vector3(0.05f, 0.08f, 0.06f);
+            headlight.transform.localPosition = new Vector3(0.20f, 0f, 0.02f);
+            var rHead = headlight.GetComponent<Renderer>();
+            if (rHead != null) { rHead.material = new Material(shader) { color = headlightColor }; rHead.sortingOrder = 10; renderers.Add(rHead); }
+
+            var stripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            stripe.name = "RoofStripe";
+            stripe.transform.SetParent(loco, false);
+            stripe.transform.localScale = new Vector3(0.36f, 0.06f, 0.04f);
+            stripe.transform.localPosition = new Vector3(0f, 0f, -0.19f);
+            var rStripe = stripe.GetComponent<Renderer>();
+            if (rStripe != null) { rStripe.material = new Material(shader) { color = Color.white }; rStripe.sortingOrder = 10; renderers.Add(rStripe); }
+
+            float[] locoWheelX = { 0.10f, -0.10f };
+            foreach (float x in locoWheelX)
+            {
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    var wheel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    wheel.name = "Wheel";
+                    wheel.transform.SetParent(loco, false);
+                    wheel.transform.localScale = new Vector3(0.07f, 0.02f, 0.07f);
+                    wheel.transform.localPosition = new Vector3(x, side * 0.09f, 0.05f);
+                    wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    var rWheel = wheel.GetComponent<Renderer>();
+                    if (rWheel != null) { rWheel.material = new Material(shader) { color = darkMetal }; rWheel.sortingOrder = 10; renderers.Add(rWheel); }
+                }
+            }
+
+            // 2. COUPLER 1
+            var c1Obj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            c1Obj.name = "Coupler1";
+            c1Obj.transform.SetParent(root.transform, false);
+            c1Obj.transform.localScale = new Vector3(0.10f, 0.06f, 0.06f);
+            coupler1 = c1Obj.transform;
+            var rC1 = c1Obj.GetComponent<Renderer>();
+            if (rC1 != null) { rC1.material = new Material(shader) { color = darkMetal }; rC1.sortingOrder = 10; renderers.Add(rC1); }
+
+            // 3. WAGON 1
+            var w1Obj = new GameObject("Wagon1");
+            w1Obj.transform.SetParent(root.transform, false);
+            wagon1 = w1Obj.transform;
+
+            var w1Body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            w1Body.name = "WagonBody";
+            w1Body.transform.SetParent(wagon1, false);
+            w1Body.transform.localScale = new Vector3(0.34f, 0.20f, 0.16f);
+            var rW1 = w1Body.GetComponent<Renderer>();
+            if (rW1 != null) { rW1.material = new Material(shader) { color = trainColor * 0.95f }; rW1.sortingOrder = 10; renderers.Add(rW1); }
+
+            for (int side = -1; side <= 1; side += 2)
+            {
+                var wWin = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                wWin.name = "WagonWindows";
+                wWin.transform.SetParent(wagon1, false);
+                wWin.transform.localScale = new Vector3(0.24f, 0.02f, 0.06f);
+                wWin.transform.localPosition = new Vector3(0f, side * 0.10f, -0.03f);
+                var rWWin = wWin.GetComponent<Renderer>();
+                if (rWWin != null) { rWWin.material = new Material(shader) { color = windowColor }; rWWin.sortingOrder = 10; renderers.Add(rWWin); }
+            }
+
+            foreach (float x in locoWheelX)
+            {
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    var wheel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    wheel.name = "Wheel";
+                    wheel.transform.SetParent(wagon1, false);
+                    wheel.transform.localScale = new Vector3(0.07f, 0.02f, 0.07f);
+                    wheel.transform.localPosition = new Vector3(x, side * 0.09f, 0.05f);
+                    wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    var rWheel = wheel.GetComponent<Renderer>();
+                    if (rWheel != null) { rWheel.material = new Material(shader) { color = darkMetal }; rWheel.sortingOrder = 10; renderers.Add(rWheel); }
+                }
+            }
+
+            // 4. COUPLER 2
+            var c2Obj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            c2Obj.name = "Coupler2";
+            c2Obj.transform.SetParent(root.transform, false);
+            c2Obj.transform.localScale = new Vector3(0.10f, 0.06f, 0.06f);
+            coupler2 = c2Obj.transform;
+            var rC2 = c2Obj.GetComponent<Renderer>();
+            if (rC2 != null) { rC2.material = new Material(shader) { color = darkMetal }; rC2.sortingOrder = 10; renderers.Add(rC2); }
+
+            // 5. WAGON 2
+            var w2Obj = new GameObject("Wagon2");
+            w2Obj.transform.SetParent(root.transform, false);
+            wagon2 = w2Obj.transform;
+
+            var w2Body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            w2Body.name = "WagonBody";
+            w2Body.transform.SetParent(wagon2, false);
+            w2Body.transform.localScale = new Vector3(0.32f, 0.20f, 0.16f);
+            var rW2 = w2Body.GetComponent<Renderer>();
+            if (rW2 != null) { rW2.material = new Material(shader) { color = trainColor * 0.90f }; rW2.sortingOrder = 10; renderers.Add(rW2); }
+
+            foreach (float x in locoWheelX)
+            {
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    var wheel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    wheel.name = "Wheel";
+                    wheel.transform.SetParent(wagon2, false);
+                    wheel.transform.localScale = new Vector3(0.07f, 0.02f, 0.07f);
+                    wheel.transform.localPosition = new Vector3(x, side * 0.09f, 0.05f);
+                    wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    var rWheel = wheel.GetComponent<Renderer>();
+                    if (rWheel != null) { rWheel.material = new Material(shader) { color = darkMetal }; rWheel.sortingOrder = 10; renderers.Add(rWheel); }
+                }
+            }
+
+            return renderers;
         }
 
         private static List<Renderer> CreateProceduralVehicle3D(GameObject root, ColorType color)
@@ -455,14 +633,10 @@ namespace PixelFlow.Services
                     }
                 }
 
-                v.Progress += Mathf.Min(v.Speed * deltaTime, MaxProgressPerFrame);
-                if (v.Progress >= 1f)
-                {
-                    v.Progress = 0f;
-                    v.SegmentIndex++;
-                }
+                v.TotalDistance += Mathf.Min(v.Speed * deltaTime, MaxProgressPerFrame);
+                float maxAllowedDist = (v.Style == VehicleStyle.Train) ? (v.Path.Count - 1) + 0.85f : (v.Path.Count - 1);
 
-                if (v.SegmentIndex >= v.Path.Count - 1)
+                if (v.TotalDistance >= maxAllowedDist)
                 {
                     if (ObstacleService != null && v.Path.Count > 0)
                     {
@@ -485,60 +659,183 @@ namespace PixelFlow.Services
                     continue;
                 }
 
-                Vector3 p0 = GetSplineControlPoint(v.Path, v.SegmentIndex - 1, v.Color);
-                Vector3 p1 = GetSplineControlPoint(v.Path, v.SegmentIndex, v.Color);
-                Vector3 p2 = GetSplineControlPoint(v.Path, v.SegmentIndex + 1, v.Color);
-                Vector3 p3 = GetSplineControlPoint(v.Path, v.SegmentIndex + 2, v.Color);
+                float locoDist = Mathf.Min(v.TotalDistance, v.Path.Count - 1);
+                float zOffset = GetZOffset(v.Path[Mathf.Clamp(Mathf.FloorToInt(locoDist), 0, v.Path.Count - 1)], v.Color);
 
-                Vector3 basePos = CatmullRom(p0, p1, p2, p3, v.Progress);
-
-                Vector3 tangent = CatmullRomTangent(p0, p1, p2, p3, v.Progress);
-                Vector3 nextTangent = CatmullRomTangent(p0, p1, p2, p3, Mathf.Min(v.Progress + 0.1f, 1f));
-
-                float baseAngle = tangent.sqrMagnitude > 0.001f ? Mathf.Atan2(tangent.y, tangent.x) * Mathf.Rad2Deg : 0f;
-                float nextAngle = nextTangent.sqrMagnitude > 0.001f ? Mathf.Atan2(nextTangent.y, nextTangent.x) * Mathf.Rad2Deg : baseAngle;
-                float deltaAngle = Mathf.DeltaAngle(baseAngle, nextAngle);
-
-                float cornerProximity = Mathf.Min(v.Progress, 1f - v.Progress);
-                bool isCorner = cornerProximity < 0.25f && Mathf.Abs(deltaAngle) > 10f;
-
-                if (isCorner)
-                {
-                    float overshootT = cornerProximity < 0.12f
-                        ? Mathf.Sin((cornerProximity / 0.12f) * Mathf.PI) * 0.18f
-                        : 0f;
-
-                    Vector3 perp = new Vector3(-tangent.y, tangent.x, 0f).normalized;
-                    if (perp.sqrMagnitude > 0.001f)
-                    {
-                        float leanDir = deltaAngle > 0 ? -1f : 1f;
-                        basePos += perp * overshootT * leanDir;
-                    }
-
-                    if (v.Progress < 0.12f)
-                    {
-                        float settleT = v.Progress / 0.12f;
-                        Vector3 prevTangent = CatmullRomTangent(p0, p1, p2, p3, 0f);
-                        Vector3 overshoot = prevTangent.normalized * 0.15f * (1f - settleT);
-                        basePos += new Vector3(overshoot.x, overshoot.y, 0f);
-                    }
-                }
-
+                Vector3 basePos = EvaluatePathPosition(v.Path, locoDist, v.Color, zOffset);
+                Vector3 tangent = EvaluatePathTangent(v.Path, locoDist, v.Color);
                 v.CurrentPosition = basePos;
 
-                float bobbing = Mathf.Sin(Time.time * 12f + v.GetHashCode()) * 0.02f;
-                Vector3 finalPos = v.CurrentPosition;
-                finalPos.z += bobbing;
-                v.Visual.transform.localPosition = finalPos;
-
-                Vector3 tangent2 = CatmullRomTangent(p0, p1, p2, p3, v.Progress);
-                if (tangent2.sqrMagnitude > 0.001f)
+                if (v.Style == VehicleStyle.Train)
                 {
-                    float angle = Mathf.Atan2(tangent2.y, tangent2.x) * Mathf.Rad2Deg;
-                    float rollBank = Mathf.Clamp(-deltaAngle * 0.5f, -20f, 20f);
-                    v.Visual.transform.rotation = Quaternion.Euler(0f, 0f, angle + rollBank);
+                    v.Visual.transform.localPosition = Vector3.zero;
+                    float bobbing = Mathf.Sin(Time.time * 8f + v.GetHashCode()) * 0.01f;
+
+                    // 1. Update Locomotive Engine
+                    Vector3 locoPos = basePos;
+                    locoPos.z = zOffset + bobbing;
+                    if (v.LocoTransform != null)
+                    {
+                        v.LocoTransform.localPosition = locoPos;
+                        if (tangent.sqrMagnitude > 0.001f)
+                        {
+                            float targetAngle = Mathf.Atan2(tangent.y, tangent.x) * Mathf.Rad2Deg;
+                            v.LocoTransform.localRotation = Quaternion.Slerp(
+                                v.LocoTransform.localRotation,
+                                Quaternion.Euler(0f, 0f, targetAngle),
+                                deltaTime * 25f);
+                        }
+                    }
+
+                    // 2. Wagon 1 (0.42f behind)
+                    Vector3 w1Pos;
+                    bool w1Active = UpdateCarriageTransform(v.Wagon1Transform, v.Path, v.TotalDistance - 0.42f, v.Color, zOffset, deltaTime, out w1Pos);
+
+                    // 3. Coupler 1
+                    if (v.Coupler1Transform != null)
+                    {
+                        if (v.LocoTransform != null && w1Active)
+                        {
+                            v.Coupler1Transform.gameObject.SetActive(true);
+                            Vector3 c1Pos = (locoPos + w1Pos) * 0.5f;
+                            v.Coupler1Transform.localPosition = c1Pos;
+                            Vector3 dir1 = locoPos - w1Pos;
+                            if (dir1.sqrMagnitude > 0.001f)
+                            {
+                                float c1Angle = Mathf.Atan2(dir1.y, dir1.x) * Mathf.Rad2Deg;
+                                v.Coupler1Transform.localRotation = Quaternion.Euler(0f, 0f, c1Angle);
+                            }
+                        }
+                        else
+                        {
+                            v.Coupler1Transform.gameObject.SetActive(false);
+                        }
+                    }
+
+                    // 4. Wagon 2 (0.84f behind)
+                    Vector3 w2Pos;
+                    bool w2Active = UpdateCarriageTransform(v.Wagon2Transform, v.Path, v.TotalDistance - 0.84f, v.Color, zOffset, deltaTime, out w2Pos);
+
+                    // 5. Coupler 2
+                    if (v.Coupler2Transform != null)
+                    {
+                        if (w1Active && w2Active)
+                        {
+                            v.Coupler2Transform.gameObject.SetActive(true);
+                            Vector3 c2Pos = (w1Pos + w2Pos) * 0.5f;
+                            v.Coupler2Transform.localPosition = c2Pos;
+                            Vector3 dir2 = w1Pos - w2Pos;
+                            if (dir2.sqrMagnitude > 0.001f)
+                            {
+                                float c2Angle = Mathf.Atan2(dir2.y, dir2.x) * Mathf.Rad2Deg;
+                                v.Coupler2Transform.localRotation = Quaternion.Euler(0f, 0f, c2Angle);
+                            }
+                        }
+                        else
+                        {
+                            v.Coupler2Transform.gameObject.SetActive(false);
+                        }
+                    }
+                }
+                else
+                {
+                    // Regular Car movement
+                    Vector3 nextTangent = EvaluatePathTangent(v.Path, Mathf.Min(locoDist + 0.1f, v.Path.Count - 1), v.Color);
+                    float baseAngle = tangent.sqrMagnitude > 0.001f ? Mathf.Atan2(tangent.y, tangent.x) * Mathf.Rad2Deg : 0f;
+                    float nextAngle = nextTangent.sqrMagnitude > 0.001f ? Mathf.Atan2(nextTangent.y, nextTangent.x) * Mathf.Rad2Deg : baseAngle;
+                    float deltaAngle = Mathf.DeltaAngle(baseAngle, nextAngle);
+
+                    float bobbing = Mathf.Sin(Time.time * 12f + v.GetHashCode()) * 0.02f;
+                    Vector3 finalPos = v.CurrentPosition;
+                    finalPos.z += bobbing;
+                    v.Visual.transform.localPosition = finalPos;
+
+                    if (tangent.sqrMagnitude > 0.001f)
+                    {
+                        float angle = Mathf.Atan2(tangent.y, tangent.x) * Mathf.Rad2Deg;
+                        float rollBank = Mathf.Clamp(-deltaAngle * 0.3f, -15f, 15f);
+                        v.Visual.transform.rotation = Quaternion.Slerp(
+                            v.Visual.transform.rotation,
+                            Quaternion.Euler(0f, 0f, angle + rollBank),
+                            deltaTime * 25f);
+                    }
                 }
             }
+        }
+
+        private bool UpdateCarriageTransform(Transform tForm, List<Vector2Int> path, float targetDist, ColorType color, float zOffset, float deltaTime, out Vector3 worldPos)
+        {
+            worldPos = Vector3.zero;
+            if (tForm == null) return false;
+
+            if (targetDist < 0f)
+            {
+                tForm.gameObject.SetActive(false);
+                return false;
+            }
+
+            tForm.gameObject.SetActive(true);
+            float clampedDist = Mathf.Min(targetDist, path.Count - 1);
+            Vector3 pos = EvaluatePathPosition(path, clampedDist, color, zOffset);
+            Vector3 tangent = EvaluatePathTangent(path, clampedDist, color);
+            worldPos = pos;
+
+            tForm.localPosition = pos;
+            if (tangent.sqrMagnitude > 0.001f)
+            {
+                float targetAngle = Mathf.Atan2(tangent.y, tangent.x) * Mathf.Rad2Deg;
+                tForm.localRotation = Quaternion.Slerp(
+                    tForm.localRotation,
+                    Quaternion.Euler(0f, 0f, targetAngle),
+                    deltaTime * 25f);
+            }
+
+            return true;
+        }
+
+        private Vector3 EvaluatePathPosition(List<Vector2Int> path, float pathDistance, ColorType color, float zOffset)
+        {
+            if (path == null || path.Count == 0) return Vector3.zero;
+            if (path.Count == 1) return new Vector3(path[0].x, path[0].y, zOffset);
+
+            float clampedDist = Mathf.Clamp(pathDistance, 0f, path.Count - 1);
+            int seg = Mathf.FloorToInt(clampedDist);
+            if (seg >= path.Count - 1)
+            {
+                seg = path.Count - 2;
+                clampedDist = path.Count - 1;
+            }
+            float t = clampedDist - seg;
+
+            Vector3 p0 = GetSplineControlPoint(path, seg - 1, color);
+            Vector3 p1 = GetSplineControlPoint(path, seg, color);
+            Vector3 p2 = GetSplineControlPoint(path, seg + 1, color);
+            Vector3 p3 = GetSplineControlPoint(path, seg + 2, color);
+
+            Vector3 pos = CatmullRom(p0, p1, p2, p3, t);
+            pos.z = zOffset;
+            return pos;
+        }
+
+        private Vector3 EvaluatePathTangent(List<Vector2Int> path, float pathDistance, ColorType color)
+        {
+            if (path == null || path.Count < 2) return Vector3.right;
+
+            float clampedDist = Mathf.Clamp(pathDistance, 0f, path.Count - 1);
+            int seg = Mathf.FloorToInt(clampedDist);
+            if (seg >= path.Count - 1)
+            {
+                seg = path.Count - 2;
+                clampedDist = path.Count - 1;
+            }
+            float t = clampedDist - seg;
+
+            Vector3 p0 = GetSplineControlPoint(path, seg - 1, color);
+            Vector3 p1 = GetSplineControlPoint(path, seg, color);
+            Vector3 p2 = GetSplineControlPoint(path, seg + 1, color);
+            Vector3 p3 = GetSplineControlPoint(path, seg + 2, color);
+
+            return CatmullRomTangent(p0, p1, p2, p3, t);
         }
 
         private float GetZOffset(Vector2Int gridPos, ColorType color)
@@ -548,10 +845,10 @@ namespace PixelFlow.Services
                 var cell = GridModel.Grid[gridPos.x, gridPos.y];
                 if (cell.HasViaduct && cell.OverColor == color)
                 {
-                    return -0.5f; // Yükseltilmiş yol (araç yoldan daha yakın)
+                    return -0.5f; // Yükseltilmiş yol
                 }
             }
-            return -0.2f; // Normal yol (araç yoldan daha yakın)
+            return -0.2f; // Normal yol
         }
 
         private void UpdateCollisionDetection()
@@ -565,43 +862,65 @@ namespace PixelFlow.Services
                     var v2 = _activeVehicles[j];
                     if (v1.Color == v2.Color) continue;
 
-                    float dist = Vector3.Distance(v1.CurrentPosition, v2.CurrentPosition);
-                    const float collisionThreshold = 0.5f;
+                    Vector3[] v1Points = GetVehicleCollisionPoints(v1);
+                    Vector3[] v2Points = GetVehicleCollisionPoints(v2);
 
-                    if (dist < collisionThreshold)
+                    foreach (var p1 in v1Points)
                     {
-                        Vector3 midPos = (v1.CurrentPosition + v2.CurrentPosition) * 0.5f;
-                        Vector2Int cellPos = new Vector2Int(
-                            Mathf.RoundToInt(midPos.x),
-                            Mathf.RoundToInt(midPos.y));
-
-                        if (cellPos.x >= 0 && cellPos.x < GridModel.Width &&
-                            cellPos.y >= 0 && cellPos.y < GridModel.Height)
+                        foreach (var p2 in v2Points)
                         {
-                            var cell = GridModel.Grid[cellPos.x, cellPos.y];
-                            if (cell.HasViaduct)
+                            float dist = Vector3.Distance(p1, p2);
+                            const float collisionThreshold = 0.45f;
+
+                            if (dist < collisionThreshold)
                             {
-                                float zDiff = Mathf.Abs(v1.CurrentPosition.z - v2.CurrentPosition.z);
-                                if (zDiff < 0.15f)
+                                Vector3 midPos = (p1 + p2) * 0.5f;
+                                Vector2Int cellPos = new Vector2Int(
+                                    Mathf.RoundToInt(midPos.x),
+                                    Mathf.RoundToInt(midPos.y));
+
+                                if (cellPos.x >= 0 && cellPos.x < GridModel.Width &&
+                                    cellPos.y >= 0 && cellPos.y < GridModel.Height)
+                                {
+                                    var cell = GridModel.Grid[cellPos.x, cellPos.y];
+                                    if (cell.HasViaduct)
+                                    {
+                                        float zDiff = Mathf.Abs(p1.z - p2.z);
+                                        if (zDiff < 0.15f)
+                                        {
+                                            TriggerCrash(cellPos, v1.Color, v2.Color);
+                                            return;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        TriggerCrash(cellPos, v1.Color, v2.Color);
+                                        return;
+                                    }
+                                }
+                                else
                                 {
                                     TriggerCrash(cellPos, v1.Color, v2.Color);
                                     return;
                                 }
                             }
-                            else
-                            {
-                                TriggerCrash(cellPos, v1.Color, v2.Color);
-                                return;
-                            }
-                        }
-                        else
-                        {
-                            TriggerCrash(cellPos, v1.Color, v2.Color);
-                            return;
                         }
                     }
                 }
             }
+        }
+
+        private static Vector3[] GetVehicleCollisionPoints(VehicleInstance v)
+        {
+            if (v.Style == VehicleStyle.Train)
+            {
+                var list = new List<Vector3>();
+                if (v.LocoTransform != null && v.LocoTransform.gameObject.activeSelf) list.Add(v.LocoTransform.localPosition);
+                if (v.Wagon1Transform != null && v.Wagon1Transform.gameObject.activeSelf) list.Add(v.Wagon1Transform.localPosition);
+                if (v.Wagon2Transform != null && v.Wagon2Transform.gameObject.activeSelf) list.Add(v.Wagon2Transform.localPosition);
+                return list.Count > 0 ? list.ToArray() : new Vector3[] { v.CurrentPosition };
+            }
+            return new Vector3[] { v.CurrentPosition };
         }
 
         private void TriggerCrash(Vector2Int crashPos, ColorType colorA, ColorType colorB)
@@ -657,9 +976,32 @@ namespace PixelFlow.Services
 
         private Vector3 GetSplineControlPoint(List<Vector2Int> path, int index, ColorType color)
         {
-            int clamped = Mathf.Clamp(index, 0, path.Count - 1);
-            Vector2Int pos = path[clamped];
-            return new Vector3(pos.x, pos.y, GetZOffset(pos, color));
+            if (path == null || path.Count == 0) return Vector3.zero;
+            if (path.Count == 1)
+            {
+                Vector2Int p = path[0];
+                return new Vector3(p.x, p.y, GetZOffset(p, color));
+            }
+
+            if (index < 0)
+            {
+                Vector2Int pos0 = path[0];
+                Vector2Int pos1 = path[1];
+                Vector3 v0 = new Vector3(pos0.x, pos0.y, GetZOffset(pos0, color));
+                Vector3 v1 = new Vector3(pos1.x, pos1.y, GetZOffset(pos1, color));
+                return v0 + (v0 - v1) * Mathf.Abs(index);
+            }
+            if (index >= path.Count)
+            {
+                Vector2Int posEnd = path[path.Count - 1];
+                Vector2Int posPrev = path[path.Count - 2];
+                Vector3 vEnd = new Vector3(posEnd.x, posEnd.y, GetZOffset(posEnd, color));
+                Vector3 vPrev = new Vector3(posPrev.x, posPrev.y, GetZOffset(posPrev, color));
+                return vEnd + (vEnd - vPrev) * (index - path.Count + 1);
+            }
+
+            Vector2Int gridPos = path[index];
+            return new Vector3(gridPos.x, gridPos.y, GetZOffset(gridPos, color));
         }
 
         private static Vector3 CatmullRom(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)

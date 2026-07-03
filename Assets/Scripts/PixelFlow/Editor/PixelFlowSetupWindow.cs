@@ -342,6 +342,35 @@ namespace PixelFlow.Editor
 
             GUILayout.Space(10);
 
+            // 2b. Vehicle Model & Style Selector Card
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label("Vehicle Model & Visual Style", EditorStyles.boldLabel);
+            GUILayout.Space(4);
+
+            var settingsModel = GetModel<ISettingsModel>();
+            int currentStyleInt = settingsModel != null 
+                ? (int)settingsModel.CurrentVehicleStyle 
+                : PlayerPrefs.GetInt("VehicleStyle", 0);
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Active Vehicle Model:", GUILayout.Width(140));
+            GUI.backgroundColor = currentStyleInt == 0 ? new Color(0.2f, 0.7f, 1f) : Color.white;
+            if (GUILayout.Button("🚘 Car (Araba)", GUILayout.Height(28)))
+            {
+                SetVehicleStyle(VehicleStyle.Car);
+            }
+            GUI.backgroundColor = currentStyleInt == 1 ? new Color(0.9f, 0.7f, 0.2f) : Color.white;
+            if (GUILayout.Button("🚆 Train (Tren / Ekspres)", GUILayout.Height(28)))
+            {
+                SetVehicleStyle(VehicleStyle.Train);
+            }
+            GUI.backgroundColor = Color.white;
+            GUILayout.EndHorizontal();
+
+            GUILayout.EndVertical();
+
+            GUILayout.Space(10);
+
             // 3. Direct Level Selector & Launcher Panel
             GUILayout.BeginVertical(_cardStyle);
             GUILayout.Label($"Quick Level Launcher ({_cachedLevels.Count} Levels)", EditorStyles.boldLabel);
@@ -1731,6 +1760,31 @@ namespace PixelFlow.Editor
                 case 3: return Services.DifficultyParams.Expert;
                 default: return Services.DifficultyParams.Master;
             }
+        }
+
+        private T GetService<T>() where T : class
+        {
+            return GetModel<T>();
+        }
+
+        private void SetVehicleStyle(VehicleStyle style)
+        {
+            var settings = GetModel<ISettingsModel>();
+            if (settings != null)
+            {
+                settings.SetVehicleStyle(style);
+            }
+            else
+            {
+                PlayerPrefs.SetInt("VehicleStyle", (int)style);
+                PlayerPrefs.Save();
+            }
+            var sim = GetService<IVehicleSimulator>();
+            if (sim != null)
+            {
+                sim.ClearAllVehicles();
+            }
+            Debug.Log($"[PixelFlowSetupWindow] Vehicle style changed to: {style}");
         }
     }
 }

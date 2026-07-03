@@ -8,20 +8,24 @@ using Nexus.Core;
 namespace PixelFlow.Models
 {
     public enum AppTheme { Dark, Light, Neon }
+    public enum VehicleStyle { Car, Train }
 
     public interface ISettingsModel
     {
         AppTheme CurrentTheme { get; }
         ColorBlindMode CurrentColorBlindMode { get; }
+        VehicleStyle CurrentVehicleStyle { get; }
         float MasterVolume { get; }
         float SfxVolume { get; }
         float MusicVolume { get; }
         bool HapticsDisabled { get; }
         event Action<AppTheme> OnThemeChanged;
         event Action<ColorBlindMode> OnColorBlindModeChanged;
+        event Action<VehicleStyle> OnVehicleStyleChanged;
         event Action<bool> OnHapticsDisabledChanged;
         void SetTheme(AppTheme theme);
         void SetColorBlindMode(ColorBlindMode mode);
+        void SetVehicleStyle(VehicleStyle style);
         void SetMasterVolume(float volume);
         void SetSfxVolume(float volume);
         void SetMusicVolume(float volume);
@@ -36,6 +40,7 @@ namespace PixelFlow.Models
     {
         private const string KeyTheme = "AppTheme";
         private const string KeyColorBlind = "ColorBlindMode";
+        private const string KeyVehicleStyle = "VehicleStyle";
         private const string KeyMasterVol = "MasterVolume";
         private const string KeySfxVol = "SfxVolume";
         private const string KeyMusicVol = "MusicVolume";
@@ -46,6 +51,7 @@ namespace PixelFlow.Models
 
         public AppTheme CurrentTheme { get; private set; }
         public ColorBlindMode CurrentColorBlindMode { get; private set; }
+        public VehicleStyle CurrentVehicleStyle { get; private set; }
         public float MasterVolume { get; private set; } = 1f;
         public float SfxVolume { get; private set; } = 1f;
         public float MusicVolume { get; private set; } = 0.7f;
@@ -53,6 +59,7 @@ namespace PixelFlow.Models
 
         public event Action<AppTheme> OnThemeChanged;
         public event Action<ColorBlindMode> OnColorBlindModeChanged;
+        public event Action<VehicleStyle> OnVehicleStyleChanged;
         public event Action<bool> OnHapticsDisabledChanged;
 
         public SettingsModel(IPlayerPrefsService prefs)
@@ -63,6 +70,9 @@ namespace PixelFlow.Models
 
             int cbRaw = _prefs.GetInt(KeyColorBlind, 0);
             CurrentColorBlindMode = cbRaw >= 0 && cbRaw <= 3 ? (ColorBlindMode)cbRaw : ColorBlindMode.None;
+
+            int vsRaw = _prefs.GetInt(KeyVehicleStyle, 0);
+            CurrentVehicleStyle = System.Enum.IsDefined(typeof(VehicleStyle), vsRaw) ? (VehicleStyle)vsRaw : VehicleStyle.Car;
 
             MasterVolume = _prefs.GetInt(KeyMasterVol, 100) / 100f;
             SfxVolume = _prefs.GetInt(KeySfxVol, 100) / 100f;
@@ -84,6 +94,14 @@ namespace PixelFlow.Models
             CurrentColorBlindMode = mode;
             _prefs.SetInt(KeyColorBlind, (int)mode);
             OnColorBlindModeChanged?.Invoke(mode);
+        }
+
+        public void SetVehicleStyle(VehicleStyle style)
+        {
+            if (CurrentVehicleStyle == style) return;
+            CurrentVehicleStyle = style;
+            _prefs.SetInt(KeyVehicleStyle, (int)style);
+            OnVehicleStyleChanged?.Invoke(style);
         }
 
         public void SetMasterVolume(float volume) { MasterVolume = Mathf.Clamp01(volume); _prefs.SetInt(KeyMasterVol, Mathf.RoundToInt(MasterVolume * 100f)); }

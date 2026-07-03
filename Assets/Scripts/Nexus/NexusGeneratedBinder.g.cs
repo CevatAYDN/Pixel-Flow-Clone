@@ -140,6 +140,7 @@ namespace Nexus.Generated
                 instance.HapticService = di.Resolve<PixelFlow.Services.IHapticService>();
                 instance.AudioService = di.Resolve<PixelFlow.Services.IAudioService>();
                 instance.ObstacleService = di.Resolve<PixelFlow.Services.IObstacleService>();
+                instance.SettingsModel = di.Resolve<PixelFlow.Models.ISettingsModel>();
             });
             NexusDI.RegisterInjector<PixelFlow.Models.CityEconomyModel>((instance, di) =>
             {
@@ -329,6 +330,7 @@ namespace Nexus.Generated
                 var _p_VehicleSimulator_HapticService = default(PixelFlow.Services.VehicleSimulator).HapticService;
                 var _p_VehicleSimulator_AudioService = default(PixelFlow.Services.VehicleSimulator).AudioService;
                 var _p_VehicleSimulator_ObstacleService = default(PixelFlow.Services.VehicleSimulator).ObstacleService;
+                var _p_VehicleSimulator_SettingsModel = default(PixelFlow.Services.VehicleSimulator).SettingsModel;
                 var _p_CityEconomyModel_PlayerPrefsService = default(PixelFlow.Models.CityEconomyModel).PlayerPrefsService;
                 var _p_CityEconomyModel_ProgressionService = default(PixelFlow.Models.CityEconomyModel).ProgressionService;
                 var _p_CityEconomyModel_GameStateModel = default(PixelFlow.Models.CityEconomyModel).GameStateModel;
