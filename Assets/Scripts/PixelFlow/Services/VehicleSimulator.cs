@@ -608,9 +608,9 @@ namespace PixelFlow.Services
         {
             Debug.LogError($"[VehicleSimulator] TRAFFIC CRASH detected at {crashPos} between {colorA} and {colorB}!");
 
-            GridModel.LastCrashPosition = crashPos;
-            GridModel.CrashColorA = colorA;
-            GridModel.CrashColorB = colorB;
+            GridModel.LastCrashPosition.Value = crashPos;
+            GridModel.CrashColorA.Value = colorA;
+            GridModel.CrashColorB.Value = colorB;
 
             var camCtrl = UnityEngine.Object.FindAnyObjectByType<CameraController>();
             if (camCtrl != null)

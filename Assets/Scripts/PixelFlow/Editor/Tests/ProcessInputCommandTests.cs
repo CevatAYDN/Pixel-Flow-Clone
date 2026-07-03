@@ -42,8 +42,8 @@ namespace PixelFlow.Editor.Tests
         {
             LoadLevel();
             _ctx.Dispatch(new InputInteractionSignal { Type = InputType.PointerDown, GridPosition = new Vector2Int(0, 0) });
-            Assert.AreEqual(ColorType.Red, _grid.ActiveColor);
-            Assert.AreEqual(new Vector2Int(0, 0), _grid.LastPosition);
+            Assert.AreEqual(ColorType.Red, _grid.ActiveColor.Value);
+            Assert.AreEqual(new Vector2Int(0, 0), _grid.LastPosition.Value);
         }
 
         [Test]
@@ -52,7 +52,7 @@ namespace PixelFlow.Editor.Tests
             LoadLevel();
             _grid.Grid[3, 3].State = CellState.Empty;
             _ctx.Dispatch(new InputInteractionSignal { Type = InputType.PointerDown, GridPosition = new Vector2Int(3, 3) });
-            Assert.AreEqual(ColorType.None, _grid.ActiveColor);
+            Assert.AreEqual(ColorType.None, _grid.ActiveColor.Value);
         }
 
         [Test]
@@ -81,10 +81,10 @@ namespace PixelFlow.Editor.Tests
         {
             LoadLevel();
             _ctx.Dispatch(new InputInteractionSignal { Type = InputType.PointerDown, GridPosition = new Vector2Int(0, 0) });
-            Assert.AreEqual(ColorType.Red, _grid.ActiveColor);
+            Assert.AreEqual(ColorType.Red, _grid.ActiveColor.Value);
             _ctx.Dispatch(new InputInteractionSignal { Type = InputType.PointerUp, GridPosition = new Vector2Int(0, 0) });
-            Assert.AreEqual(ColorType.None, _grid.ActiveColor);
-            Assert.AreEqual(new Vector2Int(-1, -1), _grid.LastPosition);
+            Assert.AreEqual(ColorType.None, _grid.ActiveColor.Value);
+            Assert.AreEqual(new Vector2Int(-1, -1), _grid.LastPosition.Value);
         }
 
         [Test]
@@ -104,7 +104,7 @@ namespace PixelFlow.Editor.Tests
             _ctx.Dispatch(new InputInteractionSignal { Type = InputType.PointerDown, GridPosition = new Vector2Int(0, 0) });
             _ctx.Dispatch(new InputInteractionSignal { Type = InputType.Drag, GridPosition = new Vector2Int(1, 0) });
             _ctx.Dispatch(new InputInteractionSignal { Type = InputType.Drag, GridPosition = new Vector2Int(2, 0) });
-            Assert.AreEqual(ColorType.None, _grid.ActiveColor,
+            Assert.AreEqual(ColorType.None, _grid.ActiveColor.Value,
                 "ActiveColor should clear after connecting to target node");
         }
 
@@ -115,7 +115,7 @@ namespace PixelFlow.Editor.Tests
             _state.SetState(GameState.LevelCompleted);
 
             _ctx.Dispatch(new InputInteractionSignal { Type = InputType.PointerDown, GridPosition = new Vector2Int(0, 0) });
-            Assert.AreEqual(ColorType.None, _grid.ActiveColor,
+            Assert.AreEqual(ColorType.None, _grid.ActiveColor.Value,
                 "Input should be blocked when state is not Playing");
         }
 
@@ -128,7 +128,7 @@ namespace PixelFlow.Editor.Tests
             _grid.Grid[1, 0].Color = ColorType.Blue;
 
             _ctx.Dispatch(new InputInteractionSignal { Type = InputType.PointerDown, GridPosition = new Vector2Int(1, 0) });
-            Assert.AreEqual(ColorType.Blue, _grid.ActiveColor,
+            Assert.AreEqual(ColorType.Blue, _grid.ActiveColor.Value,
                 "Should activate Blue when touching a cell occupied by Blue path");
         }
 

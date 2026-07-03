@@ -87,7 +87,7 @@ namespace PixelFlow.Editor.Tests
             // Wait, we need to inspect the simulator's active vehicles.
             // Since it's internal, we observe it via Crash Position or public metrics if available.
             // Actually, we can just ensure it doesn't throw and no crash occurs.
-            Assert.AreEqual(new Vector2Int(-1, -1), _grid.LastCrashPosition);
+            Assert.AreEqual(new Vector2Int(-1, -1), _grid.LastCrashPosition.Value);
             
             // Now complete the path
             _grid.Paths[ColorType.Red] = new List<Vector2Int> {
@@ -98,7 +98,7 @@ namespace PixelFlow.Editor.Tests
             _simulator.Tick(2.0f);
             
             // We can't directly read vehicle list, but we can verify no crash.
-            Assert.AreEqual(new Vector2Int(-1, -1), _grid.LastCrashPosition);
+            Assert.AreEqual(new Vector2Int(-1, -1), _grid.LastCrashPosition.Value);
         }
 
         [Test]
@@ -139,7 +139,7 @@ namespace PixelFlow.Editor.Tests
             updateCollisionMethod.Invoke(_simulator, null);
 
             // Verify crash position
-            Assert.AreEqual(new Vector2Int(2, 1), _grid.LastCrashPosition);
+            Assert.AreEqual(new Vector2Int(2, 1), _grid.LastCrashPosition.Value);
         }
 
         [Test]

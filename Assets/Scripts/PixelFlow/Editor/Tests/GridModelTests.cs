@@ -61,8 +61,8 @@ namespace PixelFlow.Editor.Tests
         public void Initialize_DefaultActiveColor_None()
         {
             _grid.Initialize(3, 3);
-            Assert.AreEqual(ColorType.None, _grid.ActiveColor);
-            Assert.AreEqual(new Vector2Int(-1, -1), _grid.LastPosition);
+            Assert.AreEqual(ColorType.None, _grid.ActiveColor.Value);
+            Assert.AreEqual(new Vector2Int(-1, -1), _grid.LastPosition.Value);
         }
 
         [Test]
@@ -79,20 +79,20 @@ namespace PixelFlow.Editor.Tests
         public void ActiveColor_SetAndReset()
         {
             _grid.Initialize(5, 5);
-            _grid.ActiveColor = ColorType.Blue;
-            Assert.AreEqual(ColorType.Blue, _grid.ActiveColor);
-            _grid.ActiveColor = ColorType.None;
-            Assert.AreEqual(ColorType.None, _grid.ActiveColor);
+            _grid.ActiveColor.Value = ColorType.Blue;
+            Assert.AreEqual(ColorType.Blue, _grid.ActiveColor.Value);
+            _grid.ActiveColor.Value = ColorType.None;
+            Assert.AreEqual(ColorType.None, _grid.ActiveColor.Value);
         }
 
         [Test]
         public void LastPosition_SetAndReset()
         {
             _grid.Initialize(5, 5);
-            _grid.LastPosition = new Vector2Int(3, 4);
-            Assert.AreEqual(new Vector2Int(3, 4), _grid.LastPosition);
-            _grid.LastPosition = new Vector2Int(-1, -1);
-            Assert.AreEqual(new Vector2Int(-1, -1), _grid.LastPosition);
+            _grid.LastPosition.Value = new Vector2Int(3, 4);
+            Assert.AreEqual(new Vector2Int(3, 4), _grid.LastPosition.Value);
+            _grid.LastPosition.Value = new Vector2Int(-1, -1);
+            Assert.AreEqual(new Vector2Int(-1, -1), _grid.LastPosition.Value);
         }
 
         [Test]

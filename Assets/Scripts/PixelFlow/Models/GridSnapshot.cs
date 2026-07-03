@@ -96,8 +96,8 @@ namespace PixelFlow.Models
                 obstacleTypes,
                 paths,
                 locked,
-                grid.ActiveColor,
-                grid.LastPosition
+                grid.ActiveColor.Value,
+                grid.LastPosition.Value
             );
         }
 
@@ -135,8 +135,8 @@ namespace PixelFlow.Models
                 grid.LockedColors.Add(c);
             }
 
-            grid.ActiveColor = ActiveColor;
-            grid.LastPosition = LastPosition;
+            grid.ActiveColor.Value = ActiveColor;
+            grid.LastPosition.Value = LastPosition;
         }
     }
 }

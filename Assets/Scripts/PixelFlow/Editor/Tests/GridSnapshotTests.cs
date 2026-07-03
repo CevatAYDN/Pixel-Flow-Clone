@@ -89,10 +89,10 @@ namespace PixelFlow.Editor.Tests
         public void Record_CapturesActiveColor()
         {
             _history.Record(_grid);
-            _grid.ActiveColor = ColorType.Red;
+            _grid.ActiveColor.Value = ColorType.Red;
 
             _history.Undo(_grid);
-            Assert.AreEqual(ColorType.None, _grid.ActiveColor,
+            Assert.AreEqual(ColorType.None, _grid.ActiveColor.Value,
                 "Undo should restore ActiveColor");
         }
 
@@ -100,10 +100,10 @@ namespace PixelFlow.Editor.Tests
         public void Record_CapturesLastPosition()
         {
             _history.Record(_grid);
-            _grid.LastPosition = new Vector2Int(2, 2);
+            _grid.LastPosition.Value = new Vector2Int(2, 2);
 
             _history.Undo(_grid);
-            Assert.AreEqual(new Vector2Int(-1, -1), _grid.LastPosition,
+            Assert.AreEqual(new Vector2Int(-1, -1), _grid.LastPosition.Value,
                 "Undo should restore LastPosition");
         }
 

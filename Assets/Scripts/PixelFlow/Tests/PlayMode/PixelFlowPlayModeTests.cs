@@ -70,16 +70,16 @@ namespace PixelFlow.PlayMode.Tests
                 builder.Bind<ITutorialDriver, TutorialDriver>();
                 builder.Bind<IAudioService, AudioService>();
 
-                builder.BindModel<IGridModel, GridModel>();
-                builder.BindModel<ILevelModel, LevelModel>();
-                builder.BindModel<IProgressModel, ProgressModel>();
-                builder.BindModel<IGameStateModel, GameStateModel>();
-                builder.BindModel<IGameSessionModel, GameSessionModel>();
-                builder.BindModel<IHintModel, HintModel>();
-                builder.BindModel<ISettingsModel, SettingsModel>();
-                builder.BindModel<ISoundModel, SoundModel>();
-                builder.BindModel<ICityEconomyModel, CityEconomyModel>();
-                builder.BindModel<ITutorialModel, TutorialModel>();
+                builder.BindReactiveModel<IGridModel, GridModel>();
+                builder.BindReactiveModel<ILevelModel, LevelModel>();
+                builder.BindReactiveModel<IProgressModel, ProgressModel>();
+                builder.BindReactiveModel<IGameStateModel, GameStateModel>();
+                builder.BindReactiveModel<IGameSessionModel, GameSessionModel>();
+                builder.BindReactiveModel<IHintModel, HintModel>();
+                builder.BindReactiveModel<ISettingsModel, SettingsModel>();
+                builder.BindReactiveModel<ISoundModel, SoundModel>();
+                builder.BindReactiveModel<ICityEconomyModel, CityEconomyModel>();
+                builder.BindReactiveModel<ITutorialModel, TutorialModel>();
                 builder.Bind<ILevelProgressionService, LevelProgressionService>();
 
                 builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));
@@ -397,7 +397,7 @@ namespace PixelFlow.PlayMode.Tests
                 GridPosition = new Vector2Int(1, 0)
             });
 
-            Assert.AreEqual(ColorType.None, grid.ActiveColor,
+            Assert.AreEqual(ColorType.None, grid.ActiveColor.Value,
                 "ActiveColor should remain None when input is blocked");
             Assert.AreEqual(CellState.Empty, grid.Grid[1, 0].State,
                 "Cell should remain Empty — input was ignored");

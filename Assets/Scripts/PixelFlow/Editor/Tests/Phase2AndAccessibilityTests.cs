@@ -110,8 +110,8 @@ namespace PixelFlow.Editor.Tests
             grid.Grid[0, 0].Color = ColorType.Red;
             grid.Grid[0, 0].PathColors.Add(ColorType.Red);
             grid.Paths[ColorType.Red] = new List<Vector2Int> { new Vector2Int(0, 0), new Vector2Int(1, 0) };
-            grid.ActiveColor = ColorType.Red;
-            grid.LastPosition = new Vector2Int(1, 0);
+            grid.ActiveColor.Value = ColorType.Red;
+            grid.LastPosition.Value = new Vector2Int(1, 0);
 
             session.StartSession(3);
             session.AddScore(500);
@@ -134,7 +134,7 @@ namespace PixelFlow.Editor.Tests
             Assert.AreEqual(5, freshGrid.Width);
             Assert.AreEqual(CellState.Node, freshGrid.Grid[0, 0].State);
             Assert.AreEqual(ColorType.Red, freshGrid.Grid[0, 0].Color);
-            Assert.AreEqual(ColorType.Red, freshGrid.ActiveColor);
+            Assert.AreEqual(ColorType.Red, freshGrid.ActiveColor.Value);
             Assert.AreEqual(2, freshGrid.Paths[ColorType.Red].Count);
 
             GridStateSerializer.ClearSave();

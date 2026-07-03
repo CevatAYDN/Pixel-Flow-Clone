@@ -27,33 +27,31 @@ namespace PixelFlow.Models
         CellData[,] Grid { get; }
         Dictionary<ColorType, List<Vector2Int>> Paths { get; }
         HashSet<ColorType> LockedColors { get; }
-        ColorType ActiveColor { get; set; }
-        Vector2Int LastPosition { get; set; }
-        Vector2Int LastCrashPosition { get; set; }
-        ColorType CrashColorA { get; set; }
-        ColorType CrashColorB { get; set; }
+        ObservableProperty<ColorType> ActiveColor { get; }
+        ObservableProperty<Vector2Int> LastPosition { get; }
+        ObservableProperty<Vector2Int> LastCrashPosition { get; }
+        ObservableProperty<ColorType> CrashColorA { get; }
+        ObservableProperty<ColorType> CrashColorB { get; }
 
         void Initialize(int width, int height);
     }
 
     /// <summary>
-    /// Izgara state'i. Bildirim için doğrudan C# event kullanmak yerine
-    /// SignalBus.Fire(GridUpdatedSignal) tercih edilir; bu sayede tüm MVCS akışı
-    /// tek kanaldan (sinyal) geçer, debug/trace tutarlı olur ve state değişikliği
-    /// Nerede olursa olsun tek bir yerde gözlemlenebilir.
+    /// Izgara state'i. Bildirim için ObservableProperty kullanılıyor,
+    /// aynı zamanda SignalBus.Fire(GridUpdatedSignal) de destekleniyor.
     /// </summary>
     public class GridModel : IGridModel, IReactiveModel
     {
         public int Width { get; private set; }
         public int Height { get; private set; }
-        public CellData[,] Grid { get; private set; }
-        public Dictionary<ColorType, List<Vector2Int>> Paths { get; private set; }
-        public HashSet<ColorType> LockedColors { get; private set; }
-        public ColorType ActiveColor { get; set; }
-        public Vector2Int LastPosition { get; set; }
-        public Vector2Int LastCrashPosition { get; set; } = new Vector2Int(-1, -1);
-        public ColorType CrashColorA { get; set; }
-        public ColorType CrashColorB { get; set; }
+        public CellData[,] Grid { get; private set; } = null!;
+        public Dictionary<ColorType, List<Vector2Int>> Paths { get; private set; } = null!;
+        public HashSet<ColorType> LockedColors { get; private set; } = null!;
+        public ObservableProperty<ColorType> ActiveColor { get; } = new(ColorType.None);
+        public ObservableProperty<Vector2Int> LastPosition { get; } = new(new Vector2Int(-1, -1));
+        public ObservableProperty<Vector2Int> LastCrashPosition { get; } = new(new Vector2Int(-1, -1));
+        public ObservableProperty<ColorType> CrashColorA { get; } = new(ColorType.None);
+        public ObservableProperty<ColorType> CrashColorB { get; } = new(ColorType.None);
 
         public void Initialize(int width, int height)
         {
@@ -72,8 +70,9 @@ namespace PixelFlow.Models
             }
             Paths = new Dictionary<ColorType, List<Vector2Int>>();
             LockedColors = new HashSet<ColorType>();
-            ActiveColor = ColorType.None;
-            LastPosition = new Vector2Int(-1, -1);
+            ActiveColor.Value = ColorType.None;
+            LastPosition.Value = new Vector2Int(-1, -1);
+            LastCrashPosition.Value = new Vector2Int(-1, -1);
         }
 
         public ValueTask OnBind(CancellationToken ct) => default;

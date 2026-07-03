@@ -143,7 +143,7 @@ namespace PixelFlow.Editor.Tests
 
             Assert.AreEqual(3, _grid.Width);
             Assert.AreEqual(0, _grid.Paths.Count);
-            Assert.AreEqual(ColorType.None, _grid.ActiveColor);
+            Assert.AreEqual(ColorType.None, _grid.ActiveColor.Value);
         }
 
         [Test]

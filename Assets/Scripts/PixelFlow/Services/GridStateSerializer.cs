@@ -61,9 +61,9 @@ namespace PixelFlow.Services
                 elapsedTime = session.ElapsedTime,
                 score = session.Score,
                 stars = session.StarsEarned,
-                activeColor = (int)grid.ActiveColor,
-                lastPosX = grid.LastPosition.x,
-                lastPosY = grid.LastPosition.y,
+                activeColor = (int)grid.ActiveColor.Value,
+                lastPosX = grid.LastPosition.Value.x,
+                lastPosY = grid.LastPosition.Value.y,
             };
 
             foreach (var lc in grid.LockedColors)
@@ -168,8 +168,8 @@ namespace PixelFlow.Services
             foreach (var lc in data.lockedColors)
                 grid.LockedColors.Add((ColorType)lc);
 
-            grid.ActiveColor = (ColorType)data.activeColor;
-            grid.LastPosition = new Vector2Int(data.lastPosX, data.lastPosY);
+            grid.ActiveColor.Value = (ColorType)data.activeColor;
+            grid.LastPosition.Value = new Vector2Int(data.lastPosX, data.lastPosY);
         }
 
         public static bool HasSavedGame(IPlayerPrefsService prefs = null)

@@ -101,7 +101,7 @@ namespace PixelFlow.Editor.Tests
 
             var grid = _ctx.GetModel<IGridModel>();
 
-            Assert.AreEqual(ColorType.None, grid.ActiveColor, "No active color before pointer down");
+            Assert.AreEqual(ColorType.None, grid.ActiveColor.Value, "No active color before pointer down");
 
             _ctx.Dispatch(new InputInteractionSignal
             {
@@ -110,8 +110,8 @@ namespace PixelFlow.Editor.Tests
                 Color = ColorType.Red
             });
 
-            Assert.AreEqual(ColorType.Red, grid.ActiveColor, "ActiveColor should be Red after touching Red node");
-            Assert.AreEqual(new Vector2Int(0, 0), grid.LastPosition, "LastPosition should be the touched node");
+            Assert.AreEqual(ColorType.Red, grid.ActiveColor.Value, "ActiveColor should be Red after touching Red node");
+            Assert.AreEqual(new Vector2Int(0, 0), grid.LastPosition.Value, "LastPosition should be the touched node");
         }
 
         [Test]
@@ -138,7 +138,7 @@ namespace PixelFlow.Editor.Tests
             Assert.AreEqual(2, grid.Paths[ColorType.Red].Count, "Path should have 2 positions");
             Assert.AreEqual(CellState.Path, grid.Grid[1, 0].State, "(1,0) should be Path");
             Assert.AreEqual(ColorType.Red, grid.Grid[1, 0].Color, "(1,0) should be Red");
-            Assert.AreEqual(new Vector2Int(1, 0), grid.LastPosition, "LastPosition should be (1,0)");
+            Assert.AreEqual(new Vector2Int(1, 0), grid.LastPosition.Value, "LastPosition should be (1,0)");
         }
 
         [Test]
@@ -155,7 +155,7 @@ namespace PixelFlow.Editor.Tests
                 GridPosition = new Vector2Int(0, 0)
             });
 
-            Assert.AreEqual(ColorType.Red, grid.ActiveColor);
+            Assert.AreEqual(ColorType.Red, grid.ActiveColor.Value);
 
             _ctx.Dispatch(new InputInteractionSignal
             {
@@ -163,8 +163,8 @@ namespace PixelFlow.Editor.Tests
                 GridPosition = new Vector2Int(0, 0)
             });
 
-            Assert.AreEqual(ColorType.None, grid.ActiveColor, "ActiveColor should reset on pointer up");
-            Assert.AreEqual(new Vector2Int(-1, -1), grid.LastPosition, "LastPosition should reset on pointer up");
+            Assert.AreEqual(ColorType.None, grid.ActiveColor.Value, "ActiveColor should reset on pointer up");
+            Assert.AreEqual(new Vector2Int(-1, -1), grid.LastPosition.Value, "LastPosition should reset on pointer up");
         }
 
         [Test]
@@ -202,7 +202,7 @@ namespace PixelFlow.Editor.Tests
                 GridPosition = new Vector2Int(2, 0)
             });
 
-            Assert.AreEqual(ColorType.None, grid.ActiveColor,
+            Assert.AreEqual(ColorType.None, grid.ActiveColor.Value,
                 "ActiveColor should clear after connecting to the target node");
         }
 
@@ -661,7 +661,7 @@ namespace PixelFlow.Editor.Tests
             });
 
             Assert.AreEqual(ColorType.None, gridModel.Grid[0, 1].Color, "Cell color should remain None since input is blocked when not Playing");
-            Assert.AreEqual(ColorType.None, gridModel.ActiveColor, "ActiveColor should remain None since input is blocked");
+            Assert.AreEqual(ColorType.None, gridModel.ActiveColor.Value, "ActiveColor should remain None since input is blocked");
         }
 
         [Test]
@@ -1270,7 +1270,7 @@ namespace PixelFlow.Editor.Tests
             Assert.AreEqual(3, grid.Width, "Grid width should match new level");
             Assert.AreEqual(0, grid.Paths.Count,
                 "All paths should be cleared on new level load");
-            Assert.AreEqual(ColorType.None, grid.ActiveColor,
+            Assert.AreEqual(ColorType.None, grid.ActiveColor.Value,
                 "ActiveColor should be reset");
         }
 
