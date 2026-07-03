@@ -18,7 +18,7 @@ namespace PixelFlow.Commands
 
         public void Execute(RedoSignal signal)
         {
-            if (GameStateModel.CurrentState != GameState.Playing)
+            if (GameStateModel.CurrentState != GameState.Playing && GameStateModel.CurrentState != GameState.Paused)
                 return;
 
             if (HistoryService.Redo(GridModel))

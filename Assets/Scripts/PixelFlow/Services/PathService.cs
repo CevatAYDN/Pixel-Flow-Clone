@@ -19,21 +19,16 @@ namespace PixelFlow.Services
             foreach (var pos in path)
             {
                 var cell = GridModel.Grid[pos.x, pos.y];
-                
                 if (cell.PathColors.Contains(color))
-                {
                     cell.PathColors.Remove(color);
-                }
 
-                if (cell.HasViaduct)
+                if (cell.HasViaduct && cell.PathColors.Count < 2)
                 {
                     cell.HasViaduct = false;
                     cell.UnderColor = ColorType.None;
                     cell.OverColor = ColorType.None;
                     if (cell.State == CellState.Bridge)
-                    {
                         cell.State = cell.PathColors.Count > 0 ? CellState.Path : CellState.Empty;
-                    }
                     GameSessionModel.RefundViaduct();
                 }
 
@@ -45,12 +40,9 @@ namespace PixelFlow.Services
                         cell.Color = ColorType.None;
                     }
                 }
-                else
+                else if (cell.Color == color && cell.State != CellState.Node)
                 {
-                    if (cell.Color == color && cell.State != CellState.Node)
-                    {
-                        cell.Color = cell.PathColors[0];
-                    }
+                    cell.Color = cell.PathColors[0];
                 }
             }
             path.Clear();
@@ -67,21 +59,16 @@ namespace PixelFlow.Services
             {
                 var pos = path[i];
                 var cell = GridModel.Grid[pos.x, pos.y];
-                
                 if (cell.PathColors.Contains(color))
-                {
                     cell.PathColors.Remove(color);
-                }
 
-                if (cell.HasViaduct)
+                if (cell.HasViaduct && cell.PathColors.Count < 2)
                 {
                     cell.HasViaduct = false;
                     cell.UnderColor = ColorType.None;
                     cell.OverColor = ColorType.None;
                     if (cell.State == CellState.Bridge)
-                    {
                         cell.State = cell.PathColors.Count > 0 ? CellState.Path : CellState.Empty;
-                    }
                     GameSessionModel.RefundViaduct();
                 }
 
@@ -93,12 +80,9 @@ namespace PixelFlow.Services
                         cell.Color = ColorType.None;
                     }
                 }
-                else
+                else if (cell.Color == color && cell.State != CellState.Node)
                 {
-                    if (cell.Color == color && cell.State != CellState.Node)
-                    {
-                        cell.Color = cell.PathColors[0];
-                    }
+                    cell.Color = cell.PathColors[0];
                 }
                 path.RemoveAt(i);
             }

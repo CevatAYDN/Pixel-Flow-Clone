@@ -68,6 +68,16 @@ namespace PixelFlow.Editor
                 SanitizeGridBounds();
                 EditorUtility.SetDirty(_data);
             }
+
+            int bridgeCount = _data.bridgePositions.Count;
+            bool limitOk = bridgeCount <= _data.viaductLimit;
+            Color statusColor = limitOk ? new Color(0.12f, 0.65f, 0.22f) : new Color(0.85f, 0.2f, 0.18f);
+            GUIStyle bridgeStyle = new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = statusColor } };
+            GUILayout.Label($"Bridges: {bridgeCount} / Viaduct Limit: {_data.viaductLimit}", bridgeStyle);
+            if (!limitOk)
+            {
+                EditorGUILayout.HelpBox("Bridge count exceeds viaduct limit! Players won't have enough viaducts.", MessageType.Warning);
+            }
             GUILayout.EndVertical();
 
             GUILayout.Space(10);
@@ -270,6 +280,7 @@ namespace PixelFlow.Editor
             // Remove items outside new width/height bounds
             _data.initialNodes.RemoveAll(n => n.position.x >= _data.width || n.position.y >= _data.height);
             _data.bridgePositions.RemoveAll(p => p.x >= _data.width || p.y >= _data.height);
+            _data.obstacles.RemoveAll(o => o.position.x >= _data.width || o.position.y >= _data.height);
             foreach (var sol in _data.solutions)
             {
                 if (sol.pathPositions != null)

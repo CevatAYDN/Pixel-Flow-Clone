@@ -23,6 +23,10 @@ namespace PixelFlow.Services
         [Inject] public IGameStateModel GameStateModel { get; set; }
 
         private SimulationUpdater _updater;
+        private float _cachedTaxRate;
+        private int _cachedMaxStorage;
+        private int _lastLevelCount = -1;
+        private int _lastCityLevel = -1;
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
@@ -53,12 +57,21 @@ namespace PixelFlow.Services
             if (GameStateModel == null || CityEconomyModel == null)
                 return;
 
-            // Vergi birikimi sadece oyun içinde (MainMenu hariç) çalışır
             if (GameStateModel.CurrentState != GameState.MainMenu)
             {
+                int cityLevel = CityEconomyModel.CityLevel;
+                int completedCount = CityEconomyModel.CompletedLevelsCount;
+                if (cityLevel != _lastCityLevel || completedCount != _lastLevelCount)
+                {
+                    _cachedTaxRate = CityEconomyModel.TaxRatePerSecond;
+                    _cachedMaxStorage = CityEconomyModel.MaxStorage;
+                    _lastCityLevel = cityLevel;
+                    _lastLevelCount = completedCount;
+                }
+
                 float dt = Time.deltaTime;
                 float accumulated = CityEconomyModel.GetAccumulatedTaxes();
-                accumulated = Mathf.Min(accumulated + CityEconomyModel.TaxRatePerSecond * dt, CityEconomyModel.MaxStorage);
+                accumulated = Mathf.Min(accumulated + _cachedTaxRate * dt, _cachedMaxStorage);
                 CityEconomyModel.SetAccumulatedTaxes(accumulated);
             }
         }

@@ -1277,7 +1277,7 @@ namespace PixelFlow.Editor.Tests
         {
             var (score, stars) = ScoreCalculator.Calculate(
                 gridWidth: 5, gridHeight: 5,
-                elapsedTime: 1f, hintsUsed: 15, totalHintsAvailable: 20);
+                elapsedTime: 1f, hintsUsed: 15, totalHintsAvailable: 20, viaductsUsed: 3);
 
             Assert.AreEqual(0, score,
                 "Score should be 0 when hint penalty saturates to 0");
@@ -1290,7 +1290,7 @@ namespace PixelFlow.Editor.Tests
         {
             var (score, stars) = ScoreCalculator.Calculate(
                 gridWidth: 5, gridHeight: 5,
-                elapsedTime: 5f, hintsUsed: 0, totalHintsAvailable: 5);
+                elapsedTime: 5f, hintsUsed: 0, totalHintsAvailable: 5, viaductsUsed: 0);
 
             Assert.Greater(score, 2000, "Score should be near maximum");
             Assert.AreEqual(3, stars,
@@ -1302,7 +1302,7 @@ namespace PixelFlow.Editor.Tests
         {
             var (score, stars) = ScoreCalculator.Calculate(
                 gridWidth: 5, gridHeight: 5,
-                elapsedTime: 200f, hintsUsed: 0, totalHintsAvailable: 5);
+                elapsedTime: 200f, hintsUsed: 0, totalHintsAvailable: 5, viaductsUsed: 0);
 
             float baseScore = 5 * 5 * 100f;
             float expectedMin = baseScore * 0.25f;

@@ -27,9 +27,11 @@ namespace PixelFlow.Views
         private static Sprite s_diamondSprite;
         private static Sprite s_starSprite;
         private static Sprite s_warningSprite;
+        private static Shader s_cachedShader;
 
         private void Awake()
         {
+            if (s_cachedShader == null) s_cachedShader = Shader.Find("Sprites/Default");
             EnsureSprite(_bgRenderer);
             EnsureCircleSprite(_dotRenderer);
             EnsureSprite(_bridgeRenderer);
@@ -68,7 +70,7 @@ namespace PixelFlow.Views
             var deckR = deck.GetComponent<Renderer>();
             if (deckR != null)
             {
-                deckR.material = new Material(Shader.Find("Sprites/Default"));
+                deckR.material = new Material(s_cachedShader);
                 deckR.material.color = new Color(0.35f, 0.35f, 0.4f, 1f);
             }
 
@@ -83,7 +85,7 @@ namespace PixelFlow.Views
                 var pillR = pillar.GetComponent<Renderer>();
                 if (pillR != null)
                 {
-                    pillR.material = new Material(Shader.Find("Sprites/Default"));
+                    pillR.material = new Material(s_cachedShader);
                     pillR.material.color = new Color(0.25f, 0.25f, 0.3f, 1f);
                 }
             }
@@ -306,13 +308,13 @@ namespace PixelFlow.Views
             switch (theme)
             {
                 case AppTheme.Dark:
-                    return new Color(0.15f, 0.15f, 0.18f, 1f);
+                    return new Color(0.043f, 0.059f, 0.098f, 1f);  // #0B0F19 Mat Obsidyen
                 case AppTheme.Light:
                     return new Color(0.92f, 0.92f, 0.94f, 1f);
                 case AppTheme.Neon:
-                    return new Color(0.12f, 0.08f, 0.22f, 1f);
+                    return new Color(0.078f, 0.055f, 0.157f, 1f);  // Koyu mor-siyah neon
                 default:
-                    return new Color(0.2f, 0.2f, 0.2f, 1f);
+                    return new Color(0.043f, 0.059f, 0.098f, 1f);
             }
         }
 
@@ -342,9 +344,16 @@ namespace PixelFlow.Views
             }
         }
 
-        public void UpdateVisuals(CellData cellData, AppTheme theme)
+        public void UpdateVisuals(CellData cellData, AppTheme theme, Vector2Int crashPos = default)
         {
             Color cellBg = GetCellBackgroundColor(theme);
+
+            if (crashPos.x >= 0 && crashPos.y >= 0 && GridPosition == crashPos)
+            {
+                float pulse = (Mathf.Sin(Time.time * 8f) + 1f) * 0.5f;
+                cellBg = Color.Lerp(new Color(0.937f, 0.267f, 0.267f), new Color(0.6f, 0.1f, 0.1f), pulse);
+            }
+
             _bgRenderer.transform.localScale = new Vector3(0.92f, 0.92f, 1f);
 
             // 3D GameObjects
@@ -387,6 +396,16 @@ namespace PixelFlow.Views
                     _bridgeRenderer.enabled = false;
                     break;
 
+                case CellState.Obstacle:
+                    _bgRenderer.color = cellBg * 0.6f;
+                    _bgRenderer.enabled = true;
+                    _dotRenderer.enabled = true;
+                    _dotRenderer.color = cellBg * 0.4f;
+                    _dotRenderer.sprite = s_squareSprite;
+                    _dotRenderer.transform.localScale = new Vector3(0.6f, 0.6f, 1f);
+                    _bridgeRenderer.enabled = false;
+                    break;
+
                 case CellState.Bridge:
                     _bgRenderer.color = cellBg;
                     _bgRenderer.enabled = true;
@@ -401,14 +420,14 @@ namespace PixelFlow.Views
         {
             switch (colorType)
             {
-                case ColorType.Red:     return Color.red;
-                case ColorType.Green:   return Color.green;
-                case ColorType.Blue:    return Color.blue;
-                case ColorType.Yellow:  return Color.yellow;
-                case ColorType.Orange:  return new Color(1f, 0.5f, 0f);
-                case ColorType.Purple:  return new Color(0.5f, 0f, 0.5f);
-                case ColorType.Cyan:    return Color.cyan;
-                case ColorType.Magenta: return Color.magenta;
+                case ColorType.Red:     return new Color(1f, 0.239f, 0.498f);     // #FF3D7F Sıcak Pembe
+                case ColorType.Green:   return new Color(0.420f, 0.796f, 0.467f); // #6BCB77 Nane Yeşili
+                case ColorType.Blue:    return new Color(0f, 0.831f, 1f);         // #00D4FF Elektrik Mavisi
+                case ColorType.Yellow:  return new Color(1f, 0.851f, 0.239f);     // #FFD93D Güneş Sarısı
+                case ColorType.Orange:  return new Color(1f, 0.557f, 0.020f);     // Neon Turuncu
+                case ColorType.Purple:  return new Color(0.702f, 0.420f, 1f);     // #B36BFF Ultraviyole
+                case ColorType.Cyan:    return new Color(0.078f, 0.882f, 0.922f); // Elektrik Cyan
+                case ColorType.Magenta: return new Color(0.949f, 0.200f, 0.722f); // Parlak Magenta
                 default:                return Color.gray;
             }
         }

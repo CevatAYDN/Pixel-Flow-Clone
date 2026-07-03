@@ -19,6 +19,8 @@ namespace PixelFlow
             builder.BindService<IGameHistoryService, GameHistoryService>();
             builder.BindService<IVehicleSimulator, VehicleSimulator>();
             builder.BindService<ITaxCollectionService, TaxCollectionService>();
+            builder.BindService<IAudioService, AudioService>();
+            builder.BindService<IGameplayTimerService, GameplayTimerService>();
             builder.Bind<IPathSolver, RuntimePathSolver>();
             builder.Bind<IHintService, HintService>();
             builder.Bind<ILevelProgressionService, LevelProgressionService>();
@@ -35,6 +37,7 @@ namespace PixelFlow
             builder.BindReactiveModel<ISettingsModel, SettingsModel>();
             builder.BindReactiveModel<ISoundModel, SoundModel>();
             builder.BindReactiveModel<ICityEconomyModel, CityEconomyModel>();
+            builder.BindReactiveModel<ITutorialModel, TutorialModel>();
 
             builder.BindSignal<PixelFlow.Signals.InputInteractionSignal>().To<PixelFlow.Commands.ProcessInputCommand>();
             builder.BindSignal<PixelFlow.Signals.CheckWinConditionSignal>().To<PixelFlow.Commands.CheckWinConditionCommand>();

@@ -47,6 +47,8 @@ namespace PixelFlow.Views
             GameSessionModel.OnScoreChanged += HandleScoreChanged;
             GameSessionModel.OnTimeChanged += HandleTimeChanged;
             GameSessionModel.OnStarsChanged += HandleStarsChanged;
+            GameSessionModel.OnSimulationTimerChanged += HandleSimulationTimerChanged;
+            GameSessionModel.OnViaductsChanged += HandleViaductsChanged;
 
             View.HideCompletion();
             View.UpdateHintCount(HintModel.HintsRemaining);
@@ -60,6 +62,7 @@ namespace PixelFlow.Views
             Subscribe<ThemeChangedSignal>(HandleThemeChanged);
             Subscribe<GridUpdatedSignal>(HandleGridUpdated);
             Subscribe<CrashDetectedSignal>(HandleCrashDetected);
+            Subscribe<PathIntersectionWarningSignal>(HandleIntersectionWarning);
 
             GameStateModel.OnStateChanged += HandleStateChanged;
             UpdateVisibility();
@@ -88,6 +91,8 @@ namespace PixelFlow.Views
             GameSessionModel.OnScoreChanged -= HandleScoreChanged;
             GameSessionModel.OnTimeChanged -= HandleTimeChanged;
             GameSessionModel.OnStarsChanged -= HandleStarsChanged;
+            GameSessionModel.OnSimulationTimerChanged -= HandleSimulationTimerChanged;
+            GameSessionModel.OnViaductsChanged -= HandleViaductsChanged;
             GameStateModel.OnStateChanged -= HandleStateChanged;
         }
 
@@ -141,6 +146,24 @@ namespace PixelFlow.Views
         {
             _lastCrashPosition = signal.Position;
             View.ShowCrisis(GameSessionModel.AvailableViaducts);
+        }
+
+        private void HandleIntersectionWarning(PathIntersectionWarningSignal signal)
+        {
+            Debug.Log($"[HUDMediator] Intersection warning at {signal.Position} — viaduct may be needed.");
+        }
+
+        private void HandleSimulationTimerChanged(float remaining)
+        {
+            View.UpdateSimulationTimer(remaining);
+        }
+
+        private void HandleViaductsChanged(int count)
+        {
+            if (count <= 0)
+            {
+                View.ShowViaductLimitReached();
+            }
         }
 
         private void HandleCrisisViaductClicked()

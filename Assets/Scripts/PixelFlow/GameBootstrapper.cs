@@ -31,23 +31,55 @@ namespace PixelFlow
                 yield break;
             }
 
-            // Root tüm lifecycle aşamalarını bitirene kadar bekle; aksi halde
-            // SignalBus henüz komutları kaydetmemiş olabilir.
             while (!nexusRoot.IsInitialized)
-            {
                 yield return null;
+
+            var splash = FindAnyObjectByType<Views.SplashView>();
+            if (splash != null)
+            {
+                bool splashDone = false;
+                splash.OnSplashComplete += () => splashDone = true;
+                yield return new WaitUntil(() => splashDone);
             }
 
             var level = ResolveInitialLevel();
             if (level == null)
             {
-                Debug.LogError("[PixelFlow] No level available to load. Create a LevelData asset or assign initialLevel.");
+                Debug.LogError("[PixelFlow] No level available to load.");
                 yield break;
             }
 
             Debug.Log($"[PixelFlow] Bootstrap loading level: {level.name} ({level.width}x{level.height})");
             var signalBus = nexusRoot.Context.Container.Resolve<ISignalBus>();
             signalBus.Fire(new LoadLevelSignal { LevelToLoad = level });
+        }
+
+        private void OnApplicationPause(bool pause)
+        {
+            if (!pause) return;
+            SaveGameState();
+        }
+
+        private void OnApplicationQuit()
+        {
+            SaveGameState();
+        }
+
+        private void SaveGameState()
+        {
+            if (nexusRoot == null || !nexusRoot.IsInitialized) return;
+            try
+            {
+                var grid = nexusRoot.Context.Container.Resolve<Models.IGridModel>();
+                var session = nexusRoot.Context.Container.Resolve<Models.IGameSessionModel>();
+                var level = nexusRoot.Context.Container.Resolve<Models.ILevelModel>();
+                if (grid != null && session != null && level != null)
+                    Services.GridStateSerializer.Save(grid, session, level);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[GameBootstrapper] Failed to save game state: {ex.Message}");
+            }
         }
 
         private IEnumerator WaitForRoot()

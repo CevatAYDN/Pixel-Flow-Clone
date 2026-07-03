@@ -134,6 +134,15 @@ namespace PixelFlow.Views
             }
         }
 
+        public void UpdateSimulationTimer(float remaining)
+        {
+            if (_timerText != null)
+            {
+                _timerText.text = $"Simülasyon: {remaining:F1}s";
+                _timerText.color = remaining > 3f ? Color.green : Color.Lerp(Color.red, Color.yellow, remaining / 3f);
+            }
+        }
+
         public void UpdateStars(int stars)
         {
             if (_starsContainer != null)
@@ -154,21 +163,42 @@ namespace PixelFlow.Views
             if (_completionPanel != null)
             {
                 _completionPanel.SetActive(true);
-                if (_completionText != null)
-                    _completionText.text = "Tebrikler! Seviye Tamamlandı!";
-                if (_completionScoreText != null)
-                    _completionScoreText.text = $"Skor: {score}";
-                if (_completionStarsText != null)
-                    _completionStarsText.text = $"Yıldız: {new string('★', stars)}{new string('☆', 3 - stars)}";
-                if (_nextLevelButton != null)
-                    _nextLevelButton.gameObject.SetActive(true);
-                else
-                    Debug.LogWarning("[HUDView] _nextLevelButton is null in Inspector!");
+                _completionPanel.transform.localScale = Vector3.zero;
+                StartCoroutine(AnimateCompletion(score, stars));
             }
             else
             {
                 Debug.LogWarning("[HUDView] _completionPanel is null in Inspector! Cannot show level completed panel.");
             }
+        }
+
+        private System.Collections.IEnumerator AnimateCompletion(int score, int stars)
+        {
+            float duration = 0.5f;
+            float elapsed = 0f;
+            RectTransform panelRect = _completionPanel.GetComponent<RectTransform>();
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Min(elapsed / duration, 1f);
+                float bounce = 1f + Mathf.Sin(t * Mathf.PI) * (1f - t) * 0.4f;
+                if (panelRect != null) panelRect.localScale = Vector3.one * Mathf.Lerp(0f, bounce, t * 1.5f);
+                yield return null;
+            }
+
+            if (panelRect != null) panelRect.localScale = Vector3.one;
+
+            if (_completionText != null)
+                _completionText.text = "Tebrikler! Seviye Tamamlandı!";
+            if (_completionScoreText != null)
+                _completionScoreText.text = $"Skor: {score}";
+            if (_completionStarsText != null)
+                _completionStarsText.text = $"Yıldız: {new string('★', stars)}{new string('☆', 3 - stars)}";
+            if (_nextLevelButton != null)
+                _nextLevelButton.gameObject.SetActive(true);
+            else
+                Debug.LogWarning("[HUDView] _nextLevelButton is null in Inspector!");
         }
 
         public void HideCompletion()
@@ -260,6 +290,15 @@ namespace PixelFlow.Views
                 _completionPanel.SetActive(false);
                 if (_nextLevelButton != null)
                     _nextLevelButton.gameObject.SetActive(true);
+            }
+        }
+
+        public void ShowViaductLimitReached()
+        {
+            if (_completionStarsText != null)
+            {
+                _completionStarsText.text = "Viyadük hakkınız bitti!";
+                _completionStarsText.color = Color.red;
             }
         }
 

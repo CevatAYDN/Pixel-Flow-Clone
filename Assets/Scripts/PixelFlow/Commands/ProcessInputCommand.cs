@@ -50,29 +50,33 @@ namespace PixelFlow.Commands
 
             if (signal.Type == InputType.PointerDown)
             {
-                if (currentCell.Color != ColorType.None)
+                ColorType clickedColor = currentCell.Color != ColorType.None ? currentCell.Color
+                    : currentCell.PathColors.Count > 0 ? currentCell.PathColors[0]
+                    : ColorType.None;
+
+                if (clickedColor != ColorType.None)
                 {
-                    if (GridModel.LockedColors.Contains(currentCell.Color))
+                    if (GridModel.LockedColors.Contains(clickedColor))
                         return;
 
                     RecordHistory();
 
-                    GridModel.ActiveColor = currentCell.Color;
+                    GridModel.ActiveColor = clickedColor;
                     GridModel.LastPosition = signal.GridPosition;
 
-                    if (!GridModel.Paths.ContainsKey(GridModel.ActiveColor))
+                    if (!GridModel.Paths.ContainsKey(clickedColor))
                     {
-                        GridModel.Paths[GridModel.ActiveColor] = new List<Vector2Int>();
+                        GridModel.Paths[clickedColor] = new List<Vector2Int>();
                     }
 
                     if (currentCell.State == CellState.Node)
                     {
-                        PathService.ClearPath(GridModel.ActiveColor);
-                        GridModel.Paths[GridModel.ActiveColor].Add(signal.GridPosition);
+                        PathService.ClearPath(clickedColor);
+                        GridModel.Paths[clickedColor].Add(signal.GridPosition);
                     }
                     else if (currentCell.State == CellState.Path || currentCell.State == CellState.Bridge)
                     {
-                        PathService.BacktrackPath(GridModel.ActiveColor, signal.GridPosition);
+                        PathService.BacktrackPath(clickedColor, signal.GridPosition);
                     }
                     SignalBus.Fire(new GridUpdatedSignal());
                 }
@@ -111,6 +115,9 @@ namespace PixelFlow.Commands
                         return;
                 }
 
+                if (currentCell.State == CellState.Obstacle)
+                    return;
+
                 if (currentCell.State == CellState.Empty)
                 {
                     RecordHistory();
@@ -127,7 +134,7 @@ namespace PixelFlow.Commands
                 }
                 else if (currentCell.State == CellState.Node && currentCell.Color == GridModel.ActiveColor)
                 {
-                    if (path.Contains(signal.GridPosition)) return;
+                    if (path.Count > 0 && path[path.Count - 1] == signal.GridPosition) return;
 
                     RecordHistory();
                     if (!currentCell.PathColors.Contains(GridModel.ActiveColor))

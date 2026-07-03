@@ -28,10 +28,20 @@ namespace PixelFlow.Views
         // Camera.main her frame FindObjectByType çağırır (yavaş). Scene boyunca değişmediği
         // için bir kez çözüp cache'liyoruz. Kamera yoksa fallback olarak Update'te tekrar deneriz.
         private Camera _cachedCamera;
+        private float _targetZoom;
+        private const float MinZoom = 2f;
+        private const float MaxZoom = 12f;
+
+        private void Awake()
+        {
+            UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Enable();
+        }
 
         private void Update()
         {
             if (_cells == null) return;
+
+            HandlePinchZoom();
 
             var pointer = UnityEngine.InputSystem.Pointer.current;
             if (pointer == null) return;
@@ -179,15 +189,16 @@ namespace PixelFlow.Views
 
         private Dictionary<ColorType, LineRenderer> _pathLines = new Dictionary<ColorType, LineRenderer>();
         private HashSet<ColorType> _previousPathColors = new HashSet<ColorType>();
+        private static Shader _cachedSpriteShader;
 
-        public void UpdateGridVisuals(CellData[,] gridData, int width, int height, AppTheme theme, Dictionary<ColorType, List<Vector2Int>> paths)
+        public void UpdateGridVisuals(CellData[,] gridData, int width, int height, AppTheme theme, Dictionary<ColorType, List<Vector2Int>> paths, Vector2Int crashPos = default)
         {
             if (_cells == null) return;
             for (int x = 0; x < width; x++)
             {
                 for (int y = 0; y < height; y++)
                 {
-                    _cells[x, y].UpdateVisuals(gridData[x, y], theme);
+                    _cells[x, y].UpdateVisuals(gridData[x, y], theme, crashPos);
                 }
             }
             UpdatePathVisuals(paths, gridData);
@@ -196,19 +207,20 @@ namespace PixelFlow.Views
         /// <summary>
         /// Sadece belirtilen hücrelerin görselini günceller. Tüm grid'i yeniden çizmez.
         /// </summary>
-        public void UpdateDifferential(CellData[,] gridData, AppTheme theme, HashSet<Vector2Int> changedCells)
+        public void UpdateDifferential(CellData[,] gridData, AppTheme theme, HashSet<Vector2Int> changedCells, Vector2Int crashPos = default)
         {
             if (_cells == null || changedCells == null) return;
             foreach (var pos in changedCells)
             {
                 if (pos.x >= 0 && pos.x < _cells.GetLength(0) && pos.y >= 0 && pos.y < _cells.GetLength(1))
                 {
-                    _cells[pos.x, pos.y].UpdateVisuals(gridData[pos.x, pos.y], theme);
+                    _cells[pos.x, pos.y].UpdateVisuals(gridData[pos.x, pos.y], theme, crashPos);
                 }
             }
         }
 
-        public void UpdatePathVisuals(Dictionary<ColorType, List<Vector2Int>> paths, CellData[,] gridData = null)
+        public void UpdatePathVisuals(Dictionary<ColorType, List<Vector2Int>> paths, CellData[,] gridData = null, 
+            Vector2Int crashPos = default, ColorType crashColorA = ColorType.None, ColorType crashColorB = ColorType.None)
         {
             if (paths == null) return;
 
@@ -246,7 +258,7 @@ namespace PixelFlow.Views
                     lineRenderer.useWorldSpace = false;
                     lineRenderer.sortingOrder = 1;
                     
-                    Shader spriteShader = Shader.Find("Sprites/Default");
+                    Shader spriteShader = _cachedSpriteShader ?? (_cachedSpriteShader = Shader.Find("Sprites/Default"));
                     Material mat = new Material(spriteShader != null ? spriteShader : Shader.Find("Unlit/Color"));
                     lineRenderer.material = mat;
                     
@@ -257,21 +269,39 @@ namespace PixelFlow.Views
                 lineRenderer.positionCount = pathPositions.Count;
                 
                 Color pipeColor = CellView.GetColor(colorType);
+
+                bool isCrashColor = crashPos.x >= 0 && 
+                    (colorType == crashColorA || colorType == crashColorB);
+
                 lineRenderer.startColor = pipeColor;
                 lineRenderer.endColor = pipeColor;
+
+                int gw = gridData != null ? gridData.GetLength(0) : 0;
+                int gh = gridData != null ? gridData.GetLength(1) : 0;
 
                 for (int i = 0; i < pathPositions.Count; i++)
                 {
                     Vector2Int gridPos = pathPositions[i];
                     float z = -0.1f;
-                    if (gridData != null && gridPos.x >= 0 && gridPos.x < gridData.GetLength(0) && gridPos.y >= 0 && gridPos.y < gridData.GetLength(1))
+                    if (gridPos.x >= 0 && gridPos.x < gw && gridPos.y >= 0 && gridPos.y < gh)
                     {
                         var cell = gridData[gridPos.x, gridPos.y];
                         if (cell.HasViaduct && cell.OverColor == colorType)
                         {
-                            z = -0.4f; // Viyadük üstünden geçen yolu yükselt
+                            z = -0.4f;
                         }
                     }
+
+                    if (isCrashColor && crashPos.x >= 0)
+                    {
+                        int dist = Mathf.Abs(gridPos.x - crashPos.x) + Mathf.Abs(gridPos.y - crashPos.y);
+                        if (dist <= 2)
+                        {
+                            lineRenderer.startColor = Color.Lerp(Color.red, pipeColor, dist / 3f);
+                            lineRenderer.endColor = Color.Lerp(Color.red, pipeColor, dist / 3f);
+                        }
+                    }
+
                     lineRenderer.SetPosition(i, new Vector3(gridPos.x, gridPos.y, z));
                 }
             }
@@ -287,6 +317,7 @@ namespace PixelFlow.Views
 
         private void OnDestroy()
         {
+            UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Disable();
             foreach (var kvp in _pathLines)
             {
                 if (kvp.Value != null)
@@ -331,6 +362,31 @@ namespace PixelFlow.Views
             }
 
             cam.orthographicSize = Mathf.Max(hSize, wSize);
+            _targetZoom = cam.orthographicSize;
+        }
+
+        private void HandlePinchZoom()
+        {
+            var touches = UnityEngine.InputSystem.EnhancedTouch.Touch.activeTouches;
+            if (touches.Count < 2) return;
+
+            if (_cachedCamera == null) _cachedCamera = Camera.main;
+            if (_cachedCamera == null || !_cachedCamera.orthographic) return;
+
+            var t0 = touches[0];
+            var t1 = touches[1];
+
+            Vector2 prevPos0 = t0.screenPosition - t0.delta;
+            Vector2 prevPos1 = t1.screenPosition - t1.delta;
+
+            float prevDist = Vector2.Distance(prevPos0, prevPos1);
+            float currDist = Vector2.Distance(t0.screenPosition, t1.screenPosition);
+
+            if (prevDist < 0.001f) return;
+
+            float zoomFactor = prevDist / currDist;
+            _targetZoom = Mathf.Clamp(_targetZoom * zoomFactor, MinZoom, MaxZoom);
+            _cachedCamera.orthographicSize = Mathf.Lerp(_cachedCamera.orthographicSize, _targetZoom, 0.3f);
         }
     }
 }

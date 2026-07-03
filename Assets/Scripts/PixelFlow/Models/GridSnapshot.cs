@@ -14,6 +14,10 @@ namespace PixelFlow.Models
         public int Height { get; }
         public CellState[,] CellStates { get; }
         public ColorType[,] CellColors { get; }
+        public List<ColorType>[,] CellPathColors { get; }
+        public bool[,] CellHasViaduct { get; }
+        public ColorType[,] CellUnderColor { get; }
+        public ColorType[,] CellOverColor { get; }
         public IReadOnlyDictionary<ColorType, IReadOnlyList<Vector2Int>> Paths { get; }
         public HashSet<ColorType> LockedColors { get; }
         public ColorType ActiveColor { get; }
@@ -22,6 +26,8 @@ namespace PixelFlow.Models
         private GridSnapshot(
             int width, int height,
             CellState[,] cellStates, ColorType[,] cellColors,
+            List<ColorType>[,] cellPathColors, bool[,] cellHasViaduct,
+            ColorType[,] cellUnderColor, ColorType[,] cellOverColor,
             IReadOnlyDictionary<ColorType, IReadOnlyList<Vector2Int>> paths,
             HashSet<ColorType> lockedColors,
             ColorType activeColor,
@@ -31,6 +37,10 @@ namespace PixelFlow.Models
             Height = height;
             CellStates = cellStates;
             CellColors = cellColors;
+            CellPathColors = cellPathColors;
+            CellHasViaduct = cellHasViaduct;
+            CellUnderColor = cellUnderColor;
+            CellOverColor = cellOverColor;
             Paths = paths;
             LockedColors = lockedColors;
             ActiveColor = activeColor;
@@ -47,6 +57,10 @@ namespace PixelFlow.Models
 
             var states = new CellState[w, h];
             var colors = new ColorType[w, h];
+            var pathColors = new List<ColorType>[w, h];
+            var hasViaduct = new bool[w, h];
+            var underColors = new ColorType[w, h];
+            var overColors = new ColorType[w, h];
 
             for (int x = 0; x < w; x++)
             {
@@ -55,6 +69,10 @@ namespace PixelFlow.Models
                     var cell = grid.Grid[x, y];
                     states[x, y] = cell.State;
                     colors[x, y] = cell.Color;
+                    pathColors[x, y] = new List<ColorType>(cell.PathColors);
+                    hasViaduct[x, y] = cell.HasViaduct;
+                    underColors[x, y] = cell.UnderColor;
+                    overColors[x, y] = cell.OverColor;
                 }
             }
 
@@ -69,6 +87,7 @@ namespace PixelFlow.Models
             return new GridSnapshot(
                 w, h,
                 states, colors,
+                pathColors, hasViaduct, underColors, overColors,
                 paths,
                 locked,
                 grid.ActiveColor,
@@ -90,6 +109,10 @@ namespace PixelFlow.Models
                     var cell = grid.Grid[x, y];
                     cell.State = CellStates[x, y];
                     cell.Color = CellColors[x, y];
+                    cell.PathColors = new List<ColorType>(CellPathColors[x, y]);
+                    cell.HasViaduct = CellHasViaduct[x, y];
+                    cell.UnderColor = CellUnderColor[x, y];
+                    cell.OverColor = CellOverColor[x, y];
                 }
             }
 

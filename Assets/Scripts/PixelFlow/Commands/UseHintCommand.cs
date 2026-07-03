@@ -5,7 +5,6 @@ using PixelFlow.Services;
 using System.Collections.Generic;
 using UnityEngine;
 using PixelFlow.Data;
-using static PixelFlow.Services.HintService;
 
 namespace PixelFlow.Commands
 {

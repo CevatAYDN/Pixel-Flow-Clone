@@ -15,6 +15,7 @@ namespace PixelFlow.Commands
         [Inject] public IHintModel HintModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public IGameHistoryService HistoryService { get; set; }
+        [Inject] public ICityEconomyModel CityEconomyModel { get; set; }
 
         public void Execute(LoadLevelSignal signal)
         {
@@ -54,8 +55,22 @@ namespace PixelFlow.Commands
                 }
             }
 
+            if (signal.LevelToLoad.obstacles != null)
+            {
+                foreach (var obs in signal.LevelToLoad.obstacles)
+                {
+                    if (obs.position.x >= 0 && obs.position.x < GridModel.Width &&
+                        obs.position.y >= 0 && obs.position.y < GridModel.Height)
+                    {
+                        var cell = GridModel.Grid[obs.position.x, obs.position.y];
+                        cell.State = CellState.Obstacle;
+                    }
+                }
+            }
+
             HistoryService.Clear();
-            GameSessionModel.StartSession(signal.LevelToLoad.viaductLimit);
+            int totalViaducts = signal.LevelToLoad.viaductLimit + (CityEconomyModel != null ? CityEconomyModel.ViaductBonus : 0);
+            GameSessionModel.StartSession(totalViaducts);
             HintModel.ResetSessionHints();
 
             SignalBus.Fire(new GridUpdatedSignal());

@@ -5,6 +5,15 @@ namespace PixelFlow.Data
 {
     public enum ColorType { None, Red, Green, Blue, Yellow, Orange, Purple, Cyan, Magenta }
 
+    public enum ObstacleType { Construction, Lake, Park, OneWay, Ferry, NarrowPass }
+
+    [System.Serializable]
+    public struct ObstacleData
+    {
+        public Vector2Int position;
+        public ObstacleType type;
+    }
+
     [System.Serializable]
     public struct GridNode
     {
@@ -29,5 +38,6 @@ namespace PixelFlow.Data
         public List<PathSolution> solutions = new List<PathSolution>();
         public List<Vector2Int> bridgePositions = new List<Vector2Int>();
         public int viaductLimit = 3;
+        public List<ObstacleData> obstacles = new List<ObstacleData>();
     }
 }

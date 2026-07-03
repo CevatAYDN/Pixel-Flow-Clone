@@ -15,6 +15,7 @@ namespace PixelFlow.Views
         private readonly List<GameObject> _spawnedBuildings = new List<GameObject>();
         private int _lastSpawnedDistrictLvl = -1;
         private int _lastSpawnedLevelsCount = -1;
+        private static Shader _cachedShader;
 
         public event Action OnCollectTaxesClicked;
         public event Action<UpgradeType> OnUpgradeClicked;
@@ -59,7 +60,16 @@ namespace PixelFlow.Views
             // Clear old buildings
             foreach (var b in _spawnedBuildings)
             {
-                if (b != null) UnityEngine.Object.Destroy(b);
+                if (b != null)
+                {
+                    var renderers = b.GetComponentsInChildren<Renderer>();
+                    foreach (var r in renderers)
+                    {
+                        if (r?.material != null)
+                            UnityEngine.Object.Destroy(r.material);
+                    }
+                    UnityEngine.Object.Destroy(b);
+                }
             }
             _spawnedBuildings.Clear();
 
@@ -125,8 +135,8 @@ namespace PixelFlow.Views
                     var renderer = building.GetComponent<Renderer>();
                     if (renderer != null)
                     {
-                        // Glassmorphic / Neon emissive look material
-                        renderer.material = new Material(Shader.Find("Sprites/Default"));
+                        if (_cachedShader == null) _cachedShader = Shader.Find("Sprites/Default");
+                        renderer.material = new Material(_cachedShader);
                         renderer.material.color = Color.Lerp(new Color(0.1f, 0.1f, 0.15f, 1f), themeColor, 0.3f);
                     }
 
@@ -140,7 +150,8 @@ namespace PixelFlow.Views
                     var lightRenderer = neonLight.GetComponent<Renderer>();
                     if (lightRenderer != null)
                     {
-                        lightRenderer.material = new Material(Shader.Find("Sprites/Default"));
+                        if (_cachedShader == null) _cachedShader = Shader.Find("Sprites/Default");
+                        lightRenderer.material = new Material(_cachedShader);
                         lightRenderer.material.color = themeColor;
                     }
 

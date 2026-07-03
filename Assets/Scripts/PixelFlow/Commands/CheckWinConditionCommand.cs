@@ -3,7 +3,7 @@ using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Data;
 using PixelFlow.Services;
-using System.Linq;
+using System.Collections.Generic;
 
 namespace PixelFlow.Commands
 {
@@ -40,38 +40,37 @@ namespace PixelFlow.Commands
 
             // 2. Check every color with nodes has a connected path
             var currentLevel = LevelModel.CurrentLevel;
-            if (currentLevel != null && currentLevel.initialNodes != null)
+            if (currentLevel?.initialNodes != null)
             {
-                var colorGroups = currentLevel.initialNodes
-                    .GroupBy(n => n.color)
-                    .ToList();
-
-                foreach (var group in colorGroups)
+                var colorNodes = new Dictionary<ColorType, List<GridNode>>();
+                for (int i = 0; i < currentLevel.initialNodes.Count; i++)
                 {
-                    if (group.Key == ColorType.None) continue;
+                    var n = currentLevel.initialNodes[i];
+                    if (n.color == ColorType.None) continue;
+                    if (!colorNodes.TryGetValue(n.color, out var list))
+                        colorNodes[n.color] = list = new List<GridNode>(2);
+                    list.Add(n);
+                }
 
-                    var nodes = group.ToList();
-                    if (nodes.Count < 2) continue;
+                foreach (var kvp in colorNodes)
+                {
+                    if (kvp.Value.Count < 2) continue;
 
-                    // The color must have a path registered
-                    if (!GridModel.Paths.ContainsKey(group.Key) || GridModel.Paths[group.Key].Count == 0)
+                    if (!GridModel.Paths.TryGetValue(kvp.Key, out var path) || path.Count == 0)
                     {
-                        UnityEngine.Debug.Log($"[CheckWinConditionCommand] Win check failed: color {group.Key} has no path");
+                        UnityEngine.Debug.Log($"[CheckWinConditionCommand] Win check failed: color {kvp.Key} has no path");
                         return;
                     }
 
-                    var path = GridModel.Paths[group.Key];
-
-                    // Verify that the path starts at one of the nodes and ends at the other node
                     var startPos = path[0];
                     var endPos = path[path.Count - 1];
-                    var node1 = nodes[0].position;
-                    var node2 = nodes[1].position;
+                    var node1 = kvp.Value[0].position;
+                    var node2 = kvp.Value[1].position;
 
                     bool validConnection = (startPos == node1 && endPos == node2) || (startPos == node2 && endPos == node1);
                     if (!validConnection)
                     {
-                        UnityEngine.Debug.Log($"[CheckWinConditionCommand] Win check failed: color {group.Key} path does not connect nodes. Path endpoints: ({startPos}, {endPos}), Node positions: ({node1}, {node2})");
+                        UnityEngine.Debug.Log($"[CheckWinConditionCommand] Win check failed: color {kvp.Key} path does not connect nodes. Path endpoints: ({startPos}, {endPos}), Node positions: ({node1}, {node2})");
                         return;
                     }
 
@@ -96,10 +95,13 @@ namespace PixelFlow.Commands
                 ? HintModel.HintsRemaining + hintsUsed
                 : 3;
 
+            int viaductsUsed = GameSessionModel.MaxViaducts - GameSessionModel.AvailableViaducts;
+
             var (finalScore, stars) = ScoreCalculator.Calculate(
                 GridModel.Width, GridModel.Height,
                 GameSessionModel.ElapsedTime,
-                hintsUsed, totalHints);
+                hintsUsed, totalHints,
+                viaductsUsed);
 
             GameSessionModel.AddScore(finalScore);
             GameSessionModel.SetStars(stars);

@@ -32,23 +32,34 @@ namespace PixelFlow.Services
             public ColorType Color;
             public List<Vector2Int> Path;
             public int SegmentIndex;
-            public float Progress; // 0 to 1
+            public float Progress;
             public GameObject Visual;
             public Vector3 CurrentPosition;
             public float Speed;
+            public Renderer[] CachedRenderers;
+        }
+
+        private static readonly ColorType[] AllColors;
+
+        static VehicleSimulator()
+        {
+            var values = System.Enum.GetValues(typeof(ColorType));
+            AllColors = new ColorType[values.Length];
+            for (int i = 0; i < values.Length; i++)
+                AllColors[i] = (ColorType)values.GetValue(i);
         }
 
         private readonly List<VehicleInstance> _activeVehicles = new List<VehicleInstance>();
         private readonly Dictionary<ColorType, float> _spawnTimers = new Dictionary<ColorType, float>();
+        private readonly Dictionary<ColorType, (Vector2Int, Vector2Int)> _cachedEndpoints = new Dictionary<ColorType, (Vector2Int, Vector2Int)>();
         private SimulationUpdater _updater;
         private Transform _vehicleContainer;
+        private GridView _cachedGridView;
 
         private float _simulationPhaseTimer = 0f;
-        private const float SimulationPhaseDuration = 10f; // Win after 10s of no crashes
-        private const float VehicleSpeed = 3f; // Cells per second
-        private const float SpawnInterval = 1.2f; // Seconds between spawns
-
-        private static Sprite _arrowSprite;
+        private const float SimulationPhaseDuration = 10f;
+        private const float VehicleSpeed = 3f;
+        private const float SpawnInterval = 1.2f;
         private ISignalSubscription _undoSubscription;
         private ISignalSubscription _redoSubscription;
 
@@ -102,11 +113,13 @@ namespace PixelFlow.Services
             if (state == GameState.Playing)
             {
                 _simulationPhaseTimer = 0f;
+                _cachedEndpoints.Clear();
                 ClearAllVehicles();
             }
             else if (state == GameState.Simulating)
             {
                 _simulationPhaseTimer = 0f;
+                _cachedEndpoints.Clear();
                 ClearAllVehicles();
                 Debug.Log("[VehicleSimulator] Simulation Phase started. All vehicles now solid.");
             }
@@ -132,6 +145,14 @@ namespace PixelFlow.Services
             {
                 if (v.Visual != null)
                 {
+                    if (v.CachedRenderers != null)
+                    {
+                        for (int i = 0; i < v.CachedRenderers.Length; i++)
+                        {
+                            if (v.CachedRenderers[i]?.material != null)
+                                UnityEngine.Object.Destroy(v.CachedRenderers[i].material);
+                        }
+                    }
                     UnityEngine.Object.Destroy(v.Visual);
                 }
             }
@@ -160,8 +181,9 @@ namespace PixelFlow.Services
 
         private void UpdateSpawning()
         {
-            foreach (ColorType color in Enum.GetValues(typeof(ColorType)))
+            for (int i = 0; i < AllColors.Length; i++)
             {
+                var color = AllColors[i];
                 if (color == ColorType.None) continue;
 
                 if (IsColorConnected(color))
@@ -190,30 +212,31 @@ namespace PixelFlow.Services
             if (!GridModel.Paths.TryGetValue(color, out var path) || path.Count < 2)
                 return false;
 
-            var currentLevel = LevelModel.CurrentLevel;
-            if (currentLevel == null || currentLevel.initialNodes == null)
-                return false;
-
-            // Find endpoints for this color in LevelData
-            Vector2Int node1 = new Vector2Int(-1, -1);
-            Vector2Int node2 = new Vector2Int(-1, -1);
-            int count = 0;
-            foreach (var n in currentLevel.initialNodes)
+            if (!_cachedEndpoints.TryGetValue(color, out var endpoints))
             {
-                if (n.color == color)
-                {
-                    if (count == 0) node1 = n.position;
-                    else if (count == 1) node2 = n.position;
-                    count++;
-                }
-            }
+                var currentLevel = LevelModel.CurrentLevel;
+                if (currentLevel?.initialNodes == null) return false;
 
-            if (count < 2) return false;
+                Vector2Int n1 = new Vector2Int(-1, -1), n2 = new Vector2Int(-1, -1);
+                int found = 0;
+                for (int i = 0; i < currentLevel.initialNodes.Count && found < 2; i++)
+                {
+                    if (currentLevel.initialNodes[i].color == color)
+                    {
+                        if (found == 0) n1 = currentLevel.initialNodes[i].position;
+                        else n2 = currentLevel.initialNodes[i].position;
+                        found++;
+                    }
+                }
+                if (found < 2) return false;
+                endpoints = (n1, n2);
+                _cachedEndpoints[color] = endpoints;
+            }
 
             Vector2Int start = path[0];
             Vector2Int end = path[path.Count - 1];
-
-            return (start == node1 && end == node2) || (start == node2 && end == node1);
+            return (start == endpoints.Item1 && end == endpoints.Item2) || 
+                   (start == endpoints.Item2 && end == endpoints.Item1);
         }
 
         private void SpawnVehicle(ColorType color)
@@ -221,31 +244,25 @@ namespace PixelFlow.Services
             if (!GridModel.Paths.TryGetValue(color, out var path) || path.Count < 2)
                 return;
 
-            // Align the vehicles container with the grid's local coordinate system
             if (_vehicleContainer != null && _vehicleContainer.parent == null)
             {
-                var gridView = UnityEngine.Object.FindAnyObjectByType<GridView>();
-                if (gridView != null)
-                {
-                    _vehicleContainer.SetParent(gridView.transform, false);
-                }
+                if (_cachedGridView == null)
+                    _cachedGridView = UnityEngine.Object.FindAnyObjectByType<GridView>();
+                if (_cachedGridView != null)
+                    _vehicleContainer.SetParent(_cachedGridView.transform, false);
             }
 
-            GameObject visual = new GameObject($"Vehicle_{color}");
+            GameObject visual = new GameObject($"V_{color}");
             visual.transform.SetParent(_vehicleContainer);
-            
-            // Create a small 3D blocky vehicle for visibility in both 2D and 3D camera angles
+
             var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
             body.name = "Body";
             body.transform.SetParent(visual.transform, false);
             var r = body.GetComponent<Renderer>();
             if (r != null)
-            {
                 r.material.color = CellView.GetColor(color);
-            }
 
             body.transform.localScale = new Vector3(0.4f, 0.4f, 0.25f);
-            Debug.Log($"[VehicleSimulator] Spawned vehicle of color {color} at start node: {path[0]}");
 
             var inst = new VehicleInstance
             {
@@ -255,7 +272,8 @@ namespace PixelFlow.Services
                 Progress = 0f,
                 Visual = visual,
                 CurrentPosition = new Vector3(path[0].x, path[0].y, GetZOffset(path[0], color)),
-                Speed = VehicleSpeed + UnityEngine.Random.Range(-0.4f, 0.4f)
+                Speed = VehicleSpeed + UnityEngine.Random.Range(-0.4f, 0.4f),
+                CachedRenderers = new Renderer[] { r }
             };
 
             visual.transform.localPosition = inst.CurrentPosition;
@@ -275,13 +293,16 @@ namespace PixelFlow.Services
                     continue;
                 }
 
-                // Update opacity
-                var sr = v.Visual.GetComponent<SpriteRenderer>();
-                if (sr != null)
+                // Update opacity via cached renderers
+                if (v.CachedRenderers != null)
                 {
-                    Color c = sr.color;
-                    c.a = alpha;
-                    sr.color = c;
+                    for (int ri = 0; ri < v.CachedRenderers.Length; ri++)
+                    {
+                        if (v.CachedRenderers[ri] == null) continue;
+                        Color c = v.CachedRenderers[ri].material.color;
+                        c.a = alpha;
+                        v.CachedRenderers[ri].material.color = c;
+                    }
                 }
 
                 // Advance segment progress
@@ -294,27 +315,31 @@ namespace PixelFlow.Services
 
                 if (v.SegmentIndex >= v.Path.Count - 1)
                 {
-                    // Reached destination, despawn
+                    if (v.CachedRenderers != null)
+                    {
+                        for (int ri = 0; ri < v.CachedRenderers.Length; ri++)
+                        {
+                            if (v.CachedRenderers[ri]?.material != null)
+                                UnityEngine.Object.Destroy(v.CachedRenderers[ri].material);
+                        }
+                    }
                     UnityEngine.Object.Destroy(v.Visual);
                     _activeVehicles.RemoveAt(i);
                     continue;
                 }
 
-                // Calculate position along segment
-                Vector2Int p1 = v.Path[v.SegmentIndex];
-                Vector2Int p2 = v.Path[v.SegmentIndex + 1];
+                Vector3 p0 = GetSplineControlPoint(v.Path, v.SegmentIndex - 1, v.Color);
+                Vector3 p1 = GetSplineControlPoint(v.Path, v.SegmentIndex, v.Color);
+                Vector3 p2 = GetSplineControlPoint(v.Path, v.SegmentIndex + 1, v.Color);
+                Vector3 p3 = GetSplineControlPoint(v.Path, v.SegmentIndex + 2, v.Color);
 
-                Vector3 startPos = new Vector3(p1.x, p1.y, GetZOffset(p1, v.Color));
-                Vector3 endPos = new Vector3(p2.x, p2.y, GetZOffset(p2, v.Color));
-
-                v.CurrentPosition = Vector3.Lerp(startPos, endPos, v.Progress);
+                v.CurrentPosition = CatmullRom(p0, p1, p2, p3, v.Progress);
                 v.Visual.transform.localPosition = v.CurrentPosition;
 
-                // Point in direction of movement
-                Vector3 dir = endPos - startPos;
-                if (dir.sqrMagnitude > 0.001f)
+                Vector3 tangent = CatmullRomTangent(p0, p1, p2, p3, v.Progress);
+                if (tangent.sqrMagnitude > 0.001f)
                 {
-                    float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+                    float angle = Mathf.Atan2(tangent.y, tangent.x) * Mathf.Rad2Deg;
                     v.Visual.transform.rotation = Quaternion.Euler(0f, 0f, angle);
                 }
             }
@@ -378,10 +403,12 @@ namespace PixelFlow.Services
         {
             Debug.LogError($"[VehicleSimulator] TRAFFIC CRASH detected at {crashPos} between {colorA} and {colorB}!");
             
-            // Simülasyonu durdur
+            GridModel.LastCrashPosition = crashPos;
+            GridModel.CrashColorA = colorA;
+            GridModel.CrashColorB = colorB;
+
             GameStateModel.SetState(GameState.Paused);
 
-            // Crash sinyalini ateşle (UI bunu dinleyip Kriz Ekranı açacak)
             SignalBus.Fire(new CrashDetectedSignal
             {
                 Position = crashPos,
@@ -393,6 +420,9 @@ namespace PixelFlow.Services
         private void UpdateCompletionTimer()
         {
             _simulationPhaseTimer += Time.deltaTime;
+            float remaining = SimulationPhaseDuration - _simulationPhaseTimer;
+            GameSessionModel.SetSimulationTimer(remaining);
+
             if (_simulationPhaseTimer >= SimulationPhaseDuration)
             {
                 CompleteLevel();
@@ -409,35 +439,29 @@ namespace PixelFlow.Services
             ClearAllVehicles();
         }
 
-        private static Sprite GetArrowSprite()
+        private Vector3 GetSplineControlPoint(List<Vector2Int> path, int index, ColorType color)
         {
-            if (_arrowSprite == null)
-            {
-                int size = 64;
-                Texture2D tex = new Texture2D(size, size);
-                for (int y = 0; y < size; y++)
-                    for (int x = 0; x < size; x++)
-                        tex.SetPixel(x, y, Color.clear);
+            int clamped = Mathf.Clamp(index, 0, path.Count - 1);
+            Vector2Int pos = path[clamped];
+            return new Vector3(pos.x, pos.y, GetZOffset(pos, color));
+        }
 
-                // Draw arrowhead pointing right (0 degrees)
-                for (int x = 16; x < 48; x++)
-                {
-                    int halfHeight = Mathf.RoundToInt((x - 16) * 0.5f);
-                    for (int y = 32 - halfHeight; y <= 32 + halfHeight; y++)
-                    {
-                        if (y >= 0 && y < size)
-                        {
-                            tex.SetPixel(x, y, Color.white);
-                        }
-                    }
-                }
+        private static Vector3 CatmullRom(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
+        {
+            float t2 = t * t;
+            float t3 = t2 * t;
+            return 0.5f * ((2f * p1) +
+                           (-p0 + p2) * t +
+                           (2f * p0 - 5f * p1 + 4f * p2 - p3) * t2 +
+                           (-p0 + 3f * p1 - 3f * p2 + p3) * t3);
+        }
 
-                tex.Apply();
-                tex.hideFlags = HideFlags.DontSave;
-                _arrowSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
-                _arrowSprite.hideFlags = HideFlags.DontSave;
-            }
-            return _arrowSprite;
+        private static Vector3 CatmullRomTangent(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
+        {
+            float t2 = t * t;
+            return 0.5f * ((-p0 + p2) +
+                           2f * (2f * p0 - 5f * p1 + 4f * p2 - p3) * t +
+                           3f * (-p0 + 3f * p1 - 3f * p2 + p3) * t2);
         }
     }
 }

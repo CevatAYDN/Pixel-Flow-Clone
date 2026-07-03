@@ -7,7 +7,7 @@ using Nexus.Core;
 
 namespace PixelFlow.Models
 {
-    public enum CellState { Empty, Node, Path, Bridge }
+    public enum CellState { Empty, Node, Path, Bridge, Obstacle }
 
     public class CellData
     {
@@ -28,6 +28,9 @@ namespace PixelFlow.Models
         HashSet<ColorType> LockedColors { get; }
         ColorType ActiveColor { get; set; }
         Vector2Int LastPosition { get; set; }
+        Vector2Int LastCrashPosition { get; set; }
+        ColorType CrashColorA { get; set; }
+        ColorType CrashColorB { get; set; }
 
         void Initialize(int width, int height);
     }
@@ -47,6 +50,9 @@ namespace PixelFlow.Models
         public HashSet<ColorType> LockedColors { get; private set; }
         public ColorType ActiveColor { get; set; }
         public Vector2Int LastPosition { get; set; }
+        public Vector2Int LastCrashPosition { get; set; } = new Vector2Int(-1, -1);
+        public ColorType CrashColorA { get; set; }
+        public ColorType CrashColorB { get; set; }
 
         public void Initialize(int width, int height)
         {

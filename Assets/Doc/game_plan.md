@@ -125,8 +125,11 @@ Anında Simülasyon: Bağlantı kurulduğu anda minik vektörel araçlar hat üz
 Onay: Oyuncu tüm bağlantıları kurup *Başlat* butonuna bastığında (veya otomatik olarak tüm düğümler eşleştiğinde), hayalet modu kalkar ve araçlar gerçek simülasyona geçer.
 2.4 Kaza Mekaniği (The Crash) — **DETAYLI** **TEKN**İK **AKI**Ş
 Klasik akış oyunlarının aksine, farklı renkteki iki yol birbirini dik kestiğinde sistem çizimi engellemez veya eski yolu silmez. Kaza mantığı şu aşamalarda işler:
+
+**ÖNEMLİ**: Kaza tespiti **hem çizim aşamasında (Playing) hem de simülasyon aşamasında (Simulating)** çalışır. Çizim sırasında araçlar hayalet modunda akar — eğer iki farklı renkli araç viyadüksüz bir kesişimde karşılaşırsa KAZA hemen tetiklenir. Oyuncunun tüm yolları tamamlamasını beklemeye gerek yoktur — anlık geri bildirim sayesinde sorunu hemen görür, düzeltir (undo/viyadük) ve çizmeye devam eder. 10 saniyelik simülasyon sayacı sadece `Simulating` state'inde çalışır; çizim sırasında tamamlama kontrolü yapılmaz.
+
 Aşama 1 — Çizim Sırasında Görsel Uyarı (Soft Warning):
-Oyuncu mevcut bir yolu kesen bir hat çizerse, kesişim noktasında küçük sarı bir uyarı ikonu (⚠) yanar.
+Oyuncu mevcut bir yolu kesen bir hat çizerse, kesişim noktasında küçük sarı bir uyarı ikonu (⚠) yanar. Aynı anda `PathIntersectionWarningSignal` ateşlenir.
 Bu sadece görsel bir ipucudur, oyunu engellemez.
 Amaç: Stratejik oyuncuya erken uyarı vererek *burada sorun olabilir* hissi yaratmak.
 Aşama 2 — Simülasyon Başlatma (Hayalet Modu):
@@ -146,33 +149,38 @@ Oyuncuya iki seçenek sunulur:
 *Game Over* yoktur. Oyuncu istediği kadar deneme yapabilir. Ancak 3 başarısız denemeden sonra bir geçiş reklamı gösterilir (İlk 5 seviyede asla gösterilmez).
 2.5 Viyadük / Üst Geçit Mekaniği — **DETAYLI** **TEKN**İK **AKI**Ş
 Tanım: Viyadük, iki yolun kesiştiği noktada bir yolun diğerinin üstünden geçmesini sağlayan yapıdır.
+
+**Uygulama Detayı**: `CellData` sınıfı `HasViaduct` (bool), `UnderColor` (alttan geçen renk) ve `OverColor` (üstten geçen renk) alanlarını tutar. `PlaceViaductCommand` tarafından yönetilir. Viyadük yerleştirildiğinde hücre `CellState.Bridge` durumuna geçer.
+
 Limit Sistemi:
 Her seviyede belirli sayıda Viyadük Hakkı verilir.
 Varsayılan hak: 3 viyadük / seviye.
 Seviye zorluk kademelerine göre değişir (bkz. §9 — Seviye Tasarım Tablosu).
+Şehir ekonomi geliştirmeleri (Viyadük Üretim) sayesinde bu limit artırılabilir (LoadLevelCommand, CityEconomyModel.ViaductBonus ile session başlangıcına bonus ekler).
 UI'da viyadük sayısı, Bento-Glass panelinde köprü ikonu ile gösterilir (örn: 🌉🌉🌉).
 Hak bittiğinde: *Acil Durum Viyadüğü* için ödüllü reklam tetiklenir (+1 köprü hakkı).
+
 Kontrol ve Etkileşim:
-Manuel Yerleştirme (Auto-popup yoktur — UX bozar):
-Kaza tespit edildikten sonra, oyuncu viyadük hakkından birini kullanarak kesişim noktasına köprü yerleştirir.
-Köprü yerleştirildiğinde: Üstten geçen yol hafifçe yükselir (Z-offset artışı), alttan geçen yol normal kalır.
-Üstteki yol, alttaki yolun %60 opaklığında görünür — oyuncu alttaki aracı hâlâ görebilir.
-Köprü yerleştirme animasyonu: Pürüzsüz bir *yükselme* efekti (0.3s, ease-out).
+Kaza tespit edildikten sonra (Simülasyon aşamasında), oyun Paused durumuna geçer. Oyuncu kesişim noktasına tıklayarak viyadük yerleştirir.
+Köprü yerleştirildiğinde: Üstten geçen yol (`OverColor`) daha yüksek Z-offset (-0.4f) ile render edilir, alttan geçen yol (`UnderColor`) normal offset'te (-0.1f) kalır.
+Viyadük yerleştirme sonrası oyun otomatik olarak Simülasyon durumuna geri döner.
+PlaceViaductCommand, HistoryService.Record() ile undo/redo snapshot'ı alır — viyadük geri alınabilir.
 Görsel Detay:
-Viyadük, iki paralel neon ray + altından hafif mavi glow + üstündeki yolda ekstra parlama çizgisi olarak tasarımlanır.
-Kamera yakınlaştığında (zoom-in) viyadüğün 3D yüksekliği belirginleşir.
-**IAP** Bağlantısı:
-*Baş Mimar Paketi* satın alındığında: Her seviyeye +1 viyadük hakkıyla başlanır.
+Viyadük hücrelerinde 3D köprü görseli (deck + pillar) oluşturulur.
+Üstteki yol, alttaki yolun %60 opaklığında görünür — oyuncu alttaki aracı hâlâ görebilir.
+Köprü yerleştirme sırasında hücre `CellState.Bridge` olarak işaretlenir.
 2.6 Undo (Geri Al) Sistemi
 Undo Stack: Sınırsız geri alma. Oyuncu istediği kadar hamle geri alabilir.
 Davranış: Geri alınan yol silinir, kaynak ve hedef düğümler tekrar bağlanabilir hale gelir.
 Viadük İadesi: Viyadük kullanılarak çözülen bir kesişim geri alınırsa, viyadük hakkı iade edilir.
 Kazadan Sonra: Kaza yapan yolun tamamı geri alınmak zorunda değildir — oyuncu yolun sadece kesişim noktasından sonraki segmentini de geri alabilir (partial undo).
-2.7 Strict Routing Kuralı
-Her grid hücresinde aynı anda tek bir yol bulunabilir.
-Aynı hücreden iki farklı renk geçemez (viyadük hariç).
-Bu kural, stratejik derinliği artırır ve çözülebilirliği garanti eder.
-Ancak bir yol, kendi üzerinde aynı yönde tekrarlanabilir (self-overlap yasak).
+2.7 Çoklu Yol ve Kesişim Kuralı (Multi-Path Routing)
+Bir grid hücresinden aynı anda birden fazla renkli yol geçebilir.
+Bu, yolların kesişmesine (intersection) izin verir — oyuncu stratejik olarak yolları üst üste çizebilir.
+İki farklı renk aynı hücrede kesiştiğinde, bu hücre "çakışma noktası" olarak işaretlenir (⚠ soft warning ikonu).
+Çakışma noktasında viyadük yoksa, simülasyon sırasında araçlar çarpışır (kaza).
+Viyadük yerleştirildiğinde: bir yol "üstten" (OverColor — yükseltilmiş Z-offset), diğeri "alttan" (UnderColor) geçer.
+Bir hücrede maksimum 2 farklı renk kesişebilir (viyadük limiti). 3+ renk kesişimi desteklenmez.
 2.8 Kazanma Koşulu
 Grid üzerindeki tüm araç renkleri, birbirine kaza yapmadan bağlandığında.
 Tüm kaynak-hedef çiftleri eşleştiğinde.
@@ -764,3 +772,64 @@ Belge Sonu — Neon Transit **GDD** v2.0.0
 Hazırlayan: Oyun Tasarım Ekibi
 Son Güncelleme: Temmuz **2026**
 Sonraki Adım: Pre-Production başlangıcı — Core mekanik prototipi (2 hafta sprint)
+
+---
+
+## Ek D: Mevcut Implementasyon Durumu (Pixel-Flow-Clone → Neon Transit Geçişi)
+
+Bu bölüm, GDD ile mevcut kod tabanı arasındaki mimari kararları ve uygulama detaylarını belgelemek için eklenmiştir.
+
+### D.1 Framework
+- **Nexus Core** MVCS mimarisi kullanılmaktadır (SignalBus, CommandPool, ReactiveModels, DI)
+- Tüm komutlar `ICommand<T>` + `IResettable` implemente eder
+- Modeller `IReactiveModel` + `INexusService` arayüzlerini kullanır
+- Mediator'lar `Subscribe<T>()` ile sinyal dinler
+- `GameContextLifecycle.OnConfigure()` tüm bağlamaları fluent API ile kaydeder
+
+### D.2 Grid ve Yol Mimarisi
+- `CellData`: `List<ColorType> PathColors` — bir hücreden birden fazla renk geçebilir
+- `HasViaduct` (bool), `UnderColor`, `OverColor` — viyadük durumu
+- `CellState`: `Empty`, `Node`, `Path`, `Bridge`
+- Hareket: Sadece orthogonal (yatay/dikey), çapraz hareket yok
+- `PathService`: ClearPath, BacktrackPath, BreakPath — her biri çoklu-yol uyumlu
+
+### D.3 Araç Simülasyonu
+- `VehicleSimulator`: `INexusService`, Unity Update döngüsüne `SimulationUpdater` MonoBehaviour ile bağlanır
+- **Playing** state'inde: Araçlar hayalet modunda (%60 opak, 3D küp), çarpışma AKTİF — anlık kaza geri bildirimi
+- **Simulating** state'inde: Araçlar katı modda, 10 saniye kesintisiz akış → `LevelCompletedSignal`
+- Kaza → `GameState.Paused` → `CrashDetectedSignal` → oyuncu düzeltir → Playing'e dönüş
+- Mesafe-tabanlı çarpışma: iki farklı renkli araç <0.5f mesafede + viyadüksüz hücre → kaza
+
+### D.4 Viyadük Sistemi
+- `PlaceViaductSignal` → `PlaceViaductCommand` → hücre `HasViaduct=true`, `CellState.Bridge`
+- `MaxPathsPerBridge = 2` (BridgeValidationUtility)
+- History tracking: `HistoryService.Record()` undo/redo için
+- Ekonomi entegrasyonu: `CityEconomyModel.ViaductBonus`, `LoadLevelCommand` session başlangıcına ekler
+
+### D.5 Idle Ekonomi
+- `CityEconomyModel`: `IReactiveModel` — jeton, vergi, geliştirme seviyeleri
+- `TaxCollectionService`: `INexusService` — Unity Update döngüsünde vergi birikimi
+- `UpgradeSignal` → `UpgradeCommand` → `CityEconomyModel.PurchaseUpgrade()`
+- Offline kazanç: `CalculateOfflineEarnings()` — max 8 saat, %50 verim
+- `HubHUDView` + `HubHUDMediator`: Bento-Glass UI, geliştirme paneli
+- `CityHubView` + `CityHubMediator`: 3D low-poly izometrik şehir, bölge bazlı binalar
+
+### D.6 Sinyal Envanteri
+| Sinyal | Komut | Tetikleyici |
+|---|---|---|
+| `InputInteractionSignal` | `ProcessInputCommand` | GridView pointer event'ları |
+| `CheckWinConditionSignal` | `CheckWinConditionCommand` | Yol tamamlandığında |
+| `PlaceViaductSignal` | `PlaceViaductCommand` | Paused state'de kesişime tıklandığında |
+| `UpgradeSignal` | `UpgradeCommand` | HubHUD geliştirme butonu |
+| `CrashDetectedSignal` | (HUDMediator dinler) | VehicleSimulator çarpışma tespiti |
+| `PathIntersectionWarningSignal` | (HUDMediator dinler) | Yol kesişimi oluştuğunda |
+| `LoadLevelSignal` | `LoadLevelCommand` | Seviye yükleme |
+| `UndoSignal` / `RedoSignal` | `UndoCommand` / `RedoCommand` | UI butonları |
+| `LevelCompletedSignal` | `SaveProgressCommand` | Simülasyon başarılı |
+| `TimerTickSignal` | `TimerCommand` | Her frame |
+| `GridUpdatedSignal` | (Görsel güncelleme) | Her grid değişikliğinde |
+
+### D.7 Test Kapsamı
+- **EditMode**: 34 test — grid, input, win condition, hint, solver, procedural generation
+- **PlayMode**: 10 test — full game flow, timer, session lifecycle, progress, viaduct, economy
+- CityEconomyModel ve VehicleSimulator her iki modda da bağlanmıştır

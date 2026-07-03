@@ -729,6 +729,65 @@ namespace PixelFlow.Editor
                 Undo.RegisterCreatedObjectUndo(bootObj, "Create GameBootstrapper");
             }
 
+            // 7. CameraController setup (seamless zoom-in)
+            if (Camera.main != null)
+            {
+                Camera.main.orthographic = true;
+                Camera.main.orthographicSize = 5;
+                if (Camera.main.GetComponent<PixelFlow.Services.CameraController>() == null)
+                    Camera.main.gameObject.AddComponent<PixelFlow.Services.CameraController>();
+                EditorUtility.SetDirty(Camera.main);
+            }
+
+            // 8. SplashView setup
+            SplashView splashView = Object.FindAnyObjectByType<SplashView>();
+            if (splashView == null)
+            {
+                GameObject splashObj = new GameObject("SplashView", typeof(RectTransform));
+                splashObj.transform.SetParent(canvasObj.transform, false);
+                splashView = splashObj.AddComponent<SplashView>();
+                var splashCanvas = splashObj.AddComponent<CanvasGroup>();
+                RectTransform splashRect = splashObj.GetComponent<RectTransform>();
+                splashRect.anchorMin = Vector2.zero;
+                splashRect.anchorMax = Vector2.one;
+                splashRect.sizeDelta = Vector2.zero;
+
+                GameObject splashImg = new GameObject("LogoSplash");
+                splashImg.transform.SetParent(splashObj.transform, false);
+                var img = splashImg.AddComponent<UnityEngine.UI.Image>();
+                img.color = new Color(0.12f, 0.08f, 0.22f, 1f);
+                var imgRect = img.rectTransform;
+                imgRect.anchorMin = new Vector2(0.5f, 0.4f);
+                imgRect.anchorMax = new Vector2(0.5f, 0.6f);
+                imgRect.sizeDelta = new Vector2(300f, 200f);
+
+                SerializedObject splashSo = new SerializedObject(splashView);
+                splashSo.FindProperty("_logoSplash").objectReferenceValue = img;
+                splashSo.FindProperty("_canvasGroup").objectReferenceValue = splashCanvas;
+                splashSo.ApplyModifiedProperties();
+            }
+
+            // 9. CityHubView + HubHUDView setup
+            CityHubView cityHub = Object.FindAnyObjectByType<CityHubView>();
+            if (cityHub == null)
+            {
+                GameObject hubObj = new GameObject("CityHubView");
+                hubObj.AddComponent<CityHubView>();
+                Undo.RegisterCreatedObjectUndo(hubObj, "Create CityHubView");
+            }
+
+            HubHUDView hubHUD = Object.FindAnyObjectByType<HubHUDView>();
+            if (hubHUD == null)
+            {
+                GameObject hubHUDObj = new GameObject("HubHUDView", typeof(RectTransform));
+                hubHUDObj.transform.SetParent(canvasObj.transform, false);
+                hubHUD = hubHUDObj.AddComponent<HubHUDView>();
+                RectTransform hubHUDRect = hubHUDObj.GetComponent<RectTransform>();
+                hubHUDRect.anchorMin = Vector2.zero;
+                hubHUDRect.anchorMax = Vector2.one;
+                hubHUDRect.sizeDelta = Vector2.zero;
+            }
+
             if (bootstrapper.initialLevel == null)
             {
                 string[] guids = AssetDatabase.FindAssets("t:LevelData");

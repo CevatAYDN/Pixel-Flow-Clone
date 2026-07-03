@@ -12,7 +12,8 @@ namespace PixelFlow.Commands
         [Inject] public IGridModel GridModel { get; set; }
         [Inject] public IGameSessionModel GameSessionModel { get; set; }
         [Inject] public IGameStateModel GameStateModel { get; set; }
-        [Inject] public ISignalBus SignalBus { get; set; }
+            [Inject] public ISignalBus SignalBus { get; set; }
+        [Inject] public IGameHistoryService HistoryService { get; set; }
 
         public void Execute(PlaceViaductSignal signal)
         {
@@ -37,12 +38,24 @@ namespace PixelFlow.Commands
             // Viyadük limitini kontrol et ve harca
             if (GameSessionModel.TryUseViaduct())
             {
+                HistoryService.Record(GridModel);
+
                 cell.HasViaduct = true;
                 cell.State = CellState.Bridge;
-                
-                // İlk eklenen alttan, ikinci eklenen üstten geçer
-                cell.UnderColor = cell.PathColors[0];
-                cell.OverColor = cell.PathColors[1];
+
+                var pathA = GridModel.Paths[cell.PathColors[0]];
+                var pathB = GridModel.Paths[cell.PathColors[1]];
+                var dirA = BridgeValidationUtility.GetCrossingDirection(pathA, pos);
+                if (dirA.x != 0)
+                {
+                    cell.UnderColor = cell.PathColors[0];
+                    cell.OverColor = cell.PathColors[1];
+                }
+                else
+                {
+                    cell.UnderColor = cell.PathColors[1];
+                    cell.OverColor = cell.PathColors[0];
+                }
 
                 Debug.Log($"[PlaceViaductCommand] Placed viaduct at {pos}. Under: {cell.UnderColor}, Over: {cell.OverColor}. Remaining viaducts: {GameSessionModel.AvailableViaducts}");
                 

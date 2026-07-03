@@ -1,5 +1,4 @@
 using System;
-using PixelFlow.Services;
 using System.Threading;
 using System.Threading.Tasks;
 using Nexus.Core;
@@ -14,11 +13,13 @@ namespace PixelFlow.Models
         bool IsSessionActive { get; }
         int AvailableViaducts { get; }
         int MaxViaducts { get; }
+        float SimulationTimeRemaining { get; set; }
 
         event Action<int> OnScoreChanged;
         event Action<float> OnTimeChanged;
         event Action<int> OnStarsChanged;
         event Action<int> OnViaductsChanged;
+        event Action<float> OnSimulationTimerChanged;
 
         void StartSession();
         void StartSession(int maxViaducts);
@@ -28,6 +29,7 @@ namespace PixelFlow.Models
         void ResetSession();
         bool TryUseViaduct();
         void RefundViaduct();
+        void SetSimulationTimer(float remaining);
     }
 
     public class GameSessionModel : IGameSessionModel, IReactiveModel
@@ -38,15 +40,17 @@ namespace PixelFlow.Models
         public bool IsSessionActive { get; private set; }
         public int AvailableViaducts { get; private set; }
         public int MaxViaducts { get; private set; }
+        public float SimulationTimeRemaining { get; set; }
 
         public event Action<int> OnScoreChanged;
         public event Action<float> OnTimeChanged;
         public event Action<int> OnStarsChanged;
         public event Action<int> OnViaductsChanged;
+        public event Action<float> OnSimulationTimerChanged;
 
         public void StartSession()
         {
-            StartSession(3); // Default limit is 3
+            StartSession(3);
         }
 
         public void StartSession(int maxViaducts)
@@ -77,7 +81,7 @@ namespace PixelFlow.Models
         public void SetStars(int stars)
         {
             if (stars == StarsEarned) return;
-            StarsEarned = Math.Max(0, Math.Min(stars, 3));
+            StarsEarned = System.Math.Max(0, System.Math.Min(stars, 3));
             OnStarsChanged?.Invoke(StarsEarned);
         }
 
@@ -112,5 +116,11 @@ namespace PixelFlow.Models
         }
 
         public ValueTask OnBind(CancellationToken ct) => default;
+
+        public void SetSimulationTimer(float remaining)
+        {
+            SimulationTimeRemaining = remaining;
+            OnSimulationTimerChanged?.Invoke(remaining);
+        }
     }
 }

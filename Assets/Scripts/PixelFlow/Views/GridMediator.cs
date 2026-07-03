@@ -73,14 +73,17 @@ namespace PixelFlow.Views
 
             if (GridModel.Width <= 0 || GridModel.Height <= 0) return;
 
+            Vector2Int crashPos = GridModel.LastCrashPosition;
             ComputeChangedCells();
             if (_changedCells.Count > 0)
             {
-                View.UpdateDifferential(GridModel.Grid, SettingsModel.CurrentTheme, _changedCells);
+                View.UpdateDifferential(GridModel.Grid, SettingsModel.CurrentTheme, _changedCells, crashPos);
             }
 
-            View.UpdatePathVisuals(GridModel.Paths, GridModel.Grid);
+            View.UpdatePathVisuals(GridModel.Paths, GridModel.Grid, crashPos, GridModel.CrashColorA, GridModel.CrashColorB);
             CacheCellState();
+
+            GridModel.LastCrashPosition = new Vector2Int(-1, -1);
         }
 
         private void ComputeChangedCells()
@@ -136,8 +139,18 @@ namespace PixelFlow.Views
         {
             CacheCellState();
             View.InitializeGrid(GridModel.Width, GridModel.Height);
-            View.UpdateGridVisuals(GridModel.Grid, GridModel.Width, GridModel.Height, SettingsModel.CurrentTheme, GridModel.Paths);
+            View.UpdateGridVisuals(GridModel.Grid, GridModel.Width, GridModel.Height, SettingsModel.CurrentTheme, GridModel.Paths, GridModel.LastCrashPosition);
             View.CenterCamera(GridModel.Width, GridModel.Height);
+
+            var camCtrl = Camera.main != null ? Camera.main.GetComponent<PixelFlow.Services.CameraController>() : null;
+            if (camCtrl != null)
+            {
+                float cx = (GridModel.Width - 1) * 0.5f;
+                float cy = (GridModel.Height - 1) * 0.5f;
+                float size = Camera.main.orthographicSize;
+                camCtrl.SetPuzzleView(cx, cy, size);
+                camCtrl.TransitionToPuzzle();
+            }
         }
     }
 }

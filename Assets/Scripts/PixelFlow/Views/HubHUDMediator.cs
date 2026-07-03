@@ -14,6 +14,7 @@ namespace PixelFlow.Views
         [Inject] public ILevelModel LevelModel { get; set; }
         [Inject] public IProgressModel ProgressModel { get; set; }
         [Inject] public ILevelProgressionService ProgressionService { get; set; }
+        [Inject] public ITaxCollectionService TaxCollectionService { get; set; }
 
         protected override void OnBind()
         {
@@ -57,7 +58,7 @@ namespace PixelFlow.Views
 
         private void HandleCollectTaxes()
         {
-            CityEconomyModel.CollectTaxes();
+            TaxCollectionService.CollectNow();
         }
 
         private void HandlePlayLevel()
