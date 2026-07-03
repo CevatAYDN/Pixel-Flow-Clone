@@ -15,6 +15,11 @@ namespace PixelFlow.Commands
         [Inject] public IGameHistoryService HistoryService { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public IGameStateModel GameStateModel { get; set; }
+        [Inject] public IGameSessionModel GameSessionModel { get; set; }
+        [Inject] public ILevelModel LevelModel { get; set; }
+        [Inject] public ISaveThrottler SaveThrottler { get; set; }
+        [Inject] public ICrisisAdService CrisisAdService { get; set; }
+        [Inject] public IHapticService HapticService { get; set; }
 
         public void Execute(UndoSignal signal)
         {
@@ -26,9 +31,13 @@ namespace PixelFlow.Commands
             {
                 if (state == GameState.Paused)
                 {
+                    GameSessionModel.MarkCrisisUndoUsed();
                     GameStateModel.SetState(GameState.Playing);
+                    CrisisAdService.RecordCrisisAttempt();
                 }
                 SignalBus.Fire(new GridUpdatedSignal());
+                SaveThrottler?.TryRequestSave(GridModel, GameSessionModel, LevelModel);
+                HapticService.Vibrate(HapticType.Light);
             }
         }
 

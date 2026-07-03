@@ -18,6 +18,7 @@ namespace PixelFlow.Editor.Tests
     public sealed class InMemoryPlayerPrefsService : IPlayerPrefsService
     {
         private readonly Dictionary<string, int> _store = new Dictionary<string, int>();
+        private readonly Dictionary<string, string> _strings = new Dictionary<string, string>();
 
         public int GetInt(string key, int defaultValue = 0)
         {
@@ -37,6 +38,16 @@ namespace PixelFlow.Editor.Tests
         public void SetBool(string key, bool value)
         {
             SetInt(key, value ? 1 : 0);
+        }
+
+        public string GetString(string key, string defaultValue = "")
+        {
+            return _strings.TryGetValue(key, out var val) ? val : defaultValue;
+        }
+
+        public void SetString(string key, string value)
+        {
+            _strings[key] = value;
         }
 
         public void Save() { }
@@ -61,6 +72,13 @@ namespace PixelFlow.Editor.Tests
                 builder.Bind<IHintService, HintService>();
                 builder.Bind<IVehicleSimulator, VehicleSimulator>();
                 builder.Bind<ITaxCollectionService, TaxCollectionService>();
+                builder.Bind<ISaveThrottler, SaveThrottler>();
+                builder.Bind<IHapticService, HapticService>();
+                builder.Bind<ICrisisAdService, CrisisAdService>();
+                builder.Bind<IObstacleService, ObstacleService>();
+                builder.Bind<IOverclockService, OverclockService>();
+                builder.Bind<ITutorialDriver, TutorialDriver>();
+                builder.Bind<IAudioService, AudioService>();
 
                 builder.BindModel<IGridModel, GridModel>();
                 builder.BindModel<ILevelModel, LevelModel>();
@@ -71,6 +89,7 @@ namespace PixelFlow.Editor.Tests
                 builder.BindModel<ISettingsModel, SettingsModel>();
                 builder.BindModel<ISoundModel, SoundModel>();
                 builder.BindModel<ICityEconomyModel, CityEconomyModel>();
+                builder.BindModel<ITutorialModel, TutorialModel>();
                 builder.Bind<ILevelProgressionService, LevelProgressionService>();
 
                 // Recovery: komut hatalarında 3 kez dene
@@ -1422,6 +1441,263 @@ namespace PixelFlow.Editor.Tests
                 Assert.IsTrue(result.solutions != null && result.solutions.Count > 0,
                     "If generated, level must be solvable");
             }
+        }
+
+        // ---------------------------------------------------------------
+        // NarrowPass queue logic (GDD §9.4)
+        // ---------------------------------------------------------------
+
+        [Test]
+        public void NarrowPass_FreeCell_AllowsAnyColor()
+        {
+            var obstacle = _ctx.Context.Container.Resolve<IObstacleService>();
+            var level = ScriptableObject.CreateInstance<LevelData>();
+            level.width = 3; level.height = 1;
+            level.obstacles = new List<ObstacleData>
+            {
+                new ObstacleData { position = new Vector2Int(1, 0), type = ObstacleType.NarrowPass }
+            };
+            obstacle.InitializeFromLevel(level);
+
+            Assert.IsTrue(obstacle.IsNarrowPass(new Vector2Int(1, 0)));
+            Assert.IsTrue(obstacle.CanVehicleEnterNarrowPass(new Vector2Int(1, 0), ColorType.Red));
+            Assert.IsTrue(obstacle.CanVehicleEnterNarrowPass(new Vector2Int(1, 0), ColorType.Blue));
+        }
+
+        [Test]
+        public void NarrowPass_OccupiedByColor_RejectsOtherColor()
+        {
+            var obstacle = _ctx.Context.Container.Resolve<IObstacleService>();
+            var level = ScriptableObject.CreateInstance<LevelData>();
+            level.width = 3; level.height = 1;
+            level.obstacles = new List<ObstacleData>
+            {
+                new ObstacleData { position = new Vector2Int(1, 0), type = ObstacleType.NarrowPass }
+            };
+            obstacle.InitializeFromLevel(level);
+
+            obstacle.OnVehicleEnteredNarrowPass(new Vector2Int(1, 0), ColorType.Red);
+            Assert.IsFalse(obstacle.CanVehicleEnterNarrowPass(new Vector2Int(1, 0), ColorType.Blue));
+            Assert.IsTrue(obstacle.CanVehicleEnterNarrowPass(new Vector2Int(1, 0), ColorType.Red));
+        }
+
+        [Test]
+        public void NarrowPass_VehicleLeaves_CellBecomesFree()
+        {
+            var obstacle = _ctx.Context.Container.Resolve<IObstacleService>();
+            var level = ScriptableObject.CreateInstance<LevelData>();
+            level.width = 3; level.height = 1;
+            level.obstacles = new List<ObstacleData>
+            {
+                new ObstacleData { position = new Vector2Int(1, 0), type = ObstacleType.NarrowPass }
+            };
+            obstacle.InitializeFromLevel(level);
+
+            obstacle.OnVehicleEnteredNarrowPass(new Vector2Int(1, 0), ColorType.Red);
+            obstacle.OnVehicleLeftNarrowPass(new Vector2Int(1, 0), ColorType.Red);
+            Assert.IsTrue(obstacle.CanVehicleEnterNarrowPass(new Vector2Int(1, 0), ColorType.Blue));
+        }
+
+        [Test]
+        public void NarrowPass_LeaveWithWrongColor_DoesNotFree()
+        {
+            var obstacle = _ctx.Context.Container.Resolve<IObstacleService>();
+            var level = ScriptableObject.CreateInstance<LevelData>();
+            level.width = 3; level.height = 1;
+            level.obstacles = new List<ObstacleData>
+            {
+                new ObstacleData { position = new Vector2Int(1, 0), type = ObstacleType.NarrowPass }
+            };
+            obstacle.InitializeFromLevel(level);
+
+            obstacle.OnVehicleEnteredNarrowPass(new Vector2Int(1, 0), ColorType.Red);
+            obstacle.OnVehicleLeftNarrowPass(new Vector2Int(1, 0), ColorType.Blue);
+            Assert.IsFalse(obstacle.CanVehicleEnterNarrowPass(new Vector2Int(1, 0), ColorType.Blue));
+        }
+
+        // ---------------------------------------------------------------
+        // CloudSave conflict resolution (GDD §10.3)
+        // ---------------------------------------------------------------
+
+        [Test]
+        public void CloudSave_NoCloud_ReturnsLocal()
+        {
+            var prefs = _ctx.Context.Container.Resolve<IPlayerPrefsService>();
+            var local = new Models.CloudSaveRecord
+            {
+                LocalSaveJson = "local_json",
+                TimestampUnix = 100
+            };
+            var cloud = new Models.CloudSaveRecord();
+            string result = Models.CloudSaveManager.ResolveConflict(local, cloud);
+            Assert.AreEqual("local_json", result);
+        }
+
+        [Test]
+        public void CloudSave_LocalNewer_ReturnsLocal()
+        {
+            var local = new Models.CloudSaveRecord
+            {
+                LocalSaveJson = "local_newer",
+                TimestampUnix = 200
+            };
+            var cloud = new Models.CloudSaveRecord
+            {
+                CloudSaveJson = "cloud_older",
+                TimestampUnix = 100
+            };
+            string result = Models.CloudSaveManager.ResolveConflict(local, cloud);
+            Assert.AreEqual("local_newer", result);
+        }
+
+        [Test]
+        public void CloudSave_CloudNewer_ReturnsCloud()
+        {
+            var local = new Models.CloudSaveRecord
+            {
+                LocalSaveJson = "local_older",
+                TimestampUnix = 100
+            };
+            var cloud = new Models.CloudSaveRecord
+            {
+                CloudSaveJson = "cloud_newer",
+                TimestampUnix = 200
+            };
+            string result = Models.CloudSaveManager.ResolveConflict(local, cloud);
+            Assert.AreEqual("cloud_newer", result);
+        }
+
+        [Test]
+        public void CloudSave_PlayerId_Persists()
+        {
+            var prefs = _ctx.Context.Container.Resolve<IPlayerPrefsService>();
+            string id1 = Models.CloudSaveManager.GetOrCreatePlayerId(prefs);
+            string id2 = Models.CloudSaveManager.GetOrCreatePlayerId(prefs);
+            Assert.IsFalse(string.IsNullOrEmpty(id1));
+            Assert.AreEqual(id1, id2, "PlayerId should be stable across calls");
+        }
+
+        [Test]
+        public void CloudSave_SyncToCloud_RoundTrips()
+        {
+            var prefs = _ctx.Context.Container.Resolve<IPlayerPrefsService>();
+            Models.CloudSaveManager.SyncToCloud(prefs, "save_v1", 1);
+            var loaded = Models.CloudSaveManager.LoadCloudRecord(prefs);
+            Assert.AreEqual("save_v1", loaded.CloudSaveJson);
+            Assert.AreEqual(1, loaded.CloudVersion);
+        }
+
+        // ---------------------------------------------------------------
+        // CellData.ObstacleType round-trip (GDD §9.4)
+        // ---------------------------------------------------------------
+
+        [Test]
+        public void CellData_ObstacleType_DefaultsToNone()
+        {
+            var cell = new CellData { State = CellState.Empty, Color = ColorType.None };
+            Assert.AreEqual(ObstacleType.None, cell.ObstacleType);
+        }
+
+        [Test]
+        public void LoadLevel_PopulatesObstacleType()
+        {
+            var level = ScriptableObject.CreateInstance<LevelData>();
+            level.levelIndex = 0;
+            level.width = 3; level.height = 1;
+            level.obstacles = new List<ObstacleData>
+            {
+                new ObstacleData { position = new Vector2Int(1, 0), type = ObstacleType.Lake }
+            };
+            level.initialNodes = new List<GridNode>
+            {
+                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
+                new GridNode { position = new Vector2Int(2, 0), color = ColorType.Red }
+            };
+
+            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
+            var grid = _ctx.GetModel<IGridModel>();
+            Assert.AreEqual(ObstacleType.Lake, grid.Grid[1, 0].ObstacleType);
+            Assert.AreEqual(CellState.Obstacle, grid.Grid[1, 0].State);
+        }
+
+        // ---------------------------------------------------------------
+        // Crisis mechanics (GDD §2.4)
+        // ---------------------------------------------------------------
+
+        [Test]
+        public void Crisis_UndoUsed_DecrementsMaxViaducts()
+        {
+            var session = _ctx.GetModel<IGameSessionModel>();
+            session.StartSession(5);
+            int maxBefore = session.MaxViaducts;
+            session.MarkCrisisUndoUsed();
+            Assert.AreEqual(maxBefore - 1, session.MaxViaducts);
+            Assert.IsTrue(session.HasUsedCrisisUndo);
+        }
+
+        [Test]
+        public void Crisis_UndoUsed_MinimumOne()
+        {
+            var session = _ctx.GetModel<IGameSessionModel>();
+            session.StartSession(1);
+            session.MarkCrisisUndoUsed();
+            Assert.GreaterOrEqual(session.MaxViaducts, 1, "MaxViaducts should never go below 1");
+        }
+
+        [Test]
+        public void Crisis_RetryCount_IncrementsAndFires()
+        {
+            _ctx.Register<RequestInterstitialAdSignal>();
+            _ctx.Register<CrisisRetryExhaustedSignal>();
+            _ctx.Register<ViaductExhaustedSignal>();
+
+            var crisis = _ctx.Context.Container.Resolve<ICrisisAdService>();
+            var session = _ctx.GetModel<IGameSessionModel>();
+            session.StartSession(3);
+
+            crisis.RecordCrisisAttempt();
+            crisis.RecordCrisisAttempt();
+            crisis.RecordCrisisAttempt();
+
+            Assert.AreEqual(3, session.RetryCount);
+        }
+
+        [Test]
+        public void Crisis_BonusViaduct_IncrementsMaxAndAvailable()
+        {
+            var session = _ctx.GetModel<IGameSessionModel>();
+            session.StartSession(3);
+            int maxBefore = session.MaxViaducts;
+            int availBefore = session.AvailableViaducts;
+            session.AddBonusViaduct(1);
+            Assert.AreEqual(maxBefore + 1, session.MaxViaducts);
+            Assert.AreEqual(availBefore + 1, session.AvailableViaducts);
+        }
+
+        // ---------------------------------------------------------------
+        // Save/Restore round-trip (GDD §10.3)
+        // ---------------------------------------------------------------
+
+        [Test]
+        public void SaveRestore_PreservesRetryCount()
+        {
+            var grid = _ctx.GetModel<IGridModel>();
+            var session = _ctx.GetModel<IGameSessionModel>();
+            var level = _ctx.GetModel<ILevelModel>();
+            var levelData = ScriptableObject.CreateInstance<LevelData>();
+            levelData.levelIndex = 0;
+            levelData.width = 3; levelData.height = 3;
+            level.SetLevel(levelData);
+            grid.Initialize(3, 3);
+            session.StartSession(3);
+            session.IncrementRetryCount();
+            session.IncrementRetryCount();
+
+            GridStateSerializer.Save(grid, session, level);
+            var loaded = GridStateSerializer.Load();
+            Assert.IsNotNull(loaded);
+            session.ApplySave(loaded.availableViaducts, loaded.maxViaducts, loaded.elapsedTime, loaded.score, loaded.stars);
+            Assert.AreEqual(0, session.RetryCount, "RetryCount should reset on new level load");
         }
     }
 }

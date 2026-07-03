@@ -34,6 +34,7 @@ namespace PixelFlow.Views
 
             View.OnHintClicked += HandleHintClicked;
             View.OnNextLevelClicked += HandleNextLevelClicked;
+            View.OnReturnToHubClicked += HandleReturnToHubClicked;
             View.OnUndoClicked += HandleUndoClicked;
             View.OnRedoClicked += HandleRedoClicked;
             View.OnThemeDarkClicked += _themeDarkHandler;
@@ -74,6 +75,7 @@ namespace PixelFlow.Views
         {
             View.OnHintClicked -= HandleHintClicked;
             View.OnNextLevelClicked -= HandleNextLevelClicked;
+            View.OnReturnToHubClicked -= HandleReturnToHubClicked;
             View.OnUndoClicked -= HandleUndoClicked;
             View.OnRedoClicked -= HandleRedoClicked;
             View.OnSimulateDebugPressed -= HandleSimulateDebugPressed;
@@ -282,14 +284,25 @@ namespace PixelFlow.Views
 
             try
             {
-                // 3 saniye bekle ve sonraki seviyeye otomatik geç
+                // GDD §5.1: Bölüm tamamlandıktan sonra oyuncu "Hub'a Dön" seçebilir
+                // veya 3 saniye sonra otomatik hub'a dönüş yapılır.
+                // "Sonraki" butonu açıkça basılırsa HandleNextLevelClicked çağrılır.
                 await System.Threading.Tasks.Task.Delay(3000);
-                HandleNextLevelClicked();
+                if (GameStateModel.CurrentState == GameState.LevelCompleted)
+                {
+                    SignalBus.Fire(new RequestReturnToHubSignal());
+                }
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[HUDMediator] Auto progression failed: {ex.Message}");
+                Debug.LogError($"[HUDMediator] Auto return-to-hub failed: {ex.Message}");
             }
+        }
+
+        private void HandleReturnToHubClicked()
+        {
+            if (GameStateModel.CurrentState != GameState.LevelCompleted) return;
+            SignalBus.Fire(new RequestReturnToHubSignal());
         }
 
         private void HandleThemeChanged(ThemeChangedSignal signal)

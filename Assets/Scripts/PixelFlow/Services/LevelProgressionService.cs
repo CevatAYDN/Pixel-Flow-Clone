@@ -3,6 +3,7 @@ using Nexus.Core;
 using PixelFlow.Data;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace PixelFlow.Services
 {
@@ -28,7 +29,6 @@ namespace PixelFlow.Services
     {
         private readonly ProceduralLevelGenerator _generator;
         private readonly Dictionary<int, LevelData> _generatedCache;
-        private readonly List<DifficultyParams> _difficultyCurve;
 
         public int LevelsPerDifficulty => 5;
 
@@ -39,23 +39,34 @@ namespace PixelFlow.Services
         {
             _generator = generator;
             _generatedCache = new Dictionary<int, LevelData>();
-
-            _difficultyCurve = new List<DifficultyParams>
-            {
-                DifficultyParams.Easy,     //  0-4   (index 1-5)
-                DifficultyParams.Medium,   //  5-9   (index 6-10)
-                DifficultyParams.Hard,     // 10-14  (index 11-15)
-                DifficultyParams.Expert,   // 15-19  (index 16-20)
-                DifficultyParams.Master,   // 20+    (index 21+)
-            };
         }
 
         public DifficultyParams GetDifficultyForLevel(int levelIndex)
         {
-            int tier = levelIndex / LevelsPerDifficulty;
-            if (tier >= _difficultyCurve.Count)
-                tier = _difficultyCurve.Count - 1;
-            return _difficultyCurve[tier];
+            // GDD §3.5: 4 faz progresyon eğrisi.
+            // Faz 1: 0-11 (Seviye 1-12), 5×5→6×6, 1-2 renk, kaza yok, viyadük yok
+            // Faz 2: 12-27 (Seviye 13-28), 7×7, 2-3 renk, kaza+viyadük (3 hak)
+            // Faz 3: 28-44 (Seviye 29-45), 8-9×8-9, 3-4 renk, engeller, full coverage
+            // Faz 4: 45-59 (Seviye 46-60), 10×10, 4-5 renk, tüm engeller
+            var phase = PhaseDefinition.GetPhaseForLevel(levelIndex);
+            return PhaseToDifficulty(phase, levelIndex);
+        }
+
+        private static DifficultyParams PhaseToDifficulty(PhaseDefinition phase, int levelIndex)
+        {
+            int span = phase.EndLevelIndex - phase.StartLevelIndex + 1;
+            float progress = span > 0 ? (float)(levelIndex - phase.StartLevelIndex) / span : 0f;
+
+            int gridSize = Mathf.RoundToInt(Mathf.Lerp(phase.GridSizeMin, phase.GridSizeMax, progress));
+            int colorCount = Mathf.RoundToInt(Mathf.Lerp(phase.ColorCountMin, phase.ColorCountMax, progress));
+            int bridgeCount = Mathf.RoundToInt(Mathf.Lerp(phase.BridgeCountMin, phase.BridgeCountMax, progress));
+
+            return new DifficultyParams(
+                gridSize, gridSize, colorCount, bridgeCount,
+                phase.RequireFullCoverage,
+                phase.ObstaclesEnabled,
+                phase.FerryEnabled,
+                phase.NarrowPassEnabled);
         }
 
         public LevelData GetOrGenerateLevel(int levelIndex)

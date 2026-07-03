@@ -16,6 +16,9 @@ namespace PixelFlow.Commands
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public IGameHistoryService HistoryService { get; set; }
         [Inject] public ICityEconomyModel CityEconomyModel { get; set; }
+        [Inject] public IObstacleService ObstacleService { get; set; }
+        [Inject] public ISaveThrottler SaveThrottler { get; set; }
+        [Inject] public ITutorialDriver TutorialDriver { get; set; }
 
         public void Execute(LoadLevelSignal signal)
         {
@@ -64,6 +67,7 @@ namespace PixelFlow.Commands
                     {
                         var cell = GridModel.Grid[obs.position.x, obs.position.y];
                         cell.State = CellState.Obstacle;
+                        cell.ObstacleType = obs.type;
                     }
                 }
             }
@@ -72,9 +76,12 @@ namespace PixelFlow.Commands
             int totalViaducts = signal.LevelToLoad.viaductLimit + (CityEconomyModel != null ? CityEconomyModel.ViaductBonus : 0);
             GameSessionModel.StartSession(totalViaducts);
             HintModel.ResetSessionHints();
+            ObstacleService?.InitializeFromLevel(signal.LevelToLoad);
+            TutorialDriver?.OnLevelLoaded(signal.LevelToLoad.levelIndex);
 
             SignalBus.Fire(new GridUpdatedSignal());
             GameStateModel.SetState(GameState.Playing);
+            SaveThrottler?.TryRequestSave(GridModel, GameSessionModel, LevelModel);
         }
 
         public void Reset()

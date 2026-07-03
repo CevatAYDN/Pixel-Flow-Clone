@@ -21,6 +21,8 @@ namespace PixelFlow.Views
         [SerializeField] private Text _completionScoreText;
         [SerializeField] private Text _completionStarsText;
         [SerializeField] private Button _nextLevelButton;
+        [SerializeField] private Button _returnToHubButton;
+        [SerializeField] private GameObject _bloomFlashOverlay;
 
         // Undo/Redo butonları
         [SerializeField] private Button _undoButton;
@@ -34,6 +36,7 @@ namespace PixelFlow.Views
 
         public event Action OnHintClicked;
         public event Action OnNextLevelClicked;
+        public event Action OnReturnToHubClicked;
         public event Action OnUndoClicked;
         public event Action OnRedoClicked;
         public event Action OnThemeDarkClicked;
@@ -53,6 +56,8 @@ namespace PixelFlow.Views
                 _hintButton.onClick.AddListener(() => OnHintClicked?.Invoke());
             if (_nextLevelButton != null)
                 _nextLevelButton.onClick.AddListener(() => OnNextLevelClicked?.Invoke());
+            if (_returnToHubButton != null)
+                _returnToHubButton.onClick.AddListener(() => OnReturnToHubClicked?.Invoke());
             if (_undoButton != null)
                 _undoButton.onClick.AddListener(() => OnUndoClicked?.Invoke());
             if (_redoButton != null)
@@ -75,6 +80,8 @@ namespace PixelFlow.Views
                 _hintButton.onClick.RemoveAllListeners();
             if (_nextLevelButton != null)
                 _nextLevelButton.onClick.RemoveAllListeners();
+            if (_returnToHubButton != null)
+                _returnToHubButton.onClick.RemoveAllListeners();
             if (_undoButton != null)
                 _undoButton.onClick.RemoveAllListeners();
             if (_redoButton != null)
@@ -170,6 +177,27 @@ namespace PixelFlow.Views
             {
                 Debug.LogWarning("[HUDView] _completionPanel is null in Inspector! Cannot show level completed panel.");
             }
+
+            if (_bloomFlashOverlay != null)
+            {
+                StartCoroutine(DoBloomFlash());
+            }
+        }
+
+        private System.Collections.IEnumerator DoBloomFlash()
+        {
+            _bloomFlashOverlay.SetActive(true);
+            var img = _bloomFlashOverlay.GetComponent<UnityEngine.UI.Image>();
+            if (img == null) yield break;
+            float duration = 0.6f;
+            float t = 0f;
+            while (t < duration)
+            {
+                t += Time.deltaTime;
+                img.color = new Color(1f, 0.95f, 0.6f, Mathf.Lerp(0.8f, 0f, t / duration));
+                yield return null;
+            }
+            _bloomFlashOverlay.SetActive(false);
         }
 
         private System.Collections.IEnumerator AnimateCompletion(int score, int stars)

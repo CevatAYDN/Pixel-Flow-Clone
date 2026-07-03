@@ -29,6 +29,7 @@ namespace PixelFlow.Services
         [Inject] public ISettingsModel SettingsModel { get; set; }
 
         private readonly Dictionary<SfxType, AudioSource> _sources = new Dictionary<SfxType, AudioSource>();
+        private readonly Dictionary<SfxType, AudioClip> _clips = new Dictionary<SfxType, AudioClip>();
         private GameObject _audioRoot;
 
         public ValueTask InitializeAsync(CancellationToken ct)
@@ -43,13 +44,35 @@ namespace PixelFlow.Services
                 child.transform.SetParent(_audioRoot.transform);
                 var source = child.AddComponent<AudioSource>();
                 source.playOnAwake = false;
-                source.loop = (type == SfxType.VehicleEngine || type == SfxType.AmbientHub || 
-                               type == SfxType.AmbientPuzzle || type == SfxType.AmbientOverclock || 
+                source.loop = (type == SfxType.VehicleEngine || type == SfxType.AmbientHub ||
+                               type == SfxType.AmbientPuzzle || type == SfxType.AmbientOverclock ||
                                type == SfxType.MainTheme);
                 _sources[type] = source;
+                _clips[type] = CreateClipForType(type);
+                if (_clips[type] != null) source.clip = _clips[type];
             }
 
             return default;
+        }
+
+        private static AudioClip CreateClipForType(SfxType type)
+        {
+            switch (type)
+            {
+                case SfxType.Crash: return ProceduralAudioFactory.CreateCrash();
+                case SfxType.Horn: return ProceduralAudioFactory.CreateHorn();
+                case SfxType.ViaductPlace: return ProceduralAudioFactory.CreateViaductPlace();
+                case SfxType.LevelComplete: return ProceduralAudioFactory.CreateLevelComplete();
+                case SfxType.CoinCollect: return ProceduralAudioFactory.CreateCoinCollect();
+                case SfxType.UIClick: return ProceduralAudioFactory.CreateUIClick();
+                case SfxType.AmbientHub: return ProceduralAudioFactory.CreateAmbientHub();
+                case SfxType.AmbientPuzzle: return ProceduralAudioFactory.CreateAmbientPuzzle();
+                case SfxType.AmbientOverclock: return ProceduralAudioFactory.CreateAmbientOverclock();
+                case SfxType.MainTheme: return ProceduralAudioFactory.CreateMainTheme();
+                case SfxType.VehicleEngine: return ProceduralAudioFactory.CreateVehicleEngine();
+                case SfxType.PathDraw: return ProceduralAudioFactory.CreatePathDraw();
+                default: return null;
+            }
         }
 
         public void OnDispose()

@@ -51,34 +51,12 @@ namespace PixelFlow.Services
             level.width = param.gridWidth;
             level.height = param.gridHeight;
             level.requireFullGridCoverage = param.requireFullGridCoverage;
+            level.viaductLimit = param.bridgeCount;
 
-            // Bridge pozisyonlarını seç
-            var bridges = new HashSet<Vector2Int>();
-            if (param.bridgeCount > 0)
-            {
-                int attempts = 0;
-                while (bridges.Count < param.bridgeCount && attempts < param.gridWidth * param.gridHeight * 2)
-                {
-                    attempts++;
-                    int bx = _rng.Next(1, param.gridWidth - 1);
-                    int by = _rng.Next(1, param.gridHeight - 1);
-                    var bp = new Vector2Int(bx, by);
-                    if (bridges.Add(bp)) { }
-                }
-            }
-            level.bridgePositions = bridges.ToList();
-
-            // Kullanılabilir renkleri belirle
-            var availableColors = new List<ColorType>
-            {
-                ColorType.Red, ColorType.Green, ColorType.Blue,
-                ColorType.Yellow, ColorType.Orange, ColorType.Purple,
-                ColorType.Cyan, ColorType.Magenta
-            };
+            var availableColors = new List<ColorType>(GddColorPalette.Standard);
 
             int colorCount = Mathf.Min(param.colorCount, availableColors.Count);
 
-            // Renkleri seç
             var selectedColors = new List<ColorType>();
             var pool = new List<ColorType>(availableColors);
             for (int i = 0; i < colorCount; i++)
@@ -88,41 +66,133 @@ namespace PixelFlow.Services
                 pool.RemoveAt(idx);
             }
 
-            // Node pozisyonları: her renk için 2 node
-            var usedPositions = new HashSet<Vector2Int>(bridges);
+            var usedPositions = new HashSet<Vector2Int>();
             var nodes = new List<GridNode>();
+            bool nodesOk = true;
 
             foreach (var color in selectedColors)
             {
                 var positions = PickTwoPositions(param.gridWidth, param.gridHeight, usedPositions);
-                if (positions == null) return null;
+                if (positions == null) { nodesOk = false; break; }
 
                 nodes.Add(new GridNode { position = positions.Value.pos1, color = color });
                 nodes.Add(new GridNode { position = positions.Value.pos2, color = color });
                 usedPositions.Add(positions.Value.pos1);
                 usedPositions.Add(positions.Value.pos2);
             }
+            if (!nodesOk) return null;
             level.initialNodes = nodes;
+            _lastLevelNodes = nodes;
 
-            // Solver ile çözümü doğrula
-            if (_solver.Solve(level, out var solutions))
+            if (!_solver.Solve(level, out var solutions))
             {
-                if (!ValidateSolutions(solutions, nodes))
-                {
-                    Debug.LogWarning("[ProceduralLevelGenerator] Solver produced invalid solution (path through node). Retrying...");
-                    return null;
-                }
-
-                level.solutions = solutions.Select(kvp => new PathSolution
-                {
-                    color = kvp.Key,
-                    pathPositions = new List<Vector2Int>(kvp.Value)
-                }).ToList();
-                return level;
+                return null;
             }
 
-            return null;
+            if (!ValidateSolutions(solutions, nodes))
+            {
+                return null;
+            }
+
+            var bridges = new HashSet<Vector2Int>();
+            if (param.bridgeCount > 0)
+            {
+                var crossings = FindPathCrossings(solutions);
+                foreach (var cross in crossings)
+                {
+                    if (bridges.Count >= param.bridgeCount) break;
+                    bridges.Add(cross);
+                }
+            }
+            level.bridgePositions = bridges.ToList();
+
+            if (param.obstaclesEnabled || param.ferryEnabled || param.narrowPassEnabled)
+            {
+                level.obstacles = GenerateObstacles(param, bridges);
+            }
+            else
+            {
+                level.obstacles = new List<ObstacleData>();
+            }
+
+            level.solutions = solutions.Select(kvp => new PathSolution
+            {
+                color = kvp.Key,
+                pathPositions = new List<Vector2Int>(kvp.Value)
+            }).ToList();
+
+            return level;
         }
+
+        private List<Vector2Int> FindPathCrossings(Dictionary<ColorType, List<Vector2Int>> solutions)
+        {
+            var crossings = new List<Vector2Int>();
+            var seen = new HashSet<Vector2Int>();
+            var pathLookup = new Dictionary<Vector2Int, List<ColorType>>();
+
+            foreach (var kvp in solutions)
+            {
+                foreach (var pos in kvp.Value)
+                {
+                    if (!pathLookup.TryGetValue(pos, out var list))
+                    {
+                        list = new List<ColorType>();
+                        pathLookup[pos] = list;
+                    }
+                    list.Add(kvp.Key);
+                }
+            }
+
+            foreach (var kvp in pathLookup)
+            {
+                if (kvp.Value.Count >= 2 && !seen.Contains(kvp.Key))
+                {
+                    crossings.Add(kvp.Key);
+                    seen.Add(kvp.Key);
+                }
+            }
+            return crossings;
+        }
+
+        private List<ObstacleData> GenerateObstacles(DifficultyParams param, HashSet<Vector2Int> bridges)
+        {
+            var obstacles = new List<ObstacleData>();
+            int target = Mathf.Min(2 + (param.gridWidth * param.gridHeight) / 25, 6);
+
+            int safety = 200;
+            while (obstacles.Count < target && safety-- > 0)
+            {
+                int ox = _rng.Next(1, param.gridWidth - 1);
+                int oy = _rng.Next(1, param.gridHeight - 1);
+                var pos = new Vector2Int(ox, oy);
+                if (bridges.Contains(pos)) continue;
+                bool already = obstacles.Exists(o => o.position == pos);
+                if (already) continue;
+                bool nearNode = false;
+                foreach (var node in _lastLevelNodes)
+                {
+                    if (Vector2Int.Distance(node.position, pos) < 1.5f) { nearNode = true; break; }
+                }
+                if (nearNode) continue;
+
+                ObstacleType type = ObstacleType.Construction;
+                if (param.ferryEnabled && _rng.Next(100) < 30) type = ObstacleType.Ferry;
+                else if (param.narrowPassEnabled && _rng.Next(100) < 20) type = ObstacleType.NarrowPass;
+                else if (param.obstaclesEnabled)
+                {
+                    int r = _rng.Next(100);
+                    if (r < 30) type = ObstacleType.Lake;
+                    else if (r < 55) type = ObstacleType.Park;
+                    else if (r < 80) type = ObstacleType.Construction;
+                    else type = ObstacleType.OneWay;
+                }
+
+                obstacles.Add(new ObstacleData { position = pos, type = type });
+            }
+            return obstacles;
+        }
+
+        private List<GridNode> _lastLevelNodes = new List<GridNode>();
 
         private static bool ValidateSolutions(
             Dictionary<ColorType, List<Vector2Int>> solutions,
@@ -190,20 +260,27 @@ namespace PixelFlow.Services
         public int colorCount;
         public int bridgeCount;
         public bool requireFullGridCoverage;
+        public bool obstaclesEnabled;
+        public bool ferryEnabled;
+        public bool narrowPassEnabled;
 
-        public DifficultyParams(int width, int height, int colors, int bridges, bool fullCoverage = false)
+        public DifficultyParams(int width, int height, int colors, int bridges, bool fullCoverage = false,
+            bool obstacles = false, bool ferry = false, bool narrow = false)
         {
             gridWidth = width;
             gridHeight = height;
             colorCount = colors;
             bridgeCount = bridges;
             requireFullGridCoverage = fullCoverage;
+            obstaclesEnabled = obstacles;
+            ferryEnabled = ferry;
+            narrowPassEnabled = narrow;
         }
 
-        public static readonly DifficultyParams Easy = new DifficultyParams(5, 5, 3, 0, false);
-        public static readonly DifficultyParams Medium = new DifficultyParams(6, 6, 4, 1, false);
-        public static readonly DifficultyParams Hard = new DifficultyParams(7, 7, 5, 2, true);
-        public static readonly DifficultyParams Expert = new DifficultyParams(8, 8, 6, 3, true);
-        public static readonly DifficultyParams Master = new DifficultyParams(10, 10, 8, 4, true);
+        public static readonly DifficultyParams Easy = new DifficultyParams(5, 5, 1, 0, false);
+        public static readonly DifficultyParams Medium = new DifficultyParams(6, 6, 2, 0, false);
+        public static readonly DifficultyParams Hard = new DifficultyParams(7, 7, 3, 2, false, true);
+        public static readonly DifficultyParams Expert = new DifficultyParams(8, 8, 4, 3, true, true);
+        public static readonly DifficultyParams Master = new DifficultyParams(10, 10, 5, 4, true, true, true, true);
     }
 }

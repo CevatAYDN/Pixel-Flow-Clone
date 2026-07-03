@@ -15,6 +15,9 @@ namespace PixelFlow.Commands
         [Inject] public IGameStateModel GameStateModel { get; set; }
             [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public IGameHistoryService HistoryService { get; set; }
+        [Inject] public ISaveThrottler SaveThrottler { get; set; }
+        [Inject] public ILevelModel LevelModel { get; set; }
+        [Inject] public IHapticService HapticService { get; set; }
 
         public void Execute(PlaceViaductSignal signal)
         {
@@ -81,11 +84,13 @@ namespace PixelFlow.Commands
                 }
                 
                 SignalBus.Fire(new GridUpdatedSignal());
+                SaveThrottler?.TryRequestSave(GridModel, GameSessionModel, LevelModel);
+                HapticService?.Vibrate(HapticType.Heavy);
             }
             else
             {
                 Debug.LogWarning("[PlaceViaductCommand] Out of viaducts!");
-                // İleride UI üzerinde "Viyadük Hakkınız Bitti, Reklam İzle" pop-up'ı tetiklemek için sinyal fırlatılabilir.
+                SignalBus.Fire(new ViaductExhaustedSignal());
             }
         }
 

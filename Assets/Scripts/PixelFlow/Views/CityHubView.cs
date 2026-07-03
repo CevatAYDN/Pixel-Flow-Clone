@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using PixelFlow.Models;
+using PixelFlow.Signals;
 using Nexus.Core;
 
 namespace PixelFlow.Views
@@ -13,12 +14,14 @@ namespace PixelFlow.Views
         [SerializeField] private Camera _hubCamera;
 
         private readonly List<GameObject> _spawnedBuildings = new List<GameObject>();
+        private readonly List<GameObject> _districtColliders = new List<GameObject>();
         private int _lastSpawnedDistrictLvl = -1;
         private int _lastSpawnedLevelsCount = -1;
         private static Shader _cachedShader;
 
         public event Action OnCollectTaxesClicked;
         public event Action<UpgradeType> OnUpgradeClicked;
+        public event Action<int> OnDistrictClicked;
 
         private void Start()
         {
@@ -116,18 +119,16 @@ namespace PixelFlow.Views
 
         private void SpawnDistrict(int districtIndex, string name, Vector3 offset, Color themeColor)
         {
-            // Spawn 4 buildings in a 2x2 grid inside this district
             for (int dx = 0; dx < 2; dx++)
             {
                 for (int dz = 0; dz < 2; dz++)
                 {
                     Vector3 pos = offset + new Vector3(dx * 1.5f, 0f, dz * 1.5f);
-                    
+
                     GameObject building = GameObject.CreatePrimitive(PrimitiveType.Cube);
                     building.name = $"{name}_Bld_{dx}_{dz}";
                     building.transform.SetParent(_cityContainer, false);
-                    
-                    // Random building height for low-poly skyline feel
+
                     float height = UnityEngine.Random.Range(1f, 3.5f + (districtIndex * 0.5f));
                     building.transform.localScale = new Vector3(0.8f, height, 0.8f);
                     building.transform.localPosition = pos + new Vector3(0f, height * 0.5f, 0f);
@@ -140,7 +141,6 @@ namespace PixelFlow.Views
                         renderer.material.color = Color.Lerp(new Color(0.1f, 0.1f, 0.15f, 1f), themeColor, 0.3f);
                     }
 
-                    // Add a tiny glowing neon cube on top of building
                     GameObject neonLight = GameObject.CreatePrimitive(PrimitiveType.Cube);
                     neonLight.name = "NeonLight";
                     neonLight.transform.SetParent(building.transform, false);
@@ -155,7 +155,19 @@ namespace PixelFlow.Views
                         lightRenderer.material.color = themeColor;
                     }
 
+                    GameObject clickTarget = new GameObject($"District_{districtIndex}_Click");
+                    clickTarget.transform.SetParent(_cityContainer, false);
+                    clickTarget.transform.localPosition = pos + new Vector3(0f, height * 0.5f, 0f);
+                    clickTarget.transform.localScale = new Vector3(2.2f, height + 0.5f, 2.2f);
+                    var boxCol = clickTarget.AddComponent<BoxCollider>();
+                    boxCol.isTrigger = true;
+
+                    var dc = clickTarget.AddComponent<DistrictClickHandler>();
+                    dc.DistrictIndex = districtIndex;
+                    dc.OwnerView = this;
+
                     _spawnedBuildings.Add(building);
+                    _districtColliders.Add(clickTarget);
                 }
             }
         }
@@ -168,6 +180,23 @@ namespace PixelFlow.Views
         public void TriggerUpgrade(UpgradeType type)
         {
             OnUpgradeClicked?.Invoke(type);
+        }
+
+        public void TriggerDistrictClick(int districtIndex)
+        {
+            OnDistrictClicked?.Invoke(districtIndex);
+        }
+    }
+
+    public class DistrictClickHandler : MonoBehaviour
+    {
+        public int DistrictIndex;
+        public CityHubView OwnerView;
+        private bool _mouseWasOver;
+
+        private void OnMouseDown()
+        {
+            if (OwnerView != null) OwnerView.TriggerDistrictClick(DistrictIndex);
         }
     }
 }

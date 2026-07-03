@@ -315,6 +315,12 @@ namespace PixelFlow.Editor
                     CreateThreeLevelPack();
                     RefreshData();
                 }
+                GUILayout.Space(3);
+                if (GUILayout.Button("Create Phase 1+2 Hand-Crafted Pack (12 levels)", GUILayout.Height(25)))
+                {
+                    CreatePhase1And2HandCraftedPack();
+                    RefreshData();
+                }
             }
             else
             {
@@ -1215,6 +1221,69 @@ namespace PixelFlow.Editor
 
             AssetDatabase.SaveAssets();
             Debug.Log("[PixelFlowSetupWindow] Generated Level 1, Level 2, Level 3, and MainLevelPack.asset successfully.");
+        }
+
+        private void CreatePhase1And2HandCraftedPack()
+        {
+            string folder = "Assets/Resources/Levels";
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+
+            for (int i = 0; i < _cachedLevels.Count; i++)
+            {
+                var old = AssetDatabase.GetAssetPath(_cachedLevels[i]);
+                if (!string.IsNullOrEmpty(old)) AssetDatabase.DeleteAsset(old);
+            }
+
+            var solver = new Services.RuntimePathSolver();
+            var generator = new Services.ProceduralLevelGenerator(solver, seed: 12345);
+
+            for (int idx = 0; idx < 12; idx++)
+            {
+                Services.DifficultyParams param = idx < 5
+                    ? new Services.DifficultyParams(5, 5, 1, 0, false)
+                    : idx < 9
+                        ? new Services.DifficultyParams(5, 5, 2, 0, false)
+                        : new Services.DifficultyParams(6, 6, 2, 0, false);
+
+                var level = generator.Generate(param, maxAttempts: 100);
+                if (level == null)
+                {
+                    Debug.LogWarning($"[PixelFlowSetupWindow] Failed to generate level {idx} with param {param.gridWidth}x{param.gridHeight}/{param.colorCount}c. Retrying with different seed...");
+                    generator = new Services.ProceduralLevelGenerator(solver, seed: 1000 + idx * 17);
+                    level = generator.Generate(param, maxAttempts: 100);
+                }
+                if (level == null) continue;
+
+                level.levelIndex = idx;
+                if (idx >= 11)
+                {
+                    level.viaductLimit = 3;
+                    level.requireFullGridCoverage = false;
+                }
+                else
+                {
+                    level.viaductLimit = 0;
+                }
+
+                string path = AssetDatabase.GenerateUniqueAssetPath($"{folder}/Level{idx + 1}.asset");
+                AssetDatabase.CreateAsset(level, path);
+            }
+
+            var allLevels = Resources.LoadAll<LevelData>("Levels");
+            System.Array.Sort(allLevels, (a, b) => a.levelIndex.CompareTo(b.levelIndex));
+
+            var pack = ScriptableObject.CreateInstance<LevelPack>();
+            pack.packName = "Neon Transit Phase 1+2 (12 Levels)";
+            pack.levels = new System.Collections.Generic.List<LevelData>(allLevels);
+            string packPath = $"{folder}/MainLevelPack.asset";
+            AssetDatabase.DeleteAsset(packPath);
+            AssetDatabase.CreateAsset(pack, packPath);
+            AssetDatabase.SaveAssets();
+
+            Debug.Log($"[PixelFlowSetupWindow] Generated {allLevels.Length} hand-crafted-style levels (Phase 1+2).");
         }
 
         private void GenerateProceduralLevel(int difficultyIndex, int? seed, int levelIndex)

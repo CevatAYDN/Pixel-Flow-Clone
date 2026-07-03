@@ -21,6 +21,12 @@ namespace PixelFlow
             builder.BindService<ITaxCollectionService, TaxCollectionService>();
             builder.BindService<IAudioService, AudioService>();
             builder.BindService<IGameplayTimerService, GameplayTimerService>();
+            builder.BindService<ISaveThrottler, SaveThrottler>();
+            builder.BindService<IHapticService, HapticService>();
+            builder.BindService<ITutorialDriver, TutorialDriver>();
+            builder.BindService<ICrisisAdService, CrisisAdService>();
+            builder.BindService<IObstacleService, ObstacleService>();
+            builder.BindService<IOverclockService, OverclockService>();
             builder.Bind<IPathSolver, RuntimePathSolver>();
             builder.Bind<IHintService, HintService>();
             builder.Bind<ILevelProgressionService, LevelProgressionService>();
@@ -50,6 +56,10 @@ namespace PixelFlow
             builder.BindSignal<PixelFlow.Signals.TimerTickSignal>().To<PixelFlow.Commands.TimerCommand>();
             builder.BindSignal<PixelFlow.Signals.PlaceViaductSignal>().To<PixelFlow.Commands.PlaceViaductCommand>();
             builder.BindSignal<PixelFlow.Signals.UpgradeSignal>().To<PixelFlow.Commands.UpgradeCommand>();
+            builder.BindSignal<PixelFlow.Signals.RequestReturnToHubSignal>().To<PixelFlow.Commands.ReturnToHubCommand>();
+            builder.BindSignal<PixelFlow.Signals.RequestRewardedAdSignal>().To<PixelFlow.Commands.RewardedAdCommand>();
+            builder.BindSignal<PixelFlow.Signals.RequestInterstitialAdSignal>().To<PixelFlow.Commands.InterstitialAdCommand>();
+            builder.BindSignal<PixelFlow.Signals.EnterDistrictSignal>().To<PixelFlow.Commands.EnterDistrictCommand>();
         }
 
         public ValueTask OnInitializeAsync(CancellationToken ct) => default;

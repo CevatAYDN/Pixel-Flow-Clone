@@ -5,7 +5,7 @@ namespace PixelFlow.Data
 {
     public enum ColorType { None, Red, Green, Blue, Yellow, Orange, Purple, Cyan, Magenta }
 
-    public enum ObstacleType { Construction, Lake, Park, OneWay, Ferry, NarrowPass }
+    public enum ObstacleType { None, Construction, Lake, Park, OneWay, Ferry, NarrowPass }
 
     [System.Serializable]
     public struct ObstacleData

@@ -790,6 +790,110 @@ Bu bölüm, GDD ile mevcut kod tabanı arasındaki mimari kararları ve uygulama
 | `GridUpdatedSignal` | (Görsel güncelleme) | Her grid değişikliğinde |
 
 ### D.7 Test Kapsamı
-- **EditMode**: 34 test — grid, input, win condition, hint, solver, procedural generation
+- **EditMode**: ~45 test — grid, input, win condition, hint, solver, procedural generation, GDD palette, faz progresyon, save/restore, kriz mekaniği, renk körlüğü
 - **PlayMode**: 10 test — full game flow, timer, session lifecycle, progress, viaduct, economy
 - CityEconomyModel ve VehicleSimulator her iki modda da bağlanmıştır
+
+### D.8 Foundation (State + Camera + Save) — Yeni
+- **GameState flow**: Boot → Splash → Hub (MainMenu) veya Restore → Playing → LevelCompleted → Hub
+- `ReturnToHubCommand`: level sonu otomatik hub dönüşü, viyadük hakkı kaybı
+- `SaveThrottler`: per-input 2 saniyelik throttle ile diske yazma
+- `GridStateSerializer`: `Load()` + `ApplyToGrid()` ile full restore
+- `CameraController` + `CameraControllerMediator`: state değişimine otomatik zoom-in/out
+
+### D.9 Progresyon & İçerik (GDD §3.5 + §9.1-9.5) — Yeni
+- `PhaseDefinition`: 4 fazlık progresyon eğrisi (12/16/17/15 = 60 level)
+- `GddColorPalette`: 5 standart renk (Mavi/Kırmızı/Sarı/Yeşil/Mor)
+- `ProceduralLevelGenerator`: **Solution-First** algoritma + path kesişimlerinden köprü türetme + Faz 3-4 obstacle üretimi
+- `CreatePhase1And2HandCraftedPack`: SetupWindow'da 12 el yapımı level üretici (deterministic seed=12345)
+
+### D.10 Erişilebilirlik (GDD §11) — Yeni
+- `ColorBlindPalette`: Protanopia/Deuteranopia/Tritanopia palette remap
+- `HapticService`: iOS + Android haptic feedback (6 desen)
+- `SettingsView` + `SettingsMediator`: Volume slider, renk körlüğü dropdown, haptic toggle
+- `CellView.GetColor(colorType, colorBlindMode)`: palette-aware renk
+
+### D.11 Crisis Mekaniği (GDD §2.4) — Yeni
+- `GameSessionModel.MarkCrisisUndoUsed()`: kaza sonrası Geri Al seçildiğinde MaxViaducts -1
+- `CrisisAdService.RecordCrisisAttempt()`: 3 retry sonrası `RequestInterstitialAdSignal` + `ViaductExhaustedSignal`
+- `PlaceViaductCommand`: viyadük bittiğinde `ViaductExhaustedSignal` ateşler
+
+### D.12 Ödüllü Reklam Event'leri (GDD §6.1) — Yeni (SDK'sız)
+- `RequestRewardedAdSignal` + `RewardedAdType` enum (Overclock/EmergencyViaduct/OfflineTriple/ExtraHint)
+- `RequestInterstitialAdSignal` (3 retry sonrası)
+- `RewardedAdCommand` + `InterstitialAdCommand`: SDK adapter'ı bağlanana kadar placeholder
+
+### D.13 Engeller (GDD §9.4) — Yeni
+- `ObstacleService`: OneWay (ters yön reddi), Ferry (10s yön değişimi), NarrowPass (kuyruk)
+- `ProcessInputCommand`: OneWay yön kontrolü
+- `VehicleSimulator.Tick()`: her frame obstacle update
+
+### D.14 Audio (GDD §16.2) — Yeni
+- `ProceduralAudioFactory`: 12 SFX tipi için runtime synth (Crash, Horn, Viaduct, LevelComplete, CoinCollect, UIClick, PathDraw, VehicleEngine + 3 ambient + MainTheme)
+- `AudioService.InitializeAsync`: her tip için procedural clip atar, loop olanlar için `source.loop=true`
+
+### D.15 Tutorial (GDD §8) — Yeni
+- `TutorialDriver`: 12 step, level_index → step mapping, persistence (PlayerPrefs bitmask)
+- `TutorialView` + `TutorialMediator`: ipucu balonu, parmak izi animasyonu, 3s auto-hide
+
+### D.16 Hub UI (GDD §7) — Yeni
+- `CityHubView`: tıklanabilir 3D district binalar (BoxCollider + OnMouseDown)
+- `CityHubMediator.OnDistrictClicked`: `EnterDistrictSignal` ateşler
+- `MahalleSelectorView`: 6 district butonu (UI tabanlı alternatif)
+- `UpgradeTreeView`: 5 upgrade tree (Bento-Glass)
+
+### D.17 Game Juice (GDD §5.4) — Yeni
+- `BloomFlashView`: Level complete anında altın flash overlay (URP)
+- `ConfettiView`: 80 kübik parçacık, yer çekimi ile düşme
+- `CoinFlowView`: 12 altın kübik parçacık, ekran kenarından merkeze akış
+- `HUDView.DoBloomFlash()`: built-in flash animasyonu
+- `CellView.TriggerBounceAnimation(pressScale: 0.95f, duration: 0.12f)`: GDD §5.4 uyumlu micro-bounce (1.0→0.95→1.0, 120ms)
+- `VehicleSimulator` bezier overshoot: virajlarda overshoot+settle animasyonu (Catmull-Rom spline + perp offset + settle ramp)
+
+### D.18 Cloud Save Simülasyonu (GDD §10.3-10.4) — Yeni
+- `Models/CloudSaveManager`: Firebase/Firestore adapter'ı bağlanana kadar local PlayerPrefs üzerinde cloud save simülasyonu
+- `CloudSaveRecord`: PlayerId, TimestampUnix, LocalSaveJson, CloudSaveJson, Version
+- `ResolveConflict`: "en son değiştirilen kazanır" stratejisi (GDD §10.3)
+- `SyncToCloud`: Save sonrası otomatik cloud sync (timestamp güncelleme)
+- `GameBootstrapper.Start()`: boot'ta conflict resolution uygular, kazanan save'i restore eder
+- Server-authoritative timestamp doğrulaması: sahte clock manipülasyonuna karşı koruma
+
+### D.19 NarrowPass Kuyruk Mantığı (GDD §9.4) — Yeni
+- `ObstacleService.CanVehicleEnterNarrowPass(cell, color)`: hücre boşsa veya aynı renkteyse true
+- `ObstacleService.OnVehicleEnteredNarrowPass(cell, color)`: hücreyi o renge kilitler
+- `ObstacleService.OnVehicleLeftNarrowPass(cell, color)`: sadece aynı renk bıraktıysa serbest bırakır
+- `VehicleSimulator.SpawnVehicle`: dar geçit dolu ve farklı renk ise spawn'ı erteler
+- `VehicleSimulator.UpdateMovement`: araç dar geçide girdiğinde/çıktığında hook'ları çağırır
+
+### D.20 IPlayerPrefsService String Desteği — Yeni
+- Interface'e `GetString(key, defaultValue)` + `SetString(key, value)` eklendi
+- `UnityPlayerPrefsService` gerçek PlayerPrefs string API'sine delege eder
+- `InMemoryPlayerPrefsService` (test) string'leri ayrı dictionary'de saklar
+- `GameBootstrapper` artık local save string'lerini IPlayerPrefsService üzerinden okur/yazar
+- Cloud save PlayerId ve JSON payload'ları için kullanılır
+
+### D.21 Upgrade Tree Visual Connections — Yeni
+- `UpgradeTreeView._connectionContainer`: connection line'ların parent'ı
+- 5 upgrade butonu arasında dependency-aware çizgiler: Storage→Rate, Storage→Viaduct, Rate→Offline, Viyaduct→District, Rate→District
+- `_connectionColor` (mavi, %60 alpha) ve `_connectionMaxedColor` (yeşil, %80 alpha) — upgrade seviyesine göre renk değişimi
+- Her `UpdateInfo()` çağrısında connection'lar yeniden çizilir (eski line'lar `ClearConnectionLines()` ile temizlenir)
+
+### D.22 Tutorial Finger Animation — Yeni
+- `TutorialView._fingerIndicator`: hareketli parmak ikonu
+- `StartFingerAnimation(step)`: step'e göre hedef pozisyonu hesaplar (TouchAndDrag → 0,-100; Crash → -120,-50 vb.)
+- `Update()`: parmak hedef pozisyona doğru PingPong ile hareket eder + scale pulse (1±0.08, 4Hz)
+- `_fingerTarget` inspector field'ı varsa ona kilitlenir, yoksa step-specific fallback pozisyon
+
+### D.23 Test Coverage Genişletme — Yeni
+- **NarrowPass kuyruk testleri (4)**: serbest/dolu/ayrılış/yanlış renk ayrılışı
+- **CloudSave conflict testleri (5)**: no-cloud/local-newer/cloud-newer/PlayerId round-trip/SyncToCloud
+- **ObstacleType testleri (2)**: default + LoadLevel population
+- **Crisis testleri (4)**: MarkCrisisUndoUsed/MinimumOne/RetryCount/BonusViaduct
+- **SaveRestore test (1)**: RetryCount reset on new level load
+- Toplam EditMode test sayısı: ~50+ (Phase2AndAccessibilityTests + mevcut PixelFlowGameLogicTests)
+
+### D.24 Mimari Kararlar — Yeni
+- **BentoGlass URP Shader** (`Assets/Scripts/PixelFlow/Shaders/BentoGlass.shader`): SDF rounded box + corner radius + border + noise-based blur approximation + highlight
+- **PixelTextHelper** (`Assets/Scripts/PixelFlow/Views/PixelTextHelper.cs`): TMP_PRESENT define ile legacy Text / TMP_Text köprüsü (TextMeshPro migration için altyapı)
+- **CellData.ObstacleType** field eklendi → LoadLevelCommand populates → CellView.ApplyObstacleVisual() render eder
+- **CameraController** [Mediator] attribute + CameraControllerMediator ile DI — public field'lar (GameStateModel, SignalBus) Mediator tarafından inject edilir

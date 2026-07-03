@@ -33,6 +33,17 @@ namespace PixelFlow.Services
             PlayerPrefs.Save();
         }
 
+        public string GetString(string key, string defaultValue = "")
+        {
+            return PlayerPrefs.GetString(key, defaultValue);
+        }
+
+        public void SetString(string key, string value)
+        {
+            PlayerPrefs.SetString(key, value);
+            PlayerPrefs.Save();
+        }
+
         public void Save()
         {
             PlayerPrefs.Save();

@@ -13,10 +13,13 @@ namespace PixelFlow.Commands
         [Inject] public IHintModel HintModel { get; set; }
         [Inject] public IGridModel GridModel { get; set; }
         [Inject] public ILevelModel LevelModel { get; set; }
+        [Inject] public IGameSessionModel GameSessionModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public IPathService PathService { get; set; }
         [Inject] public IHintService HintService { get; set; }
         [Inject] public IGameHistoryService HistoryService { get; set; }
+        [Inject] public ISaveThrottler SaveThrottler { get; set; }
+        [Inject] public IHapticService HapticService { get; set; }
 
         public void Execute(RequestHintSignal signal)
         {
@@ -77,6 +80,8 @@ namespace PixelFlow.Commands
             HintModel.UseHint();
             SignalBus.Fire(new GridUpdatedSignal());
             SignalBus.Fire(new CheckWinConditionSignal());
+            SaveThrottler?.TryRequestSave(GridModel, GameSessionModel, LevelModel);
+            HapticService?.Vibrate(HapticType.Light);
         }
 
         private ColorType ResolveHintColor(LevelData level, List<Vector2Int> hintPath)

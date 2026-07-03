@@ -17,6 +17,7 @@ namespace PixelFlow.PlayMode.Tests
     public sealed class InMemoryPlayerPrefsService : IPlayerPrefsService
     {
         private readonly Dictionary<string, int> _store = new Dictionary<string, int>();
+        private readonly Dictionary<string, string> _strings = new Dictionary<string, string>();
 
         public int GetInt(string key, int defaultValue = 0)
             => _store.TryGetValue(key, out var val) ? val : defaultValue;
@@ -27,6 +28,11 @@ namespace PixelFlow.PlayMode.Tests
             => GetInt(key, defaultValue ? 1 : 0) == 1;
 
         public void SetBool(string key, bool value) => SetInt(key, value ? 1 : 0);
+
+        public string GetString(string key, string defaultValue = "")
+            => _strings.TryGetValue(key, out var val) ? val : defaultValue;
+
+        public void SetString(string key, string value) => _strings[key] = value;
 
         public void Save() { }
     }
@@ -48,6 +54,13 @@ namespace PixelFlow.PlayMode.Tests
                 builder.Bind<IPathSolver, RuntimePathSolver>();
                 builder.Bind<IHintService, HintService>();
                 builder.Bind<IVehicleSimulator, VehicleSimulator>();
+                builder.Bind<ISaveThrottler, SaveThrottler>();
+                builder.Bind<IHapticService, HapticService>();
+                builder.Bind<ICrisisAdService, CrisisAdService>();
+                builder.Bind<IObstacleService, ObstacleService>();
+                builder.Bind<IOverclockService, OverclockService>();
+                builder.Bind<ITutorialDriver, TutorialDriver>();
+                builder.Bind<IAudioService, AudioService>();
 
                 builder.BindModel<IGridModel, GridModel>();
                 builder.BindModel<ILevelModel, LevelModel>();
@@ -58,6 +71,7 @@ namespace PixelFlow.PlayMode.Tests
                 builder.BindModel<ISettingsModel, SettingsModel>();
                 builder.BindModel<ISoundModel, SoundModel>();
                 builder.BindModel<ICityEconomyModel, CityEconomyModel>();
+                builder.BindModel<ITutorialModel, TutorialModel>();
                 builder.Bind<ILevelProgressionService, LevelProgressionService>();
 
                 builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));

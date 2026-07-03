@@ -215,7 +215,7 @@ namespace PixelFlow.Views
                 if (pos.x >= 0 && pos.x < _cells.GetLength(0) && pos.y >= 0 && pos.y < _cells.GetLength(1))
                 {
                     _cells[pos.x, pos.y].UpdateVisuals(gridData[pos.x, pos.y], theme, crashPos);
-                    _cells[pos.x, pos.y].TriggerBounceAnimation(1.18f, 0.12f);
+                    _cells[pos.x, pos.y].TriggerBounceAnimation(0.95f, 0.12f);
                 }
             }
         }

@@ -13,11 +13,12 @@ namespace PixelFlow.Views
         [SerializeField] private SpriteRenderer _dotRenderer;
         [SerializeField] private SpriteRenderer _bridgeRenderer;
         [SerializeField] private SpriteRenderer _warningRenderer;
+        [SerializeField] private SpriteRenderer _oneWayArrow;
 
-        // 3D Low-Poly Fallbacks (assigned in inspector for 3D hubs)
         [SerializeField] private GameObject _bg3D;
         [SerializeField] private GameObject _dot3D;
         [SerializeField] private GameObject _bridge3D;
+        [SerializeField] private GameObject _obstacle3D;
 
         public Vector2Int GridPosition { get; private set; }
 
@@ -377,6 +378,7 @@ namespace PixelFlow.Views
                     _bgRenderer.enabled = true;
                     _dotRenderer.enabled = false;
                     _bridgeRenderer.enabled = false;
+                    if (_oneWayArrow != null) _oneWayArrow.enabled = false;
                     break;
 
                 case CellState.Node:
@@ -387,6 +389,7 @@ namespace PixelFlow.Views
                     AssignShapeSprite(_dotRenderer, cellData.Color);
                     _dotRenderer.transform.localScale = new Vector3(0.45f, 0.45f, 1f);
                     _bridgeRenderer.enabled = false;
+                    if (_oneWayArrow != null) _oneWayArrow.enabled = false;
                     break;
 
                 case CellState.Path:
@@ -394,16 +397,11 @@ namespace PixelFlow.Views
                     _bgRenderer.enabled = true;
                     _dotRenderer.enabled = false;
                     _bridgeRenderer.enabled = false;
+                    if (_oneWayArrow != null) _oneWayArrow.enabled = false;
                     break;
 
                 case CellState.Obstacle:
-                    _bgRenderer.color = cellBg * 0.6f;
-                    _bgRenderer.enabled = true;
-                    _dotRenderer.enabled = true;
-                    _dotRenderer.color = cellBg * 0.4f;
-                    _dotRenderer.sprite = s_squareSprite;
-                    _dotRenderer.transform.localScale = new Vector3(0.6f, 0.6f, 1f);
-                    _bridgeRenderer.enabled = false;
+                    ApplyObstacleVisual(cellBg, cellData.ObstacleType);
                     break;
 
                 case CellState.Bridge:
@@ -412,29 +410,110 @@ namespace PixelFlow.Views
                     _dotRenderer.enabled = false;
                     _bridgeRenderer.enabled = true;
                     _bridgeRenderer.color = Color.white;
+                    if (_oneWayArrow != null) _oneWayArrow.enabled = false;
                     break;
+            }
+        }
+
+        private void ApplyObstacleVisual(Color cellBg, ObstacleType type)
+        {
+            if (_bgRenderer == null) return;
+            Color baseBg = cellBg;
+            Color iconColor = Color.white;
+            Sprite iconSprite = s_squareSprite;
+            float iconScale = 0.55f;
+            bool showOneWayArrow = false;
+            float arrowAngle = 0f;
+
+            switch (type)
+            {
+                case ObstacleType.Lake:
+                    baseBg = new Color(0.10f, 0.28f, 0.55f, 1f);
+                    iconColor = new Color(0.20f, 0.55f, 0.85f, 1f);
+                    iconSprite = s_circleSprite;
+                    break;
+                case ObstacleType.Park:
+                    baseBg = new Color(0.15f, 0.40f, 0.20f, 1f);
+                    iconColor = new Color(0.25f, 0.65f, 0.30f, 1f);
+                    iconSprite = s_diamondSprite;
+                    break;
+                case ObstacleType.Construction:
+                    baseBg = new Color(0.55f, 0.40f, 0.10f, 1f);
+                    iconColor = new Color(0.85f, 0.65f, 0.15f, 1f);
+                    iconSprite = s_triangleSprite;
+                    break;
+                case ObstacleType.OneWay:
+                    baseBg = cellBg * 0.8f;
+                    iconColor = new Color(0.8f, 0.8f, 0.85f, 1f);
+                    iconSprite = s_triangleSprite;
+                    iconScale = 0.6f;
+                    showOneWayArrow = true;
+                    arrowAngle = 0f;
+                    break;
+                case ObstacleType.Ferry:
+                    baseBg = new Color(0.15f, 0.35f, 0.50f, 1f);
+                    iconColor = new Color(0.30f, 0.65f, 0.85f, 1f);
+                    iconSprite = s_diamondSprite;
+                    iconScale = 0.6f;
+                    break;
+                case ObstacleType.NarrowPass:
+                    baseBg = new Color(0.45f, 0.45f, 0.50f, 1f);
+                    iconColor = new Color(0.85f, 0.85f, 0.90f, 1f);
+                    iconSprite = s_squareSprite;
+                    iconScale = 0.35f;
+                    break;
+                default:
+                    baseBg = cellBg * 0.6f;
+                    iconColor = cellBg * 0.4f;
+                    break;
+            }
+
+            _bgRenderer.color = baseBg;
+            _bgRenderer.enabled = true;
+            if (_dotRenderer != null)
+            {
+                _dotRenderer.enabled = iconSprite != null;
+                if (iconSprite != null)
+                {
+                    _dotRenderer.sprite = iconSprite;
+                    _dotRenderer.color = iconColor;
+                    _dotRenderer.transform.localScale = new Vector3(iconScale, iconScale, 1f);
+                }
+            }
+            if (_bridgeRenderer != null) _bridgeRenderer.enabled = false;
+            if (_oneWayArrow != null)
+            {
+                _oneWayArrow.enabled = showOneWayArrow;
+                if (showOneWayArrow)
+                {
+                    _oneWayArrow.color = iconColor;
+                    _oneWayArrow.transform.localScale = new Vector3(0.5f, 0.5f, 1f);
+                    _oneWayArrow.transform.localRotation = Quaternion.Euler(0f, 0f, arrowAngle);
+                    _oneWayArrow.transform.localPosition = new Vector3(0f, 0f, -0.25f);
+                }
             }
         }
 
         private Coroutine _bounceCoroutine;
 
-        public void TriggerBounceAnimation(float popScale = 1.22f, float duration = 0.15f)
+        public void TriggerBounceAnimation(float pressScale = 0.95f, float duration = 0.12f)
         {
             if (_bounceCoroutine != null) StopCoroutine(_bounceCoroutine);
-            _bounceCoroutine = StartCoroutine(DoBounceAnimation(popScale, duration));
+            _bounceCoroutine = StartCoroutine(DoBounceAnimation(pressScale, duration));
         }
 
-        private System.Collections.IEnumerator DoBounceAnimation(float popScale, float duration)
+        private System.Collections.IEnumerator DoBounceAnimation(float pressScale, float duration)
         {
             Vector3 originalScale = Vector3.one;
             float elapsed = 0f;
             float halfDuration = duration * 0.5f;
+            Vector3 pressedScale = originalScale * pressScale;
 
             while (elapsed < halfDuration)
             {
                 elapsed += Time.deltaTime;
                 float t = elapsed / halfDuration;
-                transform.localScale = Vector3.Lerp(originalScale, originalScale * popScale, t);
+                transform.localScale = Vector3.Lerp(originalScale, pressedScale, t);
                 yield return null;
             }
 
@@ -443,7 +522,7 @@ namespace PixelFlow.Views
             {
                 elapsed += Time.deltaTime;
                 float t = elapsed / halfDuration;
-                transform.localScale = Vector3.Lerp(originalScale * popScale, originalScale, t);
+                transform.localScale = Vector3.Lerp(pressedScale, originalScale, t);
                 yield return null;
             }
 
@@ -452,18 +531,12 @@ namespace PixelFlow.Views
 
         public static Color GetColor(ColorType colorType)
         {
-            switch (colorType)
-            {
-                case ColorType.Red:     return new Color(1f, 0.239f, 0.498f);     // #FF3D7F Sıcak Pembe
-                case ColorType.Green:   return new Color(0.420f, 0.796f, 0.467f); // #6BCB77 Nane Yeşili
-                case ColorType.Blue:    return new Color(0f, 0.831f, 1f);         // #00D4FF Elektrik Mavisi
-                case ColorType.Yellow:  return new Color(1f, 0.851f, 0.239f);     // #FFD93D Güneş Sarısı
-                case ColorType.Orange:  return new Color(1f, 0.557f, 0.020f);     // Neon Turuncu
-                case ColorType.Purple:  return new Color(0.702f, 0.420f, 1f);     // #B36BFF Ultraviyole
-                case ColorType.Cyan:    return new Color(0.078f, 0.882f, 0.922f); // Elektrik Cyan
-                case ColorType.Magenta: return new Color(0.949f, 0.200f, 0.722f); // Parlak Magenta
-                default:                return Color.gray;
-            }
+            return GetColor(colorType, ColorBlindMode.None);
+        }
+
+        public static Color GetColor(ColorType colorType, ColorBlindMode colorBlindMode)
+        {
+            return ColorBlindPalette.Remap(colorType, colorBlindMode);
         }
     }
 }

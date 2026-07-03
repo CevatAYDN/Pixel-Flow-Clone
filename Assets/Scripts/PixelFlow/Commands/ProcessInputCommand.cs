@@ -17,10 +17,20 @@ namespace PixelFlow.Commands
         [Inject] public IPathService PathService { get; set; }
         [Inject] public IGameStateModel GameStateModel { get; set; }
         [Inject] public IGameHistoryService HistoryService { get; set; }
+        [Inject] public IGameSessionModel GameSessionModel { get; set; }
+        [Inject] public ILevelModel LevelModel { get; set; }
+        [Inject] public ISaveThrottler SaveThrottler { get; set; }
+        [Inject] public IHapticService HapticService { get; set; }
+        [Inject] public IObstacleService ObstacleService { get; set; }
 
         private void RecordHistory()
         {
             HistoryService.Record(GridModel);
+        }
+
+        private void RequestSave()
+        {
+            SaveThrottler?.TryRequestSave(GridModel, GameSessionModel, LevelModel);
         }
 
         public void Execute(InputInteractionSignal signal)
@@ -43,6 +53,7 @@ namespace PixelFlow.Commands
                     if (currentCell.PathColors.Count >= 2 && !currentCell.HasViaduct)
                     {
                         SignalBus.Fire(new PlaceViaductSignal { Position = signal.GridPosition });
+                        HapticService?.Vibrate(HapticType.Medium);
                     }
                 }
                 return;
@@ -79,6 +90,8 @@ namespace PixelFlow.Commands
                         PathService.BacktrackPath(clickedColor, signal.GridPosition);
                     }
                     SignalBus.Fire(new GridUpdatedSignal());
+                    RequestSave();
+                    HapticService?.Vibrate(HapticType.Light);
                 }
             }
             else if (signal.Type == InputType.Drag)
@@ -101,6 +114,7 @@ namespace PixelFlow.Commands
                     PathService.BacktrackPath(GridModel.ActiveColor, signal.GridPosition);
                     GridModel.LastPosition = signal.GridPosition;
                     SignalBus.Fire(new GridUpdatedSignal());
+                    RequestSave();
                     return;
                 }
 
@@ -118,6 +132,11 @@ namespace PixelFlow.Commands
                 if (currentCell.State == CellState.Obstacle)
                     return;
 
+                if (ObstacleService != null && ObstacleService.IsOneWay(signal.GridPosition, GridModel.ActiveColor, signal.GridPosition - GridModel.LastPosition))
+                {
+                    return;
+                }
+
                 if (currentCell.State == CellState.Empty)
                 {
                     RecordHistory();
@@ -131,6 +150,7 @@ namespace PixelFlow.Commands
                     GridModel.LastPosition = signal.GridPosition;
                     SignalBus.Fire(new GridUpdatedSignal());
                     SoundModel.PlayDrawSound(path.Count);
+                    RequestSave();
                 }
                 else if (currentCell.State == CellState.Node && currentCell.Color == GridModel.ActiveColor)
                 {
@@ -146,6 +166,8 @@ namespace PixelFlow.Commands
                     GridModel.ActiveColor = ColorType.None;
                     SignalBus.Fire(new GridUpdatedSignal());
                     SignalBus.Fire(new CheckWinConditionSignal());
+                    HapticService?.Vibrate(HapticType.Medium);
+                    RequestSave();
                 }
                 else if (currentCell.State == CellState.Path || currentCell.State == CellState.Bridge)
                 {
@@ -168,7 +190,7 @@ namespace PixelFlow.Commands
                                 }
                             }
                         }
-                        
+
                         RecordHistory();
                         if (!currentCell.PathColors.Contains(GridModel.ActiveColor))
                         {
@@ -178,6 +200,7 @@ namespace PixelFlow.Commands
                         path.Add(signal.GridPosition);
                         GridModel.LastPosition = signal.GridPosition;
                         SignalBus.Fire(new GridUpdatedSignal());
+                        RequestSave();
                     }
                     else
                     {
@@ -200,6 +223,7 @@ namespace PixelFlow.Commands
 
                         SignalBus.Fire(new GridUpdatedSignal());
                         SoundModel.PlayDrawSound(path.Count);
+                        RequestSave();
                     }
                 }
             }
@@ -210,6 +234,7 @@ namespace PixelFlow.Commands
                     RecordHistory();
                     GridModel.ActiveColor = ColorType.None;
                     GridModel.LastPosition = new Vector2Int(-1, -1);
+                    RequestSave();
                 }
             }
         }

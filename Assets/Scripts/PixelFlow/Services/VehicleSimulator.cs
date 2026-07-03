@@ -26,6 +26,9 @@ namespace PixelFlow.Services
         [Inject] public IGameSessionModel GameSessionModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public IHintModel HintModel { get; set; }
+        [Inject] public IHapticService HapticService { get; set; }
+        [Inject] public IAudioService AudioService { get; set; }
+        [Inject] public IObstacleService ObstacleService { get; set; }
 
         private class VehicleInstance
         {
@@ -65,7 +68,6 @@ namespace PixelFlow.Services
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
-            // Create a hidden updater game object to receive Unity's Update loop
             GameObject updaterObj = new GameObject("[VehicleSimulatorUpdater]");
             updaterObj.hideFlags = HideFlags.DontSave;
             _updater = updaterObj.AddComponent<SimulationUpdater>();
@@ -168,11 +170,15 @@ namespace PixelFlow.Services
                 return;
             }
 
+            if (ObstacleService != null)
+            {
+                ObstacleService.Tick(Time.deltaTime);
+            }
+
             UpdateSpawning();
             UpdateMovement();
-            
             UpdateCollisionDetection();
-            
+
             if (state == GameState.Simulating)
             {
                 UpdateCompletionTimer();
@@ -243,6 +249,13 @@ namespace PixelFlow.Services
         {
             if (!GridModel.Paths.TryGetValue(color, out var path) || path.Count < 2)
                 return;
+
+            if (ObstacleService != null && path.Count > 0)
+            {
+                Vector2Int startCell = path[0];
+                if (ObstacleService.IsNarrowPass(startCell) && !ObstacleService.CanVehicleEnterNarrowPass(startCell, color))
+                    return;
+            }
 
             if (_vehicleContainer != null && _vehicleContainer.parent == null)
             {
@@ -370,7 +383,23 @@ namespace PixelFlow.Services
                     continue;
                 }
 
-                // Update opacity via cached renderers
+                if (v.SegmentIndex > 0 && v.SegmentIndex - 1 < v.Path.Count && ObstacleService != null)
+                {
+                    Vector2Int prevCell = v.Path[v.SegmentIndex - 1];
+                    if (ObstacleService.IsNarrowPass(prevCell))
+                    {
+                        ObstacleService.OnVehicleLeftNarrowPass(prevCell, v.Color);
+                    }
+                }
+                if (v.SegmentIndex < v.Path.Count && ObstacleService != null)
+                {
+                    Vector2Int curCell = v.Path[v.SegmentIndex];
+                    if (ObstacleService.IsNarrowPass(curCell) && v.Progress < 0.1f)
+                    {
+                        ObstacleService.OnVehicleEnteredNarrowPass(curCell, v.Color);
+                    }
+                }
+
                 if (v.CachedRenderers != null)
                 {
                     for (int ri = 0; ri < v.CachedRenderers.Length; ri++)
@@ -382,7 +411,6 @@ namespace PixelFlow.Services
                     }
                 }
 
-                // Advance segment progress
                 v.Progress += v.Speed * Time.deltaTime;
                 if (v.Progress >= 1f)
                 {
@@ -392,6 +420,14 @@ namespace PixelFlow.Services
 
                 if (v.SegmentIndex >= v.Path.Count - 1)
                 {
+                    if (ObstacleService != null && v.Path.Count > 0)
+                    {
+                        Vector2Int endCell = v.Path[v.Path.Count - 1];
+                        if (ObstacleService.IsNarrowPass(endCell))
+                        {
+                            ObstacleService.OnVehicleLeftNarrowPass(endCell, v.Color);
+                        }
+                    }
                     if (v.CachedRenderers != null)
                     {
                         for (int ri = 0; ri < v.CachedRenderers.Length; ri++)
@@ -410,25 +446,52 @@ namespace PixelFlow.Services
                 Vector3 p2 = GetSplineControlPoint(v.Path, v.SegmentIndex + 1, v.Color);
                 Vector3 p3 = GetSplineControlPoint(v.Path, v.SegmentIndex + 2, v.Color);
 
-                v.CurrentPosition = CatmullRom(p0, p1, p2, p3, v.Progress);
+                Vector3 basePos = CatmullRom(p0, p1, p2, p3, v.Progress);
 
-                // Add slight suspension bounce
+                Vector3 tangent = CatmullRomTangent(p0, p1, p2, p3, v.Progress);
+                Vector3 nextTangent = CatmullRomTangent(p0, p1, p2, p3, Mathf.Min(v.Progress + 0.1f, 1f));
+
+                float baseAngle = tangent.sqrMagnitude > 0.001f ? Mathf.Atan2(tangent.y, tangent.x) : 0f;
+                float nextAngle = nextTangent.sqrMagnitude > 0.001f ? Mathf.Atan2(nextTangent.y, nextTangent.x) : baseAngle;
+                float deltaAngle = Mathf.DeltaAngle(baseAngle, nextAngle);
+
+                float cornerProximity = Mathf.Min(v.Progress, 1f - v.Progress);
+                bool isCorner = cornerProximity < 0.25f && Mathf.Abs(deltaAngle) > 10f;
+
+                if (isCorner)
+                {
+                    float overshootT = cornerProximity < 0.12f
+                        ? Mathf.Sin((cornerProximity / 0.12f) * Mathf.PI) * 0.18f
+                        : 0f;
+
+                    Vector3 perp = new Vector3(-tangent.y, tangent.x, 0f).normalized;
+                    if (perp.sqrMagnitude > 0.001f)
+                    {
+                        float leanDir = deltaAngle > 0 ? -1f : 1f;
+                        basePos += perp * overshootT * leanDir;
+                    }
+
+                    if (v.Progress < 0.12f)
+                    {
+                        float settleT = v.Progress / 0.12f;
+                        Vector3 prevTangent = CatmullRomTangent(p0, p1, p2, p3, 0f);
+                        Vector3 overshoot = prevTangent.normalized * 0.15f * (1f - settleT);
+                        basePos += new Vector3(overshoot.x, overshoot.y, 0f);
+                    }
+                }
+
+                v.CurrentPosition = basePos;
+
                 float bobbing = Mathf.Sin(Time.time * 12f + v.GetHashCode()) * 0.02f;
                 Vector3 finalPos = v.CurrentPosition;
                 finalPos.z += bobbing;
                 v.Visual.transform.localPosition = finalPos;
 
-                Vector3 tangent = CatmullRomTangent(p0, p1, p2, p3, v.Progress);
-                if (tangent.sqrMagnitude > 0.001f)
+                Vector3 tangent2 = CatmullRomTangent(p0, p1, p2, p3, v.Progress);
+                if (tangent2.sqrMagnitude > 0.001f)
                 {
-                    float angle = Mathf.Atan2(tangent.y, tangent.x) * Mathf.Rad2Deg;
-
-                    // Corner roll banking (lean into curve)
-                    Vector3 nextTangent = CatmullRomTangent(p0, p1, p2, p3, Mathf.Min(v.Progress + 0.1f, 1f));
-                    float nextAngle = Mathf.Atan2(nextTangent.y, nextTangent.x) * Mathf.Rad2Deg;
-                    float deltaAngle = Mathf.DeltaAngle(angle, nextAngle);
+                    float angle = Mathf.Atan2(tangent2.y, tangent2.x) * Mathf.Rad2Deg;
                     float rollBank = Mathf.Clamp(-deltaAngle * 0.5f, -20f, 20f);
-
                     v.Visual.transform.rotation = Quaternion.Euler(rollBank, 0f, angle);
                 }
             }
@@ -491,7 +554,7 @@ namespace PixelFlow.Services
         private void TriggerCrash(Vector2Int crashPos, ColorType colorA, ColorType colorB)
         {
             Debug.LogError($"[VehicleSimulator] TRAFFIC CRASH detected at {crashPos} between {colorA} and {colorB}!");
-            
+
             GridModel.LastCrashPosition = crashPos;
             GridModel.CrashColorA = colorA;
             GridModel.CrashColorB = colorB;
@@ -503,6 +566,9 @@ namespace PixelFlow.Services
             }
 
             GameStateModel.SetState(GameState.Paused);
+
+            HapticService?.Vibrate(HapticType.Warning);
+            AudioService?.PlaySfx(SfxType.Crash);
 
             SignalBus.Fire(new CrashDetectedSignal
             {
@@ -527,10 +593,12 @@ namespace PixelFlow.Services
         private void CompleteLevel()
         {
             Debug.Log("[VehicleSimulator] Simulation completed successfully with no crashes! LEVEL COMPLETED!");
-            
+
             GameStateModel.SetState(GameState.LevelCompleted);
+            HapticService?.Vibrate(HapticType.Success);
+            AudioService?.PlaySfx(SfxType.LevelComplete);
             SignalBus.Fire(new LevelCompletedSignal());
-            
+
             ClearAllVehicles();
         }
 
