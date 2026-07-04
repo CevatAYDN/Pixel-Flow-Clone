@@ -84,7 +84,7 @@ Onay: Oyuncu tüm bağlantıları kurup *Başlat* butonuna bastığında (veya o
 2.4 Kaza Mekaniği (The Crash) — **DETAYLI** **TEKN**İK **AKI**Ş
 Klasik akış oyunlarının aksine, farklı renkteki iki yol birbirini dik kestiğinde sistem çizimi engellemez veya eski yolu silmez. Kaza mantığı şu aşamalarda işler:
 
-**ÖNEMLİ**: Kaza tespiti **hem çizim aşamasında (Playing) hem de simülasyon aşamasında (Simulating)** çalışır. Çizim sırasında araçlar hayalet modunda akar — eğer iki farklı renkli araç viyadüksüz bir kesişimde karşılaşırsa KAZA hemen tetiklenir. Oyuncunun tüm yolları tamamlamasını beklemeye gerek yoktur — anlık geri bildirim sayesinde sorunu hemen görür, düzeltir (undo/viyadük) ve çizmeye devam eder. 10 saniyelik simülasyon sayacı sadece `Simulating` state'inde çalışır; çizim sırasında tamamlama kontrolü yapılmaz.
+**ÖNEMLİ**: Kaza tespiti **hem çizim aşamasında (Playing) hem de simülasyon aşamasında (Simulating)** çalışır. Çizim sırasında araçlar hayalet modunda akar — eğer iki farklı renkli araç viyadüksüz bir kesişimde karşılaşırsa KAZA hemen tetiklenir. Oyuncunun tüm yolları tamamlamasını beklemeye gerek yoktur — anlık geri bildirim sayesinde sorunu hemen görür, düzeltir (undo/viyadük) ve çizmeye devam eder. Simülasyon fazında Flow Score threshold'una ulaşma kontrolü çalışır (bkz. §2.8); çizim sırasında tamamlama kontrolü yapılmaz.
 
 Aşama 1 — Çizim Sırasında Görsel Uyarı (Soft Warning):
 Oyuncu mevcut bir yolu kesen bir hat çizerse, kesişim noktasında küçük sarı bir uyarı ikonu (⚠) yanar. Aynı anda `PathIntersectionWarningSignal` ateşlenir.
@@ -107,6 +107,13 @@ Oyuncuya iki seçenek sunulur:
 *Game Over* yoktur. Oyuncu istediği kadar deneme yapabilir. Ancak 3 başarısız denemeden sonra bir geçiş reklamı gösterilir (İlk 5 seviyede asla gösterilmez).
 2.5 Viyadük / Üst Geçit Mekaniği — **DETAYLI** **TEKN**İK **AKI**Ş
 Tanım: Viyadük, iki yolun kesiştiği noktada bir yolun diğerinin üstünden geçmesini sağlayan yapıdır.
+
+**Viyadük Alternatifleri (Kesişim Çözüm Yolları)** — Bir kesişimi viyadüksüz çözmenin 3 yolu vardır. Bu, oyuncunun "her kaza = viyadük" rutinine düşmesini engeller:
+1. **Rota Yeniden Çizimi (Routing Around)**: Kesişen yollardan birini geri alıp farklı bir rotayla çizmek — kesişimi tamamen önlemek. `Undo + Yeniden Çiz` ile yapılır. En verimli çözüm (viyadük hakkı korunur).
+2. **Tek Yön Yolu (OneWay Yönlendirme)**: Seviye 20+ ile. Kesişim noktasındaki OneWay hücresini kullanarak iki rengin aynı hücreden **farklı zaman penceresinde** geçmesini sağlamak. OneWay yön kısıtı, kesişimi başka türlü önlenemeyecek renkler için tatmin edici bir taktik tercih sunar.
+3. **Viyadük Yerleştirme**: Hızlı çözüm, tek tık, ama viyadük hakkı harcar. Mevcut GDD davranışını korur.
+
+Tasarım Hedefi: Bir seviyede en az 2 kesişim varsa, en az biri **OneWay ile çözülebilir** olmalıdır (seviye 20+). Bu sayede viyadük "kolay ama maliyetli", OneWay "ücretsiz ama taktik ister" ikilemi oluşur.
 
 **Uygulama Detayı**: `CellData` sınıfı `HasViaduct` (bool), `UnderColor` (alttan geçen renk) ve `OverColor` (üstten geçen renk) alanlarını tutar. `PlaceViaductCommand` tarafından yönetilir. Viyadük yerleştirildiğinde hücre `CellState.Bridge` durumuna geçer.
 
@@ -140,9 +147,14 @@ Bu, yolların kesişmesine (intersection) izin verir — oyuncu stratejik olarak
 Viyadük yerleştirildiğinde: bir yol "üstten" (OverColor — yükseltilmiş Z-offset), diğeri "alttan" (UnderColor) geçer.
 Bir hücrede maksimum 2 farklı renk kesişebilir (viyadük limiti). 3+ renk kesişimi desteklenmez.
 2.8 Kazanma Koşulu ve Izgara Kaplama Mantığı (Win Conditions & Grid Coverage)
-- **Temel Kazanma Koşulu**: Grid üzerindeki tüm araç renkleri/düğümleri birbirine kaza yapmadan bağlandığında ve araçlar simülasyon fazında 10 saniye boyunca pürüzsüz aktığında bölüm tamamlanır.
+- **Temel Kazanma Koşulu (Aktif Flow Doğrulama)**: Grid üzerindeki tüm renk çiftleri kaza yapmadan bağlandığında simülasyon fazı başlar. **Pasif 10 saniye bekleme yerine**, simülasyon boyunca **aktif doğrulama** çalışır:
+  - **Trafik Akış Skoru (Flow Score)**: Her bağlanan renk çifti, araçlarının hedef düğüme ulaşma sayısına göre +puan üretir. Araç hedefe ulaştığında kaynaktan yeniden doğar (sirkülasyon).
+  - **Kazanma Eşiği**: Tüm renk çiftlerinin toplam Flow Score'u, o seviye için tanımlı threshold değerine (örn. toplam renk sayısı × 5 ulaşım) ulaştığında **akış doğrulanmış** kabul edilir ve bölüm tamamlanır.
+  - **Otokontrol**: Simülasyon sırasında herhangi bir araç beklerse, yavaşlarsa veya kısıtlanırsa (NarrowPass kuyruğu, OneWay yön ihlali denemesi) o rotadan Flow Score üretimi durur. Oyuncu **görsel olarak hangi rotanın tıkalı olduğunu** kenarlarındaki kırmızı pulse ile görür.
+  - **Sonuç**: Oyuncu pasif izleyici değil, **simülasyon kalitesini izleyen aktif bir gözlemcidir**. Kötü planlama yapan oyuncu Flow Score'un yavaş ilerlediğini görür ve daha verimli rota arar. İyi planlama yapan oyuncu eşik değerine 8-15 saniyede ulaşır.
+- **Flow Score Threshold Çarpanı**: Faz 1'de düşük (%50 düşük, sadece 1-2 ulaşım yeterli), Faz 3-4'te yüksek (her renkten en az 8-10 ulaşım). İleri seviyeler oyuncuyu "her araç en az N kez hedefe ulaşmalı" verimlilik hedefine iter.
 - **Kademeli Izgara Kaplama Kuralı (`requireFullGridCoverage`)**:
-  - **Erken ve Orta Seviyeler (Seviye 1–28)**: `requireFullGridCoverage = false` geçerlidir. Oyuncu grid üzerinde boş alan bıraksa dahi tüm renkleri kaza yapmadan eşleştirdiğinde bölüm kazanılır. Bu sayede düşük frustrasyon ve yüksek dopamin hedeflenir.
+  - **Erken ve Orta Seviyeler (Seviye 1–28)**: `requireFullGridCoverage = false` geçerlidir. Oyuncu grid üzerinde boş alan bıraksa dahi tüm renkleri kaza yapmadan eşleştirip Flow Score threshold'una ulaştığında bölüm kazanılır. Bu sayede düşük frustrasyon ve yüksek dopamin hedeflenir.
   - **İleri Zorluk Seviyeleri (Seviye 29+ & Zor Günlük Krizler)**: `requireFullGridCoverage = true` kuralı devreye girer. Tüm düğümler bağlansa dahi grid üzerinde tek bir boş hücre (`CellState.Empty`) kaldığı sürece zafer tetiklenmez. Oyuncu grid'in %100'ünü kaplamak zorundadır (*Perfect Flow Clear*).
 
 Bonus Yıldız Sistemi (Seviye Başına):
@@ -218,9 +230,10 @@ Grid Boyutu	7×7
 Renk Sayısı	2 → 3
 Kaza Mekaniği	✅ Aktif (Seviye 13'te tanıtılır)
 Viyadük	✅ Aktif (3 hak/seviye)
+Tek Yön Yollar	✅ Seviye 20+ (Faz 2'nin ikinci yarısı — viyadüğe alternatif taktik)
 Engeller	❌ Yok
 Bölüm Başına Süre	45–90 saniye
-Hedef: Stratejik düşünmeyi tetiklemek. Kaza mekaniği ve viyadük kullanımı kademeli olarak öğretilir (bkz. §10 — Onboarding).
+Hedef: Stratejik düşünmeyi tetiklemek. Kaza mekaniği ve viyadük kullanımı kademeli olarak öğretilir (bkz. §10 — Onboarding). Seviye 20+ ile birlikte tek yön yollar tanıtılarak oyuncuya kesişimleri viyadüksüz çözmenin ikinci yolunu açar.
 Faz 3: Şehir Planlamacısı (Gün 9-15 | Seviye 29-45)
 Parametre	Değer
 Grid Boyutu	8×8 → 9×9
@@ -228,9 +241,9 @@ Renk Sayısı	3 → 4
 Kaza Mekaniği	✅ Aktif
 Viyadük	✅ Aktif (3–4 hak/seviye)
 Engeller	✅ Göller, parklar, inşaat alanları
-Tek Yön Yollar	✅ Seviye 35+
+Tek Yön Yollar	✅ Seviye 29+ (Faz 2'den devamlı)
 Bölüm Başına Süre	90–**150** saniye
-Hedef: *Uzman Mimar* hissi. **D14** retention metriğini sabitlemek.
+Hedef: *Uzman Mimar* hissi. **D14** retention metriğini sabitlemek. Faz 2'de öğrenilen tek yön taktiği burada engellerle birleşir.
 Faz 4: Endgame ve Canlı Operasyon (Gün 16-20+ | Seviye 46-60)
 Parametre	Değer
 Grid Boyutu	10×10
@@ -390,8 +403,9 @@ Oyuncuyu ilk 3 günde bağımlı hale getirmek için kademeli ve organik bir eğ
 | 14 | 🌉 Viyadük kullanımı | Zorla yönlendirmeli — Kaza sonrası viyadük butonu highlight edilir |
 | 15–17 | Viyadük stratejisi | Organik — birden fazla kesişimli bölümler |
 | 18 | Undo (geri al) öğretisi | Kademeli — İpucu balonu: *Yanlış mı çizdin? Geri al!* |
+| 20 | ➡️ Tek yön yollar (alternatif taktik) | Kademeli — İpucu balonu: *Kesişimi viyadüksüz çöz: tek yön yolunu kullan!* |
+| 21–28 | OneWay + viyadük kombinasyon stratejisi | Organik — Birden fazla kesişim; bazıları OneWay ile, bazıları viyadük ile |
 | 29+ | Engeller (göller, parklar) | Organik — İlk engel haritada belirir, ipucu balonu ile |
-| 35+ | Tek yön yollar | Organik — Ok ikonu ile gösterilir |
 8.2 Tutorial Tasarım İlkeleri
 Asla metin duvarı yok: Her eğitim adımı max 1 cümle + görsel ok.
 Tıklanabilir alanlar pulsate eder: Dikkat çekmek için hafif scale animasyonu.
@@ -417,7 +431,9 @@ Her seviye aşağıdaki **JSON**-benzeri yapıda tanımlanır:
     {*type*: *hospital*, *color*: *red*, *shape*: *triangle*, *position*: [6, 6]}
     ],
     *obstacles*: [],
+    *oneway_cells*: [],
     *viaduct_limit*: 3,
+    *flow_score_threshold*: 10,
     *target_stars*: {
     *1_star*: *complete*,
     *2_star*: *viaducts_used <= 2*,
@@ -427,6 +443,13 @@ Her seviye aşağıdaki **JSON**-benzeri yapıda tanımlanır:
     *estimated_solve_time_sec*: 60
 }
 ```
+**`flow_score_threshold`**: O seviyede kazanmak için gerekli Flow Score toplamı (simülasyon başına ulaşım sayısı). Seviye zorluğuna göre değişir:
+- Faz 1 (Lv. 1-12): 3-5 (sadece sirkülasyonu doğrular, frustrasyon yok)
+- Faz 2 (Lv. 13-28): 6-10 (kaza-kurtarma taktikleri doğrulanır)
+- Faz 3 (Lv. 29-45): 12-18 (her renkten en az 3-4 ulaşım)
+- Faz 4 (Lv. 46-60): 18-30 (verimlilik, darboğaz yönetimi)
+
+**`oneway_cells`**: Tek yön hücrelerin koordinatları + yön bilgisi (Seviye 20+ için).
 9.3 Prosedürel Üretim Algoritması (Günlük Krizler İçin)
 Çözüm-Önce Yaklaşım (Solution-First):
 Önce geçerli bir çözüm üretilir (tüm renk çiftleri kesişmeden bağlanır).
@@ -452,7 +475,7 @@ Zor kriz: 41–60 puan
 | 🏗 İnşaat Alanı | Üzerinden yol geçirilemez, hücre bloke | Seviye 29 |
 | 🌊 Gölet | 2×2 veya 3×3, üzerinden yol geçirilemez | Seviye 31 |
 | 🌳 Park | 1×1 veya L-şekli, üzerinden yol geçirilemez | Seviye 33 |
-| ➡️ Tek Yön Yol | Sadece tek yönde araç geçebilir (ok işareti ile) | Seviye 35 |
+| ➡️ Tek Yön Yol | Sadece tek yönde araç geçebilir (ok işareti ile) — viyadüğe taktik alternatif | Seviye 20 |
 | ⛴ Feribot Rotası | Her 10 saniyede bir yön değiştirir (hareketli engel) | Seviye 48 |
 | 🚧 Dar Geçit | Sadece 1 araç genişliğinde, sırayla geçiş | Seviye 52 |
 9.5 Örnek Grid Şeması (Seviye 14 — İlk Kaza)
@@ -577,6 +600,27 @@ Canlı denge ayarları (vergi hızı, bina maliyetleri, reklam frekansı).
 A/B test altyapısı.
 Etkinlik açma/kapama.
 ## Soft launch sırasında market bazlı denge farklılıkları.
+13.6 Evergreen İçerik Cadence (D45+ Uzun Vadeli Retention)
+Faz 4 sonrası 6 aylık LiveOps planı — long-tail retention (D45+) için:
+
+**Haftalık Cadence** (Sabit):
+- Pazartesi: Yeni Daily Crisis batch (3 puzzle, 24 saat ömürlü)
+- Çarşamba: Weekly Challenge (zor bulmaca, 1 hafta ömürlü)
+- Cuma: "Flash Grid" mini-event — küçük bulmaca, hızlı flow score, +50% jeton
+
+**Aylık Cadence** (Sezon yapısına bağlı):
+- Ayın 1'i: Yeni sezon teması (opsiyonel)
+- Hafta 2: Yeni Challenge Set (1 büyük içerik paketi)
+- Hafta 4: Topluluk bulmacası — Featured Player Puzzle (async)
+
+**3 Aylık Evergreen Döngüsü**:
+Her 3 ayda bir yeni **District** skin eklenir + 3 eski Daily Crisis puzzle'ı "Archive" bölümünde kalıcı oynanabilir hale gelir. Bu, D90+ retention için kritiktir.
+
+**Kozmetik Çürüme Mekaniği**: Her sezonun temel teması, sezon bitiminden 2 hafta sonra "Classic" kozmetiklerine döner. 6 ay sonra geçmiş sezon temaları limited-time drop olarak geri gelir (FOMO yöntemi).
+
+**Yıllık Theme Cycle (12 Ay)**: Yılda 2 yeni sezon + sezon aralarında 2 büyük içerik güncellemesi + geçmiş sezonlara Archive erişimi. Bu, eski oyuncuları "nostalji" ile geri çeker.
+
+**Hedef**: D180+ retention %2-3. Top 10 yapımında long-tail retention kritiktir — bu cadence ile hedeflenir.
 ## KPI ve Başarı Metrikleri
 14.1 Soft Launch Hedefleri
 | Metrik | Hedef Değer | Minimum Geçerlilik |
@@ -756,7 +800,7 @@ Bu bölüm, GDD ile mevcut kod tabanı arasındaki mimari kararları ve uygulama
 ### D.3 Araç Simülasyonu
 - `VehicleSimulator`: `INexusService`, Unity Update döngüsüne `SimulationUpdater` MonoBehaviour ile bağlanır
 - **Playing** state'inde: Araçlar hayalet modunda (%60 opak, 3D küp), çarpışma AKTİF — anlık kaza geri bildirimi
-- **Simulating** state'inde: Araçlar katı modda, 10 saniye kesintisiz akış → `LevelCompletedSignal`
+- **Simulating** state'inde: Araçlar katı modda, Flow Score threshold'una ulaşma doğrulanır → `LevelCompletedSignal`
 - Kaza → `GameState.Paused` → `CrashDetectedSignal` → oyuncu düzeltir → Playing'e dönüş
 - Mesafe-tabanlı çarpışma: iki farklı renkli araç <0.5f mesafede + viyadüksüz hücre → kaza
 
