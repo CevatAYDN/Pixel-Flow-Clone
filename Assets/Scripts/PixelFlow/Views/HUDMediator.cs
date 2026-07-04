@@ -91,6 +91,7 @@ namespace PixelFlow.Views
             _themeLightHandler = null;
             _themeNeonHandler = null;
 
+            if (_returnToHubCoroutine != null) View.StopCoroutine(_returnToHubCoroutine);
             HintModel.OnHintCountChanged -= HandleHintCountChanged;
             GameSessionModel.OnScoreChanged -= HandleScoreChanged;
             GameSessionModel.OnTimeChanged -= HandleTimeChanged;
@@ -287,25 +288,25 @@ namespace PixelFlow.Views
             View.UpdateStars(stars);
         }
 
-        private async void HandleLevelCompleted(LevelCompletedSignal signal)
+        private Coroutine _returnToHubCoroutine;
+
+        private void HandleLevelCompleted(LevelCompletedSignal signal)
         {
-            if (!Application.isPlaying) return; // Skip async delay in EditMode tests to prevent TestRunner freeze
+            if (!Application.isPlaying) return;
             if (View == null || GameSessionModel == null) return;
             View.ShowCompletion(GameSessionModel.Score, GameSessionModel.StarsEarned);
 
-            try
+            if (View.isActiveAndEnabled)
+                _returnToHubCoroutine = View.StartCoroutine(AutoReturnToHubRoutine());
+        }
+
+        private System.Collections.IEnumerator AutoReturnToHubRoutine()
+        {
+            yield return new WaitForSeconds(3f);
+            if (View != null && GameStateModel != null && SignalBus != null
+                && GameStateModel.CurrentState == GameState.LevelCompleted)
             {
-                // GDD §5.1: Bölüm tamamlandıktan sonra oyuncu "Hub'a Dön" seçebilir
-                // veya 3 saniye sonra otomatik hub'a dönüş yapılır.
-                await System.Threading.Tasks.Task.Delay(3000);
-                if (this != null && View != null && GameStateModel != null && SignalBus != null && GameStateModel.CurrentState == GameState.LevelCompleted)
-                {
-                    SignalBus.Fire(new RequestReturnToHubSignal());
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[HUDMediator] Auto return-to-hub failed: {ex.Message}");
+                SignalBus.Fire(new RequestReturnToHubSignal());
             }
         }
 

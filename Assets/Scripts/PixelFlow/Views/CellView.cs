@@ -6,7 +6,6 @@ using Nexus.Core;
 
 namespace PixelFlow.Views
 {
-    [Mediator(typeof(CellMediator))]
     public class CellView : View
     {
         [SerializeField] private SpriteRenderer _bgRenderer;
@@ -29,6 +28,8 @@ namespace PixelFlow.Views
         private static Sprite s_starSprite;
         private static Sprite s_warningSprite;
         private static Shader s_cachedShader;
+        private static Material _sharedBridgeMat;
+        private static Material _sharedPillarMat;
 
         private void Awake()
         {
@@ -39,11 +40,12 @@ namespace PixelFlow.Views
 
             if (_warningRenderer == null)
             {
-                GameObject warningObj = new GameObject("WarningIcon");
-                warningObj.transform.SetParent(transform, false);
-                _warningRenderer = warningObj.AddComponent<SpriteRenderer>();
+                Debug.LogWarning("[CellView] WarningIcon SpriteRenderer not assigned in prefab.", this);
             }
-            EnsureWarningSprite(_warningRenderer);
+            else
+            {
+                EnsureWarningSprite(_warningRenderer);
+            }
 
             if (_bgRenderer != null) _bgRenderer.sortingOrder = 0;
             if (_bridgeRenderer != null) _bridgeRenderer.sortingOrder = 2;
@@ -56,8 +58,18 @@ namespace PixelFlow.Views
             }
         }
 
+        private static void EnsureSharedBridgeMaterials()
+        {
+            if (_sharedBridgeMat != null) return;
+            var shader = Shader.Find("Sprites/Default") ?? Shader.Find("Standard");
+            _sharedBridgeMat = new Material(shader) { color = new Color(0.35f, 0.35f, 0.4f, 1f), hideFlags = HideFlags.DontSave };
+            _sharedPillarMat = new Material(shader) { color = new Color(0.25f, 0.25f, 0.3f, 1f), hideFlags = HideFlags.DontSave };
+        }
+
         private void CreateBridgeVisual()
         {
+            EnsureSharedBridgeMaterials();
+
             _bridge3D = new GameObject("Bridge3D");
             _bridge3D.transform.SetParent(transform, false);
             _bridge3D.transform.localPosition = new Vector3(0f, 0f, -0.3f);
@@ -71,8 +83,7 @@ namespace PixelFlow.Views
             var deckR = deck.GetComponent<Renderer>();
             if (deckR != null)
             {
-                deckR.material = new Material(s_cachedShader);
-                deckR.material.color = new Color(0.35f, 0.35f, 0.4f, 1f);
+                deckR.material = _sharedBridgeMat;
             }
 
             for (int side = -1; side <= 1; side += 2)
@@ -86,8 +97,7 @@ namespace PixelFlow.Views
                 var pillR = pillar.GetComponent<Renderer>();
                 if (pillR != null)
                 {
-                    pillR.material = new Material(s_cachedShader);
-                    pillR.material.color = new Color(0.25f, 0.25f, 0.3f, 1f);
+                    pillR.material = _sharedPillarMat;
                 }
             }
 
@@ -363,7 +373,7 @@ namespace PixelFlow.Views
             if (_bridge3D != null) _bridge3D.SetActive(cellData.HasViaduct || cellData.State == CellState.Bridge);
 
             // Kaza Çakışma Uyarısı (2 veya daha fazla yol var ve viyadük yoksa)
-            bool hasConflict = cellData.PathColors.Count >= 2 && !cellData.HasViaduct;
+            bool hasConflict = cellData.PathColorCount >= 2 && !cellData.HasViaduct;
             if (_warningRenderer != null)
             {
                 _warningRenderer.enabled = hasConflict;

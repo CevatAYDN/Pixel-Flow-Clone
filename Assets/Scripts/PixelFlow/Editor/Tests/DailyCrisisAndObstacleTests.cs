@@ -91,14 +91,14 @@ namespace PixelFlow.Editor.Tests
 
             var cell = grid.Grid[2, 2];
             cell.State = CellState.Path;
-            cell.PathColors.Add(ColorType.Blue);
+            cell.AddPathColor(ColorType.Blue);
             cell.UnderColor = ColorType.Blue;
 
             // Second color crossing same cell
-            cell.PathColors.Add(ColorType.Red);
+            cell.AddPathColor(ColorType.Red);
             cell.OverColor = ColorType.Red;
 
-            Assert.AreEqual(2, cell.PathColors.Count);
+            Assert.AreEqual(2, cell.PathColorCount);
             Assert.AreEqual(ColorType.Blue, cell.UnderColor);
             Assert.AreEqual(ColorType.Red, cell.OverColor);
             Assert.IsFalse(cell.HasViaduct, "Cell does not have viaduct yet, soft warning should trigger.");

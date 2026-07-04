@@ -33,9 +33,9 @@ namespace PixelFlow.Commands
             var cell = GridModel.Grid[pos.x, pos.y];
 
             // Viyadük sadece en az 2 yolun kesiştiği yerlere ve henüz viyadük olmayan hücrelere konulabilir
-            if (cell.PathColors.Count < 2 || cell.PathColors.Count > BridgeValidationUtility.MaxPathsPerBridge || cell.HasViaduct)
+            if (cell.PathColorCount < 2 || cell.PathColorCount > BridgeValidationUtility.MaxPathsPerBridge || cell.HasViaduct)
             {
-                Debug.LogWarning($"[PlaceViaductCommand] Cannot place viaduct at {pos}. Paths: {cell.PathColors.Count}, HasViaduct: {cell.HasViaduct}");
+                Debug.LogWarning($"[PlaceViaductCommand] Cannot place viaduct at {pos}. Paths: {cell.PathColorCount}, HasViaduct: {cell.HasViaduct}");
                 return;
             }
 
@@ -47,7 +47,13 @@ namespace PixelFlow.Commands
                 cell.HasViaduct = true;
                 cell.State = CellState.Bridge;
 
-                var colors = System.Linq.Enumerable.ToArray(cell.PathColors);
+                var colors = new ColorType[2];
+                int ci = 0;
+                foreach (var pc in cell.GetPathColors())
+                {
+                    if (ci < 2) colors[ci++] = pc;
+                    else break;
+                }
                 List<Vector2Int> pathA = null;
                 List<Vector2Int> pathB = null;
                 bool hasPathA = GridModel.Paths != null && GridModel.Paths.TryGetValue(colors[0], out pathA);

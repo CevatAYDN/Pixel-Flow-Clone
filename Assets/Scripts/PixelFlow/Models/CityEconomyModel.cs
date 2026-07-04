@@ -35,7 +35,8 @@ namespace PixelFlow.Models
         void PurchaseUpgrade(UpgradeType type);
         int GetUpgradeCost(UpgradeType type);
         float GetAccumulatedTaxes();
-        void SetAccumulatedTaxes(float value);
+        void SetAccumulatedTaxes(float value, bool saveImmediately = false);
+        void FlushAccumulated();
     }
 
     public class CityEconomyModel : ICityEconomyModel, IReactiveModel
@@ -151,11 +152,16 @@ namespace PixelFlow.Models
         /// Birikmiş vergi miktarını ayarlar (TaxCollectionService tarafından kullanılır).
         /// MaxStorage limitini aşamaz.
         /// </summary>
-        public void SetAccumulatedTaxes(float value)
+        public void SetAccumulatedTaxes(float value, bool saveImmediately = false)
         {
             _accumulatedTaxes = Mathf.Min(value, MaxStorage);
-            SaveAccumulated();
+            if (saveImmediately) SaveAccumulated();
             OnEconomyUpdated?.Invoke();
+        }
+
+        public void FlushAccumulated()
+        {
+            SaveAccumulated();
         }
 
         private void LoadState()

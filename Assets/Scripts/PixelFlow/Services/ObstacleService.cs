@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Nexus.Core;
 using PixelFlow.Data;
 using PixelFlow.Models;
+using PixelFlow.Signals;
 using UnityEngine;
 
 namespace PixelFlow.Services
@@ -31,6 +32,7 @@ namespace PixelFlow.Services
     public class ObstacleService : IObstacleService, INexusService
     {
         [Inject] public IGridModel GridModel { get; set; }
+        [Inject] public ISignalBus SignalBus { get; set; }
 
         private readonly Dictionary<Vector2Int, ObstacleType> _obstacles = new Dictionary<Vector2Int, ObstacleType>();
         private readonly Dictionary<Vector2Int, Vector2Int> _oneWayDirs = new Dictionary<Vector2Int, Vector2Int>();
@@ -103,10 +105,12 @@ namespace PixelFlow.Services
                         {
                             cell.State = CellState.Empty;
                             cell.Color = ColorType.None;
-                            cell.PathColors.Clear();
-                        }
-                    }
+                            cell.ClearPathColors();
                 }
+            }
+
+            SignalBus?.Fire(new GridUpdatedSignal());
+        }
             }
         }
 

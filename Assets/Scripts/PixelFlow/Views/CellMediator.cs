@@ -1,8 +1,2 @@
-using Nexus.Core;
-
-namespace PixelFlow.Views
-{
-    public class CellMediator : Mediator<CellView>
-    {
-    }
-}
+// CellMediator removed — CellView uses no custom mediator logic.
+// The [Mediator] attribute in CellView.cs should be removed as well.

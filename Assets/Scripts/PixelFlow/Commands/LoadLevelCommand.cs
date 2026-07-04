@@ -47,10 +47,10 @@ namespace PixelFlow.Commands
                         var cell = GridModel.Grid[node.position.x, node.position.y];
                         cell.State = CellState.Node;
                         cell.Color = node.color;
-                        if (!cell.PathColors.Contains(node.color))
-                        {
-                            cell.PathColors.Add(node.color);
-                        }
+                if (!cell.HasPathColor(node.color))
+                {
+                    cell.AddPathColor(node.color);
+                }
                     }
                 }
             }

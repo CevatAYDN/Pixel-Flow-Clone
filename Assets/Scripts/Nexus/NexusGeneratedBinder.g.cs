@@ -118,6 +118,7 @@ namespace Nexus.Generated
             NexusDI.RegisterInjector<PixelFlow.Services.ObstacleService>((instance, di) =>
             {
                 instance.GridModel = di.Resolve<PixelFlow.Models.IGridModel>();
+                instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
             });
             NexusDI.RegisterInjector<PixelFlow.Services.OverclockService>((instance, di) =>
             {
@@ -334,6 +335,7 @@ namespace Nexus.Generated
                 var _p_HapticService_SettingsModel = default(PixelFlow.Services.HapticService).SettingsModel;
                 var _p_LocalizationService_PlayerPrefsService = default(PixelFlow.Services.LocalizationService).PlayerPrefsService;
                 var _p_ObstacleService_GridModel = default(PixelFlow.Services.ObstacleService).GridModel;
+                var _p_ObstacleService_SignalBus = default(PixelFlow.Services.ObstacleService).SignalBus;
                 var _p_OverclockService_CityEconomyModel = default(PixelFlow.Services.OverclockService).CityEconomyModel;
                 var _p_PathService_GridModel = default(PixelFlow.Services.PathService).GridModel;
                 var _p_PathService_GameSessionModel = default(PixelFlow.Services.PathService).GameSessionModel;

@@ -500,8 +500,8 @@ namespace PixelFlow.PlayMode.Tests
 
             // Setup a crossing at (2,2) by drawing two paths
             var cell = grid.Grid[2, 2];
-            cell.PathColors.Add(ColorType.Red);
-            cell.PathColors.Add(ColorType.Blue);
+            cell.AddPathColor(ColorType.Red);
+            cell.AddPathColor(ColorType.Blue);
 
             // Place viaduct
             _ctx.Dispatch(new PlaceViaductSignal { Position = new Vector2Int(2, 2) });

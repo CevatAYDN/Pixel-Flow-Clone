@@ -50,6 +50,8 @@ namespace PixelFlow.Services
             public Transform Wagon2Transform;
             public Transform Coupler1Transform;
             public Transform Coupler2Transform;
+
+            public readonly MaterialPropertyBlock Mpb = new MaterialPropertyBlock();
         }
 
         private static readonly ColorType[] AllColors;
@@ -79,14 +81,7 @@ namespace PixelFlow.Services
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
-#if UNITY_EDITOR
-            if (!UnityEditor.EditorApplication.isPlaying)
-            {
-                // EditMode test: SimulationUpdater GameObject'i yaratma — Tick() manuel çağrılır.
-                _vehicleContainer = null;
-            }
-            else
-#endif
+            if (Application.isPlaying)
             {
                 GameObject updaterObj = new GameObject("[VehicleSimulatorUpdater]");
                 updaterObj.hideFlags = HideFlags.DontSave;
@@ -175,14 +170,6 @@ namespace PixelFlow.Services
             {
                 if (v.Visual != null)
                 {
-                    if (v.CachedRenderers != null)
-                    {
-                        for (int i = 0; i < v.CachedRenderers.Length; i++)
-                        {
-                            if (v.CachedRenderers[i]?.material != null)
-                                SafeDestroy(v.CachedRenderers[i].material);
-                        }
-                    }
                     SafeDestroy(v.Visual);
                 }
             }
@@ -344,7 +331,47 @@ namespace PixelFlow.Services
             };
 
             visual.transform.localPosition = vehicleStyle == VehicleStyle.Train ? Vector3.zero : inst.CurrentPosition;
+
+            // Set initial vehicle color via MaterialPropertyBlock (shared materials don't have per-vehicle color baked in)
+            Color vehicleColor = CellView.GetColor(color);
+            inst.Mpb.SetColor("_Color", new Color(vehicleColor.r, vehicleColor.g, vehicleColor.b, 1f));
+            for (int ri = 0; ri < inst.CachedRenderers.Length; ri++)
+            {
+                if (inst.CachedRenderers[ri] != null)
+                    inst.CachedRenderers[ri].SetPropertyBlock(inst.Mpb);
+            }
+
             _activeVehicles.Add(inst);
+        }
+
+        // Shared materials for vehicle visuals — prevents new Material per-primitive (saved ~20+ allocs/vehicle)
+        private static Material _sharedSpriteMat;
+        private static Material _sharedMetalMat;
+        private static Material _sharedWindowMat;
+        private static Material _sharedHeadlightMat;
+        private static Material _sharedWhiteMat;
+        private static Material _sharedTailMat;
+
+        private static Material GetSharedSpriteMat()
+        {
+            if (_sharedSpriteMat == null)
+            {
+                var shader = Shader.Find("Sprites/Default") ?? Shader.Find("Standard");
+                _sharedSpriteMat = new Material(shader) { hideFlags = HideFlags.DontSave };
+            }
+            return _sharedSpriteMat;
+        }
+
+        private static void EnsureSharedMaterials()
+        {
+            if (_sharedSpriteMat != null) return;
+            var shader = Shader.Find("Sprites/Default") ?? Shader.Find("Standard");
+            _sharedSpriteMat = new Material(shader) { hideFlags = HideFlags.DontSave };
+            _sharedMetalMat = new Material(shader) { color = new Color(0.15f, 0.15f, 0.18f, 1f), hideFlags = HideFlags.DontSave };
+            _sharedWindowMat = new Material(shader) { color = new Color(0.2f, 0.9f, 1f, 0.9f), hideFlags = HideFlags.DontSave };
+            _sharedHeadlightMat = new Material(shader) { color = new Color(1f, 0.95f, 0.5f, 1f), hideFlags = HideFlags.DontSave };
+            _sharedWhiteMat = new Material(shader) { color = Color.white, hideFlags = HideFlags.DontSave };
+            _sharedTailMat = new Material(shader) { color = new Color(1f, 0.15f, 0.15f, 1f), hideFlags = HideFlags.DontSave };
         }
 
         private static List<Renderer> CreateProceduralTrain3D(GameObject root, ColorType color, out Transform loco, out Transform wagon1, out Transform wagon2, out Transform coupler1, out Transform coupler2)
@@ -352,12 +379,9 @@ namespace PixelFlow.Services
             var renderers = new List<Renderer>();
             loco = null; wagon1 = null; wagon2 = null; coupler1 = null; coupler2 = null;
             if (!Application.isPlaying) return renderers;
+            EnsureSharedMaterials();
 
-            Shader shader = Shader.Find("Sprites/Default") ?? Shader.Find("Standard");
             Color trainColor = CellView.GetColor(color);
-            Color darkMetal = new Color(0.15f, 0.15f, 0.18f, 1f);
-            Color windowColor = new Color(0.2f, 0.9f, 1f, 0.9f);
-            Color headlightColor = new Color(1f, 0.95f, 0.5f, 1f);
 
             // 1. LOCOMOTIVE ENGINE HEAD
             var locoObj = new GameObject("Locomotive");
@@ -369,7 +393,7 @@ namespace PixelFlow.Services
             locoBody.transform.SetParent(loco, false);
             locoBody.transform.localScale = new Vector3(0.38f, 0.22f, 0.18f);
             var rLoco = locoBody.GetComponent<Renderer>();
-            if (rLoco != null) { rLoco.material = new Material(shader) { color = trainColor }; rLoco.sortingOrder = 10; renderers.Add(rLoco); }
+            if (rLoco != null) { rLoco.material = _sharedSpriteMat; rLoco.sortingOrder = 10; renderers.Add(rLoco); }
 
             var locoCab = GameObject.CreatePrimitive(PrimitiveType.Cube);
             locoCab.name = "EngineCabin";
@@ -377,7 +401,7 @@ namespace PixelFlow.Services
             locoCab.transform.localScale = new Vector3(0.18f, 0.20f, 0.16f);
             locoCab.transform.localPosition = new Vector3(-0.06f, 0f, -0.10f);
             var rCab = locoCab.GetComponent<Renderer>();
-            if (rCab != null) { rCab.material = new Material(shader) { color = trainColor * 0.85f }; rCab.sortingOrder = 10; renderers.Add(rCab); }
+            if (rCab != null) { rCab.material = _sharedSpriteMat; rCab.sortingOrder = 10; renderers.Add(rCab); }
 
             var windshield = GameObject.CreatePrimitive(PrimitiveType.Cube);
             windshield.name = "Windshield";
@@ -385,7 +409,7 @@ namespace PixelFlow.Services
             windshield.transform.localScale = new Vector3(0.04f, 0.18f, 0.08f);
             windshield.transform.localPosition = new Vector3(0.19f, 0f, -0.06f);
             var rWin = windshield.GetComponent<Renderer>();
-            if (rWin != null) { rWin.material = new Material(shader) { color = windowColor }; rWin.sortingOrder = 10; renderers.Add(rWin); }
+            if (rWin != null) { rWin.material = _sharedWindowMat; rWin.sortingOrder = 10; renderers.Add(rWin); }
 
             var headlight = GameObject.CreatePrimitive(PrimitiveType.Cube);
             headlight.name = "TrainHeadlight";
@@ -393,7 +417,7 @@ namespace PixelFlow.Services
             headlight.transform.localScale = new Vector3(0.05f, 0.08f, 0.06f);
             headlight.transform.localPosition = new Vector3(0.20f, 0f, 0.02f);
             var rHead = headlight.GetComponent<Renderer>();
-            if (rHead != null) { rHead.material = new Material(shader) { color = headlightColor }; rHead.sortingOrder = 10; renderers.Add(rHead); }
+            if (rHead != null) { rHead.material = _sharedHeadlightMat; rHead.sortingOrder = 10; renderers.Add(rHead); }
 
             var stripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
             stripe.name = "RoofStripe";
@@ -401,7 +425,7 @@ namespace PixelFlow.Services
             stripe.transform.localScale = new Vector3(0.36f, 0.06f, 0.04f);
             stripe.transform.localPosition = new Vector3(0f, 0f, -0.19f);
             var rStripe = stripe.GetComponent<Renderer>();
-            if (rStripe != null) { rStripe.material = new Material(shader) { color = Color.white }; rStripe.sortingOrder = 10; renderers.Add(rStripe); }
+            if (rStripe != null) { rStripe.material = _sharedWhiteMat; rStripe.sortingOrder = 10; renderers.Add(rStripe); }
 
             float[] locoWheelX = { 0.10f, -0.10f };
             foreach (float x in locoWheelX)
@@ -415,7 +439,7 @@ namespace PixelFlow.Services
                     wheel.transform.localPosition = new Vector3(x, side * 0.09f, 0.05f);
                     wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
                     var rWheel = wheel.GetComponent<Renderer>();
-                    if (rWheel != null) { rWheel.material = new Material(shader) { color = darkMetal }; rWheel.sortingOrder = 10; renderers.Add(rWheel); }
+                    if (rWheel != null) { rWheel.material = _sharedMetalMat; rWheel.sortingOrder = 10; renderers.Add(rWheel); }
                 }
             }
 
@@ -426,7 +450,7 @@ namespace PixelFlow.Services
             c1Obj.transform.localScale = new Vector3(0.10f, 0.06f, 0.06f);
             coupler1 = c1Obj.transform;
             var rC1 = c1Obj.GetComponent<Renderer>();
-            if (rC1 != null) { rC1.material = new Material(shader) { color = darkMetal }; rC1.sortingOrder = 10; renderers.Add(rC1); }
+            if (rC1 != null) { rC1.material = _sharedMetalMat; rC1.sortingOrder = 10; renderers.Add(rC1); }
 
             // 3. WAGON 1
             var w1Obj = new GameObject("Wagon1");
@@ -438,7 +462,7 @@ namespace PixelFlow.Services
             w1Body.transform.SetParent(wagon1, false);
             w1Body.transform.localScale = new Vector3(0.34f, 0.20f, 0.16f);
             var rW1 = w1Body.GetComponent<Renderer>();
-            if (rW1 != null) { rW1.material = new Material(shader) { color = trainColor * 0.95f }; rW1.sortingOrder = 10; renderers.Add(rW1); }
+            if (rW1 != null) { rW1.material = _sharedSpriteMat; rW1.sortingOrder = 10; renderers.Add(rW1); }
 
             for (int side = -1; side <= 1; side += 2)
             {
@@ -448,7 +472,7 @@ namespace PixelFlow.Services
                 wWin.transform.localScale = new Vector3(0.24f, 0.02f, 0.06f);
                 wWin.transform.localPosition = new Vector3(0f, side * 0.10f, -0.03f);
                 var rWWin = wWin.GetComponent<Renderer>();
-                if (rWWin != null) { rWWin.material = new Material(shader) { color = windowColor }; rWWin.sortingOrder = 10; renderers.Add(rWWin); }
+                if (rWWin != null) { rWWin.material = _sharedWindowMat; rWWin.sortingOrder = 10; renderers.Add(rWWin); }
             }
 
             foreach (float x in locoWheelX)
@@ -462,7 +486,7 @@ namespace PixelFlow.Services
                     wheel.transform.localPosition = new Vector3(x, side * 0.09f, 0.05f);
                     wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
                     var rWheel = wheel.GetComponent<Renderer>();
-                    if (rWheel != null) { rWheel.material = new Material(shader) { color = darkMetal }; rWheel.sortingOrder = 10; renderers.Add(rWheel); }
+                    if (rWheel != null) { rWheel.material = _sharedMetalMat; rWheel.sortingOrder = 10; renderers.Add(rWheel); }
                 }
             }
 
@@ -473,7 +497,7 @@ namespace PixelFlow.Services
             c2Obj.transform.localScale = new Vector3(0.10f, 0.06f, 0.06f);
             coupler2 = c2Obj.transform;
             var rC2 = c2Obj.GetComponent<Renderer>();
-            if (rC2 != null) { rC2.material = new Material(shader) { color = darkMetal }; rC2.sortingOrder = 10; renderers.Add(rC2); }
+            if (rC2 != null) { rC2.material = _sharedMetalMat; rC2.sortingOrder = 10; renderers.Add(rC2); }
 
             // 5. WAGON 2
             var w2Obj = new GameObject("Wagon2");
@@ -485,7 +509,7 @@ namespace PixelFlow.Services
             w2Body.transform.SetParent(wagon2, false);
             w2Body.transform.localScale = new Vector3(0.32f, 0.20f, 0.16f);
             var rW2 = w2Body.GetComponent<Renderer>();
-            if (rW2 != null) { rW2.material = new Material(shader) { color = trainColor * 0.90f }; rW2.sortingOrder = 10; renderers.Add(rW2); }
+            if (rW2 != null) { rW2.material = _sharedSpriteMat; rW2.sortingOrder = 10; renderers.Add(rW2); }
 
             foreach (float x in locoWheelX)
             {
@@ -498,7 +522,7 @@ namespace PixelFlow.Services
                     wheel.transform.localPosition = new Vector3(x, side * 0.09f, 0.05f);
                     wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
                     var rWheel = wheel.GetComponent<Renderer>();
-                    if (rWheel != null) { rWheel.material = new Material(shader) { color = darkMetal }; rWheel.sortingOrder = 10; renderers.Add(rWheel); }
+                    if (rWheel != null) { rWheel.material = _sharedMetalMat; rWheel.sortingOrder = 10; renderers.Add(rWheel); }
                 }
             }
 
@@ -508,11 +532,8 @@ namespace PixelFlow.Services
         private static List<Renderer> CreateProceduralVehicle3D(GameObject root, ColorType color)
         {
             var renderers = new List<Renderer>();
-            if (!Application.isPlaying) return renderers; // Skip heavy 3D primitives during EditMode unit tests
-
-            Shader shader = Shader.Find("Sprites/Default") ?? Shader.Find("Standard");
-
-            Color carColor = CellView.GetColor(color);
+            if (!Application.isPlaying) return renderers;
+            EnsureSharedMaterials();
 
             // 1. Main Chassis / Body
             var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -522,7 +543,7 @@ namespace PixelFlow.Services
             var rBody = body.GetComponent<Renderer>();
             if (rBody != null)
             {
-                rBody.material = new Material(shader) { color = carColor };
+                rBody.material = _sharedSpriteMat;
                 rBody.sortingOrder = 10;
                 renderers.Add(rBody);
             }
@@ -536,7 +557,7 @@ namespace PixelFlow.Services
             var rCabin = cabin.GetComponent<Renderer>();
             if (rCabin != null)
             {
-                rCabin.material = new Material(shader) { color = new Color(0.15f, 0.2f, 0.3f, 0.9f) };
+                rCabin.material = _sharedWindowMat;
                 rCabin.sortingOrder = 10;
                 renderers.Add(rCabin);
             }
@@ -550,7 +571,7 @@ namespace PixelFlow.Services
             var rHead = headL.GetComponent<Renderer>();
             if (rHead != null)
             {
-                rHead.material = new Material(shader) { color = new Color(0.9f, 1f, 1f, 1f) };
+                rHead.material = _sharedHeadlightMat;
                 rHead.sortingOrder = 10;
                 renderers.Add(rHead);
             }
@@ -564,7 +585,7 @@ namespace PixelFlow.Services
             var rTail = tailL.GetComponent<Renderer>();
             if (rTail != null)
             {
-                rTail.material = new Material(shader) { color = new Color(1f, 0.15f, 0.15f, 1f) };
+                rTail.material = _sharedTailMat;
                 rTail.sortingOrder = 10;
                 renderers.Add(rTail);
             }
@@ -585,7 +606,7 @@ namespace PixelFlow.Services
                     var rWheel = wheel.GetComponent<Renderer>();
                     if (rWheel != null)
                     {
-                        rWheel.material = new Material(shader) { color = new Color(0.12f, 0.12f, 0.14f, 1f) };
+                        rWheel.material = _sharedMetalMat;
                         rWheel.sortingOrder = 10;
                         renderers.Add(rWheel);
                     }
@@ -628,12 +649,11 @@ namespace PixelFlow.Services
 
                 if (v.CachedRenderers != null)
                 {
+                    v.Mpb.SetColor("_Color", new Color(1f, 1f, 1f, baseAlpha));
                     for (int ri = 0; ri < v.CachedRenderers.Length; ri++)
                     {
                         if (v.CachedRenderers[ri] == null) continue;
-                        Color c = v.CachedRenderers[ri].material.color;
-                        c.a = baseAlpha;
-                        v.CachedRenderers[ri].material.color = c;
+                        v.CachedRenderers[ri].SetPropertyBlock(v.Mpb);
                     }
                 }
 
@@ -648,14 +668,6 @@ namespace PixelFlow.Services
                         if (ObstacleService.IsNarrowPass(endCell))
                         {
                             ObstacleService.OnVehicleLeftNarrowPass(endCell, v.Color);
-                        }
-                    }
-                    if (v.CachedRenderers != null)
-                    {
-                        for (int ri = 0; ri < v.CachedRenderers.Length; ri++)
-                        {
-                            if (v.CachedRenderers[ri]?.material != null)
-                                SafeDestroy(v.CachedRenderers[ri].material);
                         }
                     }
                     SafeDestroy(v.Visual);
@@ -855,23 +867,30 @@ namespace PixelFlow.Services
             return -0.2f; // Normal yol
         }
 
+        // Shared buffer for collision point queries — avoids per-pair allocation
+        private static readonly List<Vector3> _collisionBuffer = new List<Vector3>(8);
+
         private void UpdateCollisionDetection()
         {
             for (int i = 0; i < _activeVehicles.Count; i++)
             {
                 var v1 = _activeVehicles[i];
+                PopulateCollisionPoints(v1, _collisionBuffer);
+                if (_collisionBuffer.Count == 0) continue;
+                var bufferA = _collisionBuffer;
 
                 for (int j = i + 1; j < _activeVehicles.Count; j++)
                 {
                     var v2 = _activeVehicles[j];
                     if (v1.Color == v2.Color) continue;
 
-                    Vector3[] v1Points = GetVehicleCollisionPoints(v1);
-                    Vector3[] v2Points = GetVehicleCollisionPoints(v2);
+                    PopulateCollisionPoints(v2, _collisionBuffer);
+                    if (_collisionBuffer.Count == 0) continue;
+                    var bufferB = _collisionBuffer;
 
-                    foreach (var p1 in v1Points)
+                    foreach (var p1 in bufferA)
                     {
-                        foreach (var p2 in v2Points)
+                        foreach (var p2 in bufferB)
                         {
                             float dist = Vector3.Distance(p1, p2);
                             const float collisionThreshold = 0.45f;
@@ -879,7 +898,7 @@ namespace PixelFlow.Services
                             if (dist < collisionThreshold)
                             {
                                 Vector3 midPos = (p1 + p2) * 0.5f;
-                                Vector2Int cellPos = new Vector2Int(
+                                var cellPos = new Vector2Int(
                                     Mathf.RoundToInt(midPos.x),
                                     Mathf.RoundToInt(midPos.y));
 
@@ -914,17 +933,20 @@ namespace PixelFlow.Services
             }
         }
 
-        private static Vector3[] GetVehicleCollisionPoints(VehicleInstance v)
+        private static void PopulateCollisionPoints(VehicleInstance v, List<Vector3> buffer)
         {
+            buffer.Clear();
             if (v.Style == VehicleStyle.Train)
             {
-                var list = new List<Vector3>();
-                if (v.LocoTransform != null && v.LocoTransform.gameObject.activeSelf) list.Add(v.LocoTransform.localPosition);
-                if (v.Wagon1Transform != null && v.Wagon1Transform.gameObject.activeSelf) list.Add(v.Wagon1Transform.localPosition);
-                if (v.Wagon2Transform != null && v.Wagon2Transform.gameObject.activeSelf) list.Add(v.Wagon2Transform.localPosition);
-                return list.Count > 0 ? list.ToArray() : new Vector3[] { v.CurrentPosition };
+                if (v.LocoTransform != null && v.LocoTransform.gameObject.activeSelf) buffer.Add(v.LocoTransform.localPosition);
+                if (v.Wagon1Transform != null && v.Wagon1Transform.gameObject.activeSelf) buffer.Add(v.Wagon1Transform.localPosition);
+                if (v.Wagon2Transform != null && v.Wagon2Transform.gameObject.activeSelf) buffer.Add(v.Wagon2Transform.localPosition);
+                if (buffer.Count == 0) buffer.Add(v.CurrentPosition);
             }
-            return new Vector3[] { v.CurrentPosition };
+            else
+            {
+                buffer.Add(v.CurrentPosition);
+            }
         }
 
         private void TriggerCrash(Vector2Int crashPos, ColorType colorA, ColorType colorB)

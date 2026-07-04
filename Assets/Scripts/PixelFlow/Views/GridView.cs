@@ -36,6 +36,7 @@ namespace PixelFlow.Views
         private void Awake()
         {
             UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Enable();
+            _cachedCamera = Camera.main;
         }
 
         private void Update()
@@ -349,6 +350,8 @@ namespace PixelFlow.Views
         /// her çağrıda FindObjectByType tetiklenmez. Null gelirse kamera yok demektir,
         /// sonraki çağrıda tekrar denenir (fallback).
         /// </summary>
+        public Camera GetCachedCamera() => _cachedCamera;
+
         public void CenterCamera(int width, int height)
         {
             if (_cachedCamera == null) _cachedCamera = Camera.main;

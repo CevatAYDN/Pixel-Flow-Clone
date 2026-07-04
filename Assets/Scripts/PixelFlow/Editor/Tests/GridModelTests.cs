@@ -138,8 +138,8 @@ namespace PixelFlow.Editor.Tests
             _grid.Initialize(5, 5);
             _grid.Grid[1, 1].State = CellState.Path;
             _grid.Grid[1, 1].Color = ColorType.Red;
-            _grid.Grid[1, 1].PathColors.Add(ColorType.Red);
-            Assert.IsTrue(_grid.Grid[1, 1].PathColors.Contains(ColorType.Red));
+            _grid.Grid[1, 1].AddPathColor(ColorType.Red);
+            Assert.IsTrue(_grid.Grid[1, 1].HasPathColor(ColorType.Red));
         }
     }
 }

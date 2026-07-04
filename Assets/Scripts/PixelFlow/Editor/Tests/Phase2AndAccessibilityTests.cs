@@ -108,7 +108,7 @@ namespace PixelFlow.Editor.Tests
             grid.Initialize(5, 5);
             grid.Grid[0, 0].State = CellState.Node;
             grid.Grid[0, 0].Color = ColorType.Red;
-            grid.Grid[0, 0].PathColors.Add(ColorType.Red);
+            grid.Grid[0, 0].AddPathColor(ColorType.Red);
             grid.Paths[ColorType.Red] = new List<Vector2Int> { new Vector2Int(0, 0), new Vector2Int(1, 0) };
             grid.ActiveColor.Value = ColorType.Red;
             grid.LastPosition.Value = new Vector2Int(1, 0);

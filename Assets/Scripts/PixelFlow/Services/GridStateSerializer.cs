@@ -84,7 +84,7 @@ namespace PixelFlow.Services
                         overColor = (int)cell.OverColor,
                         obstacleType = (int)cell.ObstacleType
                     };
-                    foreach (var pc in cell.PathColors)
+                    foreach (var pc in cell.GetPathColors())
                         csd.pathColors.Add((int)pc);
                     data.cells.Add(csd);
                 }
@@ -158,9 +158,9 @@ namespace PixelFlow.Services
                 cell.HasViaduct = csd.hasViaduct;
                 cell.UnderColor = (ColorType)csd.underColor;
                 cell.OverColor = (ColorType)csd.overColor;
-                cell.PathColors.Clear();
+                cell.ClearPathColors();
                 foreach (var pc in csd.pathColors)
-                    cell.PathColors.Add((ColorType)pc);
+                    cell.AddPathColor((ColorType)pc);
                 cell.ObstacleType = (ObstacleType)csd.obstacleType;
             }
 
@@ -194,9 +194,9 @@ namespace PixelFlow.Services
                         cell.State = CellState.Node;
                         cell.Color = node.color;
                     }
-                    if (!cell.PathColors.Contains(node.color))
+                    if (!cell.HasPathColor(node.color))
                     {
-                        cell.PathColors.Add(node.color);
+                        cell.AddPathColor(node.color);
                     }
                 }
             }

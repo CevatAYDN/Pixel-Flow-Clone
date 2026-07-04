@@ -128,21 +128,6 @@ namespace PixelFlow
             EnterHub();
         }
 
-        /// <summary>
-        /// Statik erişim noktası. Save tüm UI/command'lardan tetiklenebilir.
-        /// GameBootstrapper instance'ı yoksa null check ile no-op.
-        /// </summary>
-        public static void RequestSave(IGridModel grid, IGameSessionModel session, ILevelModel level)
-        {
-            var inst = FindAnyObjectByType<GameBootstrapper>();
-            if (inst == null || inst._gridModel == null) return;
-            try { GridStateSerializer.Save(grid, session, level); }
-            catch (System.Exception ex)
-            {
-                Debug.LogWarning($"[GameBootstrapper.RequestSave] {ex.Message}");
-            }
-        }
-
         private void OnApplicationPause(bool pause)
         {
             if (pause) SaveGameState();

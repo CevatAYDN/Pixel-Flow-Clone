@@ -76,6 +76,12 @@ namespace PixelFlow.Views
 
         private void HandlePlayLevel()
         {
+            if (GameStateModel != null && GameStateModel.CurrentState != GameState.MainMenu)
+            {
+                Debug.LogWarning($"[HubHUDMediator] HandlePlayLevel ignored: current state is {GameStateModel.CurrentState}, expected MainMenu.");
+                return;
+            }
+
             // Load current level from progression service
             int levelIndex = ProgressModel.UnlockedLevels;
             LevelData level = ProgressionService.GetOrGenerateLevel(levelIndex);

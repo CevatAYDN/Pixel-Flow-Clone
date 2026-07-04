@@ -25,16 +25,12 @@ namespace PixelFlow.Services
         private SimulationUpdater _updater;
         private float _cachedTaxRate;
         private int _cachedMaxStorage;
+        private float _flushTimer;
+        private const float FlushInterval = 5f;
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
-#if UNITY_EDITOR
-            if (!UnityEditor.EditorApplication.isPlaying)
-            {
-                // EditMode test: SimulationUpdater GameObject'i yaratma.
-            }
-            else
-#endif
+            if (Application.isPlaying)
             {
                 GameObject updaterObj = new GameObject("[TaxAutoCollector]");
                 updaterObj.hideFlags = HideFlags.DontSave;
@@ -47,6 +43,7 @@ namespace PixelFlow.Services
 
         public void OnDispose()
         {
+            if (CityEconomyModel != null) CityEconomyModel.FlushAccumulated();
             if (_updater != null)
             {
                 UnityEngine.Object.Destroy(_updater.gameObject);
@@ -57,6 +54,7 @@ namespace PixelFlow.Services
         public void CollectNow()
         {
             CityEconomyModel.CollectTaxes();
+            CityEconomyModel.FlushAccumulated();
         }
 
         private void Update()
@@ -75,7 +73,16 @@ namespace PixelFlow.Services
 
             float accumulated = CityEconomyModel.GetAccumulatedTaxes();
             accumulated = Mathf.Min(accumulated + _cachedTaxRate * dt, _cachedMaxStorage);
-            CityEconomyModel.SetAccumulatedTaxes(accumulated);
+            // Memory-only update (no PlayerPrefs write)
+            CityEconomyModel.SetAccumulatedTaxes(accumulated, saveImmediately: false);
+
+            // Throttled flush to PlayerPrefs every 5s
+            _flushTimer += dt;
+            if (_flushTimer >= FlushInterval)
+            {
+                _flushTimer = 0f;
+                CityEconomyModel.FlushAccumulated();
+            }
         }
     }
 

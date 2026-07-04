@@ -6,7 +6,7 @@ namespace PixelFlow.Models
 {
     /// <summary>
     /// GridModel'in tam state'ini immutable olarak yakalar.
-    /// Değer tipleri kopyalanır, referans tipler deep-copy yapılır.
+    /// Array pooling kullanır (Capacity ve altı aynı boyuttaki snapshot'larda 0 alloc).
     /// </summary>
     public readonly struct GridSnapshot
     {
@@ -14,7 +14,7 @@ namespace PixelFlow.Models
         public int Height { get; }
         public CellState[,] CellStates { get; }
         public ColorType[,] CellColors { get; }
-        public HashSet<ColorType>[,] CellPathColors { get; }
+        public byte[,] CellPathColorMasks { get; }
         public bool[,] CellHasViaduct { get; }
         public ColorType[,] CellUnderColor { get; }
         public ColorType[,] CellOverColor { get; }
@@ -27,7 +27,7 @@ namespace PixelFlow.Models
         private GridSnapshot(
             int width, int height,
             CellState[,] cellStates, ColorType[,] cellColors,
-            HashSet<ColorType>[,] cellPathColors, bool[,] cellHasViaduct,
+            byte[,] cellPathColorMasks, bool[,] cellHasViaduct,
             ColorType[,] cellUnderColor, ColorType[,] cellOverColor,
             ObstacleType[,] cellObstacleTypes,
             IReadOnlyDictionary<ColorType, IReadOnlyList<Vector2Int>> paths,
@@ -39,7 +39,7 @@ namespace PixelFlow.Models
             Height = height;
             CellStates = cellStates;
             CellColors = cellColors;
-            CellPathColors = cellPathColors;
+            CellPathColorMasks = cellPathColorMasks;
             CellHasViaduct = cellHasViaduct;
             CellUnderColor = cellUnderColor;
             CellOverColor = cellOverColor;
@@ -50,34 +50,54 @@ namespace PixelFlow.Models
             LastPosition = lastPosition;
         }
 
+        // Thread-local array pool: reuses arrays when dimensions match
+        private static CellState[,] _poolStates;
+        private static ColorType[,] _poolColors;
+        private static byte[,] _poolPathColorMasks;
+        private static bool[,] _poolHasViaduct;
+        private static ColorType[,] _poolUnderColors;
+        private static ColorType[,] _poolOverColors;
+        private static ObstacleType[,] _poolObstacleTypes;
+        private static int _poolWidth;
+        private static int _poolHeight;
+
+        private static void EnsurePool(int w, int h)
+        {
+            if (_poolStates != null && _poolWidth == w && _poolHeight == h)
+                return;
+            _poolStates = new CellState[w, h];
+            _poolColors = new ColorType[w, h];
+            _poolPathColorMasks = new byte[w, h];
+            _poolHasViaduct = new bool[w, h];
+            _poolUnderColors = new ColorType[w, h];
+            _poolOverColors = new ColorType[w, h];
+            _poolObstacleTypes = new ObstacleType[w, h];
+            _poolWidth = w;
+            _poolHeight = h;
+        }
+
         /// <summary>
-        /// GridModel'den anlık snapshot alır. Deep-copy yapar.
+        /// GridModel'den anlık snapshot alır. Deep-copy yapar, pooled array kullanır.
         /// </summary>
         public static GridSnapshot Capture(IGridModel grid)
         {
             int w = grid.Width;
             int h = grid.Height;
 
-            var states = new CellState[w, h];
-            var colors = new ColorType[w, h];
-            var pathColors = new HashSet<ColorType>[w, h];
-            var hasViaduct = new bool[w, h];
-            var underColors = new ColorType[w, h];
-            var overColors = new ColorType[w, h];
-            var obstacleTypes = new ObstacleType[w, h];
+            EnsurePool(w, h);
 
             for (int x = 0; x < w; x++)
             {
                 for (int y = 0; y < h; y++)
                 {
                     var cell = grid.Grid[x, y];
-                    states[x, y] = cell.State;
-                    colors[x, y] = cell.Color;
-                    pathColors[x, y] = new HashSet<ColorType>(cell.PathColors);
-                    hasViaduct[x, y] = cell.HasViaduct;
-                    underColors[x, y] = cell.UnderColor;
-                    overColors[x, y] = cell.OverColor;
-                    obstacleTypes[x, y] = cell.ObstacleType;
+                    _poolStates[x, y] = cell.State;
+                    _poolColors[x, y] = cell.Color;
+                    _poolPathColorMasks[x, y] = cell.PathColorsMask;
+                    _poolHasViaduct[x, y] = cell.HasViaduct;
+                    _poolUnderColors[x, y] = cell.UnderColor;
+                    _poolOverColors[x, y] = cell.OverColor;
+                    _poolObstacleTypes[x, y] = cell.ObstacleType;
                 }
             }
 
@@ -91,9 +111,9 @@ namespace PixelFlow.Models
 
             return new GridSnapshot(
                 w, h,
-                states, colors,
-                pathColors, hasViaduct, underColors, overColors,
-                obstacleTypes,
+                _poolStates, _poolColors,
+                _poolPathColorMasks, _poolHasViaduct, _poolUnderColors, _poolOverColors,
+                _poolObstacleTypes,
                 paths,
                 locked,
                 grid.ActiveColor.Value,
@@ -115,7 +135,7 @@ namespace PixelFlow.Models
                     var cell = grid.Grid[x, y];
                     cell.State = CellStates[x, y];
                     cell.Color = CellColors[x, y];
-                    cell.PathColors = new HashSet<ColorType>(CellPathColors[x, y]);
+                    cell.PathColorsMask = CellPathColorMasks[x, y];
                     cell.HasViaduct = CellHasViaduct[x, y];
                     cell.UnderColor = CellUnderColor[x, y];
                     cell.OverColor = CellOverColor[x, y];

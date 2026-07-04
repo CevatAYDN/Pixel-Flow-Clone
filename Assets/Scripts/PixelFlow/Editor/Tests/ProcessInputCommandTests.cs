@@ -138,8 +138,8 @@ namespace PixelFlow.Editor.Tests
             LoadLevel();
             // Occupy (2,0) with 2 colors (Blue and Green) before Red reaches it
             _grid.Grid[2, 0].State = CellState.Path;
-            _grid.Grid[2, 0].PathColors.Add(ColorType.Blue);
-            _grid.Grid[2, 0].PathColors.Add(ColorType.Green);
+            _grid.Grid[2, 0].AddPathColor(ColorType.Blue);
+            _grid.Grid[2, 0].AddPathColor(ColorType.Green);
 
             _ctx.Dispatch(new InputInteractionSignal { Type = InputType.PointerDown, GridPosition = new Vector2Int(0, 0) });
             _ctx.Dispatch(new InputInteractionSignal { Type = InputType.Drag, GridPosition = new Vector2Int(1, 0) });

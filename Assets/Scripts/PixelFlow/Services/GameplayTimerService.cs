@@ -29,13 +29,7 @@ namespace PixelFlow.Services
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
-#if UNITY_EDITOR
-            if (!UnityEditor.EditorApplication.isPlaying)
-            {
-                // EditMode test: SimulationUpdater GameObject'i yaratma.
-            }
-            else
-#endif
+            if (Application.isPlaying)
             {
                 GameObject updaterObj = new GameObject("[GameplayTimerUpdater]");
                 updaterObj.hideFlags = HideFlags.DontSave;

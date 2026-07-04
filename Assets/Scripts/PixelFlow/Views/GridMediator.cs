@@ -14,7 +14,7 @@ namespace PixelFlow.Views
 
         private CellState[,] _previousCellStates;
         private ColorType[,] _previousCellColors;
-        private HashSet<ColorType>[,] _previousCellPathColors;
+        private byte[,] _previousPathColorMasks;
         private readonly HashSet<Vector2Int> _changedCells = new HashSet<Vector2Int>();
 
         protected override void OnBind()
@@ -108,9 +108,8 @@ namespace PixelFlow.Views
                     var current = GridModel.Grid[x, y];
                     bool stateChanged = _previousCellStates[x, y] != current.State;
                     bool colorChanged = _previousCellColors[x, y] != current.Color;
-                    bool pathColorsChanged = _previousCellPathColors != null
-                        && _previousCellPathColors[x, y] != null
-                        && !_previousCellPathColors[x, y].SetEquals(current.PathColors);
+                    bool pathColorsChanged = _previousPathColorMasks != null
+                        && _previousPathColorMasks[x, y] != current.PathColorsMask;
                     if (stateChanged || colorChanged || pathColorsChanged)
                     {
                         _changedCells.Add(new Vector2Int(x, y));
@@ -129,7 +128,7 @@ namespace PixelFlow.Views
             {
                 _previousCellStates = new CellState[w, h];
                 _previousCellColors = new ColorType[w, h];
-                _previousCellPathColors = new HashSet<ColorType>[w, h];
+                _previousPathColorMasks = new byte[w, h];
             }
 
             for (int x = 0; x < w; x++)
@@ -138,17 +137,7 @@ namespace PixelFlow.Views
                 {
                     _previousCellStates[x, y] = GridModel.Grid[x, y].State;
                     _previousCellColors[x, y] = GridModel.Grid[x, y].Color;
-                    var prev = _previousCellPathColors[x, y];
-                    if (prev == null)
-                    {
-                        _previousCellPathColors[x, y] = new HashSet<ColorType>(GridModel.Grid[x, y].PathColors);
-                    }
-                    else
-                    {
-                        prev.Clear();
-                        foreach (var pc in GridModel.Grid[x, y].PathColors)
-                            prev.Add(pc);
-                    }
+                    _previousPathColorMasks[x, y] = GridModel.Grid[x, y].PathColorsMask;
                 }
             }
         }
@@ -160,14 +149,18 @@ namespace PixelFlow.Views
             View.UpdateGridVisuals(GridModel.Grid, GridModel.Width, GridModel.Height, SettingsModel.CurrentTheme, GridModel.Paths, GridModel.LastCrashPosition.Value);
             View.CenterCamera(GridModel.Width, GridModel.Height);
 
-            var camCtrl = Camera.main != null ? Camera.main.GetComponent<PixelFlow.Services.CameraController>() : null;
-            if (camCtrl != null)
+            var cam = View.GetCachedCamera();
+            if (cam != null)
             {
-                float cx = (GridModel.Width - 1) * 0.5f;
-                float cy = (GridModel.Height - 1) * 0.5f;
-                float size = Camera.main.orthographicSize;
-                camCtrl.SetPuzzleView(cx, cy, size);
-                camCtrl.TransitionToPuzzle();
+                var camCtrl = cam.GetComponent<PixelFlow.Services.CameraController>();
+                if (camCtrl != null)
+                {
+                    float cx = (GridModel.Width - 1) * 0.5f;
+                    float cy = (GridModel.Height - 1) * 0.5f;
+                    float size = cam.orthographicSize;
+                    camCtrl.SetPuzzleView(cx, cy, size);
+                    camCtrl.TransitionToPuzzle();
+                }
             }
         }
     }

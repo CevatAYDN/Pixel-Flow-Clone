@@ -36,7 +36,12 @@ namespace PixelFlow.Views
         public event Action OnPlayLevelClicked;
         public event Action<UpgradeType> OnUpgradeClicked;
 
-        private void Start()
+        private void Awake()
+        {
+            EnsureUIInitialized();
+        }
+
+        private void EnsureUIInitialized()
         {
             if (_hubCanvas == null)
             {
@@ -45,29 +50,54 @@ namespace PixelFlow.Views
             }
 
             if (_collectTaxesButton != null)
+            {
+                _collectTaxesButton.onClick.RemoveAllListeners();
                 _collectTaxesButton.onClick.AddListener(() => OnCollectTaxesClicked?.Invoke());
+            }
             if (_playLevelButton != null)
+            {
+                _playLevelButton.onClick.RemoveAllListeners();
                 _playLevelButton.onClick.AddListener(() => OnPlayLevelClicked?.Invoke());
+            }
             
             if (_toggleUpgradesButton != null)
+            {
+                _toggleUpgradesButton.onClick.RemoveAllListeners();
                 _toggleUpgradesButton.onClick.AddListener(() => {
                     if (_upgradesPanel != null) _upgradesPanel.SetActive(!_upgradesPanel.activeSelf);
                 });
+            }
 
             if (_upgradeStorageButton != null)
+            {
+                _upgradeStorageButton.onClick.RemoveAllListeners();
                 _upgradeStorageButton.onClick.AddListener(() => OnUpgradeClicked?.Invoke(UpgradeType.Storage));
+            }
             if (_upgradeRateButton != null)
+            {
+                _upgradeRateButton.onClick.RemoveAllListeners();
                 _upgradeRateButton.onClick.AddListener(() => OnUpgradeClicked?.Invoke(UpgradeType.Rate));
+            }
             if (_upgradeViaductButton != null)
+            {
+                _upgradeViaductButton.onClick.RemoveAllListeners();
                 _upgradeViaductButton.onClick.AddListener(() => OnUpgradeClicked?.Invoke(UpgradeType.Viaduct));
+            }
             if (_upgradeOfflineButton != null)
+            {
+                _upgradeOfflineButton.onClick.RemoveAllListeners();
                 _upgradeOfflineButton.onClick.AddListener(() => OnUpgradeClicked?.Invoke(UpgradeType.Offline));
+            }
             if (_upgradeDistrictButton != null)
+            {
+                _upgradeDistrictButton.onClick.RemoveAllListeners();
                 _upgradeDistrictButton.onClick.AddListener(() => OnUpgradeClicked?.Invoke(UpgradeType.District));
+            }
         }
 
         public void SetVisible(bool visible)
         {
+            EnsureUIInitialized();
             if (_hubCanvas != null)
                 _hubCanvas.SetActive(visible);
         }
