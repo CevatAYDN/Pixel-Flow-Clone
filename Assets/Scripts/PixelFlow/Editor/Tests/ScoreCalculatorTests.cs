@@ -74,8 +74,8 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void Calculate_Stars_TwoStars()
         {
-            var (_, stars) = ScoreCalculator.Calculate(10, 10, 300f, 3, 10, 5);
-            Assert.AreEqual(2, stars, "Moderate play should earn 2 stars");
+            var (_, stars) = ScoreCalculator.Calculate(10, 10, 300f, 3, 10, 2);
+            Assert.AreEqual(2, stars, "Using <= 2 viaducts earns 2 stars per GDD §2.8.");
         }
 
         [Test]

@@ -133,21 +133,20 @@ namespace PixelFlow.Editor.Tests
         }
 
         [Test]
-        public void DragToOccupiedCell_DoesNotExtend()
+        public void DragToOccupiedCell_MaxTwoPathsLimit()
         {
             LoadLevel();
-            // Occupy (2,0) with Blue before Red reaches it
+            // Occupy (2,0) with 2 colors (Blue and Green) before Red reaches it
             _grid.Grid[2, 0].State = CellState.Path;
-            _grid.Grid[2, 0].Color = ColorType.Blue;
+            _grid.Grid[2, 0].PathColors.Add(ColorType.Blue);
+            _grid.Grid[2, 0].PathColors.Add(ColorType.Green);
 
             _ctx.Dispatch(new InputInteractionSignal { Type = InputType.PointerDown, GridPosition = new Vector2Int(0, 0) });
             _ctx.Dispatch(new InputInteractionSignal { Type = InputType.Drag, GridPosition = new Vector2Int(1, 0) });
             _ctx.Dispatch(new InputInteractionSignal { Type = InputType.Drag, GridPosition = new Vector2Int(2, 0) });
 
             Assert.AreEqual(2, _grid.Paths[ColorType.Red].Count,
-                "Red path should not extend into cell occupied by Blue");
-            Assert.AreEqual(CellState.Path, _grid.Grid[1, 0].State);
-            Assert.AreEqual(CellState.Path, _grid.Grid[2, 0].State);
+                "Red path should not extend into cell occupied by 2 other colors (Max 2 paths limit)");
         }
     }
 }

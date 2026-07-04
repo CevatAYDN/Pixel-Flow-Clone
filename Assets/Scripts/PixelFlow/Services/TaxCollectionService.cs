@@ -25,8 +25,6 @@ namespace PixelFlow.Services
         private SimulationUpdater _updater;
         private float _cachedTaxRate;
         private int _cachedMaxStorage;
-        private int _lastLevelCount = -1;
-        private int _lastCityLevel = -1;
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
@@ -66,17 +64,15 @@ namespace PixelFlow.Services
             if (GameStateModel == null || CityEconomyModel == null)
                 return;
 
-            int cityLevel = CityEconomyModel.CityLevel;
-            int completedCount = CityEconomyModel.CompletedLevelsCount;
-            if (cityLevel != _lastCityLevel || completedCount != _lastLevelCount)
+            float dt = Time.deltaTime;
+            if (CityEconomyModel is CityEconomyModel modelImpl)
             {
-                _cachedTaxRate = CityEconomyModel.TaxRatePerSecond;
-                _cachedMaxStorage = CityEconomyModel.MaxStorage;
-                _lastCityLevel = cityLevel;
-                _lastLevelCount = completedCount;
+                modelImpl.TickOverclock(dt);
             }
 
-            float dt = Time.deltaTime;
+            _cachedTaxRate = CityEconomyModel.TaxRatePerSecond;
+            _cachedMaxStorage = CityEconomyModel.MaxStorage;
+
             float accumulated = CityEconomyModel.GetAccumulatedTaxes();
             accumulated = Mathf.Min(accumulated + _cachedTaxRate * dt, _cachedMaxStorage);
             CityEconomyModel.SetAccumulatedTaxes(accumulated);

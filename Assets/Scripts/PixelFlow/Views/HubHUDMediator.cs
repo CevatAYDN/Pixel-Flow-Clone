@@ -99,6 +99,15 @@ namespace PixelFlow.Views
             SignalBus.Fire(new UpgradeSignal { Type = type });
         }
 
+        public void HandleOverclockRequested()
+        {
+            if (CityEconomyModel is CityEconomyModel model)
+            {
+                model.TriggerOverclock(14400f); // 4 hours Rush Hour per GDD §6.1
+            }
+            SignalBus.Fire(new RequestRewardedAdSignal { Type = RewardedAdType.Overclock });
+        }
+
         private void UpdateView()
         {
             bool isHubActive = GameStateModel.CurrentState == GameState.MainMenu;

@@ -36,6 +36,13 @@ namespace PixelFlow.Commands
         public void Execute(InputInteractionSignal signal)
         {
             var state = GameStateModel.CurrentState;
+            if (state == GameState.Simulating && signal.Type == InputType.PointerDown)
+            {
+                // Touch during simulation cancels simulation phase and returns to Playing state
+                GameStateModel.SetState(GameState.Playing);
+                return;
+            }
+
             if (state != GameState.Playing && state != GameState.Paused)
             {
                 return;
@@ -174,42 +181,45 @@ namespace PixelFlow.Commands
                     if (currentCell.PathColors.Contains(GridModel.ActiveColor.Value))
                         return;
 
+                    if (currentCell.PathColors.Count >= BridgeValidationUtility.MaxPathsPerBridge)
+                        return;
+
                     Vector2Int entryDir = signal.GridPosition - GridModel.LastPosition.Value;
 
-                    if (currentCell.HasViaduct || currentCell.State == CellState.Bridge)
+                    if (currentCell.PathColors.Count > 0)
                     {
-                        if (currentCell.PathColors.Count >= BridgeValidationUtility.MaxPathsPerBridge)
-                            return;
-
-                        if (currentCell.PathColors.Count > 0)
+                        ColorType existingColor = System.Linq.Enumerable.First(currentCell.PathColors);
+                        if (GridModel.Paths.TryGetValue(existingColor, out var otherPath))
                         {
-                            ColorType existingColor = System.Linq.Enumerable.First(currentCell.PathColors);
-                            if (GridModel.Paths.TryGetValue(existingColor, out var otherPath))
+                            if (!BridgeValidationUtility.IsValidBridgeCrossing(
+                                otherPath, path, signal.GridPosition, entryDir))
                             {
-                                if (!BridgeValidationUtility.IsValidBridgeCrossing(
-                                    otherPath, path, signal.GridPosition, entryDir))
-                                {
-                                    return;
-                                }
+                                return;
                             }
                         }
+                    }
 
-                        RecordHistory();
-                        if (!currentCell.PathColors.Contains(GridModel.ActiveColor.Value))
-                        {
-                            currentCell.PathColors.Add(GridModel.ActiveColor.Value);
-                        }
-                        currentCell.OverColor = GridModel.ActiveColor.Value;
-                        path.Add(signal.GridPosition);
-                        GridModel.LastPosition.Value = signal.GridPosition;
-                        SignalBus.Fire(new GridUpdatedSignal());
-                        RequestSave();
+                    RecordHistory();
+                    if (currentCell.PathColors.Count == 0)
+                    {
+                        currentCell.UnderColor = GridModel.ActiveColor.Value;
                     }
                     else
                     {
-                        // Non-bridge path cell occupied by another color — block extension
-                        return;
+                        currentCell.OverColor = GridModel.ActiveColor.Value;
                     }
+
+                    currentCell.PathColors.Add(GridModel.ActiveColor.Value);
+                    path.Add(signal.GridPosition);
+                    GridModel.LastPosition.Value = signal.GridPosition;
+
+                    if (!currentCell.HasViaduct && currentCell.PathColors.Count >= 2)
+                    {
+                        SignalBus.Fire(new PathIntersectionWarningSignal { Position = signal.GridPosition });
+                    }
+
+                    SignalBus.Fire(new GridUpdatedSignal());
+                    RequestSave();
                 }
             }
             else if (signal.Type == InputType.PointerUp)

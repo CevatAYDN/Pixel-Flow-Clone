@@ -79,19 +79,37 @@ namespace PixelFlow.Models
             }
         }
 
+        public bool IsOverclockActive => OverclockRemainingSeconds > 0f;
+        public float OverclockRemainingSeconds { get; private set; } = 0f;
+
         public float TaxRatePerSecond
         {
             get
             {
-                // Tax/second = Base_Rate * (1 + Infrastructure_Bonus) * City_Level_Multiplier
+                // Tax/second = Base_Rate * (1 + Infrastructure_Bonus) * City_Level_Multiplier * (IsOverclockActive ? 2.0f : 1.0f)
                 float baseRate = 10f;
                 // Rate upgrade adds +5 base rate per level
                 baseRate += RateUpgradeLevel * 5f;
 
                 float infraBonus = CompletedLevelsCount * 0.15f;
                 float cityMultiplier = 1f + (CityLevel * 0.1f);
+                float overclockMultiplier = IsOverclockActive ? 2.0f : 1.0f;
 
-                return baseRate * (1f + infraBonus) * cityMultiplier;
+                return baseRate * (1f + infraBonus) * cityMultiplier * overclockMultiplier;
+            }
+        }
+
+        public void TriggerOverclock(float durationSeconds = 14400f)
+        {
+            OverclockRemainingSeconds = Mathf.Max(OverclockRemainingSeconds, durationSeconds);
+            OnEconomyUpdated?.Invoke();
+        }
+
+        public void TickOverclock(float deltaTime)
+        {
+            if (OverclockRemainingSeconds > 0f)
+            {
+                OverclockRemainingSeconds = Mathf.Max(0f, OverclockRemainingSeconds - deltaTime);
             }
         }
 

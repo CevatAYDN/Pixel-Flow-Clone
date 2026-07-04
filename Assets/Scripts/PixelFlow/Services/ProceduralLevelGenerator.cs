@@ -187,9 +187,57 @@ namespace PixelFlow.Services
                     else type = ObstacleType.OneWay;
                 }
 
-                obstacles.Add(new ObstacleData { position = pos, type = type });
+                // Multi-cell expansion for Lake (2x2) and Park (L-shape / 2-cell) per GDD §9.4
+                var targetPositions = new List<Vector2Int> { pos };
+                if (type == ObstacleType.Lake)
+                {
+                    // 2x2 Lake Pond expansion
+                    Vector2Int p2 = pos + new Vector2Int(1, 0);
+                    Vector2Int p3 = pos + new Vector2Int(0, 1);
+                    Vector2Int p4 = pos + new Vector2Int(1, 1);
+                    if (IsCellFreeForObstacle(p2, param, bridges, obstacles) &&
+                        IsCellFreeForObstacle(p3, param, bridges, obstacles) &&
+                        IsCellFreeForObstacle(p4, param, bridges, obstacles))
+                    {
+                        targetPositions.Add(p2);
+                        targetPositions.Add(p3);
+                        targetPositions.Add(p4);
+                    }
+                }
+                else if (type == ObstacleType.Park)
+                {
+                    // L-Shape Park expansion
+                    Vector2Int p2 = pos + new Vector2Int(1, 0);
+                    Vector2Int p3 = pos + new Vector2Int(0, 1);
+                    if (IsCellFreeForObstacle(p2, param, bridges, obstacles) &&
+                        IsCellFreeForObstacle(p3, param, bridges, obstacles))
+                    {
+                        targetPositions.Add(p2);
+                        targetPositions.Add(p3);
+                    }
+                }
+
+                foreach (var p in targetPositions)
+                {
+                    if (!obstacles.Exists(o => o.position == p))
+                    {
+                        obstacles.Add(new ObstacleData { position = p, type = type });
+                    }
+                }
             }
             return obstacles;
+        }
+
+        private bool IsCellFreeForObstacle(Vector2Int cell, DifficultyParams param, HashSet<Vector2Int> bridges, List<ObstacleData> obstacles)
+        {
+            if (cell.x <= 0 || cell.x >= param.gridWidth - 1 || cell.y <= 0 || cell.y >= param.gridHeight - 1) return false;
+            if (bridges.Contains(cell)) return false;
+            if (obstacles.Exists(o => o.position == cell)) return false;
+            foreach (var node in _lastLevelNodes)
+            {
+                if (Vector2Int.Distance(node.position, cell) < 1.5f) return false;
+            }
+            return true;
         }
 
         private List<GridNode> _lastLevelNodes = new List<GridNode>();
@@ -282,5 +330,10 @@ namespace PixelFlow.Services
         public static readonly DifficultyParams Hard = new DifficultyParams(7, 7, 3, 2, false, true);
         public static readonly DifficultyParams Expert = new DifficultyParams(8, 8, 4, 3, true, true);
         public static readonly DifficultyParams Master = new DifficultyParams(10, 10, 5, 4, true, true, true, true);
+
+        public static readonly DifficultyParams Phase1_Tutorial = new DifficultyParams(5, 5, 1, 0, false);
+        public static readonly DifficultyParams Phase2_Nodes = new DifficultyParams(7, 7, 2, 3, false);
+        public static readonly DifficultyParams Phase3_Default = new DifficultyParams(8, 8, 3, 3, true, true);
+        public static readonly DifficultyParams Phase4_Endgame = new DifficultyParams(10, 10, 4, 4, true, true, true, true);
     }
 }

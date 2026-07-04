@@ -27,6 +27,8 @@ namespace PixelFlow
             builder.BindService<ICrisisAdService, CrisisAdService>();
             builder.BindService<IObstacleService, ObstacleService>();
             builder.BindService<IOverclockService, OverclockService>();
+            builder.BindService<ILocalizationService, LocalizationService>();
+            builder.BindService<IDailyCrisisService, DailyCrisisService>();
             builder.Bind<IPathSolver, RuntimePathSolver>();
             builder.Bind<IHintService, HintService>();
             builder.Bind<ILevelProgressionService, LevelProgressionService>();
@@ -44,6 +46,7 @@ namespace PixelFlow
             builder.BindReactiveModel<ISoundModel, SoundModel>();
             builder.BindReactiveModel<ICityEconomyModel, CityEconomyModel>();
             builder.BindReactiveModel<ITutorialModel, TutorialModel>();
+            builder.BindReactiveModel<IDailyCrisisModel, DailyCrisisModel>();
 
             builder.BindSignal<PixelFlow.Signals.InputInteractionSignal>().To<PixelFlow.Commands.ProcessInputCommand>();
             builder.BindSignal<PixelFlow.Signals.CheckWinConditionSignal>().To<PixelFlow.Commands.CheckWinConditionCommand>();

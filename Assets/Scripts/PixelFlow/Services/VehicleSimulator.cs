@@ -207,8 +207,9 @@ namespace PixelFlow.Services
                 _simulationPhaseTimer += deltaTime;
                 if (_simulationPhaseTimer >= SimulationPhaseDuration)
                 {
+                    _simulationPhaseTimer = 0f;
+                    GameStateModel.SetState(GameState.LevelCompleted);
                     SignalBus.Fire(new LevelCompletedSignal());
-                    StopSimulationPhase();
                     return;
                 }
             }
@@ -223,10 +224,13 @@ namespace PixelFlow.Services
 
             UpdateSpawning(deltaTime);
             UpdateMovement(deltaTime);
-            // Collision detection ONLY in Simulating state (ghost vehicles in Playing should NOT crash)
-            if (state == GameState.Simulating)
+            // Collision detection runs in BOTH Playing and Simulating states per GDD §2.4
+            if (state == GameState.Playing || state == GameState.Simulating)
             {
                 UpdateCollisionDetection();
+            }
+            if (state == GameState.Simulating)
+            {
                 UpdateCompletionTimer(deltaTime);
             }
         }

@@ -31,6 +31,9 @@ namespace PixelFlow.Commands
             }
             UnityEngine.Debug.Log($"[SaveProgressCommand] Level completed! Unlocked levels: {previousUnlocked} -> {ProgressModel.UnlockedLevels}");
 
+            // Seviye tamamlandığı için yarım kalan bulmaca kaydını sil
+            GridStateSerializer.ClearSave(PlayerPrefsService);
+
             SignalBus.Fire(new ProgressUpdatedSignal
             {
                 UnlockedLevels = ProgressModel.UnlockedLevels

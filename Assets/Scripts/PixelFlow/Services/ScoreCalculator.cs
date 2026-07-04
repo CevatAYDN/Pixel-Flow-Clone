@@ -25,14 +25,13 @@ namespace PixelFlow.Services
             float finalScore = baseScore * timeMultiplier * hintMultiplier * (1f - viaductPenalty);
             int roundedScore = (int)(finalScore + 0.5f);
 
-            float scoreRatio = cellCount > 0 ? finalScore / baseScore : 0f;
             int stars;
-            if (scoreRatio >= 0.8f)
-                stars = 3;
-            else if (roundedScore > 0)
-                stars = 2;
+            if (viaductsUsed == 0)
+                stars = 3; // ⭐⭐⭐ Perfect Flow (0 viaducts)
+            else if (viaductsUsed <= 2)
+                stars = 2; // ⭐⭐ <= 2 viaducts
             else
-                stars = 1;
+                stars = 1; // ⭐ Level Completed (> 2 viaducts)
 
             return (roundedScore, stars);
         }

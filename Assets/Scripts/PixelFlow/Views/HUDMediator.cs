@@ -179,7 +179,13 @@ namespace PixelFlow.Views
         private void HandleCrisisUndoClicked()
         {
             Debug.Log("[HUDMediator] Crisis Undo Clicked. Reverting path.");
+            GameSessionModel?.MarkCrisisUndoUsed();
             SignalBus.Fire(new UndoSignal());
+            View?.HideCrisis();
+            if (GameStateModel != null && GameStateModel.CurrentState == GameState.Paused)
+            {
+                GameStateModel.SetState(GameState.Playing);
+            }
         }
 
         private void RefreshUndoRedoButtons()
@@ -246,6 +252,7 @@ namespace PixelFlow.Views
             if (nextLevel != null)
             {
                 Debug.Log($"[HUDMediator] Firing LoadLevelSignal for level index: {nextLevel.levelIndex} ({nextLevel.name})");
+                View.HideCompletion();
                 SignalBus.Fire(new LoadLevelSignal { LevelToLoad = nextLevel });
             }
             else
