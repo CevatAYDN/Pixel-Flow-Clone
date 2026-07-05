@@ -35,6 +35,13 @@ namespace PixelFlow.PlayMode.Tests
 
         public void SetString(string key, string value) => _strings[key] = value;
 
+        private readonly Dictionary<string, float> _floats = new Dictionary<string, float>();
+
+        public float GetFloat(string key, float defaultValue = 0f)
+            => _floats.TryGetValue(key, out var val) ? val : defaultValue;
+
+        public void SetFloat(string key, float value) => _floats[key] = value;
+
         public bool HasKey(string key) => _store.ContainsKey(key) || _strings.ContainsKey(key);
 
         public void DeleteKey(string key)
@@ -72,7 +79,7 @@ namespace PixelFlow.PlayMode.Tests
                 builder.Bind<IObstacleService, ObstacleService>();
                 builder.Bind<IOverclockService, OverclockService>();
                 builder.Bind<ITutorialDriver, TutorialDriver>();
-                builder.Bind<IAudioService, AudioService>();
+                builder.Bind<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
 
                 builder.BindReactiveModel<IGridModel, GridModel>();
                 builder.BindReactiveModel<ILevelModel, LevelModel>();

@@ -15,12 +15,35 @@ namespace PixelFlow
         {
             // PlayerPrefs servisini singleton olarak bağla; kalıcı state kullanan tüm
             // modeller bunu constructor injection ile alır (test edilebilir).
-            builder.Bind<IPlayerPrefsService, UnityPlayerPrefsService>();
+            // EncryptedStorageService: AES-256 + HMAC-SHA256 Anti-Cheat Güvenlikli Depolama
+            builder.Bind<IPlayerPrefsService, EncryptedStorageService>();
+            
+            // Tüm Nexus Core Çekirdek Servisleri (13 Servis Tam Güç Entegrasyonu)
+            builder.BindService<INexusService, FeedbackService>();
+            builder.Bind<IFeedbackService, FeedbackService>();
+            builder.BindService<INexusService, ObjectPoolService>();
+            builder.Bind<IObjectPoolService, ObjectPoolService>();
+            builder.BindService<INexusService, WindowManager>();
+            builder.Bind<IWindowManager, WindowManager>();
+            builder.BindService<INexusService, EconomyService>();
+            builder.Bind<IEconomyService, EconomyService>();
+            builder.BindService<INexusService, ProgressionService>();
+            builder.Bind<IProgressionService, ProgressionService>();
+            builder.BindService<INexusService, TickService>();
+            builder.Bind<ITickService, TickService>();
+            builder.BindService<INexusService, AdService>();
+            builder.Bind<IAdService, AdService>();
+            builder.BindService<INexusService, IapService>();
+            builder.Bind<IIapService, IapService>();
+            builder.BindService<INexusService, AnalyticsService>();
+            builder.Bind<IAnalyticsService, AnalyticsService>();
+
+            // PixelFlow Özel Servisleri
             builder.BindService<IPathService, PathService>();
             builder.BindService<IGameHistoryService, GameHistoryService>();
             builder.BindService<IVehicleSimulator, VehicleSimulator>();
             builder.BindService<ITaxCollectionService, TaxCollectionService>();
-            builder.BindService<IAudioService, AudioService>();
+            builder.BindService<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
             builder.BindService<IGameplayTimerService, GameplayTimerService>();
             builder.BindService<ISaveThrottler, SaveThrottler>();
             builder.BindService<INexusService, HapticService>();
@@ -31,6 +54,7 @@ namespace PixelFlow
             builder.BindService<ICrisisAdService, CrisisAdService>();
             builder.BindService<IObstacleService, ObstacleService>();
             builder.BindService<IOverclockService, OverclockService>();
+            builder.BindService<INexusService, LocalizationService>();
             builder.BindService<ILocalizationService, LocalizationService>();
             builder.BindService<IDailyCrisisService, DailyCrisisService>();
             builder.Bind<IPathSolver, RuntimePathSolver>();

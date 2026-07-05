@@ -42,7 +42,7 @@ namespace PixelFlow.Editor.Tests
                 builder.Bind<IHapticService, HapticService>();
                 builder.BindService<INexusService, LoggerService>();
                 builder.Bind<ILoggerService, LoggerService>();
-                builder.BindService<IAudioService, AudioService>();
+                builder.BindService<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
                 builder.BindService<ISaveThrottler, SaveThrottler>();
             });
 

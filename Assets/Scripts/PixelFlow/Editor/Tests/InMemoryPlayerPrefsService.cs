@@ -45,6 +45,18 @@ namespace PixelFlow.Editor.Tests
             _strings[key] = value;
         }
 
+        private readonly Dictionary<string, float> _floats = new Dictionary<string, float>();
+
+        public float GetFloat(string key, float defaultValue = 0f)
+        {
+            return _floats.TryGetValue(key, out var val) ? val : defaultValue;
+        }
+
+        public void SetFloat(string key, float value)
+        {
+            _floats[key] = value;
+        }
+
         public bool HasKey(string key)
         {
             return _store.ContainsKey(key) || _strings.ContainsKey(key);

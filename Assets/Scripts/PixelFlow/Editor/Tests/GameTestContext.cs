@@ -41,7 +41,7 @@ namespace PixelFlow.Editor.Tests
                 builder.BindService<IObstacleService, ObstacleService>();
                 builder.BindService<IOverclockService, OverclockService>();
                 builder.BindService<ITutorialDriver, TutorialDriver>();
-                builder.BindService<IAudioService, AudioService>();
+                builder.BindService<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
 
                 builder.BindReactiveModel<IGridModel, GridModel>();
                 builder.BindReactiveModel<ILevelModel, LevelModel>();
