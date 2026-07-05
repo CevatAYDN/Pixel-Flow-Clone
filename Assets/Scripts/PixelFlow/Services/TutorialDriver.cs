@@ -94,8 +94,8 @@ namespace PixelFlow.Services
                 case 15:
                 case 16: return TutorialStep.ViaductIntro;
                 case 17: return TutorialStep.UndoIntro;
-                case 28: return TutorialStep.ObstacleIntro;
-                case 34: return TutorialStep.OneWayIntro;
+                case 19: return TutorialStep.OneWayIntro;   // Seviye 20 GDD (viyadüğe alternatif)
+                case 28: return TutorialStep.ObstacleIntro; // Seviye 29 GDD
                 default: return TutorialStep.None;
             }
         }

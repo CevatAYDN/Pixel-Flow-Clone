@@ -52,6 +52,9 @@ namespace PixelFlow.Services
             level.height = param.gridHeight;
             level.requireFullGridCoverage = param.requireFullGridCoverage;
             level.viaductLimit = param.bridgeCount;
+            
+            // GDD §2.8: flowScoreThreshold ataması (renk sayısı × 5 standart eşiği, min 5, max 30)
+            level.flowScoreThreshold = Mathf.Clamp(param.colorCount * 5, 5, 30);
 
             var availableColors = new List<ColorType>(GddColorPalette.Standard);
 

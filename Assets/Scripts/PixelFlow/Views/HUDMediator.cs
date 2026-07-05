@@ -18,6 +18,7 @@ namespace PixelFlow.Views
         [Inject] public IGameSessionModel GameSessionModel { get; set; }
         [Inject] public IGameHistoryService HistoryService { get; set; }
         [Inject] public ILevelProgressionService ProgressionService { get; set; }
+        [Inject] public ILocalizationService LocalizationService { get; set; }
 
         [SerializeField] private LevelPack _fallbackLevelPack;
 
@@ -52,8 +53,8 @@ namespace PixelFlow.Views
             GameSessionModel.OnViaductsChanged += HandleViaductsChanged;
 
             View.HideCompletion();
-            View.UpdateHintCount(HintModel.HintsRemaining);
-            View.UpdateScore(GameSessionModel.Score);
+            UpdateHintCountText(HintModel.HintsRemaining);
+            UpdateScoreText(GameSessionModel.Score);
             View.UpdateTimer(GameSessionModel.ElapsedTime);
             View.UpdateStars(GameSessionModel.StarsEarned);
             View.HighlightActiveTheme(SettingsModel.CurrentTheme);
@@ -150,7 +151,14 @@ namespace PixelFlow.Views
         private void HandleCrashDetected(CrashDetectedSignal signal)
         {
             _lastCrashPosition = signal.Position;
-            View.ShowCrisis(GameSessionModel.AvailableViaducts);
+            
+            string title = LocalizationService?.GetString("crisis_title") ?? "TRAFİK KRİZİ! 🚨";
+            string desc = LocalizationService?.GetString("crisis_desc") ?? "Çarpışmayı çözmek için viyadük yerleştirin!";
+            string format = LocalizationService?.GetString("crisis_viaducts_format") ?? "Kalan Viyadük: {0}";
+            string viaductBtn = LocalizationService?.GetString("crisis_viaduct_btn") ?? "Viyadük Kullan";
+            string undoBtn = LocalizationService?.GetString("crisis_undo_btn") ?? "Geri Al / Vazgeç";
+
+            View.ShowCrisis(GameSessionModel.AvailableViaducts, title, desc, format, viaductBtn, undoBtn);
         }
 
         private void HandleIntersectionWarning(PathIntersectionWarningSignal signal)
@@ -160,14 +168,16 @@ namespace PixelFlow.Views
 
         private void HandleSimulationTimerChanged(float remaining)
         {
-            View.UpdateSimulationTimer(remaining);
+            string format = LocalizationService?.GetString("hud_simulation_timer_format") ?? "Simülasyon: {0:F1}s";
+            View.UpdateSimulationTimer(remaining, format);
         }
 
         private void HandleViaductsChanged(int count)
         {
             if (count <= 0)
             {
-                View.ShowViaductLimitReached();
+                string msg = LocalizationService?.GetString("crisis_exhausted_msg") ?? "Viyadük hakkınız bitti!";
+                View.ShowViaductLimitReached(msg);
             }
         }
 
@@ -270,12 +280,24 @@ namespace PixelFlow.Views
 
         private void HandleHintCountChanged(int count)
         {
-            View.UpdateHintCount(count);
+            UpdateHintCountText(count);
         }
 
         private void HandleScoreChanged(int score)
         {
-            View.UpdateScore(score);
+            UpdateScoreText(score);
+        }
+
+        private void UpdateHintCountText(int count)
+        {
+            string format = LocalizationService?.GetString("hud_hint_count_format") ?? "İPUCU ({0})";
+            View.UpdateHintCount(count, format);
+        }
+
+        private void UpdateScoreText(int score)
+        {
+            string format = LocalizationService?.GetString("hud_score_format") ?? "SKOR: {0}";
+            View.UpdateScore(score, format);
         }
 
         private void HandleTimeChanged(float time)
@@ -294,7 +316,12 @@ namespace PixelFlow.Views
         {
             if (!Application.isPlaying) return;
             if (View == null || GameSessionModel == null) return;
-            View.ShowCompletion(GameSessionModel.Score, GameSessionModel.StarsEarned);
+
+            string title = LocalizationService?.GetString("level_completed_title") ?? "Tebrikler! Seviye Tamamlandı!";
+            string scoreFormat = LocalizationService?.GetString("level_completed_score_format") ?? "Skor: {0}";
+            string starsLabel = LocalizationService?.GetString("level_completed_stars_label") ?? "Yıldız";
+
+            View.ShowCompletion(GameSessionModel.Score, GameSessionModel.StarsEarned, title, scoreFormat, starsLabel);
 
             if (View.isActiveAndEnabled)
                 _returnToHubCoroutine = View.StartCoroutine(AutoReturnToHubRoutine());

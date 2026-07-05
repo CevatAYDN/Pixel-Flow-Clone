@@ -36,6 +36,10 @@ namespace PixelFlow.Models
             // Playing ↔ Paused
             (GameState.Playing, GameState.Paused),
             (GameState.Paused, GameState.Playing),
+            // Hub exit / escape transitions
+            (GameState.Playing, GameState.MainMenu),
+            (GameState.Simulating, GameState.MainMenu),
+            (GameState.Paused, GameState.MainMenu),
             // Playing → Simulating
             (GameState.Playing, GameState.Simulating),
             // Playing → LevelCompleted (grace skip, debug shortcuts)

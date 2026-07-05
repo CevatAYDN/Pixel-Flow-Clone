@@ -90,6 +90,13 @@ namespace PixelFlow.Services
 
                 _vehicleContainer = new GameObject("[Vehicles]").transform;
                 _vehicleContainer.gameObject.hideFlags = HideFlags.DontSave;
+
+                // Parenting sırasını düzelt: GridView objesini bulup onun transform'u altında topla
+                var gridView = UnityEngine.Object.FindAnyObjectByType<GridView>();
+                if (gridView != null)
+                {
+                    _vehicleContainer.SetParent(gridView.transform, false);
+                }
             }
 
             if (GameStateModel != null)
@@ -145,8 +152,8 @@ namespace PixelFlow.Services
             {
                 _simulationPhaseTimer = 0f;
                 _cachedEndpoints.Clear();
-                ClearAllVehicles();
-                Debug.Log("[VehicleSimulator] Simulation Phase started. All vehicles now solid.");
+                // ClearAllVehicles() kaldırıldı - araçlar yok edilmeden pürüzsüzce hayaletten katı moda geçecek
+                Debug.Log("[VehicleSimulator] Simulation Phase started. All vehicles now transition to solid.");
             }
             else if (state == GameState.MainMenu || state == GameState.LevelCompleted)
             {
@@ -189,18 +196,6 @@ namespace PixelFlow.Services
             if (state != GameState.Playing && state != GameState.Simulating)
                 return;
 
-            if (state == GameState.Simulating)
-            {
-                _simulationPhaseTimer += deltaTime;
-                if (_simulationPhaseTimer >= SimulationPhaseDuration)
-                {
-                    _simulationPhaseTimer = 0f;
-                    GameStateModel.SetState(GameState.LevelCompleted);
-                    SignalBus.Fire(new LevelCompletedSignal());
-                    return;
-                }
-            }
-
             // Fire TimerTickSignal every frame so GameSessionModel.ElapsedTime stays accurate
             SignalBus.Fire(new PixelFlow.Signals.TimerTickSignal());
 
@@ -211,6 +206,7 @@ namespace PixelFlow.Services
 
             UpdateSpawning(deltaTime);
             UpdateMovement(deltaTime);
+            
             // Collision detection runs in BOTH Playing and Simulating states per GDD §2.4
             if (state == GameState.Playing || state == GameState.Simulating)
             {
@@ -670,6 +666,19 @@ namespace PixelFlow.Services
                             ObstacleService.OnVehicleLeftNarrowPass(endCell, v.Color);
                         }
                     }
+
+                    // GDD §2.8: Simülasyon fazında başarılı ulaşım tespiti ve Flow Score güncelleme
+                    if (GameStateModel.CurrentState == GameState.Simulating && GameSessionModel != null)
+                    {
+                        GameSessionModel.IncrementFlowScore();
+                        SignalBus?.Fire(new FlowScoreUpdatedSignal
+                        {
+                            CurrentScore = GameSessionModel.CurrentFlowScore,
+                            TargetScore = GameSessionModel.TargetFlowScore
+                        });
+                        AudioService?.PlaySfx(SfxType.UIClick); // Hafif bir doğrulama sesi
+                    }
+
                     SafeDestroy(v.Visual);
                     _activeVehicles.RemoveAt(i);
                     continue;
@@ -979,12 +988,22 @@ namespace PixelFlow.Services
         private void UpdateCompletionTimer(float deltaTime)
         {
             _simulationPhaseTimer += deltaTime;
-            float remaining = SimulationPhaseDuration - _simulationPhaseTimer;
+            
+            // Maksimum 45 saniye güvenlik limiti (darboğaz durumlarında kilitlenmeyi önlemek için)
+            const float maxSimulationSafetyDuration = 45f;
+            float remaining = Mathf.Max(0f, maxSimulationSafetyDuration - _simulationPhaseTimer);
             GameSessionModel.SetSimulationTimer(remaining);
 
-            if (_simulationPhaseTimer >= SimulationPhaseDuration)
+            // Flow Score kazanma kontrolü
+            if (GameSessionModel != null && GameSessionModel.CurrentFlowScore >= GameSessionModel.TargetFlowScore)
             {
                 CompleteLevel();
+            }
+            else if (_simulationPhaseTimer >= maxSimulationSafetyDuration)
+            {
+                // Güvenlik zaman aşımı durumunda (kazasız ama akış yetersiz)
+                Debug.LogWarning("[VehicleSimulator] Simulation safety timeout reached. Returning to playing state due to grid congestion.");
+                StopSimulationPhase();
             }
         }
 

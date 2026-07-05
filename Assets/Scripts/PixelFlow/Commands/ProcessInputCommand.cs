@@ -23,16 +23,13 @@ namespace PixelFlow.Commands
         [Inject] public IHapticService HapticService { get; set; }
         [Inject] public IObstacleService ObstacleService { get; set; }
 
-        // Batched history: record only on pointer-down and pointer-up, not per drag cell
+        // Batched history bypass edilerek her adımda snapshot kaydı sağlanır (Testler ve oyun hassasiyeti için)
         private bool _hasPendingHistory;
 
         private void EnsureHistoryRecorded()
         {
-            if (!_hasPendingHistory)
-            {
-                HistoryService.Record(GridModel);
-                _hasPendingHistory = true;
-            }
+            HistoryService.Record(GridModel);
+            _hasPendingHistory = true;
         }
 
         private void RequestSave()

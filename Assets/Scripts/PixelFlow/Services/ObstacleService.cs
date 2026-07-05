@@ -57,22 +57,37 @@ namespace PixelFlow.Services
             _ferryBlocked.Clear();
             _narrowPassOccupants.Clear();
             _ferryTimer = 0f;
-            if (level?.obstacles == null) return;
+            if (level == null) return;
 
-            foreach (var obs in level.obstacles)
+            // 1. Geleneksel engelleri yükle (GDD §9.4)
+            if (level.obstacles != null)
             {
-                _obstacles[obs.position] = obs.type;
-                switch (obs.type)
+                foreach (var obs in level.obstacles)
                 {
-                    case ObstacleType.OneWay:
-                        _oneWayDirs[obs.position] = obs.oneWayDirection != Vector2Int.zero ? obs.oneWayDirection : Vector2Int.right;
-                        break;
-                    case ObstacleType.Ferry:
-                        _ferryBlocked[obs.position] = false;
-                        break;
-                    case ObstacleType.NarrowPass:
-                        _narrowPassOccupants[obs.position] = ColorType.None;
-                        break;
+                    _obstacles[obs.position] = obs.type;
+                    switch (obs.type)
+                    {
+                        case ObstacleType.OneWay:
+                            // Geriye uyumluluk için
+                            _oneWayDirs[obs.position] = Vector2Int.right;
+                            break;
+                        case ObstacleType.Ferry:
+                            _ferryBlocked[obs.position] = false;
+                            break;
+                        case ObstacleType.NarrowPass:
+                            _narrowPassOccupants[obs.position] = ColorType.None;
+                            break;
+                    }
+                }
+            }
+
+            // 2. Yeni GDD OneWay hücrelerini yükle (GDD §2.7 — viyadüğe alternatif)
+            if (level.oneWayCells != null)
+            {
+                foreach (var owc in level.oneWayCells)
+                {
+                    _obstacles[owc.position] = ObstacleType.OneWay;
+                    _oneWayDirs[owc.position] = owc.allowedDirection != Vector2Int.zero ? owc.allowedDirection : Vector2Int.right;
                 }
             }
         }

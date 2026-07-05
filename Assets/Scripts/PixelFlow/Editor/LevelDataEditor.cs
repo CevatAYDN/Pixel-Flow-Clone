@@ -11,10 +11,11 @@ namespace PixelFlow.Editor
     [CustomEditor(typeof(LevelData))]
     public class LevelDataEditor : UnityEditor.Editor
     {
-        private enum EditMode { None, Node, Path, Bridge, Obstacle, Eraser }
+        private enum EditMode { None, Node, Path, Bridge, Obstacle, OneWay, Eraser }
         private EditMode _currentMode = EditMode.Node;
         private ColorType _currentColor = ColorType.Red;
         private ObstacleType _currentObstacleType = ObstacleType.Construction;
+        private Vector2Int _currentOneWayDirection = Vector2Int.right;
         
         private LevelData _data;
         private Vector2Int _lastPaintedCell = new Vector2Int(-1, -1);
@@ -71,6 +72,7 @@ namespace PixelFlow.Editor
             int newWidth = EditorGUILayout.IntSlider("Width", _data.width, 3, 10);
             int newHeight = EditorGUILayout.IntSlider("Height", _data.height, 3, 10);
             int newViaductLimit = EditorGUILayout.IntSlider("Viaduct Limit", _data.viaductLimit, 0, 10);
+            int newFlowThreshold = EditorGUILayout.IntSlider("Flow Score Target", _data.flowScoreThreshold, 1, 50);
             bool newCoverage = EditorGUILayout.Toggle("Require Full Grid Coverage", _data.requireFullGridCoverage);
             if (EditorGUI.EndChangeCheck())
             {
@@ -79,6 +81,7 @@ namespace PixelFlow.Editor
                 _data.width = newWidth;
                 _data.height = newHeight;
                 _data.viaductLimit = newViaductLimit;
+                _data.flowScoreThreshold = newFlowThreshold;
                 _data.requireFullGridCoverage = newCoverage;
                 _requireFullGridCoverage = newCoverage;
                 SanitizeGridBounds();
@@ -106,7 +109,7 @@ namespace PixelFlow.Editor
             // Edit Mode Selector (Horizontal Buttons)
             GUILayout.Label("Select Tool:", EditorStyles.miniLabel);
             GUILayout.BeginHorizontal();
-            EditMode[] modes = { EditMode.Node, EditMode.Path, EditMode.Bridge, EditMode.Obstacle, EditMode.Eraser };
+            EditMode[] modes = { EditMode.Node, EditMode.Path, EditMode.Bridge, EditMode.Obstacle, EditMode.OneWay, EditMode.Eraser };
             foreach (var m in modes)
             {
                 bool isSelected = _currentMode == m;
@@ -137,6 +140,24 @@ namespace PixelFlow.Editor
             {
                 GUILayout.Label("Select Obstacle Type:", EditorStyles.miniLabel);
                 _currentObstacleType = (ObstacleType)EditorGUILayout.EnumPopup("Obstacle Type", _currentObstacleType);
+                GUILayout.Space(5);
+            }
+
+            // OneWay Direction Selector
+            if (_currentMode == EditMode.OneWay)
+            {
+                GUILayout.Label("Select OneWay Direction:", EditorStyles.miniLabel);
+                string[] directions = { "Right (→)", "Left (←)", "Up (↑)", "Down (↓)" };
+                int selectedIndex = 0;
+                if (_currentOneWayDirection == Vector2Int.left) selectedIndex = 1;
+                else if (_currentOneWayDirection == Vector2Int.up) selectedIndex = 2;
+                else if (_currentOneWayDirection == Vector2Int.down) selectedIndex = 3;
+
+                int newIndex = EditorGUILayout.Popup("Direction", selectedIndex, directions);
+                if (newIndex == 0) _currentOneWayDirection = Vector2Int.right;
+                else if (newIndex == 1) _currentOneWayDirection = Vector2Int.left;
+                else if (newIndex == 2) _currentOneWayDirection = Vector2Int.up;
+                else if (newIndex == 3) _currentOneWayDirection = Vector2Int.down;
                 GUILayout.Space(5);
             }
 
@@ -323,6 +344,10 @@ namespace PixelFlow.Editor
             _data.initialNodes.RemoveAll(n => n.position.x >= _data.width || n.position.y >= _data.height);
             _data.bridgePositions.RemoveAll(p => p.x >= _data.width || p.y >= _data.height);
             _data.obstacles.RemoveAll(o => o.position.x >= _data.width || o.position.y >= _data.height);
+            if (_data.oneWayCells != null)
+            {
+                _data.oneWayCells.RemoveAll(ow => ow.position.x >= _data.width || ow.position.y >= _data.height);
+            }
             foreach (var sol in _data.solutions)
             {
                 if (sol.pathPositions != null)
@@ -424,6 +449,29 @@ namespace PixelFlow.Editor
                         EditorGUI.DrawRect(new Rect(cellRect.x + 2, cellRect.y + 2, cellSize - 4, cellSize - 4), obsColor);
                     }
 
+                    // Draw OneWay Cells (GDD §2.7 — viyadüğe alternatif)
+                    var oneWayCell = _data.oneWayCells != null ? _data.oneWayCells.Find(ow => ow.position == pos) : default;
+                    bool isOneWay = _data.oneWayCells != null && _data.oneWayCells.Any(ow => ow.position == pos);
+                    if (isOneWay)
+                    {
+                        Vector2 center = cellRect.center;
+                        Handles.BeginGUI();
+                        Handles.color = new Color(0.2f, 0.8f, 1f, 1f); // Neon Cyan ok
+                        string arrowText = "→";
+                        if (oneWayCell.allowedDirection == Vector2Int.left) arrowText = "←";
+                        else if (oneWayCell.allowedDirection == Vector2Int.up) arrowText = "↑";
+                        else if (oneWayCell.allowedDirection == Vector2Int.down) arrowText = "↓";
+                        
+                        GUIStyle arrowStyle = new GUIStyle(EditorStyles.boldLabel)
+                        {
+                            alignment = TextAnchor.MiddleCenter,
+                            fontSize = Mathf.RoundToInt(cellSize * 0.5f),
+                            normal = { textColor = new Color(0.2f, 0.8f, 1f, 1f) }
+                        };
+                        GUI.Label(new Rect(center.x - cellSize * 0.5f, center.y - cellSize * 0.5f, cellSize, cellSize), arrowText, arrowStyle);
+                        Handles.EndGUI();
+                    }
+
                     if (isBridge)
                     {
                         Vector2 center = cellRect.center;
@@ -485,6 +533,7 @@ namespace PixelFlow.Editor
             {
                 _data.initialNodes.RemoveAll(n => n.position == pos);
                 if (_data.obstacles != null) _data.obstacles.RemoveAll(o => o.position == pos);
+                if (_data.oneWayCells != null) _data.oneWayCells.RemoveAll(ow => ow.position == pos);
                 foreach (var sol in _data.solutions)
                 {
                     if (sol.pathPositions != null)
@@ -496,6 +545,7 @@ namespace PixelFlow.Editor
             {
                 _data.initialNodes.RemoveAll(n => n.position == pos);
                 if (_data.obstacles != null) _data.obstacles.RemoveAll(o => o.position == pos);
+                if (_data.oneWayCells != null) _data.oneWayCells.RemoveAll(ow => ow.position == pos);
                 foreach (var sol in _data.solutions)
                 {
                     if (sol.pathPositions != null)
@@ -508,11 +558,21 @@ namespace PixelFlow.Editor
                 _data.initialNodes.RemoveAll(n => n.position == pos);
                 if (_data.obstacles == null) _data.obstacles = new List<ObstacleData>();
                 _data.obstacles.RemoveAll(o => o.position == pos);
+                if (_data.oneWayCells != null) _data.oneWayCells.RemoveAll(ow => ow.position == pos);
                 _data.obstacles.Add(new ObstacleData { position = pos, type = _currentObstacleType });
+            }
+            else if (_currentMode == EditMode.OneWay)
+            {
+                _data.initialNodes.RemoveAll(n => n.position == pos);
+                if (_data.obstacles != null) _data.obstacles.RemoveAll(o => o.position == pos);
+                if (_data.oneWayCells == null) _data.oneWayCells = new List<OneWayCell>();
+                _data.oneWayCells.RemoveAll(ow => ow.position == pos);
+                _data.oneWayCells.Add(new OneWayCell { position = pos, allowedDirection = _currentOneWayDirection });
             }
             else if (_currentMode == EditMode.Bridge)
             {
                 _data.initialNodes.RemoveAll(n => n.position == pos);
+                if (_data.oneWayCells != null) _data.oneWayCells.RemoveAll(ow => ow.position == pos);
                 if (!_data.bridgePositions.Contains(pos))
                     _data.bridgePositions.Add(pos);
                 else

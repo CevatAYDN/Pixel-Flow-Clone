@@ -40,6 +40,7 @@ transcript*.jsonl
 *.tmp
 *.bak
 *.swp
+*.omo
 
 # ==========================================
 # IDE & EDITOR SPECIFIC FILES

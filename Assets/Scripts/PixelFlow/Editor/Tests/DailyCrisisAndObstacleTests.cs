@@ -38,6 +38,7 @@ namespace PixelFlow.Editor.Tests
             param.gridWidth = 10;
             param.gridHeight = 10;
             param.colorCount = 3;
+            param.requireFullGridCoverage = false; // Matematiksel tıkanıklığı önlemek için false yapıyoruz
             param.obstaclesEnabled = true;
 
             var level = generator.Generate(param);

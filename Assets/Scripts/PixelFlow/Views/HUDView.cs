@@ -119,16 +119,16 @@ namespace PixelFlow.Views
                 _redoButton.interactable = interactable;
         }
 
-        public void UpdateHintCount(int count)
+        public void UpdateHintCount(int count, string format)
         {
             if (_hintCountText != null)
-                _hintCountText.text = $"HINT ({count})";
+                _hintCountText.text = string.Format(format, count);
         }
 
-        public void UpdateScore(int score)
+        public void UpdateScore(int score, string format)
         {
             if (_scoreText != null)
-                _scoreText.text = $"SKOR: {score}";
+                _scoreText.text = string.Format(format, score);
         }
 
         public void UpdateTimer(float elapsedTime)
@@ -139,13 +139,17 @@ namespace PixelFlow.Views
                 int seconds = Mathf.FloorToInt(elapsedTime % 60f);
                 _timerText.text = $"{minutes:00}:{seconds:00}";
             }
+            if (_timerText != null)
+            {
+                _timerText.color = Color.white; // Simülasyondan çıkışta rengi sıfırla
+            }
         }
 
-        public void UpdateSimulationTimer(float remaining)
+        public void UpdateSimulationTimer(float remaining, string format)
         {
             if (_timerText != null)
             {
-                _timerText.text = $"Simülasyon: {remaining:F1}s";
+                _timerText.text = string.Format(format, remaining);
                 _timerText.color = remaining > 3f ? Color.green : Color.Lerp(Color.red, Color.yellow, remaining / 3f);
             }
         }
@@ -160,7 +164,7 @@ namespace PixelFlow.Views
             }
         }
 
-        public void ShowCompletion(int score, int stars)
+        public void ShowCompletion(int score, int stars, string title, string scoreFormat, string starsLabel)
         {
             if (_crisisViaductButton != null)
                 _crisisViaductButton.gameObject.SetActive(false);
@@ -171,7 +175,7 @@ namespace PixelFlow.Views
             {
                 _completionPanel.SetActive(true);
                 _completionPanel.transform.localScale = Vector3.zero;
-                StartCoroutine(AnimateCompletion(score, stars));
+                StartCoroutine(AnimateCompletion(score, stars, title, scoreFormat, starsLabel));
             }
             else
             {
@@ -200,7 +204,7 @@ namespace PixelFlow.Views
             _bloomFlashOverlay.SetActive(false);
         }
 
-        private System.Collections.IEnumerator AnimateCompletion(int score, int stars)
+        private System.Collections.IEnumerator AnimateCompletion(int score, int stars, string title, string scoreFormat, string starsLabel)
         {
             float duration = 0.5f;
             float elapsed = 0f;
@@ -218,11 +222,11 @@ namespace PixelFlow.Views
             if (panelRect != null) panelRect.localScale = Vector3.one;
 
             if (_completionText != null)
-                _completionText.text = "Tebrikler! Seviye Tamamlandı!";
+                _completionText.text = title;
             if (_completionScoreText != null)
-                _completionScoreText.text = $"Skor: {score}";
+                _completionScoreText.text = string.Format(scoreFormat, score);
             if (_completionStarsText != null)
-                _completionStarsText.text = $"Yıldız: {new string('★', stars)}{new string('☆', 3 - stars)}";
+                _completionStarsText.text = $"{starsLabel}: {new string('★', stars)}{new string('☆', 3 - stars)}";
             if (_nextLevelButton != null)
                 _nextLevelButton.gameObject.SetActive(true);
             else
@@ -235,7 +239,7 @@ namespace PixelFlow.Views
                 _completionPanel.SetActive(false);
         }
 
-        private void CreateCrisisButtonsIfNeeded()
+        private void CreateCrisisButtonsIfNeeded(string viaductBtnText, string undoBtnText)
         {
             if (_nextLevelButton == null || _completionPanel == null) return;
 
@@ -244,7 +248,6 @@ namespace PixelFlow.Views
                 _crisisViaductButton = Instantiate(_nextLevelButton, _completionPanel.transform);
                 _crisisViaductButton.name = "CrisisViaductButton";
                 
-                // Konumu ayarla (Sol taraf)
                 RectTransform rt = _crisisViaductButton.GetComponent<RectTransform>();
                 if (rt != null)
                 {
@@ -253,9 +256,14 @@ namespace PixelFlow.Views
                 }
                 
                 Text btnText = _crisisViaductButton.GetComponentInChildren<Text>();
-                if (btnText != null) btnText.text = "Viyadük Kullan";
+                if (btnText != null) btnText.text = viaductBtnText;
 
                 _crisisViaductButton.onClick.AddListener(() => OnCrisisViaductClicked?.Invoke());
+            }
+            else
+            {
+                Text btnText = _crisisViaductButton.GetComponentInChildren<Text>();
+                if (btnText != null) btnText.text = viaductBtnText;
             }
 
             if (_crisisUndoButton == null)
@@ -263,7 +271,6 @@ namespace PixelFlow.Views
                 _crisisUndoButton = Instantiate(_nextLevelButton, _completionPanel.transform);
                 _crisisUndoButton.name = "CrisisUndoButton";
                 
-                // Konumu ayarla (Sağ taraf)
                 RectTransform rt = _crisisUndoButton.GetComponent<RectTransform>();
                 if (rt != null)
                 {
@@ -272,27 +279,35 @@ namespace PixelFlow.Views
                 }
                 
                 Text btnText = _crisisUndoButton.GetComponentInChildren<Text>();
-                if (btnText != null) btnText.text = "Geri Al / Geri Dön";
+                if (btnText != null) btnText.text = undoBtnText;
 
                 _crisisUndoButton.onClick.AddListener(() => OnCrisisUndoClicked?.Invoke());
             }
+            else
+            {
+                Text btnText = _crisisUndoButton.GetComponentInChildren<Text>();
+                if (btnText != null) btnText.text = undoBtnText;
+            }
         }
 
-        public void ShowCrisis(int availableViaducts)
+        public void ShowCrisis(int availableViaducts, string title, string desc, string viaductLabelFormat, string viaductBtnText, string undoBtnText)
         {
             if (_completionPanel != null)
             {
                 _completionPanel.SetActive(true);
                 if (_completionText != null)
-                    _completionText.text = "TRAFİK KRİZİ! 🚨";
+                    _completionText.text = title;
                 if (_completionScoreText != null)
-                    _completionScoreText.text = "Çarpışmayı çözmek için viyadük köprüsü yerleştirin!";
+                    _completionScoreText.text = desc;
                 if (_completionStarsText != null)
-                    _completionStarsText.text = $"Kalan Viyadük: {availableViaducts}";
+                {
+                    _completionStarsText.text = string.Format(viaductLabelFormat, availableViaducts);
+                    _completionStarsText.color = Color.white;
+                }
                 if (_nextLevelButton != null)
                     _nextLevelButton.gameObject.SetActive(false);
 
-                CreateCrisisButtonsIfNeeded();
+                CreateCrisisButtonsIfNeeded(viaductBtnText, undoBtnText);
 
                 if (_crisisViaductButton != null)
                 {
@@ -321,11 +336,11 @@ namespace PixelFlow.Views
             }
         }
 
-        public void ShowViaductLimitReached()
+        public void ShowViaductLimitReached(string message)
         {
             if (_completionStarsText != null)
             {
-                _completionStarsText.text = "Viyadük hakkınız bitti!";
+                _completionStarsText.text = message;
                 _completionStarsText.color = Color.red;
             }
         }

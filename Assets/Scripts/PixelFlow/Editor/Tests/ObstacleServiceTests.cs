@@ -28,7 +28,7 @@ namespace PixelFlow.Editor.Tests
             _ctx?.Dispose();
         }
 
-        private LevelData CreateLevelWithObstacles(List<ObstacleData> obstacles)
+        private LevelData CreateLevelWithObstacles(List<ObstacleData> obstacles, List<OneWayCell> oneWayCells = null)
         {
             var level = ScriptableObject.CreateInstance<LevelData>();
             level.levelIndex = 0;
@@ -40,39 +40,40 @@ namespace PixelFlow.Editor.Tests
                 new GridNode { position = new Vector2Int(2, 0), color = ColorType.Red },
             };
             level.obstacles = obstacles;
+            level.oneWayCells = oneWayCells;
             return level;
         }
 
         [Test]
         public void OneWay_DefaultDirection_IsRight()
         {
-            var obstacles = new List<ObstacleData>
+            var oneWayCells = new List<OneWayCell>
             {
-                new ObstacleData { position = new Vector2Int(1, 1), type = ObstacleType.OneWay }
+                new OneWayCell { position = new Vector2Int(1, 1), allowedDirection = Vector2Int.right }
             };
-            _obstacle.InitializeFromLevel(CreateLevelWithObstacles(obstacles));
+            _obstacle.InitializeFromLevel(CreateLevelWithObstacles(new List<ObstacleData>(), oneWayCells));
             Assert.AreEqual(Vector2Int.right, _obstacle.GetOneWayDirection(new Vector2Int(1, 1)));
         }
 
         [Test]
         public void OneWay_WithDirection_StoresCorrectly()
         {
-            var obstacles = new List<ObstacleData>
+            var oneWayCells = new List<OneWayCell>
             {
-                new ObstacleData { position = new Vector2Int(1, 1), type = ObstacleType.OneWay, oneWayDirection = Vector2Int.up }
+                new OneWayCell { position = new Vector2Int(1, 1), allowedDirection = Vector2Int.up }
             };
-            _obstacle.InitializeFromLevel(CreateLevelWithObstacles(obstacles));
+            _obstacle.InitializeFromLevel(CreateLevelWithObstacles(new List<ObstacleData>(), oneWayCells));
             Assert.AreEqual(Vector2Int.up, _obstacle.GetOneWayDirection(new Vector2Int(1, 1)));
         }
 
         [Test]
         public void OneWay_BlocksWrongDirection()
         {
-            var obstacles = new List<ObstacleData>
+            var oneWayCells = new List<OneWayCell>
             {
-                new ObstacleData { position = new Vector2Int(1, 0), type = ObstacleType.OneWay, oneWayDirection = Vector2Int.right }
+                new OneWayCell { position = new Vector2Int(1, 0), allowedDirection = Vector2Int.right }
             };
-            _obstacle.InitializeFromLevel(CreateLevelWithObstacles(obstacles));
+            _obstacle.InitializeFromLevel(CreateLevelWithObstacles(new List<ObstacleData>(), oneWayCells));
             // Going left is blocked (wrong direction for right-only)
             Assert.IsTrue(_obstacle.IsOneWay(new Vector2Int(1, 0), ColorType.Red, Vector2Int.left));
             // Going right is allowed

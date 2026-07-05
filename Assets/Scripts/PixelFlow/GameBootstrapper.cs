@@ -50,7 +50,12 @@ namespace PixelFlow
                 _gridModel = container.Resolve<IGridModel>();
                 _sessionModel = container.Resolve<IGameSessionModel>();
                 _levelModel = container.Resolve<ILevelModel>();
-                Debug.Log("[PixelFlow] DI Services resolved successfully (SignalBus, StateModel, GridModel, SessionModel, LevelModel).");
+                
+                // Unity runtime update'leri ve kaza kurtarma stratejilerini tetiklemek için resolve et
+                container.Resolve<IVehicleSimulator>();
+                container.Resolve<IObstacleService>();
+
+                Debug.Log("[PixelFlow] DI Services resolved successfully.");
             }
             catch (System.Exception ex)
             {
@@ -104,6 +109,13 @@ namespace PixelFlow
                                 GridStateSerializer.EnsureInitialNodesOnGrid(level, _gridModel);
                                 _sessionModel.ApplySave(saved.availableViaducts, saved.maxViaducts,
                                     saved.elapsedTime, saved.score, saved.stars);
+
+                                var obstacleService = nexusRoot.Context.Container.Resolve<IObstacleService>();
+                                obstacleService?.InitializeFromLevel(level);
+
+                                var tutorialDriver = nexusRoot.Context.Container.Resolve<ITutorialDriver>();
+                                tutorialDriver?.OnLevelLoaded(level.levelIndex);
+
                                 _signalBus.Fire(new GridUpdatedSignal());
                                 _stateModel.SetState(GameState.Playing);
                                 Debug.Log($"[PixelFlow] Game state transitioned to Playing. Level {level.levelIndex + 1} restored.");

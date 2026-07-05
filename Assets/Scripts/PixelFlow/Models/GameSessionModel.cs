@@ -16,6 +16,8 @@ namespace PixelFlow.Models
         float SimulationTimeRemaining { get; set; }
         int RetryCount { get; }
         bool HasUsedCrisisUndo { get; }
+        int CurrentFlowScore { get; }
+        int TargetFlowScore { get; }
 
         event Action<int> OnScoreChanged;
         event Action<float> OnTimeChanged;
@@ -23,9 +25,11 @@ namespace PixelFlow.Models
         event Action<int> OnViaductsChanged;
         event Action<float> OnSimulationTimerChanged;
         event Action<int> OnRetryCountChanged;
+        event Action<int, int> OnFlowScoreChanged;
 
         void StartSession();
         void StartSession(int maxViaducts);
+        void StartSession(int maxViaducts, int targetFlowScore);
         void UpdateTime(float deltaTime);
         void AddScore(int points);
         void SetStars(int stars);
@@ -37,6 +41,8 @@ namespace PixelFlow.Models
         void ResetRetryCount();
         void MarkCrisisUndoUsed();
         void AddBonusViaduct(int amount);
+        void IncrementFlowScore();
+        void SetTargetFlowScore(int target);
         void ApplySave(int availableViaducts, int maxViaducts, float elapsedTime, int score, int stars);
     }
 
@@ -51,6 +57,8 @@ namespace PixelFlow.Models
         public float SimulationTimeRemaining { get; set; }
         public int RetryCount { get; private set; }
         public bool HasUsedCrisisUndo { get; private set; }
+        public int CurrentFlowScore { get; private set; }
+        public int TargetFlowScore { get; private set; }
 
         public event Action<int> OnScoreChanged;
         public event Action<float> OnTimeChanged;
@@ -58,13 +66,19 @@ namespace PixelFlow.Models
         public event Action<int> OnViaductsChanged;
         public event Action<float> OnSimulationTimerChanged;
         public event Action<int> OnRetryCountChanged;
+        public event Action<int, int> OnFlowScoreChanged;
 
         public void StartSession()
         {
-            StartSession(3);
+            StartSession(3, 5);
         }
 
         public void StartSession(int maxViaducts)
+        {
+            StartSession(maxViaducts, 5);
+        }
+
+        public void StartSession(int maxViaducts, int targetFlowScore)
         {
             Score = 0;
             ElapsedTime = 0f;
@@ -74,8 +88,11 @@ namespace PixelFlow.Models
             IsSessionActive = true;
             RetryCount = 0;
             HasUsedCrisisUndo = false;
+            CurrentFlowScore = 0;
+            TargetFlowScore = targetFlowScore;
             OnViaductsChanged?.Invoke(AvailableViaducts);
             OnRetryCountChanged?.Invoke(RetryCount);
+            OnFlowScoreChanged?.Invoke(CurrentFlowScore, TargetFlowScore);
         }
 
         public void UpdateTime(float deltaTime)
@@ -109,6 +126,8 @@ namespace PixelFlow.Models
             IsSessionActive = false;
             RetryCount = 0;
             HasUsedCrisisUndo = false;
+            CurrentFlowScore = 0;
+            TargetFlowScore = 0;
         }
 
         public bool TryUseViaduct()
@@ -141,6 +160,20 @@ namespace PixelFlow.Models
         {
             RetryCount = 0;
             OnRetryCountChanged?.Invoke(RetryCount);
+        }
+
+        public void IncrementFlowScore()
+        {
+            if (!IsSessionActive) return;
+            CurrentFlowScore++;
+            OnFlowScoreChanged?.Invoke(CurrentFlowScore, TargetFlowScore);
+        }
+
+        public void SetTargetFlowScore(int target)
+        {
+            if (!IsSessionActive) return;
+            TargetFlowScore = target;
+            OnFlowScoreChanged?.Invoke(CurrentFlowScore, TargetFlowScore);
         }
 
         /// <summary>
@@ -187,11 +220,14 @@ namespace PixelFlow.Models
             IsSessionActive = true;
             RetryCount = 0;
             HasUsedCrisisUndo = false;
+            CurrentFlowScore = 0;
+            TargetFlowScore = 5; // Default fallback
             OnViaductsChanged?.Invoke(AvailableViaducts);
             OnTimeChanged?.Invoke(ElapsedTime);
             OnScoreChanged?.Invoke(Score);
             OnStarsChanged?.Invoke(StarsEarned);
             OnRetryCountChanged?.Invoke(RetryCount);
+            OnFlowScoreChanged?.Invoke(CurrentFlowScore, TargetFlowScore);
         }
 
         public ValueTask OnBind(CancellationToken ct) => default;

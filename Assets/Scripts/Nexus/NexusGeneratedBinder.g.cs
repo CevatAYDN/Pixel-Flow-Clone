@@ -44,6 +44,7 @@ namespace Nexus.Generated
                 instance.GameSessionModel = di.Resolve<PixelFlow.Models.IGameSessionModel>();
                 instance.HistoryService = di.Resolve<PixelFlow.Services.IGameHistoryService>();
                 instance.ProgressionService = di.Resolve<PixelFlow.Services.ILevelProgressionService>();
+                instance.LocalizationService = di.Resolve<PixelFlow.Services.ILocalizationService>();
             });
             NexusDI.RegisterInjector<PixelFlow.Views.HubHUDMediator>((instance, di) =>
             {
@@ -309,6 +310,7 @@ namespace Nexus.Generated
                 var _p_HUDMediator_GameSessionModel = default(PixelFlow.Views.HUDMediator).GameSessionModel;
                 var _p_HUDMediator_HistoryService = default(PixelFlow.Views.HUDMediator).HistoryService;
                 var _p_HUDMediator_ProgressionService = default(PixelFlow.Views.HUDMediator).ProgressionService;
+                var _p_HUDMediator_LocalizationService = default(PixelFlow.Views.HUDMediator).LocalizationService;
                 var _p_HubHUDMediator_CityEconomyModel = default(PixelFlow.Views.HubHUDMediator).CityEconomyModel;
                 var _p_HubHUDMediator_GameStateModel = default(PixelFlow.Views.HubHUDMediator).GameStateModel;
                 var _p_HubHUDMediator_LevelModel = default(PixelFlow.Views.HubHUDMediator).LevelModel;

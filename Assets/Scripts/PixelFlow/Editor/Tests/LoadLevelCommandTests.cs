@@ -166,9 +166,9 @@ namespace PixelFlow.Editor.Tests
                 new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
                 new GridNode { position = new Vector2Int(2, 0), color = ColorType.Red },
             };
-            level.obstacles = new List<ObstacleData>
+            level.oneWayCells = new List<OneWayCell>
             {
-                new ObstacleData { position = new Vector2Int(1, 0), type = ObstacleType.OneWay, oneWayDirection = Vector2Int.right }
+                new OneWayCell { position = new Vector2Int(1, 0), allowedDirection = Vector2Int.right }
             };
             _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
             var obstacle = _ctx.Context.Container.Resolve<IObstacleService>();

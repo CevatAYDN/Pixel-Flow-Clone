@@ -40,4 +40,10 @@ namespace PixelFlow.Signals
         public int Amount;
         public Vector3 Origin;
     }
+
+    public struct FlowScoreUpdatedSignal
+    {
+        public int CurrentScore;
+        public int TargetScore;
+    }
 }

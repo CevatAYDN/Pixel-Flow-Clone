@@ -1532,6 +1532,7 @@ namespace PixelFlow.Editor
             lvl1.levelIndex = 0;
             lvl1.width = 5;
             lvl1.height = 5;
+            lvl1.flowScoreThreshold = 5;
             lvl1.initialNodes = new System.Collections.Generic.List<GridNode>
             {
                 new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
@@ -1563,6 +1564,7 @@ namespace PixelFlow.Editor
             lvl2.levelIndex = 1;
             lvl2.width = 5;
             lvl2.height = 5;
+            lvl2.flowScoreThreshold = 5;
             lvl2.initialNodes = new System.Collections.Generic.List<GridNode>
             {
                 new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
@@ -1588,6 +1590,7 @@ namespace PixelFlow.Editor
             lvl3.levelIndex = 2;
             lvl3.width = 5;
             lvl3.height = 5;
+            lvl3.flowScoreThreshold = 5;
             lvl3.bridgePositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(2, 2) };
             lvl3.initialNodes = new System.Collections.Generic.List<GridNode>
             {
@@ -1660,6 +1663,8 @@ namespace PixelFlow.Editor
                 if (level == null) continue;
 
                 level.levelIndex = idx;
+                level.flowScoreThreshold = Mathf.Clamp(param.colorCount * 5, 5, 10);
+                
                 if (idx >= 11)
                 {
                     level.viaductLimit = 3;

@@ -1,4 +1,5 @@
 using Nexus.Core;
+using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Services;
@@ -83,9 +84,25 @@ namespace PixelFlow.Commands
                 }
             }
 
+            if (signal.LevelToLoad.oneWayCells != null)
+            {
+                foreach (var owc in signal.LevelToLoad.oneWayCells)
+                {
+                    if (owc.position.x >= 0 && owc.position.x < GridModel.Width &&
+                        owc.position.y >= 0 && owc.position.y < GridModel.Height)
+                    {
+                        var cell = GridModel.Grid[owc.position.x, owc.position.y];
+                        // OneWay hücreleri çizilebilir boş hücrelerdir, sadece yön kısıtı vardır.
+                        // State'i Empty bırakıyoruz ama ObstacleType.OneWay atayarak yönü belirtiyoruz.
+                        cell.State = CellState.Empty;
+                        cell.ObstacleType = ObstacleType.OneWay;
+                    }
+                }
+            }
+
             HistoryService.Clear();
             int totalViaducts = signal.LevelToLoad.viaductLimit + (CityEconomyModel != null ? CityEconomyModel.ViaductBonus : 0);
-            GameSessionModel.StartSession(totalViaducts);
+            GameSessionModel.StartSession(totalViaducts, signal.LevelToLoad.flowScoreThreshold);
             HintModel.ResetSessionHints();
             ObstacleService?.InitializeFromLevel(signal.LevelToLoad);
             TutorialDriver?.OnLevelLoaded(signal.LevelToLoad.levelIndex);

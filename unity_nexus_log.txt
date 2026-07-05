@@ -1,0 +1,22 @@
+disk I/O error
+disk I/O error
+[Licensing::Module] Trying to connect to existing licensing client channel...
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-wwwla" at "2026-07-05T00:20:01.3236365Z"
+Built from '6000.5/staging' branch; Version is '6000.5.0f1 (88b47c5e7076) revision 8959100'; Using compiler version '194234433'; Build Type 'Release'
+OS: 'Windows 11  (10.0.26200) Professional' Language: 'tr' Physical Memory: 65446 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+System  architecture: x64
+Process architecture: x64
+Date: 2026-07-05T00:20:01Z
+
+COMMAND LINE ARGUMENTS:
+C:\Program Files\Unity\Hub\Editor\6000.5.0f1\Editor\Unity.exe
+-batchmode
+-projectPath
+C:\Users\wwwla\Documents\Github\Pixel-Flow-Clone\GameContainer\Nexus
+-logFile
+C:\Users\wwwla\Documents\Github\Pixel-Flow-Clone\unity_nexus_log.txt
+-quit
+Successfully changed project path to: C:\Users\wwwla\Documents\Github\Pixel-Flow-Clone\GameContainer\Nexus
+C:/Users/wwwla/Documents/Github/Pixel-Flow-Clone/GameContainer/Nexus
+Exiting without the bug reporter. Application will terminate with return code 1
