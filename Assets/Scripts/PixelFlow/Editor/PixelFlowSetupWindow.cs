@@ -98,9 +98,30 @@ namespace PixelFlow.Editor
             RunDiagnostics();
         }
 
+        private bool _cellWarningIconOk = false;
+
         private void RunDiagnostics()
         {
-            _prefabsOk = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/CellView.prefab") != null;
+            var cellPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/CellView.prefab");
+            _prefabsOk = cellPrefab != null;
+            if (_prefabsOk)
+            {
+                var cellView = cellPrefab.GetComponent<CellView>();
+                if (cellView != null)
+                {
+                    SerializedObject cellSo = new SerializedObject(cellView);
+                    var warnProp = cellSo.FindProperty("_warningRenderer");
+                    _cellWarningIconOk = warnProp != null && warnProp.objectReferenceValue != null;
+                }
+                else
+                {
+                    _cellWarningIconOk = false;
+                }
+            }
+            else
+            {
+                _cellWarningIconOk = false;
+            }
             
             var root = Object.FindAnyObjectByType<Root>();
             _rootOk = root != null;
@@ -472,6 +493,7 @@ namespace PixelFlow.Editor
             GUILayout.Space(5);
 
             DrawDiagnosticRow("Base Prefabs (CellView)", _prefabsOk, GeneratePrefabs);
+            DrawDiagnosticRow("CellView WarningIcon Renderer", _cellWarningIconOk, FixCellViewWarningIcon);
             DrawDiagnosticRow("Scene Root Context", _rootOk, SetupScene);
             DrawDiagnosticRow("Context Data Configuration", _contextDataOk, SetupScene);
             DrawDiagnosticRow("GridView Component & Layout", _gridViewOk, SetupScene);
@@ -485,7 +507,7 @@ namespace PixelFlow.Editor
 
             GUILayout.Space(12);
 
-            bool allOk = _prefabsOk && _rootOk && _contextDataOk && _gridViewOk && _canvasOk && _hudOk && _eventSystemOk && _soundOk && _themeOk && _bootstrapperOk && _levelsOk;
+            bool allOk = _prefabsOk && _cellWarningIconOk && _rootOk && _contextDataOk && _gridViewOk && _canvasOk && _hudOk && _eventSystemOk && _soundOk && _themeOk && _bootstrapperOk && _levelsOk;
             if (allOk)
             {
                 EditorGUILayout.HelpBox("✔ Everything is configured perfectly. Ready to play!", MessageType.Info);
@@ -1169,15 +1191,59 @@ namespace PixelFlow.Editor
                 bridgeObj.transform.SetParent(cellObj.transform);
                 var bridgeRenderer = bridgeObj.AddComponent<SpriteRenderer>();
 
+                GameObject warningObj = new GameObject("Warning");
+                warningObj.transform.SetParent(cellObj.transform);
+                var warningRenderer = warningObj.AddComponent<SpriteRenderer>();
+
                 SerializedObject so = new SerializedObject(cellView);
                 so.FindProperty("_bgRenderer").objectReferenceValue = bgRenderer;
                 so.FindProperty("_dotRenderer").objectReferenceValue = dotRenderer;
                 so.FindProperty("_bridgeRenderer").objectReferenceValue = bridgeRenderer;
+                so.FindProperty("_warningRenderer").objectReferenceValue = warningRenderer;
                 so.ApplyModifiedProperties();
 
                 PrefabUtility.SaveAsPrefabAsset(cellObj, cellPrefabPath);
                 DestroyImmediate(cellObj);
-                Debug.Log("[PixelFlowSetupWindow] CellView prefab created at: " + cellPrefabPath);
+                Debug.Log("[PixelFlowSetupWindow] CellView prefab created with WarningIcon at: " + cellPrefabPath);
+            }
+        }
+
+        private void FixCellViewWarningIcon()
+        {
+            string cellPrefabPath = "Assets/Prefabs/CellView.prefab";
+            var prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(cellPrefabPath);
+            if (prefabAsset != null)
+            {
+                var instance = PrefabUtility.InstantiatePrefab(prefabAsset) as GameObject;
+                if (instance != null)
+                {
+                    var cellView = instance.GetComponent<CellView>();
+                    var warningTrans = instance.transform.Find("Warning");
+                    SpriteRenderer warningRenderer = null;
+                    if (warningTrans == null)
+                    {
+                        var warningObj = new GameObject("Warning");
+                        warningObj.transform.SetParent(instance.transform);
+                        warningRenderer = warningObj.AddComponent<SpriteRenderer>();
+                    }
+                    else
+                    {
+                        warningRenderer = warningTrans.GetComponent<SpriteRenderer>() ?? warningTrans.gameObject.AddComponent<SpriteRenderer>();
+                    }
+
+                    SerializedObject so = new SerializedObject(cellView);
+                    so.Update();
+                    so.FindProperty("_warningRenderer").objectReferenceValue = warningRenderer;
+                    so.ApplyModifiedProperties();
+
+                    PrefabUtility.SaveAsPrefabAsset(instance, cellPrefabPath);
+                    DestroyImmediate(instance);
+                    Debug.Log("[PixelFlowSetupWindow] WarningIcon SpriteRenderer reference auto-fixed in CellView.prefab");
+                }
+            }
+            else
+            {
+                GeneratePrefabs();
             }
         }
 

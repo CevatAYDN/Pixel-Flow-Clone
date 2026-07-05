@@ -1,5 +1,6 @@
 using UnityEngine;
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Signals;
@@ -25,6 +26,7 @@ namespace PixelFlow
         private IGridModel _gridModel;
         private IGameSessionModel _sessionModel;
         private ILevelModel _levelModel;
+        private ILoggerService _loggerService;
 
         private IEnumerator Start()
         {
@@ -39,12 +41,13 @@ namespace PixelFlow
             while (!nexusRoot.IsInitialized)
                 yield return null;
 
-            Debug.Log("[PixelFlow] Nexus Root initialized successfully. Resolving services...");
-
             // Container'dan kritik servisleri çözümle.
             try
             {
                 var container = nexusRoot.Context.Container;
+                _loggerService = container.Resolve<ILoggerService>();
+                _loggerService?.Log("[PixelFlow] Nexus Root initialized successfully. Resolving services...");
+
                 _signalBus = container.Resolve<ISignalBus>();
                 _stateModel = container.Resolve<IGameStateModel>();
                 _gridModel = container.Resolve<IGridModel>();
@@ -55,31 +58,34 @@ namespace PixelFlow
                 container.Resolve<IVehicleSimulator>();
                 container.Resolve<IObstacleService>();
 
-                Debug.Log("[PixelFlow] DI Services resolved successfully.");
+                _loggerService?.Log("[PixelFlow] DI Services resolved successfully.");
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[PixelFlow] ERROR: DI resolve failed: {ex.Message}");
+                if (_loggerService != null)
+                    _loggerService.LogError($"[PixelFlow] ERROR: DI resolve failed: {ex.Message}");
+                else
+                    Debug.LogError($"[PixelFlow] ERROR: DI resolve failed: {ex.Message}");
                 yield break;
             }
 
             var splash = FindAnyObjectByType<Views.SplashView>();
             if (splash != null)
             {
-                Debug.Log("[PixelFlow] Waiting for Splash screen completion...");
+                _loggerService?.Log("[PixelFlow] Waiting for Splash screen completion...");
                 bool splashDone = false;
                 splash.OnSplashComplete += () => splashDone = true;
                 yield return new WaitUntil(() => splashDone);
-                Debug.Log("[PixelFlow] Splash screen complete.");
+                _loggerService?.Log("[PixelFlow] Splash screen complete.");
             }
 
-            if (GridStateSerializer.HasSavedGame())
+            var prefs = nexusRoot.Context.Container.Resolve<IPlayerPrefsService>();
+            if (GridStateSerializer.HasSavedGame(prefs))
             {
-                Debug.Log("[PixelFlow] Saved game detected in PlayerPrefs. Checking save validity...");
-                var saved = GridStateSerializer.Load();
+                _loggerService?.Log("[PixelFlow] Saved game detected in PlayerPrefs. Checking save validity...");
+                var saved = GridStateSerializer.Load(prefs);
                 if (saved != null)
                 {
-                    var prefs = nexusRoot.Context.Container.Resolve<IPlayerPrefsService>();
                     var cloud = Models.CloudSaveManager.LoadCloudRecord(prefs);
                     string localJson = prefs.GetString("NT_PuzzleSave_", "");
                     var local = new Models.CloudSaveRecord
@@ -92,7 +98,7 @@ namespace PixelFlow
                     if (!string.IsNullOrEmpty(resolvedJson) && resolvedJson != localJson)
                     {
                         prefs.SetString("NT_PuzzleSave_", resolvedJson);
-                        saved = GridStateSerializer.Load();
+                        saved = GridStateSerializer.Load(prefs);
                     }
 
                     if (saved != null && saved.cells != null && saved.cells.Count > 0)
@@ -103,7 +109,7 @@ namespace PixelFlow
                             var level = ResolveLevelByIndex(saved.levelIndex);
                             if (level != null)
                             {
-                                Debug.Log($"[PixelFlow] Restoring valid saved game: Level {saved.levelIndex + 1} ({level.name}, Grid: {saved.width}x{saved.height}, Cells: {saved.cells.Count}, Paths: {saved.paths.Count})");
+                                _loggerService?.Log($"[PixelFlow] Restoring valid saved game: Level {saved.levelIndex + 1} ({level.name}, Grid: {saved.width}x{saved.height}, Cells: {saved.cells.Count}, Paths: {saved.paths.Count})");
                                 _levelModel.SetLevel(level);
                                 GridStateSerializer.ApplyToGrid(saved, _gridModel);
                                 GridStateSerializer.EnsureInitialNodesOnGrid(level, _gridModel);
@@ -118,25 +124,25 @@ namespace PixelFlow
 
                                 _signalBus.Fire(new GridUpdatedSignal());
                                 _stateModel.SetState(GameState.Playing);
-                                Debug.Log($"[PixelFlow] Game state transitioned to Playing. Level {level.levelIndex + 1} restored.");
+                                _loggerService?.Log($"[PixelFlow] Game state transitioned to Playing. Level {level.levelIndex + 1} restored.");
                                 yield break;
                             }
                             else
                             {
-                                Debug.LogWarning($"[PixelFlow] Could not resolve LevelData asset for index {saved.levelIndex}. Falling back to Hub.");
+                                _loggerService?.LogWarning($"[PixelFlow] Could not resolve LevelData asset for index {saved.levelIndex}. Falling back to Hub.");
                             }
                         }
                         else
                         {
-                            Debug.LogWarning("[PixelFlow] Saved game snapshot had 0 nodes/paths. Clearing empty save file.");
-                            GridStateSerializer.ClearSave();
+                            _loggerService?.LogWarning("[PixelFlow] Saved game snapshot had 0 nodes/paths. Clearing empty save file.");
+                            GridStateSerializer.ClearSave(prefs);
                         }
                     }
                 }
             }
 
             // İlk çalıştırma veya save bozuk → Hub'a gir.
-            Debug.Log("[PixelFlow] No valid save file found — entering Hub (MainMenu).");
+            _loggerService?.Log("[PixelFlow] No valid save file found — entering Hub (MainMenu).");
             EnterHub();
         }
 
@@ -160,8 +166,8 @@ namespace PixelFlow
 
             try
             {
-                GridStateSerializer.Save(_gridModel, _sessionModel, _levelModel);
                 var prefs = nexusRoot.Context.Container.Resolve<IPlayerPrefsService>();
+                GridStateSerializer.Save(_gridModel, _sessionModel, _levelModel, prefs);
                 Models.CloudSaveManager.SyncToCloud(
                     prefs,
                     prefs.GetString("NT_PuzzleSave_", ""),

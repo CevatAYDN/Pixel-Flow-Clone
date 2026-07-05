@@ -8,6 +8,7 @@ using PixelFlow.Data;
 using PixelFlow.Signals;
 using PixelFlow.Views;
 using Nexus.Core;
+using Nexus.Core.Services;
 
 namespace PixelFlow.Services
 {
@@ -31,6 +32,7 @@ namespace PixelFlow.Services
         [Inject] public IAudioService AudioService { get; set; }
         [Inject] public IObstacleService ObstacleService { get; set; }
         [Inject] public ISettingsModel SettingsModel { get; set; }
+        [Inject] public ILoggerService LoggerService { get; set; }
 
         private class VehicleInstance
         {
@@ -877,29 +879,28 @@ namespace PixelFlow.Services
         }
 
         // Shared buffer for collision point queries — avoids per-pair allocation
-        private static readonly List<Vector3> _collisionBuffer = new List<Vector3>(8);
+        private static readonly List<Vector3> _bufferA = new List<Vector3>(8);
+        private static readonly List<Vector3> _bufferB = new List<Vector3>(8);
 
         private void UpdateCollisionDetection()
         {
             for (int i = 0; i < _activeVehicles.Count; i++)
             {
                 var v1 = _activeVehicles[i];
-                PopulateCollisionPoints(v1, _collisionBuffer);
-                if (_collisionBuffer.Count == 0) continue;
-                var bufferA = _collisionBuffer;
+                PopulateCollisionPoints(v1, _bufferA);
+                if (_bufferA.Count == 0) continue;
 
                 for (int j = i + 1; j < _activeVehicles.Count; j++)
                 {
                     var v2 = _activeVehicles[j];
                     if (v1.Color == v2.Color) continue;
 
-                    PopulateCollisionPoints(v2, _collisionBuffer);
-                    if (_collisionBuffer.Count == 0) continue;
-                    var bufferB = _collisionBuffer;
+                    PopulateCollisionPoints(v2, _bufferB);
+                    if (_bufferB.Count == 0) continue;
 
-                    foreach (var p1 in bufferA)
+                    foreach (var p1 in _bufferA)
                     {
-                        foreach (var p2 in bufferB)
+                        foreach (var p2 in _bufferB)
                         {
                             float dist = Vector3.Distance(p1, p2);
                             const float collisionThreshold = 0.45f;
@@ -960,7 +961,7 @@ namespace PixelFlow.Services
 
         private void TriggerCrash(Vector2Int crashPos, ColorType colorA, ColorType colorB)
         {
-            Debug.LogError($"[VehicleSimulator] TRAFFIC CRASH detected at {crashPos} between {colorA} and {colorB}!");
+            LoggerService?.LogError($"[VehicleSimulator] TRAFFIC CRASH detected at {crashPos} between {colorA} and {colorB}!");
 
             GridModel.LastCrashPosition.Value = crashPos;
             GridModel.CrashColorA.Value = colorA;
@@ -1002,14 +1003,14 @@ namespace PixelFlow.Services
             else if (_simulationPhaseTimer >= maxSimulationSafetyDuration)
             {
                 // Güvenlik zaman aşımı durumunda (kazasız ama akış yetersiz)
-                Debug.LogWarning("[VehicleSimulator] Simulation safety timeout reached. Returning to playing state due to grid congestion.");
+                LoggerService?.LogWarning("[VehicleSimulator] Simulation safety timeout reached. Returning to playing state due to grid congestion.");
                 StopSimulationPhase();
             }
         }
 
         private void CompleteLevel()
         {
-            Debug.Log("[VehicleSimulator] Simulation completed successfully with no crashes! LEVEL COMPLETED!");
+            LoggerService?.Log("[VehicleSimulator] Simulation completed successfully with no crashes! LEVEL COMPLETED!");
 
             GameStateModel.SetState(GameState.LevelCompleted);
             HapticService?.Vibrate(HapticType.Success);

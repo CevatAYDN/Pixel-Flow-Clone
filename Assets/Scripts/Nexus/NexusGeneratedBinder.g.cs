@@ -44,7 +44,7 @@ namespace Nexus.Generated
                 instance.GameSessionModel = di.Resolve<PixelFlow.Models.IGameSessionModel>();
                 instance.HistoryService = di.Resolve<PixelFlow.Services.IGameHistoryService>();
                 instance.ProgressionService = di.Resolve<PixelFlow.Services.ILevelProgressionService>();
-                instance.LocalizationService = di.Resolve<PixelFlow.Services.ILocalizationService>();
+                instance.LocalizationService = di.Resolve<Nexus.Core.Services.ILocalizationService>();
             });
             NexusDI.RegisterInjector<PixelFlow.Views.HubHUDMediator>((instance, di) =>
             {
@@ -108,14 +108,6 @@ namespace Nexus.Generated
                 instance.GameStateModel = di.Resolve<PixelFlow.Models.IGameStateModel>();
                 instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
             });
-            NexusDI.RegisterInjector<PixelFlow.Services.HapticService>((instance, di) =>
-            {
-                instance.SettingsModel = di.Resolve<PixelFlow.Models.ISettingsModel>();
-            });
-            NexusDI.RegisterInjector<PixelFlow.Services.LocalizationService>((instance, di) =>
-            {
-                instance.PlayerPrefsService = di.Resolve<PixelFlow.Services.IPlayerPrefsService>();
-            });
             NexusDI.RegisterInjector<PixelFlow.Services.ObstacleService>((instance, di) =>
             {
                 instance.GridModel = di.Resolve<PixelFlow.Models.IGridModel>();
@@ -130,10 +122,6 @@ namespace Nexus.Generated
                 instance.GridModel = di.Resolve<PixelFlow.Models.IGridModel>();
                 instance.GameSessionModel = di.Resolve<PixelFlow.Models.IGameSessionModel>();
             });
-            NexusDI.RegisterInjector<PixelFlow.Services.SaveThrottler>((instance, di) =>
-            {
-                instance.PlayerPrefsService = di.Resolve<PixelFlow.Services.IPlayerPrefsService>();
-            });
             NexusDI.RegisterInjector<PixelFlow.Services.TaxCollectionService>((instance, di) =>
             {
                 instance.CityEconomyModel = di.Resolve<PixelFlow.Models.ICityEconomyModel>();
@@ -142,7 +130,7 @@ namespace Nexus.Generated
             NexusDI.RegisterInjector<PixelFlow.Services.TutorialDriver>((instance, di) =>
             {
                 instance.TutorialModel = di.Resolve<PixelFlow.Models.ITutorialModel>();
-                instance.PlayerPrefsService = di.Resolve<PixelFlow.Services.IPlayerPrefsService>();
+                instance.PlayerPrefsService = di.Resolve<Nexus.Core.Services.IPlayerPrefsService>();
             });
             NexusDI.RegisterInjector<PixelFlow.Services.VehicleSimulator>((instance, di) =>
             {
@@ -152,20 +140,21 @@ namespace Nexus.Generated
                 instance.GameSessionModel = di.Resolve<PixelFlow.Models.IGameSessionModel>();
                 instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
                 instance.HintModel = di.Resolve<PixelFlow.Models.IHintModel>();
-                instance.HapticService = di.Resolve<PixelFlow.Services.IHapticService>();
+                instance.HapticService = di.Resolve<Nexus.Core.Services.IHapticService>();
                 instance.AudioService = di.Resolve<PixelFlow.Services.IAudioService>();
                 instance.ObstacleService = di.Resolve<PixelFlow.Services.IObstacleService>();
                 instance.SettingsModel = di.Resolve<PixelFlow.Models.ISettingsModel>();
+                instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
             });
             NexusDI.RegisterInjector<PixelFlow.Models.CityEconomyModel>((instance, di) =>
             {
-                instance.PlayerPrefsService = di.Resolve<PixelFlow.Services.IPlayerPrefsService>();
+                instance.PlayerPrefsService = di.Resolve<Nexus.Core.Services.IPlayerPrefsService>();
                 instance.ProgressionService = di.Resolve<PixelFlow.Services.ILevelProgressionService>();
                 instance.GameStateModel = di.Resolve<PixelFlow.Models.IGameStateModel>();
             });
             NexusDI.RegisterInjector<PixelFlow.Models.DailyCrisisModel>((instance, di) =>
             {
-                instance.PlayerPrefsService = di.Resolve<PixelFlow.Services.IPlayerPrefsService>();
+                instance.PlayerPrefsService = di.Resolve<Nexus.Core.Services.IPlayerPrefsService>();
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.ChangeThemeCommand>((instance, di) =>
             {
@@ -180,6 +169,7 @@ namespace Nexus.Generated
                 instance.GameSessionModel = di.Resolve<PixelFlow.Models.IGameSessionModel>();
                 instance.HintModel = di.Resolve<PixelFlow.Models.IHintModel>();
                 instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
+                instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.EnterDistrictCommand>((instance, di) =>
             {
@@ -200,8 +190,10 @@ namespace Nexus.Generated
                 instance.HistoryService = di.Resolve<PixelFlow.Services.IGameHistoryService>();
                 instance.CityEconomyModel = di.Resolve<PixelFlow.Models.ICityEconomyModel>();
                 instance.ObstacleService = di.Resolve<PixelFlow.Services.IObstacleService>();
-                instance.SaveThrottler = di.Resolve<PixelFlow.Services.ISaveThrottler>();
+                instance.SaveThrottler = di.Resolve<Nexus.Core.Services.ISaveThrottler>();
                 instance.TutorialDriver = di.Resolve<PixelFlow.Services.ITutorialDriver>();
+                instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
+                instance.PlayerPrefsService = di.Resolve<Nexus.Core.Services.IPlayerPrefsService>();
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.PlaceViaductCommand>((instance, di) =>
             {
@@ -210,9 +202,11 @@ namespace Nexus.Generated
                 instance.GameStateModel = di.Resolve<PixelFlow.Models.IGameStateModel>();
                 instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
                 instance.HistoryService = di.Resolve<PixelFlow.Services.IGameHistoryService>();
-                instance.SaveThrottler = di.Resolve<PixelFlow.Services.ISaveThrottler>();
+                instance.SaveThrottler = di.Resolve<Nexus.Core.Services.ISaveThrottler>();
                 instance.LevelModel = di.Resolve<PixelFlow.Models.ILevelModel>();
-                instance.HapticService = di.Resolve<PixelFlow.Services.IHapticService>();
+                instance.HapticService = di.Resolve<Nexus.Core.Services.IHapticService>();
+                instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
+                instance.PlayerPrefsService = di.Resolve<Nexus.Core.Services.IPlayerPrefsService>();
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.ProcessInputCommand>((instance, di) =>
             {
@@ -224,9 +218,10 @@ namespace Nexus.Generated
                 instance.HistoryService = di.Resolve<PixelFlow.Services.IGameHistoryService>();
                 instance.GameSessionModel = di.Resolve<PixelFlow.Models.IGameSessionModel>();
                 instance.LevelModel = di.Resolve<PixelFlow.Models.ILevelModel>();
-                instance.SaveThrottler = di.Resolve<PixelFlow.Services.ISaveThrottler>();
-                instance.HapticService = di.Resolve<PixelFlow.Services.IHapticService>();
+                instance.SaveThrottler = di.Resolve<Nexus.Core.Services.ISaveThrottler>();
+                instance.HapticService = di.Resolve<Nexus.Core.Services.IHapticService>();
                 instance.ObstacleService = di.Resolve<PixelFlow.Services.IObstacleService>();
+                instance.PlayerPrefsService = di.Resolve<Nexus.Core.Services.IPlayerPrefsService>();
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.RedoCommand>((instance, di) =>
             {
@@ -251,7 +246,8 @@ namespace Nexus.Generated
                 instance.ProgressModel = di.Resolve<PixelFlow.Models.IProgressModel>();
                 instance.LevelModel = di.Resolve<PixelFlow.Models.ILevelModel>();
                 instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
-                instance.PlayerPrefsService = di.Resolve<PixelFlow.Services.IPlayerPrefsService>();
+                instance.PlayerPrefsService = di.Resolve<Nexus.Core.Services.IPlayerPrefsService>();
+                instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.TimerCommand>((instance, di) =>
             {
@@ -266,9 +262,10 @@ namespace Nexus.Generated
                 instance.GameStateModel = di.Resolve<PixelFlow.Models.IGameStateModel>();
                 instance.GameSessionModel = di.Resolve<PixelFlow.Models.IGameSessionModel>();
                 instance.LevelModel = di.Resolve<PixelFlow.Models.ILevelModel>();
-                instance.SaveThrottler = di.Resolve<PixelFlow.Services.ISaveThrottler>();
+                instance.SaveThrottler = di.Resolve<Nexus.Core.Services.ISaveThrottler>();
                 instance.CrisisAdService = di.Resolve<PixelFlow.Services.ICrisisAdService>();
-                instance.HapticService = di.Resolve<PixelFlow.Services.IHapticService>();
+                instance.HapticService = di.Resolve<Nexus.Core.Services.IHapticService>();
+                instance.PlayerPrefsService = di.Resolve<Nexus.Core.Services.IPlayerPrefsService>();
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.UpgradeCommand>((instance, di) =>
             {
@@ -284,8 +281,10 @@ namespace Nexus.Generated
                 instance.PathService = di.Resolve<PixelFlow.Services.IPathService>();
                 instance.HintService = di.Resolve<PixelFlow.Services.IHintService>();
                 instance.HistoryService = di.Resolve<PixelFlow.Services.IGameHistoryService>();
-                instance.SaveThrottler = di.Resolve<PixelFlow.Services.ISaveThrottler>();
-                instance.HapticService = di.Resolve<PixelFlow.Services.IHapticService>();
+                instance.SaveThrottler = di.Resolve<Nexus.Core.Services.ISaveThrottler>();
+                instance.HapticService = di.Resolve<Nexus.Core.Services.IHapticService>();
+                instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
+                instance.PlayerPrefsService = di.Resolve<Nexus.Core.Services.IPlayerPrefsService>();
             });
         }
 
@@ -296,148 +295,307 @@ namespace Nexus.Generated
             if (false)
             {
                 var _p_CityHubMediator_CityEconomyModel = default(PixelFlow.Views.CityHubMediator).CityEconomyModel;
+                _ = _p_CityHubMediator_CityEconomyModel; // Suppress CS0219 warning
                 var _p_CityHubMediator_GameStateModel = default(PixelFlow.Views.CityHubMediator).GameStateModel;
+                _ = _p_CityHubMediator_GameStateModel; // Suppress CS0219 warning
                 var _p_CityHubMediator_SettingsModel = default(PixelFlow.Views.CityHubMediator).SettingsModel;
+                _ = _p_CityHubMediator_SettingsModel; // Suppress CS0219 warning
                 var _p_CityHubMediator_ProgressModel = default(PixelFlow.Views.CityHubMediator).ProgressModel;
+                _ = _p_CityHubMediator_ProgressModel; // Suppress CS0219 warning
                 var _p_DailyCrisisMediator_DailyCrisisModel = default(PixelFlow.Views.DailyCrisisMediator).DailyCrisisModel;
+                _ = _p_DailyCrisisMediator_DailyCrisisModel; // Suppress CS0219 warning
                 var _p_DailyCrisisMediator_DailyCrisisService = default(PixelFlow.Views.DailyCrisisMediator).DailyCrisisService;
+                _ = _p_DailyCrisisMediator_DailyCrisisService; // Suppress CS0219 warning
                 var _p_GridMediator_GridModel = default(PixelFlow.Views.GridMediator).GridModel;
+                _ = _p_GridMediator_GridModel; // Suppress CS0219 warning
                 var _p_GridMediator_SettingsModel = default(PixelFlow.Views.GridMediator).SettingsModel;
+                _ = _p_GridMediator_SettingsModel; // Suppress CS0219 warning
                 var _p_HUDMediator_HintModel = default(PixelFlow.Views.HUDMediator).HintModel;
+                _ = _p_HUDMediator_HintModel; // Suppress CS0219 warning
                 var _p_HUDMediator_LevelModel = default(PixelFlow.Views.HUDMediator).LevelModel;
+                _ = _p_HUDMediator_LevelModel; // Suppress CS0219 warning
                 var _p_HUDMediator_SettingsModel = default(PixelFlow.Views.HUDMediator).SettingsModel;
+                _ = _p_HUDMediator_SettingsModel; // Suppress CS0219 warning
                 var _p_HUDMediator_GameStateModel = default(PixelFlow.Views.HUDMediator).GameStateModel;
+                _ = _p_HUDMediator_GameStateModel; // Suppress CS0219 warning
                 var _p_HUDMediator_GameSessionModel = default(PixelFlow.Views.HUDMediator).GameSessionModel;
+                _ = _p_HUDMediator_GameSessionModel; // Suppress CS0219 warning
                 var _p_HUDMediator_HistoryService = default(PixelFlow.Views.HUDMediator).HistoryService;
+                _ = _p_HUDMediator_HistoryService; // Suppress CS0219 warning
                 var _p_HUDMediator_ProgressionService = default(PixelFlow.Views.HUDMediator).ProgressionService;
+                _ = _p_HUDMediator_ProgressionService; // Suppress CS0219 warning
                 var _p_HUDMediator_LocalizationService = default(PixelFlow.Views.HUDMediator).LocalizationService;
+                _ = _p_HUDMediator_LocalizationService; // Suppress CS0219 warning
                 var _p_HubHUDMediator_CityEconomyModel = default(PixelFlow.Views.HubHUDMediator).CityEconomyModel;
+                _ = _p_HubHUDMediator_CityEconomyModel; // Suppress CS0219 warning
                 var _p_HubHUDMediator_GameStateModel = default(PixelFlow.Views.HubHUDMediator).GameStateModel;
+                _ = _p_HubHUDMediator_GameStateModel; // Suppress CS0219 warning
                 var _p_HubHUDMediator_LevelModel = default(PixelFlow.Views.HubHUDMediator).LevelModel;
+                _ = _p_HubHUDMediator_LevelModel; // Suppress CS0219 warning
                 var _p_HubHUDMediator_ProgressModel = default(PixelFlow.Views.HubHUDMediator).ProgressModel;
+                _ = _p_HubHUDMediator_ProgressModel; // Suppress CS0219 warning
                 var _p_HubHUDMediator_ProgressionService = default(PixelFlow.Views.HubHUDMediator).ProgressionService;
+                _ = _p_HubHUDMediator_ProgressionService; // Suppress CS0219 warning
                 var _p_HubHUDMediator_TaxCollectionService = default(PixelFlow.Views.HubHUDMediator).TaxCollectionService;
+                _ = _p_HubHUDMediator_TaxCollectionService; // Suppress CS0219 warning
                 var _p_LevelPackMediator_ProgressModel = default(PixelFlow.Views.LevelPackMediator).ProgressModel;
+                _ = _p_LevelPackMediator_ProgressModel; // Suppress CS0219 warning
                 var _p_MahalleSelectorMediator_GameStateModel = default(PixelFlow.Views.MahalleSelectorMediator).GameStateModel;
+                _ = _p_MahalleSelectorMediator_GameStateModel; // Suppress CS0219 warning
                 var _p_SettingsMediator_SettingsModel = default(PixelFlow.Views.SettingsMediator).SettingsModel;
+                _ = _p_SettingsMediator_SettingsModel; // Suppress CS0219 warning
                 var _p_SettingsMediator_GameStateModel = default(PixelFlow.Views.SettingsMediator).GameStateModel;
+                _ = _p_SettingsMediator_GameStateModel; // Suppress CS0219 warning
                 var _p_SoundHandlerMediator_SoundModel = default(PixelFlow.Views.SoundHandlerMediator).SoundModel;
+                _ = _p_SoundHandlerMediator_SoundModel; // Suppress CS0219 warning
                 var _p_ThemeHandlerMediator_SettingsModel = default(PixelFlow.Views.ThemeHandlerMediator).SettingsModel;
+                _ = _p_ThemeHandlerMediator_SettingsModel; // Suppress CS0219 warning
                 var _p_TutorialMediator_TutorialModel = default(PixelFlow.Views.TutorialMediator).TutorialModel;
+                _ = _p_TutorialMediator_TutorialModel; // Suppress CS0219 warning
                 var _p_TutorialMediator_TutorialDriver = default(PixelFlow.Views.TutorialMediator).TutorialDriver;
+                _ = _p_TutorialMediator_TutorialDriver; // Suppress CS0219 warning
                 var _p_UpgradeTreeMediator_CityEconomyModel = default(PixelFlow.Views.UpgradeTreeMediator).CityEconomyModel;
+                _ = _p_UpgradeTreeMediator_CityEconomyModel; // Suppress CS0219 warning
                 var _p_AudioService_SettingsModel = default(PixelFlow.Services.AudioService).SettingsModel;
+                _ = _p_AudioService_SettingsModel; // Suppress CS0219 warning
                 var _p_CameraControllerMediator_GameStateModel = default(PixelFlow.Services.CameraControllerMediator).GameStateModel;
+                _ = _p_CameraControllerMediator_GameStateModel; // Suppress CS0219 warning
                 var _p_CrisisAdService_GameSessionModel = default(PixelFlow.Services.CrisisAdService).GameSessionModel;
+                _ = _p_CrisisAdService_GameSessionModel; // Suppress CS0219 warning
                 var _p_CrisisAdService_SignalBus = default(PixelFlow.Services.CrisisAdService).SignalBus;
+                _ = _p_CrisisAdService_SignalBus; // Suppress CS0219 warning
                 var _p_CrisisAdService_LevelModel = default(PixelFlow.Services.CrisisAdService).LevelModel;
+                _ = _p_CrisisAdService_LevelModel; // Suppress CS0219 warning
                 var _p_DailyCrisisService_DailyCrisisModel = default(PixelFlow.Services.DailyCrisisService).DailyCrisisModel;
+                _ = _p_DailyCrisisService_DailyCrisisModel; // Suppress CS0219 warning
                 var _p_GameplayTimerService_GameStateModel = default(PixelFlow.Services.GameplayTimerService).GameStateModel;
+                _ = _p_GameplayTimerService_GameStateModel; // Suppress CS0219 warning
                 var _p_GameplayTimerService_SignalBus = default(PixelFlow.Services.GameplayTimerService).SignalBus;
-                var _p_HapticService_SettingsModel = default(PixelFlow.Services.HapticService).SettingsModel;
-                var _p_LocalizationService_PlayerPrefsService = default(PixelFlow.Services.LocalizationService).PlayerPrefsService;
+                _ = _p_GameplayTimerService_SignalBus; // Suppress CS0219 warning
                 var _p_ObstacleService_GridModel = default(PixelFlow.Services.ObstacleService).GridModel;
+                _ = _p_ObstacleService_GridModel; // Suppress CS0219 warning
                 var _p_ObstacleService_SignalBus = default(PixelFlow.Services.ObstacleService).SignalBus;
+                _ = _p_ObstacleService_SignalBus; // Suppress CS0219 warning
                 var _p_OverclockService_CityEconomyModel = default(PixelFlow.Services.OverclockService).CityEconomyModel;
+                _ = _p_OverclockService_CityEconomyModel; // Suppress CS0219 warning
                 var _p_PathService_GridModel = default(PixelFlow.Services.PathService).GridModel;
+                _ = _p_PathService_GridModel; // Suppress CS0219 warning
                 var _p_PathService_GameSessionModel = default(PixelFlow.Services.PathService).GameSessionModel;
-                var _p_SaveThrottler_PlayerPrefsService = default(PixelFlow.Services.SaveThrottler).PlayerPrefsService;
+                _ = _p_PathService_GameSessionModel; // Suppress CS0219 warning
                 var _p_TaxCollectionService_CityEconomyModel = default(PixelFlow.Services.TaxCollectionService).CityEconomyModel;
+                _ = _p_TaxCollectionService_CityEconomyModel; // Suppress CS0219 warning
                 var _p_TaxCollectionService_GameStateModel = default(PixelFlow.Services.TaxCollectionService).GameStateModel;
+                _ = _p_TaxCollectionService_GameStateModel; // Suppress CS0219 warning
                 var _p_TutorialDriver_TutorialModel = default(PixelFlow.Services.TutorialDriver).TutorialModel;
+                _ = _p_TutorialDriver_TutorialModel; // Suppress CS0219 warning
                 var _p_TutorialDriver_PlayerPrefsService = default(PixelFlow.Services.TutorialDriver).PlayerPrefsService;
+                _ = _p_TutorialDriver_PlayerPrefsService; // Suppress CS0219 warning
                 var _p_VehicleSimulator_GridModel = default(PixelFlow.Services.VehicleSimulator).GridModel;
+                _ = _p_VehicleSimulator_GridModel; // Suppress CS0219 warning
                 var _p_VehicleSimulator_LevelModel = default(PixelFlow.Services.VehicleSimulator).LevelModel;
+                _ = _p_VehicleSimulator_LevelModel; // Suppress CS0219 warning
                 var _p_VehicleSimulator_GameStateModel = default(PixelFlow.Services.VehicleSimulator).GameStateModel;
+                _ = _p_VehicleSimulator_GameStateModel; // Suppress CS0219 warning
                 var _p_VehicleSimulator_GameSessionModel = default(PixelFlow.Services.VehicleSimulator).GameSessionModel;
+                _ = _p_VehicleSimulator_GameSessionModel; // Suppress CS0219 warning
                 var _p_VehicleSimulator_SignalBus = default(PixelFlow.Services.VehicleSimulator).SignalBus;
+                _ = _p_VehicleSimulator_SignalBus; // Suppress CS0219 warning
                 var _p_VehicleSimulator_HintModel = default(PixelFlow.Services.VehicleSimulator).HintModel;
+                _ = _p_VehicleSimulator_HintModel; // Suppress CS0219 warning
                 var _p_VehicleSimulator_HapticService = default(PixelFlow.Services.VehicleSimulator).HapticService;
+                _ = _p_VehicleSimulator_HapticService; // Suppress CS0219 warning
                 var _p_VehicleSimulator_AudioService = default(PixelFlow.Services.VehicleSimulator).AudioService;
+                _ = _p_VehicleSimulator_AudioService; // Suppress CS0219 warning
                 var _p_VehicleSimulator_ObstacleService = default(PixelFlow.Services.VehicleSimulator).ObstacleService;
+                _ = _p_VehicleSimulator_ObstacleService; // Suppress CS0219 warning
                 var _p_VehicleSimulator_SettingsModel = default(PixelFlow.Services.VehicleSimulator).SettingsModel;
+                _ = _p_VehicleSimulator_SettingsModel; // Suppress CS0219 warning
+                var _p_VehicleSimulator_LoggerService = default(PixelFlow.Services.VehicleSimulator).LoggerService;
+                _ = _p_VehicleSimulator_LoggerService; // Suppress CS0219 warning
                 var _p_CityEconomyModel_PlayerPrefsService = default(PixelFlow.Models.CityEconomyModel).PlayerPrefsService;
+                _ = _p_CityEconomyModel_PlayerPrefsService; // Suppress CS0219 warning
                 var _p_CityEconomyModel_ProgressionService = default(PixelFlow.Models.CityEconomyModel).ProgressionService;
+                _ = _p_CityEconomyModel_ProgressionService; // Suppress CS0219 warning
                 var _p_CityEconomyModel_GameStateModel = default(PixelFlow.Models.CityEconomyModel).GameStateModel;
+                _ = _p_CityEconomyModel_GameStateModel; // Suppress CS0219 warning
                 var _p_DailyCrisisModel_PlayerPrefsService = default(PixelFlow.Models.DailyCrisisModel).PlayerPrefsService;
+                _ = _p_DailyCrisisModel_PlayerPrefsService; // Suppress CS0219 warning
                 var _p_ChangeThemeCommand_SettingsModel = default(PixelFlow.Commands.ChangeThemeCommand).SettingsModel;
+                _ = _p_ChangeThemeCommand_SettingsModel; // Suppress CS0219 warning
                 var _p_ChangeThemeCommand_SignalBus = default(PixelFlow.Commands.ChangeThemeCommand).SignalBus;
+                _ = _p_ChangeThemeCommand_SignalBus; // Suppress CS0219 warning
                 var _p_CheckWinConditionCommand_GridModel = default(PixelFlow.Commands.CheckWinConditionCommand).GridModel;
+                _ = _p_CheckWinConditionCommand_GridModel; // Suppress CS0219 warning
                 var _p_CheckWinConditionCommand_LevelModel = default(PixelFlow.Commands.CheckWinConditionCommand).LevelModel;
+                _ = _p_CheckWinConditionCommand_LevelModel; // Suppress CS0219 warning
                 var _p_CheckWinConditionCommand_GameStateModel = default(PixelFlow.Commands.CheckWinConditionCommand).GameStateModel;
+                _ = _p_CheckWinConditionCommand_GameStateModel; // Suppress CS0219 warning
                 var _p_CheckWinConditionCommand_GameSessionModel = default(PixelFlow.Commands.CheckWinConditionCommand).GameSessionModel;
+                _ = _p_CheckWinConditionCommand_GameSessionModel; // Suppress CS0219 warning
                 var _p_CheckWinConditionCommand_HintModel = default(PixelFlow.Commands.CheckWinConditionCommand).HintModel;
+                _ = _p_CheckWinConditionCommand_HintModel; // Suppress CS0219 warning
                 var _p_CheckWinConditionCommand_SignalBus = default(PixelFlow.Commands.CheckWinConditionCommand).SignalBus;
+                _ = _p_CheckWinConditionCommand_SignalBus; // Suppress CS0219 warning
+                var _p_CheckWinConditionCommand_LoggerService = default(PixelFlow.Commands.CheckWinConditionCommand).LoggerService;
+                _ = _p_CheckWinConditionCommand_LoggerService; // Suppress CS0219 warning
                 var _p_EnterDistrictCommand_ProgressionService = default(PixelFlow.Commands.EnterDistrictCommand).ProgressionService;
+                _ = _p_EnterDistrictCommand_ProgressionService; // Suppress CS0219 warning
                 var _p_EnterDistrictCommand_ProgressModel = default(PixelFlow.Commands.EnterDistrictCommand).ProgressModel;
+                _ = _p_EnterDistrictCommand_ProgressModel; // Suppress CS0219 warning
                 var _p_EnterDistrictCommand_LevelModel = default(PixelFlow.Commands.EnterDistrictCommand).LevelModel;
+                _ = _p_EnterDistrictCommand_LevelModel; // Suppress CS0219 warning
                 var _p_EnterDistrictCommand_SignalBus = default(PixelFlow.Commands.EnterDistrictCommand).SignalBus;
+                _ = _p_EnterDistrictCommand_SignalBus; // Suppress CS0219 warning
                 var _p_EnterDistrictCommand_TutorialDriver = default(PixelFlow.Commands.EnterDistrictCommand).TutorialDriver;
+                _ = _p_EnterDistrictCommand_TutorialDriver; // Suppress CS0219 warning
                 var _p_LoadLevelCommand_GridModel = default(PixelFlow.Commands.LoadLevelCommand).GridModel;
+                _ = _p_LoadLevelCommand_GridModel; // Suppress CS0219 warning
                 var _p_LoadLevelCommand_LevelModel = default(PixelFlow.Commands.LoadLevelCommand).LevelModel;
+                _ = _p_LoadLevelCommand_LevelModel; // Suppress CS0219 warning
                 var _p_LoadLevelCommand_GameStateModel = default(PixelFlow.Commands.LoadLevelCommand).GameStateModel;
+                _ = _p_LoadLevelCommand_GameStateModel; // Suppress CS0219 warning
                 var _p_LoadLevelCommand_GameSessionModel = default(PixelFlow.Commands.LoadLevelCommand).GameSessionModel;
+                _ = _p_LoadLevelCommand_GameSessionModel; // Suppress CS0219 warning
                 var _p_LoadLevelCommand_HintModel = default(PixelFlow.Commands.LoadLevelCommand).HintModel;
+                _ = _p_LoadLevelCommand_HintModel; // Suppress CS0219 warning
                 var _p_LoadLevelCommand_SignalBus = default(PixelFlow.Commands.LoadLevelCommand).SignalBus;
+                _ = _p_LoadLevelCommand_SignalBus; // Suppress CS0219 warning
                 var _p_LoadLevelCommand_HistoryService = default(PixelFlow.Commands.LoadLevelCommand).HistoryService;
+                _ = _p_LoadLevelCommand_HistoryService; // Suppress CS0219 warning
                 var _p_LoadLevelCommand_CityEconomyModel = default(PixelFlow.Commands.LoadLevelCommand).CityEconomyModel;
+                _ = _p_LoadLevelCommand_CityEconomyModel; // Suppress CS0219 warning
                 var _p_LoadLevelCommand_ObstacleService = default(PixelFlow.Commands.LoadLevelCommand).ObstacleService;
+                _ = _p_LoadLevelCommand_ObstacleService; // Suppress CS0219 warning
                 var _p_LoadLevelCommand_SaveThrottler = default(PixelFlow.Commands.LoadLevelCommand).SaveThrottler;
+                _ = _p_LoadLevelCommand_SaveThrottler; // Suppress CS0219 warning
                 var _p_LoadLevelCommand_TutorialDriver = default(PixelFlow.Commands.LoadLevelCommand).TutorialDriver;
+                _ = _p_LoadLevelCommand_TutorialDriver; // Suppress CS0219 warning
+                var _p_LoadLevelCommand_LoggerService = default(PixelFlow.Commands.LoadLevelCommand).LoggerService;
+                _ = _p_LoadLevelCommand_LoggerService; // Suppress CS0219 warning
+                var _p_LoadLevelCommand_PlayerPrefsService = default(PixelFlow.Commands.LoadLevelCommand).PlayerPrefsService;
+                _ = _p_LoadLevelCommand_PlayerPrefsService; // Suppress CS0219 warning
                 var _p_PlaceViaductCommand_GridModel = default(PixelFlow.Commands.PlaceViaductCommand).GridModel;
+                _ = _p_PlaceViaductCommand_GridModel; // Suppress CS0219 warning
                 var _p_PlaceViaductCommand_GameSessionModel = default(PixelFlow.Commands.PlaceViaductCommand).GameSessionModel;
+                _ = _p_PlaceViaductCommand_GameSessionModel; // Suppress CS0219 warning
                 var _p_PlaceViaductCommand_GameStateModel = default(PixelFlow.Commands.PlaceViaductCommand).GameStateModel;
+                _ = _p_PlaceViaductCommand_GameStateModel; // Suppress CS0219 warning
                 var _p_PlaceViaductCommand_SignalBus = default(PixelFlow.Commands.PlaceViaductCommand).SignalBus;
+                _ = _p_PlaceViaductCommand_SignalBus; // Suppress CS0219 warning
                 var _p_PlaceViaductCommand_HistoryService = default(PixelFlow.Commands.PlaceViaductCommand).HistoryService;
+                _ = _p_PlaceViaductCommand_HistoryService; // Suppress CS0219 warning
                 var _p_PlaceViaductCommand_SaveThrottler = default(PixelFlow.Commands.PlaceViaductCommand).SaveThrottler;
+                _ = _p_PlaceViaductCommand_SaveThrottler; // Suppress CS0219 warning
                 var _p_PlaceViaductCommand_LevelModel = default(PixelFlow.Commands.PlaceViaductCommand).LevelModel;
+                _ = _p_PlaceViaductCommand_LevelModel; // Suppress CS0219 warning
                 var _p_PlaceViaductCommand_HapticService = default(PixelFlow.Commands.PlaceViaductCommand).HapticService;
+                _ = _p_PlaceViaductCommand_HapticService; // Suppress CS0219 warning
+                var _p_PlaceViaductCommand_LoggerService = default(PixelFlow.Commands.PlaceViaductCommand).LoggerService;
+                _ = _p_PlaceViaductCommand_LoggerService; // Suppress CS0219 warning
+                var _p_PlaceViaductCommand_PlayerPrefsService = default(PixelFlow.Commands.PlaceViaductCommand).PlayerPrefsService;
+                _ = _p_PlaceViaductCommand_PlayerPrefsService; // Suppress CS0219 warning
                 var _p_ProcessInputCommand_GridModel = default(PixelFlow.Commands.ProcessInputCommand).GridModel;
+                _ = _p_ProcessInputCommand_GridModel; // Suppress CS0219 warning
                 var _p_ProcessInputCommand_SignalBus = default(PixelFlow.Commands.ProcessInputCommand).SignalBus;
+                _ = _p_ProcessInputCommand_SignalBus; // Suppress CS0219 warning
                 var _p_ProcessInputCommand_SoundModel = default(PixelFlow.Commands.ProcessInputCommand).SoundModel;
+                _ = _p_ProcessInputCommand_SoundModel; // Suppress CS0219 warning
                 var _p_ProcessInputCommand_PathService = default(PixelFlow.Commands.ProcessInputCommand).PathService;
+                _ = _p_ProcessInputCommand_PathService; // Suppress CS0219 warning
                 var _p_ProcessInputCommand_GameStateModel = default(PixelFlow.Commands.ProcessInputCommand).GameStateModel;
+                _ = _p_ProcessInputCommand_GameStateModel; // Suppress CS0219 warning
                 var _p_ProcessInputCommand_HistoryService = default(PixelFlow.Commands.ProcessInputCommand).HistoryService;
+                _ = _p_ProcessInputCommand_HistoryService; // Suppress CS0219 warning
                 var _p_ProcessInputCommand_GameSessionModel = default(PixelFlow.Commands.ProcessInputCommand).GameSessionModel;
+                _ = _p_ProcessInputCommand_GameSessionModel; // Suppress CS0219 warning
                 var _p_ProcessInputCommand_LevelModel = default(PixelFlow.Commands.ProcessInputCommand).LevelModel;
+                _ = _p_ProcessInputCommand_LevelModel; // Suppress CS0219 warning
                 var _p_ProcessInputCommand_SaveThrottler = default(PixelFlow.Commands.ProcessInputCommand).SaveThrottler;
+                _ = _p_ProcessInputCommand_SaveThrottler; // Suppress CS0219 warning
                 var _p_ProcessInputCommand_HapticService = default(PixelFlow.Commands.ProcessInputCommand).HapticService;
+                _ = _p_ProcessInputCommand_HapticService; // Suppress CS0219 warning
                 var _p_ProcessInputCommand_ObstacleService = default(PixelFlow.Commands.ProcessInputCommand).ObstacleService;
+                _ = _p_ProcessInputCommand_ObstacleService; // Suppress CS0219 warning
+                var _p_ProcessInputCommand_PlayerPrefsService = default(PixelFlow.Commands.ProcessInputCommand).PlayerPrefsService;
+                _ = _p_ProcessInputCommand_PlayerPrefsService; // Suppress CS0219 warning
                 var _p_RedoCommand_GridModel = default(PixelFlow.Commands.RedoCommand).GridModel;
+                _ = _p_RedoCommand_GridModel; // Suppress CS0219 warning
                 var _p_RedoCommand_HistoryService = default(PixelFlow.Commands.RedoCommand).HistoryService;
+                _ = _p_RedoCommand_HistoryService; // Suppress CS0219 warning
                 var _p_RedoCommand_SignalBus = default(PixelFlow.Commands.RedoCommand).SignalBus;
+                _ = _p_RedoCommand_SignalBus; // Suppress CS0219 warning
                 var _p_RedoCommand_GameStateModel = default(PixelFlow.Commands.RedoCommand).GameStateModel;
+                _ = _p_RedoCommand_GameStateModel; // Suppress CS0219 warning
                 var _p_ReturnToHubCommand_GameStateModel = default(PixelFlow.Commands.ReturnToHubCommand).GameStateModel;
+                _ = _p_ReturnToHubCommand_GameStateModel; // Suppress CS0219 warning
                 var _p_ReturnToHubCommand_SignalBus = default(PixelFlow.Commands.ReturnToHubCommand).SignalBus;
+                _ = _p_ReturnToHubCommand_SignalBus; // Suppress CS0219 warning
                 var _p_RewardedAdCommand_GameSessionModel = default(PixelFlow.Commands.RewardedAdCommand).GameSessionModel;
+                _ = _p_RewardedAdCommand_GameSessionModel; // Suppress CS0219 warning
                 var _p_RewardedAdCommand_CityEconomyModel = default(PixelFlow.Commands.RewardedAdCommand).CityEconomyModel;
+                _ = _p_RewardedAdCommand_CityEconomyModel; // Suppress CS0219 warning
                 var _p_RewardedAdCommand_SignalBus = default(PixelFlow.Commands.RewardedAdCommand).SignalBus;
+                _ = _p_RewardedAdCommand_SignalBus; // Suppress CS0219 warning
                 var _p_SaveProgressCommand_ProgressModel = default(PixelFlow.Commands.SaveProgressCommand).ProgressModel;
+                _ = _p_SaveProgressCommand_ProgressModel; // Suppress CS0219 warning
                 var _p_SaveProgressCommand_LevelModel = default(PixelFlow.Commands.SaveProgressCommand).LevelModel;
+                _ = _p_SaveProgressCommand_LevelModel; // Suppress CS0219 warning
                 var _p_SaveProgressCommand_SignalBus = default(PixelFlow.Commands.SaveProgressCommand).SignalBus;
+                _ = _p_SaveProgressCommand_SignalBus; // Suppress CS0219 warning
                 var _p_SaveProgressCommand_PlayerPrefsService = default(PixelFlow.Commands.SaveProgressCommand).PlayerPrefsService;
+                _ = _p_SaveProgressCommand_PlayerPrefsService; // Suppress CS0219 warning
+                var _p_SaveProgressCommand_LoggerService = default(PixelFlow.Commands.SaveProgressCommand).LoggerService;
+                _ = _p_SaveProgressCommand_LoggerService; // Suppress CS0219 warning
                 var _p_TimerCommand_GameSessionModel = default(PixelFlow.Commands.TimerCommand).GameSessionModel;
+                _ = _p_TimerCommand_GameSessionModel; // Suppress CS0219 warning
                 var _p_TimerCommand_GameStateModel = default(PixelFlow.Commands.TimerCommand).GameStateModel;
+                _ = _p_TimerCommand_GameStateModel; // Suppress CS0219 warning
                 var _p_UndoCommand_GridModel = default(PixelFlow.Commands.UndoCommand).GridModel;
+                _ = _p_UndoCommand_GridModel; // Suppress CS0219 warning
                 var _p_UndoCommand_HistoryService = default(PixelFlow.Commands.UndoCommand).HistoryService;
+                _ = _p_UndoCommand_HistoryService; // Suppress CS0219 warning
                 var _p_UndoCommand_SignalBus = default(PixelFlow.Commands.UndoCommand).SignalBus;
+                _ = _p_UndoCommand_SignalBus; // Suppress CS0219 warning
                 var _p_UndoCommand_GameStateModel = default(PixelFlow.Commands.UndoCommand).GameStateModel;
+                _ = _p_UndoCommand_GameStateModel; // Suppress CS0219 warning
                 var _p_UndoCommand_GameSessionModel = default(PixelFlow.Commands.UndoCommand).GameSessionModel;
+                _ = _p_UndoCommand_GameSessionModel; // Suppress CS0219 warning
                 var _p_UndoCommand_LevelModel = default(PixelFlow.Commands.UndoCommand).LevelModel;
+                _ = _p_UndoCommand_LevelModel; // Suppress CS0219 warning
                 var _p_UndoCommand_SaveThrottler = default(PixelFlow.Commands.UndoCommand).SaveThrottler;
+                _ = _p_UndoCommand_SaveThrottler; // Suppress CS0219 warning
                 var _p_UndoCommand_CrisisAdService = default(PixelFlow.Commands.UndoCommand).CrisisAdService;
+                _ = _p_UndoCommand_CrisisAdService; // Suppress CS0219 warning
                 var _p_UndoCommand_HapticService = default(PixelFlow.Commands.UndoCommand).HapticService;
+                _ = _p_UndoCommand_HapticService; // Suppress CS0219 warning
+                var _p_UndoCommand_PlayerPrefsService = default(PixelFlow.Commands.UndoCommand).PlayerPrefsService;
+                _ = _p_UndoCommand_PlayerPrefsService; // Suppress CS0219 warning
                 var _p_UpgradeCommand_CityEconomyModel = default(PixelFlow.Commands.UpgradeCommand).CityEconomyModel;
+                _ = _p_UpgradeCommand_CityEconomyModel; // Suppress CS0219 warning
                 var _p_UseHintCommand_HintModel = default(PixelFlow.Commands.UseHintCommand).HintModel;
+                _ = _p_UseHintCommand_HintModel; // Suppress CS0219 warning
                 var _p_UseHintCommand_GridModel = default(PixelFlow.Commands.UseHintCommand).GridModel;
+                _ = _p_UseHintCommand_GridModel; // Suppress CS0219 warning
                 var _p_UseHintCommand_LevelModel = default(PixelFlow.Commands.UseHintCommand).LevelModel;
+                _ = _p_UseHintCommand_LevelModel; // Suppress CS0219 warning
                 var _p_UseHintCommand_GameSessionModel = default(PixelFlow.Commands.UseHintCommand).GameSessionModel;
+                _ = _p_UseHintCommand_GameSessionModel; // Suppress CS0219 warning
                 var _p_UseHintCommand_SignalBus = default(PixelFlow.Commands.UseHintCommand).SignalBus;
+                _ = _p_UseHintCommand_SignalBus; // Suppress CS0219 warning
                 var _p_UseHintCommand_PathService = default(PixelFlow.Commands.UseHintCommand).PathService;
+                _ = _p_UseHintCommand_PathService; // Suppress CS0219 warning
                 var _p_UseHintCommand_HintService = default(PixelFlow.Commands.UseHintCommand).HintService;
+                _ = _p_UseHintCommand_HintService; // Suppress CS0219 warning
                 var _p_UseHintCommand_HistoryService = default(PixelFlow.Commands.UseHintCommand).HistoryService;
+                _ = _p_UseHintCommand_HistoryService; // Suppress CS0219 warning
                 var _p_UseHintCommand_SaveThrottler = default(PixelFlow.Commands.UseHintCommand).SaveThrottler;
+                _ = _p_UseHintCommand_SaveThrottler; // Suppress CS0219 warning
                 var _p_UseHintCommand_HapticService = default(PixelFlow.Commands.UseHintCommand).HapticService;
+                _ = _p_UseHintCommand_HapticService; // Suppress CS0219 warning
+                var _p_UseHintCommand_LoggerService = default(PixelFlow.Commands.UseHintCommand).LoggerService;
+                _ = _p_UseHintCommand_LoggerService; // Suppress CS0219 warning
+                var _p_UseHintCommand_PlayerPrefsService = default(PixelFlow.Commands.UseHintCommand).PlayerPrefsService;
+                _ = _p_UseHintCommand_PlayerPrefsService; // Suppress CS0219 warning
             }
             #pragma warning restore 0169, 0414, 0219
         }

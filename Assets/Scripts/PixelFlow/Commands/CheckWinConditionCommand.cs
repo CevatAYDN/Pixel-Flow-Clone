@@ -1,4 +1,5 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Data;
@@ -16,12 +17,13 @@ namespace PixelFlow.Commands
         [Inject] public IGameSessionModel GameSessionModel { get; set; }
         [Inject] public IHintModel HintModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
+        [Inject] public ILoggerService LoggerService { get; set; }
 
         public void Execute(CheckWinConditionSignal signal)
         {
             if (GameStateModel.CurrentState != GameState.Playing)
             {
-                UnityEngine.Debug.Log($"[CheckWinConditionCommand] Aborting check: GameState is not Playing (current: {GameStateModel.CurrentState})");
+                LoggerService?.Log($"[CheckWinConditionCommand] Aborting check: GameState is not Playing (current: {GameStateModel.CurrentState})");
                 return;
             }
 
@@ -36,7 +38,7 @@ namespace PixelFlow.Commands
                     {
                         if (GridModel.Grid[x, y].State == CellState.Empty)
                         {
-                            UnityEngine.Debug.Log($"[CheckWinConditionCommand] Win check failed: empty cell remaining at ({x}, {y})");
+                            LoggerService?.Log($"[CheckWinConditionCommand] Win check failed: empty cell remaining at ({x}, {y})");
                             return;
                         }
                     }
@@ -62,7 +64,7 @@ namespace PixelFlow.Commands
 
                     if (!GridModel.Paths.TryGetValue(kvp.Key, out var path) || path.Count == 0)
                     {
-                        UnityEngine.Debug.Log($"[CheckWinConditionCommand] Win check failed: color {kvp.Key} has no path");
+                        LoggerService?.Log($"[CheckWinConditionCommand] Win check failed: color {kvp.Key} has no path");
                         return;
                     }
 
@@ -74,7 +76,7 @@ namespace PixelFlow.Commands
                     bool validConnection = (startPos == node1 && endPos == node2) || (startPos == node2 && endPos == node1);
                     if (!validConnection)
                     {
-                        UnityEngine.Debug.Log($"[CheckWinConditionCommand] Win check failed: color {kvp.Key} path does not connect nodes. Path endpoints: ({startPos}, {endPos}), Node positions: ({node1}, {node2})");
+                        LoggerService?.Log($"[CheckWinConditionCommand] Win check failed: color {kvp.Key} path does not connect nodes. Path endpoints: ({startPos}, {endPos}), Node positions: ({node1}, {node2})");
                         return;
                     }
 
@@ -83,14 +85,14 @@ namespace PixelFlow.Commands
                     {
                         if (pos.x < 0 || pos.x >= GridModel.Width || pos.y < 0 || pos.y >= GridModel.Height)
                         {
-                            UnityEngine.Debug.Log($"[CheckWinConditionCommand] Win check failed: path position {pos} out of bounds");
+                            LoggerService?.Log($"[CheckWinConditionCommand] Win check failed: path position {pos} out of bounds");
                             return;
                         }
                     }
                 }
             }
 
-            UnityEngine.Debug.Log("[CheckWinConditionCommand] WIN CONDITION MET! Level Completed!");
+            LoggerService?.Log("[CheckWinConditionCommand] WIN CONDITION MET! Level Completed!");
 
             int hintsUsed = HintModel != null
                 ? HintModel.TotalHintsUsed
@@ -110,7 +112,7 @@ namespace PixelFlow.Commands
             GameSessionModel.AddScore(finalScore);
             GameSessionModel.SetStars(stars);
 
-            UnityEngine.Debug.Log("[CheckWinConditionCommand] Paths completed! Transitioning to Simulation Phase...");
+            LoggerService?.Log("[CheckWinConditionCommand] Paths completed! Transitioning to Simulation Phase...");
             GameStateModel.SetState(GameState.Simulating);
         }
 

@@ -1,4 +1,5 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Services;
@@ -12,6 +13,7 @@ namespace PixelFlow.Commands
         [Inject] public ILevelModel LevelModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
+        [Inject] public ILoggerService LoggerService { get; set; }
 
         public void Execute(LevelCompletedSignal signal)
         {
@@ -29,7 +31,7 @@ namespace PixelFlow.Commands
                     PlayerPrefsService?.Save();
                 }
             }
-            UnityEngine.Debug.Log($"[SaveProgressCommand] Level completed! Unlocked levels: {previousUnlocked} -> {ProgressModel.UnlockedLevels}");
+            LoggerService?.Log($"[SaveProgressCommand] Level completed! Unlocked levels: {previousUnlocked} -> {ProgressModel.UnlockedLevels}");
 
             // Seviye tamamlandığı için yarım kalan bulmaca kaydını sil
             GridStateSerializer.ClearSave(PlayerPrefsService);

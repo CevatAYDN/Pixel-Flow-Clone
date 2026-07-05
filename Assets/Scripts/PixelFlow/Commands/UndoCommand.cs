@@ -1,4 +1,5 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Models;
 using PixelFlow.Services;
 using PixelFlow.Signals;
@@ -20,6 +21,7 @@ namespace PixelFlow.Commands
         [Inject] public ISaveThrottler SaveThrottler { get; set; }
         [Inject] public ICrisisAdService CrisisAdService { get; set; }
         [Inject] public IHapticService HapticService { get; set; }
+        [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
 
         public void Execute(UndoSignal signal)
         {
@@ -36,7 +38,7 @@ namespace PixelFlow.Commands
                     CrisisAdService.RecordCrisisAttempt();
                 }
                 SignalBus.Fire(new GridUpdatedSignal());
-                SaveThrottler?.TryRequestSave(GridModel, GameSessionModel, LevelModel);
+                SaveThrottler?.TryRequestSave(() => GridStateSerializer.Save(GridModel, GameSessionModel, LevelModel, PlayerPrefsService));
                 HapticService.Vibrate(HapticType.Light);
             }
         }

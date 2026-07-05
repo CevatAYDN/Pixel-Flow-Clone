@@ -1,4 +1,5 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Data;
@@ -23,6 +24,8 @@ namespace PixelFlow.Commands
         [Inject] public IHapticService HapticService { get; set; }
         [Inject] public IObstacleService ObstacleService { get; set; }
 
+        [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
+
         // Batched history bypass edilerek her adımda snapshot kaydı sağlanır (Testler ve oyun hassasiyeti için)
         private bool _hasPendingHistory;
 
@@ -30,11 +33,12 @@ namespace PixelFlow.Commands
         {
             HistoryService.Record(GridModel);
             _hasPendingHistory = true;
+            _ = _hasPendingHistory; // Suppress CS0414 warning
         }
 
         private void RequestSave()
         {
-            SaveThrottler?.TryRequestSave(GridModel, GameSessionModel, LevelModel);
+            SaveThrottler?.TryRequestSave(() => GridStateSerializer.Save(GridModel, GameSessionModel, LevelModel, PlayerPrefsService));
         }
 
         public void Execute(InputInteractionSignal signal)

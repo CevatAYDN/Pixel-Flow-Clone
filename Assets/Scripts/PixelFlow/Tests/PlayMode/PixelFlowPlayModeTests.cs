@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Commands;
 using PixelFlow.Data;
 using PixelFlow.Models;
@@ -63,7 +64,10 @@ namespace PixelFlow.PlayMode.Tests
                 builder.Bind<IHintService, HintService>();
                 builder.Bind<IVehicleSimulator, VehicleSimulator>();
                 builder.Bind<ISaveThrottler, SaveThrottler>();
+                builder.BindService<INexusService, HapticService>();
                 builder.Bind<IHapticService, HapticService>();
+                builder.BindService<INexusService, LoggerService>();
+                builder.Bind<ILoggerService, LoggerService>();
                 builder.Bind<ICrisisAdService, CrisisAdService>();
                 builder.Bind<IObstacleService, ObstacleService>();
                 builder.Bind<IOverclockService, OverclockService>();

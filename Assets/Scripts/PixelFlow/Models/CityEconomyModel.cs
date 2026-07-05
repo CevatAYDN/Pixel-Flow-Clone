@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using PixelFlow.Services;
 using Nexus.Core;
+using Nexus.Core.Services;
 
 namespace PixelFlow.Models
 {

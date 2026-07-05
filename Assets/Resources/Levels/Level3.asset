@@ -75,4 +75,6 @@ MonoBehaviour:
   - {x: 2, y: 2}
   viaductLimit: 3
   requireFullGridCoverage: 0
+  flowScoreThreshold: 5
   obstacles: []
+  oneWayCells: []

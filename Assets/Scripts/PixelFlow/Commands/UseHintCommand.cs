@@ -1,4 +1,5 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Services;
@@ -20,30 +21,33 @@ namespace PixelFlow.Commands
         [Inject] public IGameHistoryService HistoryService { get; set; }
         [Inject] public ISaveThrottler SaveThrottler { get; set; }
         [Inject] public IHapticService HapticService { get; set; }
+        [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
+
 
         public void Execute(RequestHintSignal signal)
         {
             if (HintModel.HintsRemaining <= 0)
             {
-                Debug.LogWarning("[UseHintCommand] Abort: no hints remaining.");
+                LoggerService?.LogWarning("[UseHintCommand] Abort: no hints remaining.");
                 return;
             }
 
             var level = LevelModel.CurrentLevel;
             if (level == null)
             {
-                Debug.LogWarning("[UseHintCommand] Abort: LevelModel.CurrentLevel is null.");
+                LoggerService?.LogWarning("[UseHintCommand] Abort: LevelModel.CurrentLevel is null.");
                 return;
             }
 
             var hintPath = HintService.GetNextUnsolvedHint(level, GridModel, steps: 3);
             if (hintPath == null || hintPath.Count == 0)
             {
-                Debug.LogWarning($"[UseHintCommand] Abort: GetNextUnsolvedHint returned {(hintPath == null ? "null" : "empty")}. Grid has {GridModel.Paths.Count} paths.");
+                LoggerService?.LogWarning($"[UseHintCommand] Abort: GetNextUnsolvedHint returned {(hintPath == null ? "null" : "empty")}. Grid has {GridModel.Paths.Count} paths.");
                 return;
             }
 
-            Debug.Log($"[UseHintCommand] Hint path: {hintPath.Count} cells. Applying...");
+            LoggerService?.Log($"[UseHintCommand] Hint path: {hintPath.Count} cells. Applying...");
 
             HistoryService.Record(GridModel);
 
@@ -80,7 +84,7 @@ namespace PixelFlow.Commands
             HintModel.UseHint();
             SignalBus.Fire(new GridUpdatedSignal());
             SignalBus.Fire(new CheckWinConditionSignal());
-            SaveThrottler?.TryRequestSave(GridModel, GameSessionModel, LevelModel);
+            SaveThrottler?.TryRequestSave(() => GridStateSerializer.Save(GridModel, GameSessionModel, LevelModel, PlayerPrefsService));
             HapticService?.Vibrate(HapticType.Light);
         }
 

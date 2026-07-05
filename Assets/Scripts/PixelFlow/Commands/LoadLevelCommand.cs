@@ -1,4 +1,5 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Signals;
@@ -20,12 +21,14 @@ namespace PixelFlow.Commands
         [Inject] public IObstacleService ObstacleService { get; set; }
         [Inject] public ISaveThrottler SaveThrottler { get; set; }
         [Inject] public ITutorialDriver TutorialDriver { get; set; }
+        [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
 
         public void Execute(LoadLevelSignal signal)
         {
             if (signal.LevelToLoad == null)
             {
-                UnityEngine.Debug.LogError("[PixelFlow.LoadLevelCommand] ERROR: LoadLevelSignal received with null LevelToLoad.");
+                LoggerService?.LogError("[PixelFlow.LoadLevelCommand] ERROR: LoadLevelSignal received with null LevelToLoad.");
                 return;
             }
 
@@ -33,7 +36,7 @@ namespace PixelFlow.Commands
             int bridgeCount = signal.LevelToLoad.bridgePositions != null ? signal.LevelToLoad.bridgePositions.Count : 0;
             int obstacleCount = signal.LevelToLoad.obstacles != null ? signal.LevelToLoad.obstacles.Count : 0;
 
-            UnityEngine.Debug.Log($"[PixelFlow.LoadLevelCommand] ▶ Executing LoadLevel: Level {signal.LevelToLoad.levelIndex + 1} ({signal.LevelToLoad.name}, Grid: {signal.LevelToLoad.width}x{signal.LevelToLoad.height}, Nodes: {nodeCount}, Bridges: {bridgeCount}, Obstacles: {obstacleCount})");
+            LoggerService?.Log($"[PixelFlow.LoadLevelCommand] ▶ Executing LoadLevel: Level {signal.LevelToLoad.levelIndex + 1} ({signal.LevelToLoad.name}, Grid: {signal.LevelToLoad.width}x{signal.LevelToLoad.height}, Nodes: {nodeCount}, Bridges: {bridgeCount}, Obstacles: {obstacleCount})");
             
             LevelModel.SetLevel(signal.LevelToLoad);
             GridModel.Initialize(signal.LevelToLoad.width, signal.LevelToLoad.height);
@@ -109,7 +112,7 @@ namespace PixelFlow.Commands
 
             SignalBus.Fire(new GridUpdatedSignal());
             GameStateModel.SetState(GameState.Playing);
-            SaveThrottler?.TryRequestSave(GridModel, GameSessionModel, LevelModel);
+            SaveThrottler?.TryRequestSave(() => GridStateSerializer.Save(GridModel, GameSessionModel, LevelModel, PlayerPrefsService));
             UnityEngine.Debug.Log($"[PixelFlow.LoadLevelCommand] ✔ Level {signal.LevelToLoad.levelIndex + 1} loaded successfully. State: GameState.Playing.");
         }
 

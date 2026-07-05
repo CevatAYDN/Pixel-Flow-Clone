@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using PixelFlow.Services;
+using Nexus.Core.Services;
 
 namespace PixelFlow.Models
 {

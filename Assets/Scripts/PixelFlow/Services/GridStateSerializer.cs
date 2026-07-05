@@ -3,6 +3,7 @@ using UnityEngine;
 using PixelFlow.Models;
 using PixelFlow.Data;
 using Nexus.Core;
+using Nexus.Core.Services;
 
 namespace PixelFlow.Services
 {

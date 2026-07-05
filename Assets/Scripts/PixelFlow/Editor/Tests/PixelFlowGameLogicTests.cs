@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Commands;
 using PixelFlow.Data;
 using PixelFlow.Models;

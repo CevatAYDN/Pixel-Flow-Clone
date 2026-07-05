@@ -2,6 +2,7 @@ using NUnit.Framework;
 using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Services;
+using Nexus.Core.Services;
 using UnityEngine;
 
 namespace PixelFlow.Editor.Tests

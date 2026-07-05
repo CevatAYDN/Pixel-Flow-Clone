@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Data;
@@ -18,6 +19,8 @@ namespace PixelFlow.Commands
         [Inject] public ISaveThrottler SaveThrottler { get; set; }
         [Inject] public ILevelModel LevelModel { get; set; }
         [Inject] public IHapticService HapticService { get; set; }
+        [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
 
         public void Execute(PlaceViaductSignal signal)
         {
@@ -35,7 +38,7 @@ namespace PixelFlow.Commands
             // Viyadük sadece en az 2 yolun kesiştiği yerlere ve henüz viyadük olmayan hücrelere konulabilir
             if (cell.PathColorCount < 2 || cell.PathColorCount > BridgeValidationUtility.MaxPathsPerBridge || cell.HasViaduct)
             {
-                Debug.LogWarning($"[PlaceViaductCommand] Cannot place viaduct at {pos}. Paths: {cell.PathColorCount}, HasViaduct: {cell.HasViaduct}");
+                LoggerService?.LogWarning($"[PlaceViaductCommand] Cannot place viaduct at {pos}. Paths: {cell.PathColorCount}, HasViaduct: {cell.HasViaduct}");
                 return;
             }
 
@@ -91,7 +94,7 @@ namespace PixelFlow.Commands
                 }
                 
                 SignalBus.Fire(new GridUpdatedSignal());
-                SaveThrottler?.TryRequestSave(GridModel, GameSessionModel, LevelModel);
+                SaveThrottler?.TryRequestSave(() => GridStateSerializer.Save(GridModel, GameSessionModel, LevelModel, PlayerPrefsService));
                 HapticService?.Vibrate(HapticType.Heavy);
             }
             else

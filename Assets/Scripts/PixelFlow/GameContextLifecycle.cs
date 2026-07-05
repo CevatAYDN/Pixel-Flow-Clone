@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Models;
 using PixelFlow.Services;
 
@@ -22,7 +23,10 @@ namespace PixelFlow
             builder.BindService<IAudioService, AudioService>();
             builder.BindService<IGameplayTimerService, GameplayTimerService>();
             builder.BindService<ISaveThrottler, SaveThrottler>();
-            builder.BindService<IHapticService, HapticService>();
+            builder.BindService<INexusService, HapticService>();
+            builder.Bind<IHapticService, HapticService>();
+            builder.BindService<INexusService, LoggerService>();
+            builder.Bind<ILoggerService, LoggerService>();
             builder.BindService<ITutorialDriver, TutorialDriver>();
             builder.BindService<ICrisisAdService, CrisisAdService>();
             builder.BindService<IObstacleService, ObstacleService>();

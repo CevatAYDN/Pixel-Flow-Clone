@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Services;
 
 namespace PixelFlow.Editor.Tests

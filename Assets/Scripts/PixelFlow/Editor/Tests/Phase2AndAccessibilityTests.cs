@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Commands;
 using PixelFlow.Data;
 using PixelFlow.Models;
@@ -28,7 +29,10 @@ namespace PixelFlow.Editor.Tests
                 builder.BindService<IVehicleSimulator, VehicleSimulator>();
                 builder.BindService<ITaxCollectionService, TaxCollectionService>();
                 builder.BindService<ISaveThrottler, SaveThrottler>();
-                builder.BindService<IHapticService, HapticService>();
+                builder.BindService<INexusService, HapticService>();
+                builder.Bind<IHapticService, HapticService>();
+                builder.BindService<INexusService, LoggerService>();
+                builder.Bind<ILoggerService, LoggerService>();
                 builder.BindService<IObstacleService, ObstacleService>();
                 builder.BindService<IOverclockService, OverclockService>();
                 builder.BindService<ICrisisAdService, CrisisAdService>();
@@ -216,7 +220,8 @@ namespace PixelFlow.Editor.Tests
             session.StartSession(3);
 
             var throttler = _ctx.Context.Container.Resolve<ISaveThrottler>();
-            throttler.ForceSave(grid, session, level);
+            var prefs = _ctx.Context.Container.Resolve<IPlayerPrefsService>();
+            throttler.ForceSave(() => GridStateSerializer.Save(grid, session, level, prefs));
             Assert.IsTrue(GridStateSerializer.HasSavedGame(_ctx.Context.Container.Resolve<IPlayerPrefsService>()));
 
             GridStateSerializer.ClearSave();

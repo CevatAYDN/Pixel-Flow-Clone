@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Commands;
 using PixelFlow.Data;
 using PixelFlow.Models;
@@ -34,6 +35,8 @@ namespace PixelFlow.Editor.Tests
                 builder.BindService<ITaxCollectionService, TaxCollectionService>();
                 builder.BindService<ISaveThrottler, SaveThrottler>();
                 builder.BindService<IHapticService, HapticService>();
+                builder.BindService<INexusService, LoggerService>();
+                builder.Bind<ILoggerService, LoggerService>();
                 builder.BindService<ICrisisAdService, CrisisAdService>();
                 builder.BindService<IObstacleService, ObstacleService>();
                 builder.BindService<IOverclockService, OverclockService>();
