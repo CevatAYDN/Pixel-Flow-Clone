@@ -291,7 +291,7 @@ namespace Nexus.Generated
         // Forces IL2CPP to preserve members that are injected
         public static void PreserveMembers()
         {
-            #pragma warning disable 0169, 0414, 0219
+            #pragma warning disable 0162, 0169, 0414, 0219
             if (false)
             {
                 var _p_CityHubMediator_CityEconomyModel = default(PixelFlow.Views.CityHubMediator).CityEconomyModel;
@@ -597,7 +597,7 @@ namespace Nexus.Generated
                 var _p_UseHintCommand_PlayerPrefsService = default(PixelFlow.Commands.UseHintCommand).PlayerPrefsService;
                 _ = _p_UseHintCommand_PlayerPrefsService; // Suppress CS0219 warning
             }
-            #pragma warning restore 0169, 0414, 0219
+            #pragma warning restore 0162, 0169, 0414, 0219
         }
     }
 }
