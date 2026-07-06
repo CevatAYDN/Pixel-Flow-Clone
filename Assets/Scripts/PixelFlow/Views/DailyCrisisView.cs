@@ -1,10 +1,12 @@
 using System;
 using UnityEngine;
 using UnityEngine.UI;
+using Nexus.Core;
 
 namespace PixelFlow.Views
 {
-    public class DailyCrisisView : MonoBehaviour
+    [Mediator(typeof(DailyCrisisMediator))]
+    public class DailyCrisisView : View
     {
         [SerializeField] private GameObject _panelContainer;
         [SerializeField] private Text _titleText;

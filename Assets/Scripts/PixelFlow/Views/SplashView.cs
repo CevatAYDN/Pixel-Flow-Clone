@@ -5,6 +5,7 @@ using Nexus.Core;
 
 namespace PixelFlow.Views
 {
+    [Mediator(typeof(SplashMediator))]
     public class SplashView : View
     {
         [SerializeField] private Image _logoSplash;

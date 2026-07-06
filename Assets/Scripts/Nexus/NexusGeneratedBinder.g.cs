@@ -179,6 +179,11 @@ namespace Nexus.Generated
                 instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
                 instance.TutorialDriver = di.Resolve<PixelFlow.Services.ITutorialDriver>();
             });
+            NexusDI.RegisterInjector<PixelFlow.Commands.LevelVictoryCompositeHandler>((instance, di) =>
+            {
+                instance.FeedbackService = di.Resolve<Nexus.Core.Services.IFeedbackService>();
+                instance.Logger = di.Resolve<Nexus.Core.Services.ILoggerService>();
+            });
             NexusDI.RegisterInjector<PixelFlow.Commands.LoadLevelCommand>((instance, di) =>
             {
                 instance.GridModel = di.Resolve<PixelFlow.Models.IGridModel>();
@@ -448,6 +453,10 @@ namespace Nexus.Generated
                 _ = _p_EnterDistrictCommand_SignalBus; // Suppress CS0219 warning
                 var _p_EnterDistrictCommand_TutorialDriver = default(PixelFlow.Commands.EnterDistrictCommand).TutorialDriver;
                 _ = _p_EnterDistrictCommand_TutorialDriver; // Suppress CS0219 warning
+                var _p_LevelVictoryCompositeHandler_FeedbackService = default(PixelFlow.Commands.LevelVictoryCompositeHandler).FeedbackService;
+                _ = _p_LevelVictoryCompositeHandler_FeedbackService; // Suppress CS0219 warning
+                var _p_LevelVictoryCompositeHandler_Logger = default(PixelFlow.Commands.LevelVictoryCompositeHandler).Logger;
+                _ = _p_LevelVictoryCompositeHandler_Logger; // Suppress CS0219 warning
                 var _p_LoadLevelCommand_GridModel = default(PixelFlow.Commands.LoadLevelCommand).GridModel;
                 _ = _p_LoadLevelCommand_GridModel; // Suppress CS0219 warning
                 var _p_LoadLevelCommand_LevelModel = default(PixelFlow.Commands.LoadLevelCommand).LevelModel;
