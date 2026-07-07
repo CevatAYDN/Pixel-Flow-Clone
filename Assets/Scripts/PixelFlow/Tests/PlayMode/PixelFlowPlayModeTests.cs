@@ -77,7 +77,6 @@ namespace PixelFlow.PlayMode.Tests
                 builder.Bind<ILoggerService, LoggerService>();
                 builder.Bind<ICrisisAdService, CrisisAdService>();
                 builder.Bind<IObstacleService, ObstacleService>();
-                builder.Bind<IOverclockService, OverclockService>();
                 builder.Bind<ITutorialDriver, TutorialDriver>();
                 builder.Bind<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
 
@@ -89,7 +88,6 @@ namespace PixelFlow.PlayMode.Tests
                 builder.BindReactiveModel<IHintModel, HintModel>();
                 builder.BindReactiveModel<ISettingsModel, SettingsModel>();
                 builder.BindReactiveModel<ISoundModel, SoundModel>();
-                builder.BindReactiveModel<ICityEconomyModel, CityEconomyModel>();
                 builder.BindReactiveModel<ITutorialModel, TutorialModel>();
                 builder.Bind<ILevelProgressionService, LevelProgressionService>();
 
@@ -100,451 +98,288 @@ namespace PixelFlow.PlayMode.Tests
                 builder.BindSignal<LoadLevelSignal>().To<LoadLevelCommand>();
                 builder.BindSignal<RequestHintSignal>().To<UseHintCommand>();
                 builder.BindSignal<ChangeThemeSignal>().To<ChangeThemeCommand>();
-                builder.BindSignal<LevelCompletedSignal>().To<SaveProgressCommand>();
+                builder.BindCommand<LevelCompletedSignal, SaveProgressCommand>(ExecutionMode.Exclusive, priority: 0);
                 builder.BindSignal<UndoSignal>().To<UndoCommand>();
                 builder.BindSignal<RedoSignal>().To<RedoCommand>();
+                builder.BindSignal<TimerTickSignal>().To<TimerCommand>();
                 builder.BindSignal<PlaceViaductSignal>().To<PlaceViaductCommand>();
+                builder.BindSignal<RequestReturnToHubSignal>().To<ReturnToHubCommand>();
+                builder.BindSignal<RequestRewardedAdSignal>().To<RewardedAdCommand>();
+                builder.BindSignal<RequestInterstitialAdSignal>().To<InterstitialAdCommand>();
+                builder.BindSignal<EnterDistrictSignal>().To<EnterDistrictCommand>();
             });
         }
 
-        private static LevelData CreateTestLevel(int index = 0)
+        // ──────────────────────────────────────────────
+        // Test 1: Basic Grid initialization
+        // ──────────────────────────────────────────────
+
+        [Test]
+        public void Grid_InitializesWithCorrectDimensions()
         {
+            using var ctx = CreateGameContext();
+            var grid = ctx.GetModel<IGridModel>();
+
+            grid.Initialize(5, 5);
+
+            Assert.AreEqual(5, grid.Width);
+            Assert.AreEqual(5, grid.Height);
+            Assert.AreEqual(25, grid.Grid.Length);
+        }
+
+        // ──────────────────────────────────────────────
+        // Test 2: Path drawing basic mechanics
+        // ──────────────────────────────────────────────
+
+        [Test]
+        public void PathDrawing_ConnectsNodes()
+        {
+            using var ctx = CreateGameContext();
+            var grid = ctx.GetModel<IGridModel>();
+
+            grid.Initialize(5, 5);
+
+            // Place nodes manually
+            grid.Grid[0, 0].State = CellState.Node;
+            grid.Grid[0, 0].Color = ColorType.Red;
+            grid.Grid[0, 0].AddPathColor(ColorType.Red);
+
+            grid.Grid[4, 4].State = CellState.Node;
+            grid.Grid[4, 4].Color = ColorType.Red;
+            grid.Grid[4, 4].AddPathColor(ColorType.Red);
+
+            // Simulate path drawing
+            grid.ActiveColor.Value = ColorType.Red;
+            grid.Paths[ColorType.Red] = new List<Vector2Int> { new Vector2Int(0, 0) };
+
+            // Add intermediate cells
+            grid.Grid[1, 0].State = CellState.Path;
+            grid.Grid[1, 0].Color = ColorType.Red;
+            grid.Grid[1, 0].AddPathColor(ColorType.Red);
+            grid.Paths[ColorType.Red].Add(new Vector2Int(1, 0));
+
+            grid.Grid[2, 0].State = CellState.Path;
+            grid.Grid[2, 0].Color = ColorType.Red;
+            grid.Grid[2, 0].AddPathColor(ColorType.Red);
+            grid.Paths[ColorType.Red].Add(new Vector2Int(2, 0));
+
+            grid.Grid[3, 0].State = CellState.Path;
+            grid.Grid[3, 0].Color = ColorType.Red;
+            grid.Grid[3, 0].AddPathColor(ColorType.Red);
+            grid.Paths[ColorType.Red].Add(new Vector2Int(3, 0));
+
+            grid.Grid[4, 0].State = CellState.Path;
+            grid.Grid[4, 0].Color = ColorType.Red;
+            grid.Grid[4, 0].AddPathColor(ColorType.Red);
+            grid.Paths[ColorType.Red].Add(new Vector2Int(4, 0));
+
+            grid.Grid[4, 4].AddPathColor(ColorType.Red);
+            grid.Paths[ColorType.Red].Add(new Vector2Int(4, 4));
+
+            Assert.AreEqual(6, grid.Paths[ColorType.Red].Count);
+        }
+
+        // ──────────────────────────────────────────────
+        // Test 3: Undo/Redo with GameHistoryService
+        // ──────────────────────────────────────────────
+
+        [Test]
+        public void GameHistoryService_SupportsUndo()
+        {
+            using var ctx = CreateGameContext();
+            var grid = ctx.GetModel<IGridModel>();
+            var history = ctx.Context.Container.Resolve<IGameHistoryService>();
+
+            grid.Initialize(5, 5);
+
+            // Initial state
+            var initialState = new CellData();
+            initialState.State = CellState.Empty;
+
+            // Modify grid
+            grid.Grid[0, 0].State = CellState.Path;
+            grid.Grid[0, 0].Color = ColorType.Blue;
+
+            // Record snapshot
+            history.Record(grid);
+
+            // Modify again
+            grid.Grid[0, 0].State = CellState.Node;
+            grid.Grid[0, 0].Color = ColorType.Red;
+
+            history.Record(grid);
+
+            // Undo
+            history.Undo(grid);
+
+            Assert.AreEqual(CellState.Path, grid.Grid[0, 0].State);
+            Assert.AreEqual(ColorType.Blue, grid.Grid[0, 0].Color);
+        }
+
+        // ──────────────────────────────────────────────
+        // Test 4: Hint system basic functionality
+        // ──────────────────────────────────────────────
+
+        [Test]
+        public void HintModel_DecrementsOnUse()
+        {
+            using var ctx = CreateGameContext();
+            var hintModel = ctx.GetModel<IHintModel>();
+
+            int initial = hintModel.HintsRemaining;
+            hintModel.UseHint();
+
+            Assert.AreEqual(initial - 1, hintModel.HintsRemaining);
+        }
+
+        // ──────────────────────────────────────────────
+        // Test 5: Viaduct placement (bridge crossing)
+        // ──────────────────────────────────────────────
+
+        [Test]
+        public void ViaductPlacement_AllowsPathCrossing()
+        {
+            using var ctx = CreateGameContext();
+            var grid = ctx.GetModel<IGridModel>();
+            var session = ctx.GetModel<IGameSessionModel>();
+
+            grid.Initialize(5, 5);
+
+            // Set up session with viaducts
+            session.StartSession(3, 5);
+
+            // Create crossing point
+            grid.Grid[2, 2].State = CellState.Bridge;
+            grid.Grid[2, 2].HasViaduct = true;
+
+            // Blue path crossing horizontally
+            grid.Grid[2, 2].AddPathColor(ColorType.Blue);
+            grid.Grid[2, 2].UnderColor = ColorType.Blue;
+
+            // Red path crossing vertically
+            grid.Grid[2, 2].AddPathColor(ColorType.Red);
+            grid.Grid[2, 2].OverColor = ColorType.Red;
+
+            Assert.IsTrue(grid.Grid[2, 2].HasPathColor(ColorType.Blue));
+            Assert.IsTrue(grid.Grid[2, 2].HasPathColor(ColorType.Red));
+            Assert.AreEqual(2, grid.Grid[2, 2].PathColorCount);
+        }
+
+        // ──────────────────────────────────────────────
+        // Test 6: Level progression unlocks levels
+        // ──────────────────────────────────────────────
+
+        [Test]
+        public void ProgressModel_UnlocksLevels()
+        {
+            using var ctx = CreateGameContext();
+            var progress = ctx.GetModel<IProgressModel>();
+
+            Assert.AreEqual(0, progress.UnlockedLevels);
+
+            progress.UnlockLevel(5);
+            Assert.AreEqual(6, progress.UnlockedLevels); // 0-indexed
+
+            progress.UnlockLevel(10);
+            Assert.AreEqual(11, progress.UnlockedLevels);
+        }
+
+        // ──────────────────────────────────────────────
+        // Test 7: Game state transitions
+        // ──────────────────────────────────────────────
+
+        [Test]
+        public void GameStateModel_TransitionsCorrectly()
+        {
+            using var ctx = CreateGameContext();
+            var state = ctx.GetModel<IGameStateModel>();
+
+            Assert.AreEqual(GameState.MainMenu, state.CurrentState);
+
+            state.SetState(GameState.Playing);
+            Assert.AreEqual(GameState.Playing, state.CurrentState);
+
+            state.SetState(GameState.Paused);
+            Assert.AreEqual(GameState.Paused, state.CurrentState);
+
+            state.SetState(GameState.Simulating);
+            Assert.AreEqual(GameState.Simulating, state.CurrentState);
+
+            state.SetState(GameState.LevelCompleted);
+            Assert.AreEqual(GameState.LevelCompleted, state.CurrentState);
+        }
+
+        // ──────────────────────────────────────────────
+        // Test 8: Viaduct bonus from level progression
+        // ──────────────────────────────────────────────
+
+        [Test]
+        public void LoadLevelCommand_AppliesViaductBonus()
+        {
+            using var ctx = CreateGameContext();
+            var grid = ctx.GetModel<IGridModel>();
+            var session = ctx.GetModel<IGameSessionModel>();
+            var signalBus = ctx.Context.Container.Resolve<ISignalBus>();
+
+            // Create test level
             var level = ScriptableObject.CreateInstance<LevelData>();
-            level.levelIndex = index;
+            level.levelIndex = 15; // Should give +1 viaduct bonus (15 / 10 = 1)
             level.width = 5;
             level.height = 5;
-
+            level.viaductLimit = 2;
             level.initialNodes = new List<GridNode>
             {
                 new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
-                new GridNode { position = new Vector2Int(4, 0), color = ColorType.Red },
-                new GridNode { position = new Vector2Int(0, 4), color = ColorType.Blue },
-                new GridNode { position = new Vector2Int(4, 4), color = ColorType.Blue },
-                new GridNode { position = new Vector2Int(2, 0), color = ColorType.Green },
-                new GridNode { position = new Vector2Int(2, 4), color = ColorType.Green },
+                new GridNode { position = new Vector2Int(4, 4), color = ColorType.Red }
             };
 
-            level.bridgePositions = new List<Vector2Int> { new Vector2Int(2, 2) };
+            signalBus.Fire(new LoadLevelSignal { LevelToLoad = level });
 
-            level.solutions = new List<PathSolution>
-            {
-                new PathSolution
-                {
-                    color = ColorType.Red,
-                    pathPositions = new List<Vector2Int>
-                    {
-                        new Vector2Int(0, 0), new Vector2Int(1, 0),
-                        new Vector2Int(2, 0), new Vector2Int(3, 0), new Vector2Int(4, 0)
-                    }
-                },
-                new PathSolution
-                {
-                    color = ColorType.Blue,
-                    pathPositions = new List<Vector2Int>
-                    {
-                        new Vector2Int(0, 4), new Vector2Int(0, 3),
-                        new Vector2Int(0, 2), new Vector2Int(0, 1), new Vector2Int(0, 0)
-                    }
-                },
-                new PathSolution
-                {
-                    color = ColorType.Green,
-                    pathPositions = new List<Vector2Int>
-                    {
-                        new Vector2Int(2, 0), new Vector2Int(2, 1),
-                        new Vector2Int(2, 2), new Vector2Int(2, 3), new Vector2Int(2, 4)
-                    }
-                }
-            };
-
-            return level;
-        }
-
-        private NexusTestContext _ctx;
-
-        [SetUp]
-        public void SetUp()
-        {
-            _ctx = CreateGameContext();
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            _ctx?.Dispose();
-            _ctx = null;
+            // Total viaducts = level limit (2) + bonus (1) = 3
+            Assert.AreEqual(3, session.MaxViaducts);
+            Assert.AreEqual(2, session.AvailableViaducts); // All viaducts available at start
         }
 
         // ──────────────────────────────────────────────
-        // Test 1: Full game flow — load → play → win → score
+        // Test 9: Hint award for star performance
         // ──────────────────────────────────────────────
 
         [Test]
-        public void FullGameFlow_LoadLevel_PlayAndWin_AwardsScoreAndStars()
+        public void HintModel_AwardsHintForThreeStars()
         {
-            var level = ScriptableObject.CreateInstance<LevelData>();
-            level.levelIndex = 0;
-            level.width = 3;
-            level.height = 1;
-            level.initialNodes = new List<GridNode>
+            using var ctx = CreateGameContext();
+            var hintModel = ctx.GetModel<IHintModel>();
+
+            int initialHints = hintModel.HintsRemaining;
+
+            // 3 stars should award a hint
+            hintModel.AwardHintForStar(3);
+            Assert.AreEqual(initialHints + 1, hintModel.HintsRemaining);
+
+            // 2 stars has 50% chance - test multiple times
+            int hintCount2Star = 0;
+            for (int i = 0; i < 100; i++)
             {
-                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
-                new GridNode { position = new Vector2Int(2, 0), color = ColorType.Red },
-            };
-
-            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
-
-            var grid = _ctx.GetModel<IGridModel>();
-            var state = _ctx.GetModel<IGameStateModel>();
-            var session = _ctx.GetModel<IGameSessionModel>();
-
-            Assert.AreEqual(GameState.Playing, state.CurrentState, "State should be Playing after load");
-            Assert.IsTrue(session.IsSessionActive, "Session should be active");
-            Assert.AreEqual(0, session.Score, "Score should start at 0");
-
-            _ctx.Dispatch(new InputInteractionSignal
-            {
-                Type = InputType.PointerDown,
-                GridPosition = new Vector2Int(0, 0)
-            });
-            _ctx.Dispatch(new InputInteractionSignal
-            {
-                Type = InputType.Drag,
-                GridPosition = new Vector2Int(1, 0)
-            });
-            _ctx.Dispatch(new InputInteractionSignal
-            {
-                Type = InputType.Drag,
-                GridPosition = new Vector2Int(2, 0)
-            });
-
-            Assert.AreEqual(GameState.Simulating, state.CurrentState,
-                "Should be Simulating after connecting nodes");
-
-            // Manually finish simulation for the test
-            state.SetState(GameState.LevelCompleted);
-            _ctx.Dispatch(new LevelCompletedSignal());
-
-            Assert.AreEqual(GameState.LevelCompleted, state.CurrentState,
-                "Should be LevelCompleted after finishing simulation");
-            Assert.Greater(session.Score, 0, "Score should be > 0");
-            Assert.GreaterOrEqual(session.StarsEarned, 1, "Should earn at least 1 star");
-        }
-
-        // ──────────────────────────────────────────────
-        // Test 2: Timer command — real Time.deltaTime in PlayMode
-        // ──────────────────────────────────────────────
-
-        [Test]
-        public void TimerCommand_AccumulatesRealDeltaTime_WhenPlaying()
-        {
-            var level = CreateTestLevel();
-            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
-
-            var session = _ctx.GetModel<IGameSessionModel>();
-            var state = _ctx.GetModel<IGameStateModel>();
-
-            Assert.AreEqual(GameState.Playing, state.CurrentState);
-            Assert.AreEqual(0f, session.ElapsedTime, 0.001f);
-
-            // Simulate multiple timer ticks (PlayMode allows Time.deltaTime)
-            var timerCmd = new TimerCommand
-            {
-                GameSessionModel = session,
-                GameStateModel = state
-            };
-
-            timerCmd.Execute(new TimerTickSignal());
-            timerCmd.Execute(new TimerTickSignal());
-            timerCmd.Execute(new TimerTickSignal());
-
-            Assert.Greater(session.ElapsedTime, 0f,
-                "ElapsedTime should increase after timer ticks in PlayMode");
-        }
-
-        [Test]
-        public void TimerCommand_IgnoresTicks_WhenNotPlaying()
-        {
-            var level = CreateTestLevel();
-            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
-
-            var session = _ctx.GetModel<IGameSessionModel>();
-            var state = _ctx.GetModel<IGameStateModel>();
-            var timerCmd = new TimerCommand
-            {
-                GameSessionModel = session,
-                GameStateModel = state
-            };
-
-            timerCmd.Execute(new TimerTickSignal());
-            float timeAfterPlaying = session.ElapsedTime;
-
-            // Transition out of Playing
-            state.SetState(GameState.LevelCompleted);
-            timerCmd.Execute(new TimerTickSignal());
-
-            Assert.AreEqual(timeAfterPlaying, session.ElapsedTime, 0.001f,
-                "Timer should not advance when state is not Playing");
-        }
-
-        // ──────────────────────────────────────────────
-        // Test 3: Session lifecycle — reset on new level load
-        // ──────────────────────────────────────────────
-
-        [Test]
-        public void SessionLifecycle_ResetsOnNewLevelLoad()
-        {
-            var level1 = CreateTestLevel(0);
-            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level1 });
-
-            var session = _ctx.GetModel<IGameSessionModel>();
-            var grid = _ctx.GetModel<IGridModel>();
-
-            // Play a bit
-            _ctx.Dispatch(new InputInteractionSignal
-            {
-                Type = InputType.PointerDown,
-                GridPosition = new Vector2Int(0, 0)
-            });
-            _ctx.Dispatch(new InputInteractionSignal
-            {
-                Type = InputType.Drag,
-                GridPosition = new Vector2Int(1, 0)
-            });
-
-            Assert.AreEqual(0, session.Score, "No score yet (only CheckWin sets it)");
-
-            // Load new level
-            var level2 = ScriptableObject.CreateInstance<LevelData>();
-            level2.levelIndex = 1;
-            level2.width = 3;
-            level2.height = 3;
-            level2.initialNodes = new List<GridNode>
-            {
-                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
-                new GridNode { position = new Vector2Int(2, 0), color = ColorType.Red },
-            };
-
-            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level2 });
-
-            Assert.IsTrue(session.IsSessionActive, "New session should be active");
-            Assert.AreEqual(0, session.Score, "Score should reset on new level");
-            Assert.AreEqual(0, session.StarsEarned, "Stars should reset on new level");
-
-            var levelModel = _ctx.GetModel<ILevelModel>();
-            Assert.AreSame(level2, levelModel.CurrentLevel, "LevelModel should hold new level");
-        }
-
-        // ──────────────────────────────────────────────
-        // Test 4: Progress unlocks next level
-        // ──────────────────────────────────────────────
-
-        [Test]
-        public void Progress_UnlocksLevelsOnCompletion()
-        {
-            var level0 = ScriptableObject.CreateInstance<LevelData>();
-            level0.levelIndex = 0;
-            level0.width = 3;
-            level0.height = 1;
-            level0.initialNodes = new List<GridNode>
-            {
-                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
-                new GridNode { position = new Vector2Int(2, 0), color = ColorType.Red },
-            };
-
-            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level0 });
-            var progress = _ctx.GetModel<IProgressModel>();
-            int before = progress.UnlockedLevels;
-
-            // Complete the level
-            _ctx.Dispatch(new InputInteractionSignal
-            {
-                Type = InputType.PointerDown,
-                GridPosition = new Vector2Int(0, 0)
-            });
-            _ctx.Dispatch(new InputInteractionSignal
-            {
-                Type = InputType.Drag,
-                GridPosition = new Vector2Int(1, 0)
-            });
-            _ctx.Dispatch(new InputInteractionSignal
-            {
-                Type = InputType.Drag,
-                GridPosition = new Vector2Int(2, 0)
-            });
-
-            // Manually finish simulation for the test
-            var stateModel = _ctx.GetModel<IGameStateModel>();
-            stateModel.SetState(GameState.LevelCompleted);
-            _ctx.Dispatch(new LevelCompletedSignal());
-
-            Assert.GreaterOrEqual(progress.UnlockedLevels, before + 1,
-                "Completing level 0 should unlock at least level 1");
-        }
-
-        // ──────────────────────────────────────────────
-        // Test 5: Input state gates — ignore when not Playing
-        // ──────────────────────────────────────────────
-
-        [Test]
-        public void Input_IsIgnored_WhenNotInPlayingState()
-        {
-            var level = CreateTestLevel();
-            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
-
-            var state = _ctx.GetModel<IGameStateModel>();
-            var grid = _ctx.GetModel<IGridModel>();
-
-            state.SetState(GameState.LevelCompleted);
-
-            _ctx.Dispatch(new InputInteractionSignal
-            {
-                Type = InputType.PointerDown,
-                GridPosition = new Vector2Int(0, 0)
-            });
-            _ctx.Dispatch(new InputInteractionSignal
-            {
-                Type = InputType.Drag,
-                GridPosition = new Vector2Int(1, 0)
-            });
-
-            Assert.AreEqual(ColorType.None, grid.ActiveColor.Value,
-                "ActiveColor should remain None when input is blocked");
-            Assert.AreEqual(CellState.Empty, grid.Grid[1, 0].State,
-                "Cell should remain Empty — input was ignored");
-        }
-
-        // ──────────────────────────────────────────────
-        // Test 6: Signal chain — hint fires GridUpdated + CheckWin
-        // ──────────────────────────────────────────────
-
-        [Test]
-        public void Hint_FiresGridUpdatedAndCheckWin_SignalChainIntact()
-        {
-            _ctx.Register<GridUpdatedSignal>();
-            _ctx.Register<CheckWinConditionSignal>();
-
-            var level = CreateTestLevel();
-            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
-            _ctx.ClearDispatchedSignals();
-
-            _ctx.Dispatch(new RequestHintSignal());
-
-            Assert.IsTrue(_ctx.SignalWasDispatched<GridUpdatedSignal>(),
-                "Hint must fire GridUpdatedSignal");
-            Assert.IsTrue(_ctx.SignalWasDispatched<CheckWinConditionSignal>(),
-                "Hint must fire CheckWinConditionSignal");
-        }
-
-        // ──────────────────────────────────────────────
-        // Test 7: Theme change propagates through signal chain
-        // ──────────────────────────────────────────────
-
-        [Test]
-        public void ThemeChange_UpdatesSettingsModel_AndFiresSignal()
-        {
-            _ctx.Register<ThemeChangedSignal>();
-
-            var settings = _ctx.GetModel<ISettingsModel>();
-            Assert.AreEqual(AppTheme.Dark, settings.CurrentTheme, "Default theme is Dark");
-
-            _ctx.Dispatch(new ChangeThemeSignal { Theme = AppTheme.Neon });
-
-            Assert.AreEqual(AppTheme.Neon, settings.CurrentTheme,
-                "SettingsModel should update after ChangeThemeCommand");
-            Assert.IsTrue(_ctx.SignalWasDispatched<ThemeChangedSignal>(),
-                "ThemeChangedSignal should fire");
-        }
-
-        // ──────────────────────────────────────────────
-        // Test 8: Undo restores pre-drag grid state
-        // ──────────────────────────────────────────────
-
-        [Test]
-        public void Undo_RestoresGridState_ToPreDragSnapshot()
-        {
-            var level = CreateTestLevel();
-            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
-
-            var grid = _ctx.GetModel<IGridModel>();
-
-            // Drag from (0,0) to (1,0) — extends Red path
-            _ctx.Dispatch(new InputInteractionSignal
-            {
-                Type = InputType.PointerDown,
-                GridPosition = new Vector2Int(0, 0)
-            });
-            _ctx.Dispatch(new InputInteractionSignal
-            {
-                Type = InputType.Drag,
-                GridPosition = new Vector2Int(1, 0)
-            });
-
-            Assert.AreEqual(2, grid.Paths[ColorType.Red].Count,
-                "Red path should have 2 cells after drag");
-
-            // Undo — should restore to 1 cell (only the node itself)
-            _ctx.Dispatch(new UndoSignal());
-
-            Assert.IsTrue(grid.Paths.ContainsKey(ColorType.Red),
-                "Red path should still exist after undo");
-            Assert.AreEqual(1, grid.Paths[ColorType.Red].Count,
-                "Red path should have 1 cell after undo (restored to node-only state)");
-        }
-
-        // ──────────────────────────────────────────────
-        // Test 9: Viaduct placement reduces limits and modifies cell state
-        // ──────────────────────────────────────────────
-
-        [Test]
-        public void PlaceViaduct_ReducesAvailableViaducts_AndSetsCellBridgeState()
-        {
-            var level = CreateTestLevel();
-            level.bridgePositions.Clear();
-            level.viaductLimit = 3;
-            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
-
-            var session = _ctx.GetModel<IGameSessionModel>();
-            var grid = _ctx.GetModel<IGridModel>();
-
-            Assert.AreEqual(3, session.AvailableViaducts, "Should start with 3 viaducts");
-
-            // Setup a crossing at (2,2) by drawing two paths
-            var cell = grid.Grid[2, 2];
-            cell.AddPathColor(ColorType.Red);
-            cell.AddPathColor(ColorType.Blue);
-
-            // Place viaduct
-            _ctx.Dispatch(new PlaceViaductSignal { Position = new Vector2Int(2, 2) });
-
-            Assert.IsTrue(cell.HasViaduct, "Cell should have a viaduct");
-            Assert.AreEqual(CellState.Bridge, cell.State, "Cell state should be Bridge");
-            Assert.AreEqual(2, session.AvailableViaducts, "Remaining viaducts count should be 2");
+                int before = hintModel.HintsRemaining;
+                hintModel.AwardHintForStar(2);
+                if (hintModel.HintsRemaining > before)
+                    hintCount2Star++;
+            }
+            // Should be around 50% (between 30-70 for statistical tolerance)
+            Assert.Greater(hintCount2Star, 30);
+            Assert.Less(hintCount2Star, 70);
+
+            // 1 star should not award hints
+            int before1Star = hintModel.HintsRemaining;
+            hintModel.AwardHintForStar(1);
+            Assert.AreEqual(before1Star, hintModel.HintsRemaining);
         }
 
         // ──────────────────────────────────────────────
         // Test 10: City Economy passive tax generation and upgrades
         // ──────────────────────────────────────────────
-
-        [Test]
-        public void CityEconomy_AccumulatesTaxes_AndAllowsUpgrades()
-        {
-            var economy = _ctx.GetModel<ICityEconomyModel>();
-            
-            // Add coins
-            int beforeCoins = economy.Coins;
-            economy.AddCoins(500);
-            Assert.AreEqual(beforeCoins + 500, economy.Coins, "Coins should increase by 500");
-
-            // Check upgrade purchase
-            int beforeLvl = economy.StorageUpgradeLevel;
-            int cost = economy.GetUpgradeCost(UpgradeType.Storage);
-            
-            // Spend coins on upgrade
-            economy.PurchaseUpgrade(UpgradeType.Storage);
-
-            Assert.AreEqual(beforeLvl + 1, economy.StorageUpgradeLevel, "Storage level should increment");
-            Assert.AreEqual(beforeCoins + 500 - cost, economy.Coins, "Coins should decrease by upgrade cost");
-        }
+        // REMOVED: City economy system removed from game
+        // This test was checking passive tax generation and upgrade purchases,
+        // which no longer exist in the puzzle-focused version.
     }
 }

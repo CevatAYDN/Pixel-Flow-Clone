@@ -35,7 +35,7 @@ namespace PixelFlow.Commands
     public class RewardedAdCommand : ICommand<RequestRewardedAdSignal>, IResettable
     {
         [Inject] public IGameSessionModel GameSessionModel { get; set; }
-        [Inject] public ICityEconomyModel CityEconomyModel { get; set; }
+        [Inject] public IHintModel HintModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
 
         public void Execute(RequestRewardedAdSignal signal)
@@ -44,21 +44,20 @@ namespace PixelFlow.Commands
             // Production'da bu metodun başında SDK.showRewardedAd() çağrısı olur.
             switch (signal.Type)
             {
-                case RewardedAdType.Overclock:
-                    // 4 saat ×2 vergi hızı — CityEconomyModel'e overclock bonus'u ekle.
-                    Debug.Log("[RewardedAdCommand] Overclock ad rewarded (placeholder).");
-                    break;
                 case RewardedAdType.EmergencyViaduct:
                     // +1 viyadük hakkı — maxViaducts'ı geçici olarak 1 arttır.
                     GameSessionModel.AddBonusViaduct(1);
                     Debug.Log("[RewardedAdCommand] Emergency viaduct +1 granted.");
                     break;
-                case RewardedAdType.OfflineTriple:
-                    Debug.Log("[RewardedAdCommand] Offline x3 ad rewarded (placeholder).");
-                    break;
                 case RewardedAdType.ExtraHint:
                     // IHintModel'a ek hint ekle (3 adede kadar).
-                    Debug.Log("[RewardedAdCommand] Extra hint rewarded (placeholder).");
+                    HintModel.AddHint();
+                    Debug.Log("[RewardedAdCommand] Extra hint rewarded.");
+                    break;
+                case RewardedAdType.Overclock:
+                case RewardedAdType.OfflineTriple:
+                    // City economy related rewards removed
+                    Debug.Log($"[RewardedAdCommand] {signal.Type} ad reward type deprecated (city economy removed).");
                     break;
             }
         }

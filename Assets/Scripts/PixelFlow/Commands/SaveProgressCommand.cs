@@ -14,6 +14,8 @@ namespace PixelFlow.Commands
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject] public IHintModel HintModel { get; set; }
+        [Inject] public IGameSessionModel GameSessionModel { get; set; }
 
         public void Execute(LevelCompletedSignal signal)
         {
@@ -23,7 +25,7 @@ namespace PixelFlow.Commands
             {
                 ProgressModel.UnlockLevel(currentLevel.levelIndex);
 
-                // Vergi üretimi çarpanı için tamamlanan seviye sayısını kaydet
+                // Tamamlanan seviye sayısını kaydet
                 int completed = PlayerPrefsService != null ? PlayerPrefsService.GetInt("PF_CompletedLevelsCount", 0) : 0;
                 if (currentLevel.levelIndex > completed)
                 {
@@ -32,6 +34,11 @@ namespace PixelFlow.Commands
                 }
             }
             LoggerService?.Log($"[SaveProgressCommand] Level completed! Unlocked levels: {previousUnlocked} -> {ProgressModel.UnlockedLevels}");
+
+            // Star bazlı hint ödülü
+            int stars = GameSessionModel.StarsEarned;
+            HintModel?.AwardHintForStar(stars);
+            LoggerService?.Log($"[SaveProgressCommand] Awarded hint for {stars} stars.");
 
             // Seviye tamamlandığı için yarım kalan bulmaca kaydını sil
             GridStateSerializer.ClearSave(PlayerPrefsService);

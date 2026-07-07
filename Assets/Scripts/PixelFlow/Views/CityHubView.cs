@@ -19,8 +19,6 @@ namespace PixelFlow.Views
         private int _lastSpawnedLevelsCount = -1;
         private static Shader _cachedShader;
 
-        public event Action OnCollectTaxesClicked;
-        public event Action<UpgradeType> OnUpgradeClicked;
         public event Action<int> OnDistrictClicked;
 
         private void Start()
@@ -170,16 +168,6 @@ namespace PixelFlow.Views
                     _districtColliders.Add(clickTarget);
                 }
             }
-        }
-
-        public void TriggerCollectTaxes()
-        {
-            OnCollectTaxesClicked?.Invoke();
-        }
-
-        public void TriggerUpgrade(UpgradeType type)
-        {
-            OnUpgradeClicked?.Invoke(type);
         }
 
         public void TriggerDistrictClick(int districtIndex)

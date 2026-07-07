@@ -42,7 +42,6 @@ namespace PixelFlow
             builder.BindService<IPathService, PathService>();
             builder.BindService<IGameHistoryService, GameHistoryService>();
             builder.BindService<IVehicleSimulator, VehicleSimulator>();
-            builder.BindService<ITaxCollectionService, TaxCollectionService>();
             builder.BindService<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
             builder.BindService<IGameplayTimerService, GameplayTimerService>();
             builder.BindService<ISaveThrottler, SaveThrottler>();
@@ -53,7 +52,6 @@ namespace PixelFlow
             builder.BindService<ITutorialDriver, TutorialDriver>();
             builder.BindService<ICrisisAdService, CrisisAdService>();
             builder.BindService<IObstacleService, ObstacleService>();
-            builder.BindService<IOverclockService, OverclockService>();
             builder.BindService<INexusService, LocalizationService>();
             builder.BindService<ILocalizationService, LocalizationService>();
             builder.BindService<IDailyCrisisService, DailyCrisisService>();
@@ -72,7 +70,6 @@ namespace PixelFlow
             builder.BindReactiveModel<IHintModel, HintModel>();
             builder.BindReactiveModel<ISettingsModel, SettingsModel>();
             builder.BindReactiveModel<ISoundModel, SoundModel>();
-            builder.BindReactiveModel<ICityEconomyModel, CityEconomyModel>();
             builder.BindReactiveModel<ITutorialModel, TutorialModel>();
             builder.BindReactiveModel<IDailyCrisisModel, DailyCrisisModel>();
 
@@ -86,7 +83,6 @@ namespace PixelFlow
             builder.BindSignal<PixelFlow.Signals.RedoSignal>().To<PixelFlow.Commands.RedoCommand>();
             builder.BindSignal<PixelFlow.Signals.TimerTickSignal>().To<PixelFlow.Commands.TimerCommand>();
             builder.BindSignal<PixelFlow.Signals.PlaceViaductSignal>().To<PixelFlow.Commands.PlaceViaductCommand>();
-            builder.BindSignal<PixelFlow.Signals.UpgradeSignal>().To<PixelFlow.Commands.UpgradeCommand>();
             builder.BindSignal<PixelFlow.Signals.RequestReturnToHubSignal>().To<PixelFlow.Commands.ReturnToHubCommand>();
             builder.BindSignal<PixelFlow.Signals.RequestRewardedAdSignal>().To<PixelFlow.Commands.RewardedAdCommand>();
             builder.BindSignal<PixelFlow.Signals.RequestInterstitialAdSignal>().To<PixelFlow.Commands.InterstitialAdCommand>();

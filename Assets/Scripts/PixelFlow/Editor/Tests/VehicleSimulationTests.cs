@@ -30,13 +30,11 @@ namespace PixelFlow.Editor.Tests
                 builder.BindReactiveModel<IGameStateModel, GameStateModel>();
                 builder.BindReactiveModel<IGameSessionModel, GameSessionModel>();
                 builder.BindReactiveModel<IHintModel, HintModel>();
-                builder.BindReactiveModel<ICityEconomyModel, CityEconomyModel>();
                 builder.BindReactiveModel<ISettingsModel, SettingsModel>();
                 builder.BindReactiveModel<ISoundModel, SoundModel>();
                 builder.BindReactiveModel<IProgressModel, ProgressModel>();
 
                 builder.BindService<IObstacleService, ObstacleService>();
-                builder.BindService<IOverclockService, OverclockService>();
                 builder.BindService<IVehicleSimulator, VehicleSimulator>();
                 builder.BindService<INexusService, HapticService>();
                 builder.Bind<IHapticService, HapticService>();
@@ -179,22 +177,6 @@ namespace PixelFlow.Editor.Tests
             Assert.IsTrue(obstacleService.CanVehicleEnterNarrowPass(new Vector2Int(1,0), ColorType.Blue));
         }
 
-        [Test]
-        public void OverclockService_Activation_SetsIsActive()
-        {
-            var overclock = _ctx.Context.Container.Resolve<IOverclockService>();
-            var stateModel = _ctx.GetModel<IGameStateModel>();
-
-            Assert.IsFalse(overclock.IsActive);
-
-            stateModel.SetState(GameState.Simulating);
-            overclock.Activate();
-
-            Assert.IsTrue(overclock.IsActive);
-
-            // Mock waiting or tick to verify time decrement (OverclockService relies on Time.deltaTime, so we must tick)
-            overclock.Tick(1.0f);
-            Assert.Less(overclock.RemainingSeconds, 4f * 60f * 60f);
-        }
+        // OverclockService test removed - service removed from game
     }
 }

@@ -9,6 +9,7 @@ using PixelFlow.Signals;
 using PixelFlow.Views;
 using Nexus.Core;
 using Nexus.Core.Services;
+using PixelFlow.Services;
 
 namespace PixelFlow.Services
 {

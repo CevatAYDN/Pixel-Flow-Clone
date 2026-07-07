@@ -8,18 +8,14 @@ namespace PixelFlow.Views
 {
     public class CityHubMediator : Mediator<CityHubView>
     {
-        [Inject] public ICityEconomyModel CityEconomyModel { get; set; }
         [Inject] public IGameStateModel GameStateModel { get; set; }
         [Inject] public ISettingsModel SettingsModel { get; set; }
         [Inject] public IProgressModel ProgressModel { get; set; }
 
         protected override void OnBind()
         {
-            CityEconomyModel.OnEconomyUpdated += HandleEconomyUpdated;
             GameStateModel.OnStateChanged += HandleStateChanged;
 
-            View.OnCollectTaxesClicked += HandleCollectTaxes;
-            View.OnUpgradeClicked += HandleUpgrade;
             View.OnDistrictClicked += HandleDistrictClicked;
 
             RefreshHub();
@@ -27,17 +23,9 @@ namespace PixelFlow.Views
 
         protected override void OnUnbind()
         {
-            CityEconomyModel.OnEconomyUpdated -= HandleEconomyUpdated;
             GameStateModel.OnStateChanged -= HandleStateChanged;
 
-            View.OnCollectTaxesClicked -= HandleCollectTaxes;
-            View.OnUpgradeClicked -= HandleUpgrade;
             View.OnDistrictClicked -= HandleDistrictClicked;
-        }
-
-        private void HandleEconomyUpdated()
-        {
-            RefreshHub();
         }
 
         private void HandleStateChanged(GameState state)
@@ -54,17 +42,6 @@ namespace PixelFlow.Views
             }
         }
 
-        private void HandleCollectTaxes()
-        {
-            CityEconomyModel.CollectTaxes();
-            SignalBus.Fire(new CoinCollectionSignal { Amount = 0 });
-        }
-
-        private void HandleUpgrade(UpgradeType type)
-        {
-            CityEconomyModel.PurchaseUpgrade(type);
-        }
-
         private void HandleDistrictClicked(int districtIndex)
         {
             if (GameStateModel.CurrentState != GameState.MainMenu) return;
@@ -76,7 +53,9 @@ namespace PixelFlow.Views
 
         private void RefreshHub()
         {
-            View.RefreshCityLayout(CityEconomyModel.DistrictUnlockLevel, CityEconomyModel.CompletedLevelsCount);
+            // District unlock seviyesi artık progress model'den
+            int districtUnlockLevel = ProgressModel.UnlockedLevels / 10; // Her 10 level yeni district
+            View.RefreshCityLayout(districtUnlockLevel, ProgressModel.UnlockedLevels);
             View.SetupCamera(GameStateModel.CurrentState == GameState.MainMenu);
         }
     }

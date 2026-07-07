@@ -27,14 +27,12 @@ namespace PixelFlow.Editor.Tests
                 builder.Bind<IPathSolver, RuntimePathSolver>();
                 builder.Bind<IHintService, HintService>();
                 builder.BindService<IVehicleSimulator, VehicleSimulator>();
-                builder.BindService<ITaxCollectionService, TaxCollectionService>();
                 builder.BindService<ISaveThrottler, SaveThrottler>();
                 builder.BindService<INexusService, HapticService>();
                 builder.Bind<IHapticService, HapticService>();
                 builder.BindService<INexusService, LoggerService>();
                 builder.Bind<ILoggerService, LoggerService>();
                 builder.BindService<IObstacleService, ObstacleService>();
-                builder.BindService<IOverclockService, OverclockService>();
                 builder.BindService<ICrisisAdService, CrisisAdService>();
                 builder.BindService<ITutorialDriver, TutorialDriver>();
 
@@ -46,7 +44,6 @@ namespace PixelFlow.Editor.Tests
                 builder.BindReactiveModel<IHintModel, HintModel>();
                 builder.BindReactiveModel<ISettingsModel, SettingsModel>();
                 builder.BindReactiveModel<ISoundModel, SoundModel>();
-                builder.BindReactiveModel<ICityEconomyModel, CityEconomyModel>();
                 builder.BindReactiveModel<ITutorialModel, TutorialModel>();
 
                 builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));

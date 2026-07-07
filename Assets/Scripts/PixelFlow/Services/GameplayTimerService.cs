@@ -4,6 +4,7 @@ using UnityEngine;
 using Nexus.Core;
 using PixelFlow.Models;
 using PixelFlow.Signals;
+using PixelFlow.Services;
 
 namespace PixelFlow.Services
 {

@@ -13,8 +13,10 @@ namespace PixelFlow.Models
         int TotalHintsUsed { get; }
         event Action<int> OnHintCountChanged;
         void UseHint();
+        void AddHint();
         void AddHints(int amount);
         void ResetSessionHints();
+        void AwardHintForStar(int stars);
     }
 
     /// <summary>
@@ -26,7 +28,7 @@ namespace PixelFlow.Models
         private const string Key = "HintCount";
         private const int DefaultHints = 3;
 
-        private readonly IPlayerPrefsService _prefs;
+        [Inject] public IPlayerPrefsService _prefs { get; set; }
         private int _hintsRemaining;
         private int _totalHintsUsed;
 
@@ -34,10 +36,10 @@ namespace PixelFlow.Models
         public int TotalHintsUsed => _totalHintsUsed;
         public event Action<int> OnHintCountChanged;
 
-        public HintModel(IPlayerPrefsService prefs)
+        public ValueTask OnBind(CancellationToken ct)
         {
-            _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
-            _hintsRemaining = _prefs.GetInt(Key, DefaultHints);
+            _hintsRemaining = _prefs != null ? _prefs.GetInt(Key, DefaultHints) : DefaultHints;
+            return default;
         }
 
         public void UseHint()
@@ -59,11 +61,31 @@ namespace PixelFlow.Models
             OnHintCountChanged?.Invoke(_hintsRemaining);
         }
 
+        public void AddHint()
+        {
+            AddHints(1);
+        }
+
+        public void AwardHintForStar(int stars)
+        {
+            // 3 star = +1 hint, 2 star = +0.5 hint (rounded), 1 star = no hint
+            if (stars >= 3)
+            {
+                AddHint();
+            }
+            else if (stars == 2)
+            {
+                // 50% chance to get a hint for 2 stars
+                if (UnityEngine.Random.value < 0.5f)
+                {
+                    AddHint();
+                }
+            }
+        }
+
         public void ResetSessionHints()
         {
             _totalHintsUsed = 0;
         }
-
-        public ValueTask OnBind(CancellationToken ct) => default;
     }
 }

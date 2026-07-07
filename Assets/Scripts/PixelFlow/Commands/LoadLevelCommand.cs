@@ -17,7 +17,6 @@ namespace PixelFlow.Commands
         [Inject] public IHintModel HintModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public IGameHistoryService HistoryService { get; set; }
-        [Inject] public ICityEconomyModel CityEconomyModel { get; set; }
         [Inject] public IObstacleService ObstacleService { get; set; }
         [Inject] public ISaveThrottler SaveThrottler { get; set; }
         [Inject] public ITutorialDriver TutorialDriver { get; set; }
@@ -104,7 +103,8 @@ namespace PixelFlow.Commands
             }
 
             HistoryService.Clear();
-            int totalViaducts = signal.LevelToLoad.viaductLimit + (CityEconomyModel != null ? CityEconomyModel.ViaductBonus : 0);
+            int viaductBonus = signal.LevelToLoad.levelIndex / 10; // Her 10 level +1 viyadük bonus
+            int totalViaducts = signal.LevelToLoad.viaductLimit + viaductBonus;
             GameSessionModel.StartSession(totalViaducts, signal.LevelToLoad.flowScoreThreshold);
             HintModel.ResetSessionHints();
             ObstacleService?.InitializeFromLevel(signal.LevelToLoad);

@@ -34,7 +34,7 @@ namespace PixelFlow.Editor
         private bool _soundOk, _themeOk, _bootstrapperOk, _levelsOk;
         // Yeni View tanılama
         private bool _dailyCrisisOk, _confettiOk, _bloomFlashOk, _coinFlowOk;
-        private bool _upgradeTreeOk, _tutorialOk, _settingsViewOk;
+        private bool _tutorialOk, _settingsViewOk;
         private bool _levelPackOk, _mahalleSelectorOk;
         private bool _globalVolumeOk, _cameraControllerOk;
 
@@ -194,7 +194,6 @@ namespace PixelFlow.Editor
             _confettiOk = Object.FindAnyObjectByType<ConfettiView>(FindObjectsInactive.Include) != null;
             _bloomFlashOk = Object.FindAnyObjectByType<BloomFlashView>(FindObjectsInactive.Include) != null;
             _coinFlowOk = Object.FindAnyObjectByType<CoinFlowView>(FindObjectsInactive.Include) != null;
-            _upgradeTreeOk = Object.FindAnyObjectByType<UpgradeTreeView>(FindObjectsInactive.Include) != null;
             _tutorialOk = Object.FindAnyObjectByType<TutorialView>(FindObjectsInactive.Include) != null;
             _settingsViewOk = Object.FindAnyObjectByType<SettingsView>(FindObjectsInactive.Include) != null;
             _levelPackOk = Object.FindAnyObjectByType<LevelPackView>(FindObjectsInactive.Include) != null;
@@ -279,7 +278,6 @@ namespace PixelFlow.Editor
             var stateModel = GetModel<IGameStateModel>();
             var levelModel = GetModel<ILevelModel>();
             var progressModel = GetModel<IProgressModel>();
-            var economyModel = GetModel<ICityEconomyModel>();
             var sessionModel = GetModel<IGameSessionModel>();
             var hintModel = GetModel<IHintModel>();
 
@@ -291,7 +289,6 @@ namespace PixelFlow.Editor
                     : "Yok");
 
             int unlockedLvl = progressModel != null ? progressModel.UnlockedLevels : PlayerPrefs.GetInt("NT_UnlockedLevels", 1);
-            int coins = economyModel != null ? economyModel.Coins : PlayerPrefs.GetInt("NT_Coins", 0);
             int hints = hintModel != null ? hintModel.HintsRemaining : -1;
             float elapsed = sessionModel != null ? sessionModel.ElapsedTime : 0f;
 
@@ -301,8 +298,6 @@ namespace PixelFlow.Editor
             GUILayout.BeginHorizontal();
             GUILayout.Label("Açık Seviye:", GUILayout.Width(110));
             GUILayout.Label($"Seviye {unlockedLvl + 1}", EditorStyles.boldLabel, GUILayout.Width(100));
-            GUILayout.Label("Altın:", GUILayout.Width(40));
-            GUILayout.Label($"{coins:N0} ₺", EditorStyles.boldLabel, GUILayout.Width(80));
             if (hints >= 0)
             {
                 GUILayout.Label("İpucu:", GUILayout.Width(45));
@@ -368,10 +363,6 @@ namespace PixelFlow.Editor
             if (GUILayout.Button("↪️ Yinele", GUILayout.Height(28)))
             {
                 DispatchSignal(new RedoSignal());
-            }
-            if (GUILayout.Button("➕ +50.000 Altın Ekle", GUILayout.Height(28)))
-            {
-                AddTestCoins(50000);
             }
             GUILayout.EndHorizontal();
 
@@ -571,7 +562,6 @@ namespace PixelFlow.Editor
             DrawDiagnosticRow("ConfettiView (Kutlama Efekti)", _confettiOk, SetupExtendedViews);
             DrawDiagnosticRow("BloomFlashView (Işık Patlaması)", _bloomFlashOk, SetupExtendedViews);
             DrawDiagnosticRow("CoinFlowView (Altın Akışı)", _coinFlowOk, SetupExtendedViews);
-            DrawDiagnosticRow("UpgradeTreeView (Yükseltme Ağacı)", _upgradeTreeOk, SetupExtendedViews);
             DrawDiagnosticRow("TutorialView (Eğitim Sistemi)", _tutorialOk, SetupExtendedViews);
             DrawDiagnosticRow("SettingsView (Ayarlar Paneli)", _settingsViewOk, SetupExtendedViews);
             DrawDiagnosticRow("LevelPackView (Seviye Paketi)", _levelPackOk, SetupExtendedViews);
@@ -618,7 +608,7 @@ namespace PixelFlow.Editor
             bool allCoreOk = _prefabsOk && _cellWarningIconOk && _rootOk && _contextDataOk && _gridViewOk &&
                             _canvasOk && _hudOk && _eventSystemOk && _soundOk && _themeOk && _bootstrapperOk && _levelsOk;
             bool allExtOk = _dailyCrisisOk && _confettiOk && _bloomFlashOk && _coinFlowOk &&
-                           _upgradeTreeOk && _tutorialOk && _settingsViewOk && _levelPackOk && _mahalleSelectorOk;
+                           _tutorialOk && _settingsViewOk && _levelPackOk && _mahalleSelectorOk;
             bool allEnvOk = _globalVolumeOk && _cameraControllerOk;
 
             if (allCoreOk && allExtOk && allEnvOk)
@@ -677,10 +667,6 @@ namespace PixelFlow.Editor
             if (GUILayout.Button("🗑️ PlayerPrefs & Kayıt Verilerini Temizle", GUILayout.Height(28)))
             {
                 WipeSaveData();
-            }
-            if (GUILayout.Button("➕ +50.000 Test Altını Ekle", GUILayout.Height(28)))
-            {
-                AddTestCoins(50000);
             }
             if (GUILayout.Button("📂 Sahneyi Kaydet", GUILayout.Height(28)))
             {
@@ -994,7 +980,6 @@ namespace PixelFlow.Editor
             DrawNexusResolveStatus<IHintModel>(container, "IHintModel (İpucu)");
             DrawNexusResolveStatus<ISettingsModel>(container, "ISettingsModel (Ayarlar)");
             DrawNexusResolveStatus<ISoundModel>(container, "ISoundModel (Ses)");
-            DrawNexusResolveStatus<ICityEconomyModel>(container, "ICityEconomyModel (Ekonomi)");
             DrawNexusResolveStatus<ITutorialModel>(container, "ITutorialModel (Eğitim)");
             DrawNexusResolveStatus<IDailyCrisisModel>(container, "IDailyCrisisModel (Günlük Kriz)");
 
@@ -1009,10 +994,8 @@ namespace PixelFlow.Editor
             DrawNexusResolveStatus<IPathService>(container, "IPathService (Yol)");
             DrawNexusResolveStatus<IGameHistoryService>(container, "IGameHistoryService (Geçmiş)");
             DrawNexusResolveStatus<IVehicleSimulator>(container, "IVehicleSimulator (Araç Simülatörü)");
-            DrawNexusResolveStatus<ITaxCollectionService>(container, "ITaxCollectionService (Vergi)");
             DrawNexusResolveStatus<IGameplayTimerService>(container, "IGameplayTimerService (Zamanlayıcı)");
             DrawNexusResolveStatus<IObstacleService>(container, "IObstacleService (Engel)");
-            DrawNexusResolveStatus<IOverclockService>(container, "IOverclockService (Overclock)");
             DrawNexusResolveStatus<IDailyCrisisService>(container, "IDailyCrisisService (Kriz)");
             DrawNexusResolveStatus<ICrisisAdService>(container, "ICrisisAdService (Kriz Reklam)");
             DrawNexusResolveStatus<IHintService>(container, "IHintService (İpucu)");
@@ -1237,22 +1220,6 @@ namespace PixelFlow.Editor
             {
                 DispatchSignal(new RequestReturnToHubSignal());
             }
-        }
-
-        private void AddTestCoins(int amount)
-        {
-            var economyModel = GetModel<ICityEconomyModel>();
-            if (economyModel != null)
-            {
-                economyModel.AddCoins(amount);
-            }
-            else
-            {
-                int current = PlayerPrefs.GetInt("NT_Coins", 0);
-                PlayerPrefs.SetInt("NT_Coins", current + amount);
-                PlayerPrefs.Save();
-            }
-            Debug.Log($"[PixelFlow] +{amount} altın eklendi.");
         }
 
         private void UnlockAllLevels()
@@ -2087,7 +2054,6 @@ namespace PixelFlow.Editor
             // UI tabanlı View'ler (Canvas altına)
             if (canvasObj != null)
             {
-                CreateUIViewIfMissing<UpgradeTreeView>("UpgradeTreeView", canvasObj);
                 CreateUIViewIfMissing<TutorialView>("TutorialView", canvasObj);
                 CreateUIViewIfMissing<SettingsView>("SettingsView", canvasObj);
                 CreateUIViewIfMissing<LevelPackView>("LevelPackView", canvasObj);
