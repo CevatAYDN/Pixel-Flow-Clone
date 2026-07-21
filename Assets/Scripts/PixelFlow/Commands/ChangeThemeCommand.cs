@@ -4,11 +4,6 @@ using PixelFlow.Signals;
 
 namespace PixelFlow.Commands
 {
-    public struct ChangeThemeSignal
-    {
-        public AppTheme Theme;
-    }
-
     public class ChangeThemeCommand : ICommand<ChangeThemeSignal>, IResettable
     {
         [Inject] public ISettingsModel SettingsModel { get; set; }

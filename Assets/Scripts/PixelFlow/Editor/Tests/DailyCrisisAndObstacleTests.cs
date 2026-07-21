@@ -51,8 +51,7 @@ namespace PixelFlow.Editor.Tests
         public void DailyCrisisModel_TracksCompletionAndStreak()
         {
             var prefs = new InMemoryPlayerPrefsService();
-            var model = new DailyCrisisModel { PlayerPrefsService = prefs };
-            model.LoadState();
+            var model = new DailyCrisisModel(prefs);
 
             Assert.IsFalse(model.IsCrisisCompleted(0));
             Assert.AreEqual(0, model.BadgesEarned);

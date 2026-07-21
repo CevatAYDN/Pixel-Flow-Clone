@@ -97,7 +97,7 @@ namespace PixelFlow.Services
             }
             _puzzleRotation = Quaternion.Euler(0f, 0f, 0f);
             if (_transition != null) StopCoroutine(_transition);
-            _transition = StartCoroutine(LerpCamera(_puzzlePosition, _puzzleRotation, _puzzleSize, 0.5f));
+            _transition = StartCoroutine(LerpCamera(_puzzlePosition, _puzzleRotation, _puzzleSize, 0.8f));
         }
 
         private Coroutine _shakeCoroutine;

@@ -42,6 +42,8 @@ namespace PixelFlow.Editor.Tests
                 builder.Bind<ILoggerService, LoggerService>();
                 builder.BindService<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
                 builder.BindService<ISaveThrottler, SaveThrottler>();
+                builder.Bind<IFeedbackService, FeedbackService>();
+                builder.Bind<Nexus.Core.Services.IAudioService, StubAudioService>();
             });
 
             _grid = _ctx.GetModel<IGridModel>();

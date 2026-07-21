@@ -29,7 +29,7 @@ namespace PixelFlow.Commands
             if (state != GameState.Playing && state != GameState.Paused)
                 return;
 
-            if (HistoryService.Undo(GridModel))
+            if (HistoryService.Undo(GridModel, GameSessionModel))
             {
                 if (state == GameState.Paused)
                 {

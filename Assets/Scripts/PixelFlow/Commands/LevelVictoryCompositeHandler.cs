@@ -6,7 +6,7 @@ using PixelFlow.Services;
 namespace PixelFlow.Commands
 {
     [CompositeSignalHandler(typeof(LevelCompletedSignal), typeof(CheckWinConditionSignal))]
-    public class LevelVictoryCompositeHandler : ICommand
+    public class LevelVictoryCompositeHandler : ICommand, IResettable
     {
         [Inject] public IFeedbackService FeedbackService { get; set; }
         [Inject] public ILoggerService Logger { get; set; }
@@ -15,6 +15,12 @@ namespace PixelFlow.Commands
         {
             Logger?.Log("[PixelFlow] Composite trigger satisfied: LevelCompletedSignal + CheckWinConditionSignal!");
             FeedbackService?.Play(FeedbackPreset.SuccessFanfare);
+        }
+
+        public void Reset()
+        {
+            FeedbackService = null;
+            Logger = null;
         }
     }
 }

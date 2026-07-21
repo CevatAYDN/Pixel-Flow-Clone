@@ -27,6 +27,11 @@ namespace PixelFlow.Editor.Tests
                 builder.Bind<IPathSolver, RuntimePathSolver>();
                 builder.BindReactiveModel<ILevelModel, LevelModel>();
                 builder.BindReactiveModel<IProgressModel, ProgressModel>();
+                builder.BindReactiveModel<IGameSessionModel, GameSessionModel>();
+                builder.BindReactiveModel<IHintModel, HintModel>();
+                builder.Bind<ILoggerService, LoggerService>();
+                builder.Bind<IFeedbackService, FeedbackService>();
+                builder.Bind<Nexus.Core.Services.IAudioService, StubAudioService>();
 
                 builder.BindCommand<LevelCompletedSignal, SaveProgressCommand>();
             });

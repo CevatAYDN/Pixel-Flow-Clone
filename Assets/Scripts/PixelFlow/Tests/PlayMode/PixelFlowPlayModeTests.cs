@@ -12,6 +12,25 @@ using UnityEngine;
 namespace PixelFlow.PlayMode.Tests
 {
     /// <summary>
+    /// Minimal no-op stub for Nexus.Core.Services.IAudioService.
+    /// Satisfies DI injection in FeedbackService without requiring
+    /// the full Nexus AudioService setup.
+    /// </summary>
+    public sealed class StubAudioService : Nexus.Core.Services.IAudioService
+    {
+        public float MasterVolume { get; set; }
+        public float BgmVolume { get; set; }
+        public float SfxVolume { get; set; }
+        public bool IsMuted { get; set; }
+        public float BgmStateMultiplier { get; set; }
+
+        public void PlayBgm(AudioClip clip, bool loop = true, float fadeDuration = 0.5f) { }
+        public void StopBgm(float fadeDuration = 0.5f) { }
+        public void PlaySfx(AudioClip clip, float volume = 1f, float pitchMin = 1f, float pitchMax = 1f) { }
+        public void PlaySfxAtPosition(AudioClip clip, Vector3 position, float volume = 1f) { }
+    }
+
+    /// <summary>
     /// In-memory PlayerPrefs substitute for PlayMode tests.
     /// Mirrors the one in EditMode tests; avoids Unity PlayerPrefs dependency.
     /// </summary>
@@ -42,12 +61,21 @@ namespace PixelFlow.PlayMode.Tests
 
         public void SetFloat(string key, float value) => _floats[key] = value;
 
-        public bool HasKey(string key) => _store.ContainsKey(key) || _strings.ContainsKey(key);
+        private readonly Dictionary<string, long> _longs = new Dictionary<string, long>();
+
+        public long GetLong(string key, long defaultValue = 0L)
+            => _longs.TryGetValue(key, out var val) ? val : defaultValue;
+
+        public void SetLong(string key, long value) => _longs[key] = value;
+
+        public bool HasKey(string key) => _store.ContainsKey(key) || _strings.ContainsKey(key) || _floats.ContainsKey(key) || _longs.ContainsKey(key);
 
         public void DeleteKey(string key)
         {
             _store.Remove(key);
             _strings.Remove(key);
+            _floats.Remove(key);
+            _longs.Remove(key);
         }
 
         public void Save() { }
@@ -78,7 +106,12 @@ namespace PixelFlow.PlayMode.Tests
                 builder.Bind<ICrisisAdService, CrisisAdService>();
                 builder.Bind<IObstacleService, ObstacleService>();
                 builder.Bind<ITutorialDriver, TutorialDriver>();
-                builder.Bind<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
+                builder.Bind<IFeedbackService, FeedbackService>();
+                builder.Bind<Nexus.Core.Services.IAudioService, StubAudioService>();
+                builder.Bind<ITimeProvider, UnityTimeProvider>();
+                builder.BindService<INexusService, TickService>();
+                builder.Bind<ITickService, TickService>();
+                builder.BindReactiveModel<IDailyCrisisModel, DailyCrisisModel>();
 
                 builder.BindReactiveModel<IGridModel, GridModel>();
                 builder.BindReactiveModel<ILevelModel, LevelModel>();
@@ -337,7 +370,7 @@ namespace PixelFlow.PlayMode.Tests
 
             // Total viaducts = level limit (2) + bonus (1) = 3
             Assert.AreEqual(3, session.MaxViaducts);
-            Assert.AreEqual(2, session.AvailableViaducts); // All viaducts available at start
+            Assert.AreEqual(3, session.AvailableViaducts); // All viaducts available at start
         }
 
         // ──────────────────────────────────────────────

@@ -49,7 +49,7 @@ namespace PixelFlow.Commands
 
             LoggerService?.Log($"[UseHintCommand] Hint path: {hintPath.Count} cells. Applying...");
 
-            HistoryService.Record(GridModel);
+            HistoryService.Record(GridModel, GameSessionModel);
 
             var colorToHint = ResolveHintColor(level, hintPath);
             if (colorToHint == ColorType.None) return;

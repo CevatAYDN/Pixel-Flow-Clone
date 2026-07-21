@@ -34,7 +34,7 @@ namespace PixelFlow.Views
 
         public void Init(Vector3 dir, float life)
         {
-            _target = Vector3.zero;
+            _target = dir;
             _speed = 8f;
             _life = life;
         }

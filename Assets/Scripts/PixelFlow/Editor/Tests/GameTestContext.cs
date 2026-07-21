@@ -40,6 +40,12 @@ namespace PixelFlow.Editor.Tests
                 builder.BindService<IObstacleService, ObstacleService>();
                 builder.BindService<ITutorialDriver, TutorialDriver>();
                 builder.BindService<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
+                builder.Bind<IFeedbackService, FeedbackService>();
+                builder.Bind<Nexus.Core.Services.IAudioService, StubAudioService>();
+                builder.Bind<ITimeProvider, UnityTimeProvider>();
+                builder.BindService<INexusService, TickService>();
+                builder.Bind<ITickService, TickService>();
+                builder.BindReactiveModel<IDailyCrisisModel, DailyCrisisModel>();
 
                 builder.BindReactiveModel<IGridModel, GridModel>();
                 builder.BindReactiveModel<ILevelModel, LevelModel>();

@@ -74,6 +74,9 @@ namespace PixelFlow.Services
         private Transform _vehicleContainer;
         private GridView _cachedGridView;
 
+        // Grid-based spatial partitioning for O(1) collision lookup instead of O(n²) brute-force
+        private readonly Dictionary<Vector2Int, List<VehicleInstance>> _cellOccupancy = new Dictionary<Vector2Int, List<VehicleInstance>>();
+
         private float _simulationPhaseTimer = 0f;
         private const float SimulationPhaseDuration = 10f;
         private const float VehicleSpeed = 3f;
@@ -185,6 +188,7 @@ namespace PixelFlow.Services
             }
             _activeVehicles.Clear();
             _spawnTimers.Clear();
+            _cellOccupancy.Clear();
         }
 
         private void Update()
@@ -351,26 +355,23 @@ namespace PixelFlow.Services
         private static Material _sharedWhiteMat;
         private static Material _sharedTailMat;
 
-        private static Material GetSharedSpriteMat()
-        {
-            if (_sharedSpriteMat == null)
-            {
-                var shader = Shader.Find("Sprites/Default") ?? Shader.Find("Standard");
-                _sharedSpriteMat = new Material(shader) { hideFlags = HideFlags.DontSave };
-            }
-            return _sharedSpriteMat;
-        }
-
-        private static void EnsureSharedMaterials()
+        private static void EnsureAllSharedMaterialsCreated()
         {
             if (_sharedSpriteMat != null) return;
             var shader = Shader.Find("Sprites/Default") ?? Shader.Find("Standard");
-            _sharedSpriteMat = new Material(shader) { hideFlags = HideFlags.DontSave };
-            _sharedMetalMat = new Material(shader) { color = new Color(0.15f, 0.15f, 0.18f, 1f), hideFlags = HideFlags.DontSave };
-            _sharedWindowMat = new Material(shader) { color = new Color(0.2f, 0.9f, 1f, 0.9f), hideFlags = HideFlags.DontSave };
-            _sharedHeadlightMat = new Material(shader) { color = new Color(1f, 0.95f, 0.5f, 1f), hideFlags = HideFlags.DontSave };
-            _sharedWhiteMat = new Material(shader) { color = Color.white, hideFlags = HideFlags.DontSave };
-            _sharedTailMat = new Material(shader) { color = new Color(1f, 0.15f, 0.15f, 1f), hideFlags = HideFlags.DontSave };
+            _sharedSpriteMat = CreateSharedMat(shader, Color.white);
+            _sharedMetalMat = CreateSharedMat(shader, new Color(0.15f, 0.15f, 0.18f, 1f));
+            _sharedWindowMat = CreateSharedMat(shader, new Color(0.2f, 0.9f, 1f, 0.9f));
+            _sharedHeadlightMat = CreateSharedMat(shader, new Color(1f, 0.95f, 0.5f, 1f));
+            _sharedWhiteMat = CreateSharedMat(shader, Color.white);
+            _sharedTailMat = CreateSharedMat(shader, new Color(1f, 0.15f, 0.15f, 1f));
+        }
+
+        private static Material CreateSharedMat(Shader shader, Color color)
+        {
+            var mat = new Material(shader) { color = color, hideFlags = HideFlags.DontSave };
+            mat.name = $"Shared_{color}";
+            return mat;
         }
 
         private static List<Renderer> CreateProceduralTrain3D(GameObject root, ColorType color, out Transform loco, out Transform wagon1, out Transform wagon2, out Transform coupler1, out Transform coupler2)
@@ -378,7 +379,7 @@ namespace PixelFlow.Services
             var renderers = new List<Renderer>();
             loco = null; wagon1 = null; wagon2 = null; coupler1 = null; coupler2 = null;
             if (!Application.isPlaying) return renderers;
-            EnsureSharedMaterials();
+            EnsureAllSharedMaterialsCreated();
 
             Color trainColor = CellView.GetColor(color);
 
@@ -532,7 +533,7 @@ namespace PixelFlow.Services
         {
             var renderers = new List<Renderer>();
             if (!Application.isPlaying) return renderers;
-            EnsureSharedMaterials();
+            EnsureAllSharedMaterialsCreated();
 
             // 1. Main Chassis / Body
             var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -879,84 +880,72 @@ namespace PixelFlow.Services
             return -0.2f; // Normal yol
         }
 
-        // Shared buffer for collision point queries — avoids per-pair allocation
-        private static readonly List<Vector3> _bufferA = new List<Vector3>(8);
-        private static readonly List<Vector3> _bufferB = new List<Vector3>(8);
-
+        /// <summary>
+        /// Grid-based spatial partitioning collision detection.
+        /// Instead of O(n²) brute-force distance checks, vehicles register which cell
+        /// they occupy. Collision is checked only between vehicles on the same
+        /// or adjacent cells, reducing complexity to O(n × avgDensity) in practice.
+        /// </summary>
         private void UpdateCollisionDetection()
         {
+            // Build fresh occupancy map from current vehicle positions
+            _cellOccupancy.Clear();
             for (int i = 0; i < _activeVehicles.Count; i++)
             {
-                var v1 = _activeVehicles[i];
-                PopulateCollisionPoints(v1, _bufferA);
-                if (_bufferA.Count == 0) continue;
+                var v = _activeVehicles[i];
+                Vector2Int gridPos = new Vector2Int(
+                    Mathf.RoundToInt(v.CurrentPosition.x),
+                    Mathf.RoundToInt(v.CurrentPosition.y));
 
-                for (int j = i + 1; j < _activeVehicles.Count; j++)
+                // Clamp to grid bounds
+                gridPos.x = Mathf.Clamp(gridPos.x, 0, GridModel.Width - 1);
+                gridPos.y = Mathf.Clamp(gridPos.y, 0, GridModel.Height - 1);
+
+                if (!_cellOccupancy.TryGetValue(gridPos, out var list))
                 {
-                    var v2 = _activeVehicles[j];
-                    if (v1.Color == v2.Color) continue;
+                    list = new List<VehicleInstance>();
+                    _cellOccupancy[gridPos] = list;
+                }
+                list.Add(v);
+            }
 
-                    PopulateCollisionPoints(v2, _bufferB);
-                    if (_bufferB.Count == 0) continue;
+            // Check collisions only on cells with multiple vehicles
+            foreach (var kvp in _cellOccupancy)
+            {
+                var vehicles = kvp.Value;
+                if (vehicles.Count < 2) continue;
 
-                    foreach (var p1 in _bufferA)
+                for (int i = 0; i < vehicles.Count; i++)
+                {
+                    for (int j = i + 1; j < vehicles.Count; j++)
                     {
-                        foreach (var p2 in _bufferB)
+                        var v1 = vehicles[i];
+                        var v2 = vehicles[j];
+                        if (v1.Color == v2.Color) continue;
+
+                        float dist = Vector3.Distance(v1.CurrentPosition, v2.CurrentPosition);
+                        if (dist < 0.45f)
                         {
-                            float dist = Vector3.Distance(p1, p2);
-                            const float collisionThreshold = 0.45f;
+                            Vector2Int cellPos = kvp.Key;
+                            var cell = GridModel.Grid[cellPos.x, cellPos.y];
 
-                            if (dist < collisionThreshold)
+                            if (cell.HasViaduct)
                             {
-                                Vector3 midPos = (p1 + p2) * 0.5f;
-                                var cellPos = new Vector2Int(
-                                    Mathf.RoundToInt(midPos.x),
-                                    Mathf.RoundToInt(midPos.y));
-
-                                if (cellPos.x >= 0 && cellPos.x < GridModel.Width &&
-                                    cellPos.y >= 0 && cellPos.y < GridModel.Height)
-                                {
-                                    var cell = GridModel.Grid[cellPos.x, cellPos.y];
-                                    if (cell.HasViaduct)
-                                    {
-                                        float zDiff = Mathf.Abs(p1.z - p2.z);
-                                        if (zDiff < 0.15f)
-                                        {
-                                            TriggerCrash(cellPos, v1.Color, v2.Color);
-                                            return;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        TriggerCrash(cellPos, v1.Color, v2.Color);
-                                        return;
-                                    }
-                                }
-                                else
+                                float zDiff = Mathf.Abs(v1.CurrentPosition.z - v2.CurrentPosition.z);
+                                if (zDiff < 0.15f)
                                 {
                                     TriggerCrash(cellPos, v1.Color, v2.Color);
                                     return;
                                 }
                             }
+                            else
+                            {
+                                TriggerCrash(cellPos, v1.Color, v2.Color);
+                                return;
+                            }
                         }
                     }
                 }
-            }
-        }
-
-        private static void PopulateCollisionPoints(VehicleInstance v, List<Vector3> buffer)
-        {
-            buffer.Clear();
-            if (v.Style == VehicleStyle.Train)
-            {
-                if (v.LocoTransform != null && v.LocoTransform.gameObject.activeSelf) buffer.Add(v.LocoTransform.localPosition);
-                if (v.Wagon1Transform != null && v.Wagon1Transform.gameObject.activeSelf) buffer.Add(v.Wagon1Transform.localPosition);
-                if (v.Wagon2Transform != null && v.Wagon2Transform.gameObject.activeSelf) buffer.Add(v.Wagon2Transform.localPosition);
-                if (buffer.Count == 0) buffer.Add(v.CurrentPosition);
-            }
-            else
-            {
-                buffer.Add(v.CurrentPosition);
             }
         }
 

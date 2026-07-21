@@ -15,13 +15,14 @@ namespace PixelFlow.Commands
         [Inject] public IGameHistoryService HistoryService { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public IGameStateModel GameStateModel { get; set; }
+        [Inject] public IGameSessionModel GameSessionModel { get; set; }
 
         public void Execute(RedoSignal signal)
         {
             if (GameStateModel.CurrentState != GameState.Playing && GameStateModel.CurrentState != GameState.Paused)
                 return;
 
-            if (HistoryService.Redo(GridModel))
+            if (HistoryService.Redo(GridModel, GameSessionModel))
             {
                 SignalBus.Fire(new GridUpdatedSignal());
             }

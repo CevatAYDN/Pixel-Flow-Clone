@@ -75,9 +75,9 @@ namespace PixelFlow.Models
             int vsRaw = _prefs.GetInt(KeyVehicleStyle, 0);
             CurrentVehicleStyle = System.Enum.IsDefined(typeof(VehicleStyle), vsRaw) ? (VehicleStyle)vsRaw : VehicleStyle.Car;
 
-            MasterVolume = _prefs.GetInt(KeyMasterVol, 100) / 100f;
-            SfxVolume = _prefs.GetInt(KeySfxVol, 100) / 100f;
-            MusicVolume = _prefs.GetInt(KeyMusicVol, 70) / 100f;
+            MasterVolume = _prefs.GetFloat(KeyMasterVol, 1f);
+            SfxVolume = _prefs.GetFloat(KeySfxVol, 1f);
+            MusicVolume = _prefs.GetFloat(KeyMusicVol, 0.7f);
             HapticsDisabled = _prefs.GetBool(KeyHaptics, false);
         }
 
@@ -105,9 +105,9 @@ namespace PixelFlow.Models
             OnVehicleStyleChanged?.Invoke(style);
         }
 
-        public void SetMasterVolume(float volume) { MasterVolume = Mathf.Clamp01(volume); _prefs.SetInt(KeyMasterVol, Mathf.RoundToInt(MasterVolume * 100f)); }
-        public void SetSfxVolume(float volume) { SfxVolume = Mathf.Clamp01(volume); _prefs.SetInt(KeySfxVol, Mathf.RoundToInt(SfxVolume * 100f)); }
-        public void SetMusicVolume(float volume) { MusicVolume = Mathf.Clamp01(volume); _prefs.SetInt(KeyMusicVol, Mathf.RoundToInt(MusicVolume * 100f)); }
+        public void SetMasterVolume(float volume) { MasterVolume = Mathf.Clamp01(volume); _prefs.SetFloat(KeyMasterVol, MasterVolume); }
+        public void SetSfxVolume(float volume) { SfxVolume = Mathf.Clamp01(volume); _prefs.SetFloat(KeySfxVol, SfxVolume); }
+        public void SetMusicVolume(float volume) { MusicVolume = Mathf.Clamp01(volume); _prefs.SetFloat(KeyMusicVol, MusicVolume); }
         public void SetHapticsDisabled(bool disabled)
         {
             if (HapticsDisabled == disabled) return;

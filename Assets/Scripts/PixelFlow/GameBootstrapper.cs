@@ -20,6 +20,7 @@ namespace PixelFlow
 
         private const int RootSearchRetries = 10;
         private const float RootSearchInterval = 0.1f;
+        private Root _cachedRoot;
 
         private ISignalBus _signalBus;
         private IGameStateModel _stateModel;
@@ -30,13 +31,13 @@ namespace PixelFlow
 
         private IEnumerator Start()
         {
-            Debug.Log("[PixelFlow] GameBootstrapper starting initialization...");
             yield return WaitForRoot();
-            if (nexusRoot == null)
+            if (_cachedRoot == null)
             {
                 Debug.LogError("[PixelFlow] ERROR: Nexus Root not found after retries. Game cannot start.");
                 yield break;
             }
+            nexusRoot = _cachedRoot;
 
             while (!nexusRoot.IsInitialized)
                 yield return null;
@@ -205,10 +206,10 @@ namespace PixelFlow
         private IEnumerator WaitForRoot()
         {
             int retries = RootSearchRetries;
-            while (nexusRoot == null && retries > 0)
+            while (_cachedRoot == null && retries > 0)
             {
-                nexusRoot = FindAnyObjectByType<Root>();
-                if (nexusRoot == null)
+                _cachedRoot = FindAnyObjectByType<Root>();
+                if (_cachedRoot == null)
                 {
                     retries--;
                     yield return new WaitForSeconds(RootSearchInterval);

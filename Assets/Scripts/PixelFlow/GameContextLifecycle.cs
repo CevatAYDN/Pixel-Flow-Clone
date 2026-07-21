@@ -44,6 +44,7 @@ namespace PixelFlow
             builder.BindService<IVehicleSimulator, VehicleSimulator>();
             builder.BindService<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
             builder.BindService<IGameplayTimerService, GameplayTimerService>();
+            builder.Bind<ITimeProvider, UnityTimeProvider>();
             builder.BindService<ISaveThrottler, SaveThrottler>();
             builder.BindService<INexusService, HapticService>();
             builder.Bind<IHapticService, HapticService>();
@@ -54,6 +55,7 @@ namespace PixelFlow
             builder.BindService<IObstacleService, ObstacleService>();
             builder.BindService<INexusService, LocalizationService>();
             builder.BindService<ILocalizationService, LocalizationService>();
+            builder.Bind<ILocalizationTableProvider, ResourceLocalizationTableProvider>();
             builder.BindService<IDailyCrisisService, DailyCrisisService>();
             builder.Bind<IPathSolver, RuntimePathSolver>();
             builder.Bind<IHintService, HintService>();
@@ -77,7 +79,7 @@ namespace PixelFlow
             builder.BindSignal<PixelFlow.Signals.CheckWinConditionSignal>().To<PixelFlow.Commands.CheckWinConditionCommand>();
             builder.BindSignal<PixelFlow.Signals.LoadLevelSignal>().To<PixelFlow.Commands.LoadLevelCommand>();
             builder.BindSignal<PixelFlow.Signals.RequestHintSignal>().To<PixelFlow.Commands.UseHintCommand>();
-            builder.BindSignal<PixelFlow.Commands.ChangeThemeSignal>().To<PixelFlow.Commands.ChangeThemeCommand>();
+            builder.BindSignal<PixelFlow.Signals.ChangeThemeSignal>().To<PixelFlow.Commands.ChangeThemeCommand>();
             builder.BindCommand<PixelFlow.Signals.LevelCompletedSignal, PixelFlow.Commands.SaveProgressCommand>(ExecutionMode.Exclusive, priority: 0);
             builder.BindSignal<PixelFlow.Signals.UndoSignal>().To<PixelFlow.Commands.UndoCommand>();
             builder.BindSignal<PixelFlow.Signals.RedoSignal>().To<PixelFlow.Commands.RedoCommand>();

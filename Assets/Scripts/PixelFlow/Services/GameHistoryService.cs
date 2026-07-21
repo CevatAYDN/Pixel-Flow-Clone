@@ -9,6 +9,7 @@ namespace PixelFlow.Services
     /// <summary>
     /// Undo/Redo yığınları. MaxDepth aşılınca en eski snapshot atılır.
     /// Test edilebilirlik için interface üzerinden bağlanır.
+    /// Grid state + GameSessionModel state'ini birlikte yönetir.
     /// </summary>
     public sealed class GameHistoryService : IGameHistoryService, INexusService
     {
@@ -27,7 +28,6 @@ namespace PixelFlow.Services
         public GameHistoryService() : this(DefaultMaxDepth) { }
 
         // DI dışı manuel oluşturma (testler vb.) için internal bırakıldı.
-        // Nexus DI, [Inject] attribute'u sayesinde parametresiz constructor'ı seçer.
         internal GameHistoryService(int maxDepth)
         {
             _maxDepth = maxDepth > 0 ? maxDepth : DefaultMaxDepth;
@@ -35,7 +35,12 @@ namespace PixelFlow.Services
 
         public void Record(IGridModel grid)
         {
-            var snapshot = GridSnapshot.Capture(grid);
+            Record(grid, null);
+        }
+
+        public void Record(IGridModel grid, IGameSessionModel session)
+        {
+            var snapshot = GridSnapshot.Capture(grid, session);
             _undoStack.AddLast(snapshot);
             _redoStack.Clear();
 
@@ -48,32 +53,50 @@ namespace PixelFlow.Services
 
         public bool Undo(IGridModel grid)
         {
+            return Undo(grid, null);
+        }
+
+        public bool Undo(IGridModel grid, IGameSessionModel session)
+        {
             if (_undoStack.Count == 0) return false;
 
             // Mevcut state'i redo'ya taşı
-            var currentSnapshot = GridSnapshot.Capture(grid);
+            var currentSnapshot = GridSnapshot.Capture(grid, session);
             _redoStack.AddLast(currentSnapshot);
 
             // Son snapshot'ı geri yükle
             var restore = _undoStack.Last.Value;
             _undoStack.RemoveLast();
             restore.ApplyTo(grid);
+            if (session != null)
+            {
+                restore.ApplySessionTo(session);
+            }
 
             return true;
         }
 
         public bool Redo(IGridModel grid)
         {
+            return Redo(grid, null);
+        }
+
+        public bool Redo(IGridModel grid, IGameSessionModel session)
+        {
             if (_redoStack.Count == 0) return false;
 
             // Mevcut state'i undo'ya taşı
-            var currentSnapshot = GridSnapshot.Capture(grid);
+            var currentSnapshot = GridSnapshot.Capture(grid, session);
             _undoStack.AddLast(currentSnapshot);
 
             // Son redo snapshot'ını geri yükle
             var restore = _redoStack.Last.Value;
             _redoStack.RemoveLast();
             restore.ApplyTo(grid);
+            if (session != null)
+            {
+                restore.ApplySessionTo(session);
+            }
 
             return true;
         }

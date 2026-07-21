@@ -31,6 +31,17 @@ namespace PixelFlow.Services
         private readonly Dictionary<SfxType, AudioSource> _sources = new Dictionary<SfxType, AudioSource>();
         private readonly Dictionary<SfxType, AudioClip> _clips = new Dictionary<SfxType, AudioClip>();
         private GameObject _audioRoot;
+        private float _masterVolume = 1f;
+        private float _sfxVolume = 1f;
+        private float _musicVolume = 0.7f;
+
+        // SfxType'ları SFX mi Music/Ambient mi diye ayıran yardımcı
+        private static bool IsMusicOrAmbient(SfxType type)
+        {
+            return type == SfxType.AmbientHub || type == SfxType.AmbientPuzzle ||
+                   type == SfxType.AmbientOverclock || type == SfxType.MainTheme ||
+                   type == SfxType.VehicleEngine;
+        }
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
@@ -53,7 +64,25 @@ namespace PixelFlow.Services
                 if (_clips[type] != null) source.clip = _clips[type];
             }
 
+            // Başlangıç volume ayarlarını SettingsModel'den al
+            if (SettingsModel != null)
+            {
+                _masterVolume = SettingsModel.MasterVolume;
+                _sfxVolume = SettingsModel.SfxVolume;
+                _musicVolume = SettingsModel.MusicVolume;
+            }
+            ApplyAllVolumes();
+
             return default;
+        }
+
+        private void ApplyAllVolumes()
+        {
+            foreach (var kvp in _sources)
+            {
+                float typeVol = IsMusicOrAmbient(kvp.Key) ? _musicVolume : _sfxVolume;
+                kvp.Value.volume = typeVol * _masterVolume;
+            }
         }
 
         private static AudioClip CreateClipForType(SfxType type)
@@ -87,8 +116,8 @@ namespace PixelFlow.Services
         {
             if (_sources.TryGetValue(type, out var source))
             {
-                float vol = type == SfxType.MainTheme ? SettingsModel.MusicVolume : SettingsModel.SfxVolume;
-                source.volume = vol * SettingsModel.MasterVolume;
+                float typeVol = IsMusicOrAmbient(type) ? _musicVolume : _sfxVolume;
+                source.volume = typeVol * _masterVolume;
                 if (!source.isPlaying)
                     source.Play();
             }
@@ -102,11 +131,32 @@ namespace PixelFlow.Services
 
         public void SetMasterVolume(float volume)
         {
-            foreach (var kvp in _sources)
-                kvp.Value.volume = volume;
+            _masterVolume = Mathf.Clamp01(volume);
+            ApplyAllVolumes();
         }
 
-        public void SetSfxVolume(float volume) { }
-        public void SetMusicVolume(float volume) { }
+        public void SetSfxVolume(float volume)
+        {
+            _sfxVolume = Mathf.Clamp01(volume);
+            foreach (var kvp in _sources)
+            {
+                if (!IsMusicOrAmbient(kvp.Key))
+                {
+                    kvp.Value.volume = _sfxVolume * _masterVolume;
+                }
+            }
+        }
+
+        public void SetMusicVolume(float volume)
+        {
+            _musicVolume = Mathf.Clamp01(volume);
+            foreach (var kvp in _sources)
+            {
+                if (IsMusicOrAmbient(kvp.Key))
+                {
+                    kvp.Value.volume = _musicVolume * _masterVolume;
+                }
+            }
+        }
     }
 }

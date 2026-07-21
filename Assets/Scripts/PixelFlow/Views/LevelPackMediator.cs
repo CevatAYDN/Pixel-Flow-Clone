@@ -16,6 +16,9 @@ namespace PixelFlow.Views
 
         private void OnLevelSelected(int levelIndex)
         {
+            // M7 fix: verify level is actually unlocked before loading
+            if (levelIndex > ProgressModel.UnlockedLevels - 1) return;
+
             var pack = View.LevelPackData;
             if (pack != null && levelIndex < pack.levels.Count)
             {

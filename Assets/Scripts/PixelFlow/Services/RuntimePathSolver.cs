@@ -321,16 +321,22 @@ namespace PixelFlow.Services
             return colorNodes;
         }
 
+        // Reusable buffer to avoid allocating a new array on every recursive call
+        private static readonly Vector2Int[] _directionBuffer = new Vector2Int[4];
+
         private static Vector2Int[] GetSortedDirections(Vector2Int current, Vector2Int end)
         {
-            var dirs = new[] { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
-            Array.Sort(dirs, (a, b) =>
+            _directionBuffer[0] = Vector2Int.up;
+            _directionBuffer[1] = Vector2Int.down;
+            _directionBuffer[2] = Vector2Int.left;
+            _directionBuffer[3] = Vector2Int.right;
+            Array.Sort(_directionBuffer, (a, b) =>
             {
                 int da = Mathf.Abs((current + a).x - end.x) + Mathf.Abs((current + a).y - end.y);
                 int db = Mathf.Abs((current + b).x - end.x) + Mathf.Abs((current + b).y - end.y);
                 return da.CompareTo(db);
             });
-            return dirs;
+            return _directionBuffer;
         }
     }
 }

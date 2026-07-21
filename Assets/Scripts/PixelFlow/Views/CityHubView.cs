@@ -176,13 +176,18 @@ namespace PixelFlow.Views
         }
     }
 
-    public class DistrictClickHandler : MonoBehaviour
+    public class DistrictClickHandler : MonoBehaviour, UnityEngine.EventSystems.IPointerClickHandler
     {
         public int DistrictIndex;
         public CityHubView OwnerView;
         private bool _mouseWasOver;
 
         private void OnMouseDown()
+        {
+            if (OwnerView != null) OwnerView.TriggerDistrictClick(DistrictIndex);
+        }
+
+        public void OnPointerClick(UnityEngine.EventSystems.PointerEventData eventData)
         {
             if (OwnerView != null) OwnerView.TriggerDistrictClick(DistrictIndex);
         }

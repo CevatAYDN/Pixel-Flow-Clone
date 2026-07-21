@@ -23,7 +23,10 @@ namespace PixelFlow.Editor.Tests
                 builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
                 builder.BindReactiveModel<ISettingsModel, SettingsModel>();
                 builder.BindReactiveModel<ISoundModel, SoundModel>();
-                
+                builder.Bind<ILoggerService, LoggerService>();
+                builder.Bind<IFeedbackService, FeedbackService>();
+                builder.Bind<Nexus.Core.Services.IAudioService, StubAudioService>();
+
                 builder.BindCommand<ChangeThemeSignal, ChangeThemeCommand>();
             });
 

@@ -21,6 +21,7 @@ namespace PixelFlow.Models
 
     /// <summary>
     /// İpucu sayısını IPlayerPrefsService üzerinden kalıcı saklar.
+    /// Constructor injection ile alır — diğer modellerle tutarlı ve test edilebilir.
     /// Testlerde InMemoryPlayerPrefsService ile değiştirilebilir.
     /// </summary>
     public class HintModel : IHintModel, IReactiveModel
@@ -28,7 +29,7 @@ namespace PixelFlow.Models
         private const string Key = "HintCount";
         private const int DefaultHints = 3;
 
-        [Inject] public IPlayerPrefsService _prefs { get; set; }
+        private readonly IPlayerPrefsService _prefs;
         private int _hintsRemaining;
         private int _totalHintsUsed;
 
@@ -36,11 +37,13 @@ namespace PixelFlow.Models
         public int TotalHintsUsed => _totalHintsUsed;
         public event Action<int> OnHintCountChanged;
 
-        public ValueTask OnBind(CancellationToken ct)
+        public HintModel(IPlayerPrefsService prefs)
         {
-            _hintsRemaining = _prefs != null ? _prefs.GetInt(Key, DefaultHints) : DefaultHints;
-            return default;
+            _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
+            _hintsRemaining = _prefs.GetInt(Key, DefaultHints);
         }
+
+        public ValueTask OnBind(CancellationToken ct) => default;
 
         public void UseHint()
         {
@@ -68,14 +71,12 @@ namespace PixelFlow.Models
 
         public void AwardHintForStar(int stars)
         {
-            // 3 star = +1 hint, 2 star = +0.5 hint (rounded), 1 star = no hint
             if (stars >= 3)
             {
                 AddHint();
             }
             else if (stars == 2)
             {
-                // 50% chance to get a hint for 2 stars
                 if (UnityEngine.Random.value < 0.5f)
                 {
                     AddHint();

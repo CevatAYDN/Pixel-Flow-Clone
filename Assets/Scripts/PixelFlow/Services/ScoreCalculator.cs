@@ -6,32 +6,32 @@ namespace PixelFlow.Services
     {
         public static (int finalScore, int stars) Calculate(
             int gridWidth, int gridHeight,
-            float elapsedTime, int hintsUsed, int totalHintsAvailable, int viaductsUsed)
+            double elapsedTime, int hintsUsed, int totalHintsAvailable, int viaductsUsed)
         {
-            int cellCount = gridWidth * gridHeight;
-            float baseScore = cellCount * 100f;
+            double cellCount = gridWidth * gridHeight;
+            double baseScore = cellCount * 100.0;
 
-            float idealTime = cellCount * 0.5f;
-            float timeMultiplier = elapsedTime <= idealTime
-                ? 1.0f
-                : System.Math.Max(0.25f, idealTime / elapsedTime);
+            double idealTime = cellCount * 0.5;
+            double timeMultiplier = elapsedTime <= idealTime
+                ? 1.0
+                : System.Math.Max(0.25, idealTime / elapsedTime);
 
-            float hintMultiplier = 1f - (hintsUsed * 0.10f);
-            if (hintMultiplier < 0f) hintMultiplier = 0f;
+            double hintMultiplier = 1.0 - (hintsUsed * 0.10);
+            if (hintMultiplier < 0.0) hintMultiplier = 0.0;
 
-            float viaductPenalty = viaductsUsed * 0.08f;
-            if (viaductPenalty > 1f) viaductPenalty = 1f;
+            double viaductPenalty = viaductsUsed * 0.08;
+            if (viaductPenalty > 1.0) viaductPenalty = 1.0;
 
-            float finalScore = baseScore * timeMultiplier * hintMultiplier * (1f - viaductPenalty);
-            int roundedScore = (int)(finalScore + 0.5f);
+            double finalScore = baseScore * timeMultiplier * hintMultiplier * (1.0 - viaductPenalty);
+            int roundedScore = (int)(finalScore + 0.5);
 
             int stars;
             if (viaductsUsed == 0)
-                stars = 3; // ⭐⭐⭐ Perfect Flow (0 viaducts)
+                stars = 3;
             else if (viaductsUsed <= 2)
-                stars = 2; // ⭐⭐ <= 2 viaducts
+                stars = 2;
             else
-                stars = 1; // ⭐ Level Completed (> 2 viaducts)
+                stars = 1;
 
             return (roundedScore, stars);
         }

@@ -21,6 +21,9 @@ namespace PixelFlow.Services
     /// GDD §6.1: Viyadük hakkı bittiğinde UI "Acil Durum Viyadüğü" reklamı sunar.
     /// Bu sınıf sadece event'leri ateşler; gerçek SDK entegrasyonu adapter
     /// tarafından yapılacak.
+    ///
+    /// RecordCrisisAttempt: sadece retry/interstitial logic'i.
+    /// Viaduct exhaustion ayrı bir çağrı ile (CheckViaductExhaustion) yönetilir.
     /// </summary>
     public class CrisisAdService : ICrisisAdService, INexusService
     {
@@ -37,6 +40,10 @@ namespace PixelFlow.Services
         public ValueTask InitializeAsync(CancellationToken ct) => default;
         public void OnDispose() { }
 
+        /// <summary>
+        /// Kriz denemesini kaydeder. 3 denemede interstitial reklam tetikler.
+        /// Viaduct exhaustion kontrolü içermez — CheckViaductExhaustion() ayrı çağrılır.
+        /// </summary>
         public void RecordCrisisAttempt()
         {
             if (GameSessionModel == null) return;
@@ -49,7 +56,14 @@ namespace PixelFlow.Services
                 SignalBus?.Fire(new RequestInterstitialAdSignal());
                 SignalBus?.Fire(new CrisisRetryExhaustedSignal { RetryCount = RetryCount });
             }
+        }
 
+        /// <summary>
+        /// Viyadük hakkı bittiğinde ayrı olarak çağrılır.
+        /// RecordCrisisAttempt'tan ayrıştırıldı — H5 fix.
+        /// </summary>
+        public void CheckViaductExhaustion()
+        {
             if (IsViaductExhausted)
             {
                 SignalBus?.Fire(new ViaductExhaustedSignal());

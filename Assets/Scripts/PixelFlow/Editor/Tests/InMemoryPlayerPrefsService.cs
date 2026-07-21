@@ -57,15 +57,29 @@ namespace PixelFlow.Editor.Tests
             _floats[key] = value;
         }
 
+        private readonly Dictionary<string, long> _longs = new Dictionary<string, long>();
+
+        public long GetLong(string key, long defaultValue = 0L)
+        {
+            return _longs.TryGetValue(key, out var val) ? val : defaultValue;
+        }
+
+        public void SetLong(string key, long value)
+        {
+            _longs[key] = value;
+        }
+
         public bool HasKey(string key)
         {
-            return _store.ContainsKey(key) || _strings.ContainsKey(key);
+            return _store.ContainsKey(key) || _strings.ContainsKey(key) || _floats.ContainsKey(key) || _longs.ContainsKey(key);
         }
 
         public void DeleteKey(string key)
         {
             _store.Remove(key);
             _strings.Remove(key);
+            _floats.Remove(key);
+            _longs.Remove(key);
         }
 
         public void Save() { }

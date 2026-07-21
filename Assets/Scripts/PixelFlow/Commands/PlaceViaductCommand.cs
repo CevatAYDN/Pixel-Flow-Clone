@@ -45,7 +45,7 @@ namespace PixelFlow.Commands
             // Viyadük limitini kontrol et ve harca
             if (GameSessionModel.TryUseViaduct())
             {
-                HistoryService.Record(GridModel);
+                HistoryService.Record(GridModel, GameSessionModel);
 
                 cell.HasViaduct = true;
                 cell.State = CellState.Bridge;

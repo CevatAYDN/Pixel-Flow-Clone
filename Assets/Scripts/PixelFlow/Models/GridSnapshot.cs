@@ -5,7 +5,7 @@ using UnityEngine;
 namespace PixelFlow.Models
 {
     /// <summary>
-    /// GridModel'in tam state'ini immutable olarak yakalar.
+    /// GridModel'in tam state'ini + GameSessionModel state'ini immutable olarak yakalar.
     /// </summary>
     public readonly struct GridSnapshot
     {
@@ -23,6 +23,18 @@ namespace PixelFlow.Models
         public ColorType ActiveColor { get; }
         public Vector2Int LastPosition { get; }
 
+        // Session state fields — captured/restored alongside grid state
+        public int SessionScore { get; }
+        public int SessionAvailableViaducts { get; }
+        public int SessionMaxViaducts { get; }
+        public float SessionElapsedTime { get; }
+        public int SessionStarsEarned { get; }
+        public int SessionCurrentFlowScore { get; }
+        public int SessionTargetFlowScore { get; }
+        public bool SessionHasUsedCrisisUndo { get; }
+        public int SessionRetryCount { get; }
+        public bool HasSessionState { get; }
+
         private GridSnapshot(
             int width, int height,
             CellState[,] cellStates, ColorType[,] cellColors,
@@ -32,7 +44,13 @@ namespace PixelFlow.Models
             IReadOnlyDictionary<ColorType, IReadOnlyList<Vector2Int>> paths,
             HashSet<ColorType> lockedColors,
             ColorType activeColor,
-            Vector2Int lastPosition)
+            Vector2Int lastPosition,
+            // Session state
+            int sessionScore, int sessionAvailableViaducts, int sessionMaxViaducts,
+            float sessionElapsedTime, int sessionStarsEarned,
+            int sessionCurrentFlowScore, int sessionTargetFlowScore,
+            bool sessionHasUsedCrisisUndo, int sessionRetryCount,
+            bool hasSessionState)
         {
             Width = width;
             Height = height;
@@ -47,12 +65,31 @@ namespace PixelFlow.Models
             LockedColors = lockedColors;
             ActiveColor = activeColor;
             LastPosition = lastPosition;
+
+            SessionScore = sessionScore;
+            SessionAvailableViaducts = sessionAvailableViaducts;
+            SessionMaxViaducts = sessionMaxViaducts;
+            SessionElapsedTime = sessionElapsedTime;
+            SessionStarsEarned = sessionStarsEarned;
+            SessionCurrentFlowScore = sessionCurrentFlowScore;
+            SessionTargetFlowScore = sessionTargetFlowScore;
+            SessionHasUsedCrisisUndo = sessionHasUsedCrisisUndo;
+            SessionRetryCount = sessionRetryCount;
+            HasSessionState = hasSessionState;
         }
 
         /// <summary>
         /// GridModel'den anlık snapshot alır. Deep-copy yapar.
         /// </summary>
         public static GridSnapshot Capture(IGridModel grid)
+        {
+            return Capture(grid, null);
+        }
+
+        /// <summary>
+        /// GridModel + GameSessionModel'den anlık snapshot alır.
+        /// </summary>
+        public static GridSnapshot Capture(IGridModel grid, IGameSessionModel session)
         {
             int w = grid.Width;
             int h = grid.Height;
@@ -88,6 +125,8 @@ namespace PixelFlow.Models
 
             var locked = new HashSet<ColorType>(grid.LockedColors);
 
+            bool hasSession = session != null;
+
             return new GridSnapshot(
                 w, h,
                 cellStates, cellColors,
@@ -96,7 +135,18 @@ namespace PixelFlow.Models
                 paths,
                 locked,
                 grid.ActiveColor.Value,
-                grid.LastPosition.Value
+                grid.LastPosition.Value,
+                // Session state
+                hasSession ? session.Score : 0,
+                hasSession ? session.AvailableViaducts : 0,
+                hasSession ? session.MaxViaducts : 0,
+                hasSession ? session.ElapsedTime : 0f,
+                hasSession ? session.StarsEarned : 0,
+                hasSession ? session.CurrentFlowScore : 0,
+                hasSession ? session.TargetFlowScore : 0,
+                hasSession ? session.HasUsedCrisisUndo : false,
+                hasSession ? session.RetryCount : 0,
+                hasSession
             );
         }
 
@@ -136,6 +186,15 @@ namespace PixelFlow.Models
 
             grid.ActiveColor.Value = ActiveColor;
             grid.LastPosition.Value = LastPosition;
+        }
+
+        /// <summary>
+        /// Session state'ini GameSessionModel'e geri yükler.
+        /// </summary>
+        public void ApplySessionTo(IGameSessionModel session)
+        {
+            if (!HasSessionState || session == null) return;
+            session.ApplySave(SessionAvailableViaducts, SessionMaxViaducts, SessionElapsedTime, SessionScore, SessionStarsEarned);
         }
     }
 }

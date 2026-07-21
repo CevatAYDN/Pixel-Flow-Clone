@@ -21,13 +21,15 @@ namespace PixelFlow.Models
 
     public class DailyCrisisModel : IDailyCrisisModel, IReactiveModel
     {
-        [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
+        private readonly IPlayerPrefsService _prefs;
 
-        public ValueTask OnBind(CancellationToken ct)
+        public DailyCrisisModel(IPlayerPrefsService prefs)
         {
+            _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
             LoadState();
-            return default;
         }
+
+        public ValueTask OnBind(CancellationToken ct) => default;
 
         public int CurrentDailySeed => GetTodayUtcSeed();
         public int StreakCount { get; private set; }
@@ -43,31 +45,28 @@ namespace PixelFlow.Models
         private const string PrefKeySeed = "NT_CrisisLastSeed";
         private const string PrefKeyFlags = "NT_CrisisFlags";
 
-        public void LoadState()
+        private void LoadState()
         {
-            if (PlayerPrefsService == null) return;
-            StreakCount = PlayerPrefsService.GetInt(PrefKeyStreak, 0);
-            BadgesEarned = PlayerPrefsService.GetInt(PrefKeyBadges, 0);
-            _lastCompletedSeed = PlayerPrefsService.GetInt(PrefKeySeed, 0);
+            StreakCount = _prefs.GetInt(PrefKeyStreak, 0);
+            BadgesEarned = _prefs.GetInt(PrefKeyBadges, 0);
+            _lastCompletedSeed = _prefs.GetInt(PrefKeySeed, 0);
 
             int currentSeed = GetTodayUtcSeed();
             if (_lastCompletedSeed != currentSeed)
             {
-                // Reset daily flags for a new day
                 _completedDaily[0] = false;
                 _completedDaily[1] = false;
                 _completedDaily[2] = false;
 
-                // Check if streak broke (> 1 day missed)
                 if (_lastCompletedSeed > 0 && currentSeed - _lastCompletedSeed > 1)
                 {
                     StreakCount = 0;
-                    PlayerPrefsService.SetInt(PrefKeyStreak, 0);
+                    _prefs.SetInt(PrefKeyStreak, 0);
                 }
             }
             else
             {
-                int flags = PlayerPrefsService.GetInt(PrefKeyFlags, 0);
+                int flags = _prefs.GetInt(PrefKeyFlags, 0);
                 _completedDaily[0] = (flags & 1) != 0;
                 _completedDaily[1] = (flags & 2) != 0;
                 _completedDaily[2] = (flags & 4) != 0;
@@ -97,14 +96,11 @@ namespace PixelFlow.Models
 
             _lastCompletedSeed = todaySeed;
 
-            if (PlayerPrefsService != null)
-            {
-                PlayerPrefsService.SetInt(PrefKeyBadges, BadgesEarned);
-                PlayerPrefsService.SetInt(PrefKeyStreak, StreakCount);
-                PlayerPrefsService.SetInt(PrefKeySeed, todaySeed);
-                PlayerPrefsService.SetInt(PrefKeyFlags, flags);
-                PlayerPrefsService.Save();
-            }
+            _prefs.SetInt(PrefKeyBadges, BadgesEarned);
+            _prefs.SetInt(PrefKeyStreak, StreakCount);
+            _prefs.SetInt(PrefKeySeed, todaySeed);
+            _prefs.SetInt(PrefKeyFlags, flags);
+            _prefs.Save();
 
             OnDailyCrisisUpdated?.Invoke();
         }

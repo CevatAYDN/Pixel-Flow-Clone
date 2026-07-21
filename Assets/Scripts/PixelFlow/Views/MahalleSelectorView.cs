@@ -55,6 +55,7 @@ namespace PixelFlow.Views
     public class MahalleSelectorMediator : Mediator<MahalleSelectorView>
     {
         [Inject] public IGameStateModel GameStateModel { get; set; }
+        [Inject] public IProgressModel ProgressModel { get; set; }
 
         protected override void OnBind()
         {
@@ -71,6 +72,10 @@ namespace PixelFlow.Views
 
         private void HandleDistrict(int idx)
         {
+            int requiredLevel = PixelFlow.Commands.EnterDistrictCommand.DistrictToLevelIndex(idx);
+            if (requiredLevel < 0) return;
+            if (requiredLevel > ProgressModel.UnlockedLevels - 1) return;
+
             SignalBus.Fire(new PixelFlow.Signals.EnterDistrictSignal { DistrictIndex = idx });
             View.SetVisible(false);
         }

@@ -31,7 +31,7 @@ namespace PixelFlow.Commands
 
         private void EnsureHistoryRecorded()
         {
-            HistoryService.Record(GridModel);
+            HistoryService.Record(GridModel, GameSessionModel);
             _hasPendingHistory = true;
             _ = _hasPendingHistory; // Suppress CS0414 warning
         }
