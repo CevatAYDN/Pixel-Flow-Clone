@@ -29,11 +29,146 @@ namespace PixelFlow.Views
         [SerializeField] private Sprite _starSprite;
         [SerializeField] private Sprite _warningSprite;
 
+        private static Sprite _fallbackCircle, _fallbackSquare, _fallbackTriangle, _fallbackDiamond, _fallbackStar, _fallbackWarning, _fallbackBg;
+
         public Vector2Int GridPosition { get; private set; }
 
         public void Setup(Vector2Int pos)
         {
             GridPosition = pos;
+            EnsureRenderersAndSprites();
+        }
+
+        private void Awake()
+        {
+            EnsureRenderersAndSprites();
+        }
+
+        public void EnsureRenderersAndSprites()
+        {
+            if (_bgRenderer == null)
+            {
+                _bgRenderer = GetComponent<SpriteRenderer>();
+                if (_bgRenderer == null)
+                {
+                    var bgObj = new GameObject("Background");
+                    bgObj.transform.SetParent(transform, false);
+                    _bgRenderer = bgObj.AddComponent<SpriteRenderer>();
+                }
+            }
+            if (_dotRenderer == null)
+            {
+                var dotObj = transform.Find("DotNode");
+                if (dotObj != null) _dotRenderer = dotObj.GetComponent<SpriteRenderer>();
+                if (_dotRenderer == null)
+                {
+                    var newDot = new GameObject("DotNode");
+                    newDot.transform.SetParent(transform, false);
+                    newDot.transform.localPosition = new Vector3(0, 0, -0.1f);
+                    _dotRenderer = newDot.AddComponent<SpriteRenderer>();
+                }
+            }
+            if (_bridgeRenderer == null)
+            {
+                var bridgeObj = transform.Find("Bridge");
+                if (bridgeObj != null) _bridgeRenderer = bridgeObj.GetComponent<SpriteRenderer>();
+                if (_bridgeRenderer == null)
+                {
+                    var newBridge = new GameObject("Bridge");
+                    newBridge.transform.SetParent(transform, false);
+                    newBridge.transform.localPosition = new Vector3(0, 0, -0.2f);
+                    _bridgeRenderer = newBridge.AddComponent<SpriteRenderer>();
+                }
+            }
+            if (_warningRenderer == null)
+            {
+                var warnObj = transform.Find("Warning");
+                if (warnObj != null) _warningRenderer = warnObj.GetComponent<SpriteRenderer>();
+                if (_warningRenderer == null)
+                {
+                    var newWarn = new GameObject("Warning");
+                    newWarn.transform.SetParent(transform, false);
+                    newWarn.transform.localPosition = new Vector3(0, 0, -0.3f);
+                    _warningRenderer = newWarn.AddComponent<SpriteRenderer>();
+                }
+            }
+
+            if (_bgRenderer != null && _bgRenderer.sprite == null)
+            {
+                GenerateFallbackSpritesIfNeeded();
+                _bgRenderer.sprite = _fallbackBg;
+            }
+        }
+
+        private static void GenerateFallbackSpritesIfNeeded()
+        {
+            if (_fallbackSquare != null) return;
+
+            int size = 64;
+            Texture2D texSquare = new Texture2D(size, size);
+            Color[] colorsSq = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    bool border = (x <= 2 || x >= size - 3 || y <= 2 || y >= size - 3);
+                    colorsSq[y * size + x] = border ? new Color(0.2f, 0.25f, 0.35f, 0.8f) : Color.white;
+                }
+            }
+            texSquare.SetPixels(colorsSq);
+            texSquare.Apply();
+            _fallbackSquare = Sprite.Create(texSquare, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 64f);
+            _fallbackBg = _fallbackSquare;
+
+            Texture2D texCircle = new Texture2D(size, size);
+            Color[] colorsCirc = new Color[size * size];
+            float r = size * 0.45f;
+            Vector2 center = new Vector2(size * 0.5f, size * 0.5f);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dist = Vector2.Distance(new Vector2(x, y), center);
+                    colorsCirc[y * size + x] = dist <= r ? Color.white : Color.clear;
+                }
+            }
+            texCircle.SetPixels(colorsCirc);
+            texCircle.Apply();
+            _fallbackCircle = Sprite.Create(texCircle, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 64f);
+
+            Texture2D texTri = new Texture2D(size, size);
+            Color[] colorsTri = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float normY = (float)y / size;
+                    float halfWidth = normY * 0.45f * size;
+                    float distFromMid = Mathf.Abs(x - size * 0.5f);
+                    colorsTri[y * size + x] = (distFromMid <= halfWidth && y >= 6) ? Color.white : Color.clear;
+                }
+            }
+            texTri.SetPixels(colorsTri);
+            texTri.Apply();
+            _fallbackTriangle = Sprite.Create(texTri, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 64f);
+
+            Texture2D texDiamond = new Texture2D(size, size);
+            Color[] colorsDia = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = Mathf.Abs(x - size * 0.5f) / (size * 0.45f);
+                    float dy = Mathf.Abs(y - size * 0.5f) / (size * 0.45f);
+                    colorsDia[y * size + x] = (dx + dy <= 1f) ? Color.white : Color.clear;
+                }
+            }
+            texDiamond.SetPixels(colorsDia);
+            texDiamond.Apply();
+            _fallbackDiamond = Sprite.Create(texDiamond, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 64f);
+
+            _fallbackStar = _fallbackDiamond;
+            _fallbackWarning = _fallbackTriangle;
         }
 
         public static Color GetCellBackgroundColor(AppTheme theme)
@@ -54,15 +189,16 @@ namespace PixelFlow.Views
         public void AssignShapeSprite(SpriteRenderer renderer, ColorType colorType)
         {
             if (renderer == null) return;
+            GenerateFallbackSpritesIfNeeded();
             Sprite sprite = null;
             switch (colorType)
             {
-                case ColorType.Blue:    sprite = _circleSprite;   break;
-                case ColorType.Red:     sprite = _triangleSprite; break;
-                case ColorType.Yellow:  sprite = _squareSprite;   break;
-                case ColorType.Green:   sprite = _diamondSprite;  break;
-                case ColorType.Purple:  sprite = _starSprite;     break;
-                default:                sprite = _circleSprite;   break;
+                case ColorType.Blue:    sprite = _circleSprite != null ? _circleSprite : _fallbackCircle;   break;
+                case ColorType.Red:     sprite = _triangleSprite != null ? _triangleSprite : _fallbackTriangle; break;
+                case ColorType.Yellow:  sprite = _squareSprite != null ? _squareSprite : _fallbackSquare;   break;
+                case ColorType.Green:   sprite = _diamondSprite != null ? _diamondSprite : _fallbackDiamond;  break;
+                case ColorType.Purple:  sprite = _starSprite != null ? _starSprite : _fallbackStar;     break;
+                default:                sprite = _circleSprite != null ? _circleSprite : _fallbackCircle;   break;
             }
             if (sprite != null)
                 renderer.sprite = sprite;

@@ -1,4 +1,5 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Signals;
@@ -11,6 +12,7 @@ namespace PixelFlow.Views
     {
         [Inject] public IGridModel GridModel { get; set; }
         [Inject] public ISettingsModel SettingsModel { get; set; }
+        [Inject] public ILoggerService Logger { get; set; }
 
         private CellState[,] _previousCellStates;
         private ColorType[,] _previousCellColors;
@@ -30,6 +32,7 @@ namespace PixelFlow.Views
 
             if (GridModel.Width > 0 && GridModel.Height > 0)
             {
+                Logger?.Log($"[PixelFlow.GridMediator] 🎯 OnBind: Grid model active ({GridModel.Width}x{GridModel.Height}). Initializing & centering camera.");
                 InitializeAndCenter();
             }
         }
@@ -150,18 +153,19 @@ namespace PixelFlow.Views
             View.CenterCamera(GridModel.Width, GridModel.Height);
 
             var cam = View.GetCachedCamera();
+            float cx = (GridModel.Width - 1) * 0.5f;
+            float cy = (GridModel.Height - 1) * 0.5f;
             if (cam != null)
             {
                 var camCtrl = cam.GetComponent<PixelFlow.Services.CameraController>();
                 if (camCtrl != null)
                 {
-                    float cx = (GridModel.Width - 1) * 0.5f;
-                    float cy = (GridModel.Height - 1) * 0.5f;
                     float size = cam.orthographicSize;
                     camCtrl.SetPuzzleView(cx, cy, size);
                     camCtrl.TransitionToPuzzle();
                 }
             }
+            Logger?.Log($"[PixelFlow.GridMediator] 📷 Grid initialized ({GridModel.Width}x{GridModel.Height}) and camera centered at ({cx}, {cy}).");
         }
     }
 }

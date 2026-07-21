@@ -108,11 +108,13 @@ namespace Nexus.Generated
             {
                 instance.GridModel = di.Resolve<PixelFlow.Models.IGridModel>();
                 instance.SettingsModel = di.Resolve<PixelFlow.Models.ISettingsModel>();
+                instance.Logger = di.Resolve<Nexus.Core.Services.ILoggerService>();
             });
             NexusDI.RegisterClearer<PixelFlow.Views.GridMediator>(instance =>
             {
                 instance.GridModel = null;
                 instance.SettingsModel = null;
+                instance.Logger = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Views.GridView>((instance, di) =>
             {
@@ -586,6 +588,8 @@ namespace Nexus.Generated
                 _ = _p_GridMediator_GridModel; // Suppress CS0219 warning
                 var _p_GridMediator_SettingsModel = default(PixelFlow.Views.GridMediator).SettingsModel;
                 _ = _p_GridMediator_SettingsModel; // Suppress CS0219 warning
+                var _p_GridMediator_Logger = default(PixelFlow.Views.GridMediator).Logger;
+                _ = _p_GridMediator_Logger; // Suppress CS0219 warning
                 var _p_GridView_CameraProvider = default(PixelFlow.Views.GridView).CameraProvider;
                 _ = _p_GridView_CameraProvider; // Suppress CS0219 warning
                 var _p_HUDMediator_HintModel = default(PixelFlow.Views.HUDMediator).HintModel;

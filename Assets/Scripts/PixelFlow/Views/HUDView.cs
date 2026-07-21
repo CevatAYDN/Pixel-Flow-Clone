@@ -61,9 +61,56 @@ namespace PixelFlow.Views
         private Button _crisisViaductButton;
         private Button _crisisUndoButton;
 
+        private void Awake()
+        {
+            AutoWireUIReferences();
+        }
+
+        public void AutoWireUIReferences()
+        {
+            var texts = GetComponentsInChildren<Text>(true);
+            var buttons = GetComponentsInChildren<Button>(true);
+
+            foreach (var t in texts)
+            {
+                string name = t.gameObject.name.ToLower();
+                if (_scoreText == null && (name.Contains("score") || name.Contains("puan"))) _scoreText = t;
+                if (_timerText == null && (name.Contains("timer") || name.Contains("time") || name.Contains("sure"))) _timerText = t;
+                if (_hintCountText == null && name.Contains("hint")) _hintCountText = t;
+                if (_completionText == null && name.Contains("complet")) _completionText = t;
+                if (_completionScoreText == null && name.Contains("finalscore")) _completionScoreText = t;
+                if (_levelFailedText == null && name.Contains("failed")) _levelFailedText = t;
+            }
+
+            foreach (var b in buttons)
+            {
+                string name = b.gameObject.name.ToLower();
+                if (_hintButton == null && name.Contains("hint")) _hintButton = b;
+                if (_undoButton == null && name.Contains("undo")) _undoButton = b;
+                if (_redoButton == null && name.Contains("redo")) _redoButton = b;
+                if (_nextLevelButton == null && name.Contains("next")) _nextLevelButton = b;
+                if (_continueButton == null && name.Contains("continue")) _continueButton = b;
+                if (_pauseButton == null && name.Contains("pause")) _pauseButton = b;
+                if (_retryButton == null && name.Contains("retry")) _retryButton = b;
+                if (_themeDarkButton == null && name.Contains("dark")) _themeDarkButton = b;
+                if (_themeLightButton == null && name.Contains("light")) _themeLightButton = b;
+                if (_themeNeonButton == null && name.Contains("neon")) _themeNeonButton = b;
+            }
+
+            var transforms = GetComponentsInChildren<Transform>(true);
+            foreach (var tr in transforms)
+            {
+                string name = tr.gameObject.name.ToLower();
+                if (_completionPanel == null && (name.Contains("completion") || name.Contains("victory"))) _completionPanel = tr.gameObject;
+                if (_levelFailedPanel == null && (name.Contains("fail") || name.Contains("gameover"))) _levelFailedPanel = tr.gameObject;
+                if (_starsContainer == null && name.Contains("star")) _starsContainer = tr.gameObject;
+            }
+        }
+
         protected override void OnBind(IContext context)
         {
             base.OnBind(context);
+            AutoWireUIReferences();
             if (_hintButton != null)
                 _hintButton.onClick.AddListener(() => OnHintClicked?.Invoke());
             if (_nextLevelButton != null)
