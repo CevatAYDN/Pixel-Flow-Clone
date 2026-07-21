@@ -52,23 +52,28 @@ namespace PixelFlow.Services
 
         public static void Save(IGridModel grid, IGameSessionModel session, ILevelModel level, IPlayerPrefsService prefs = null)
         {
+            if (grid == null) return;
+
             var data = new GridSaveData
             {
-                levelIndex = level.CurrentLevel != null ? level.CurrentLevel.levelIndex : 0,
+                levelIndex = level != null && level.CurrentLevel != null ? level.CurrentLevel.levelIndex : 0,
                 width = grid.Width,
                 height = grid.Height,
-                availableViaducts = session.AvailableViaducts,
-                maxViaducts = session.MaxViaducts,
-                elapsedTime = session.ElapsedTime,
-                score = session.Score,
-                stars = session.StarsEarned,
-                activeColor = (int)grid.ActiveColor.Value,
-                lastPosX = grid.LastPosition.Value.x,
-                lastPosY = grid.LastPosition.Value.y,
+                availableViaducts = session != null ? session.AvailableViaducts : 0,
+                maxViaducts = session != null ? session.MaxViaducts : 0,
+                elapsedTime = session != null ? session.ElapsedTime : 0f,
+                score = session != null ? session.Score : 0,
+                stars = session != null ? session.StarsEarned : 0,
+                activeColor = grid.ActiveColor != null ? (int)grid.ActiveColor.Value : 0,
+                lastPosX = grid.LastPosition != null ? grid.LastPosition.Value.x : -1,
+                lastPosY = grid.LastPosition != null ? grid.LastPosition.Value.y : -1,
             };
 
-            foreach (var lc in grid.LockedColors)
-                data.lockedColors.Add((int)lc);
+            if (grid.LockedColors != null)
+            {
+                foreach (var lc in grid.LockedColors)
+                    data.lockedColors.Add((int)lc);
+            }
 
             for (int x = 0; x < grid.Width; x++)
             {

@@ -107,8 +107,8 @@ namespace PixelFlow
 
                     if (saved != null && saved.cells != null && saved.cells.Count > 0)
                     {
-                        bool hasNodesOrPaths = saved.cells.Exists(c => c.state == (int)Models.CellState.Node) || (saved.paths != null && saved.paths.Count > 0);
-                        if (hasNodesOrPaths)
+                        bool hasActivePaths = saved.paths != null && saved.paths.Count > 0;
+                        if (hasActivePaths)
                         {
                             var level = ResolveLevelByIndex(saved.levelIndex);
                             if (level != null)

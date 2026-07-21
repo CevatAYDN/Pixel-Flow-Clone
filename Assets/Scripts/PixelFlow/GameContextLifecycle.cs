@@ -86,6 +86,8 @@ namespace PixelFlow
             builder.BindSignal<PixelFlow.Signals.StartSimulationSignal>().To<PixelFlow.Commands.StartSimulationCommand>();
             builder.BindSignal<PixelFlow.Signals.PauseSimulationSignal>().To<PixelFlow.Commands.PauseSimulationCommand>();
             builder.BindSignal<PixelFlow.Signals.LoadedInitialLevelSignal>();
+            builder.BindSignal<PixelFlow.Signals.FlowScoreUpdatedSignal>();
+            builder.BindSignal<PixelFlow.Signals.ProgressUpdatedSignal>();
         }
 
         public ValueTask OnInitializeAsync(CancellationToken ct) => default;

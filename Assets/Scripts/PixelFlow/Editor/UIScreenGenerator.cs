@@ -263,6 +263,12 @@ namespace PixelFlow.Editor
             var existing = Object.FindAnyObjectByType<Canvas>();
             if (existing != null)
             {
+                var scaler = existing.GetComponent<CanvasScaler>();
+                if (scaler == null) scaler = existing.gameObject.AddComponent<CanvasScaler>();
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1080, 1920);
+                scaler.matchWidthOrHeight = 0.5f;
+
                 existing.transform.SetParent(uiParent);
                 return existing;
             }
@@ -273,7 +279,12 @@ namespace PixelFlow.Editor
 
             var canvas = go.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            go.AddComponent<CanvasScaler>();
+
+            var scalerComp = go.AddComponent<CanvasScaler>();
+            scalerComp.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scalerComp.referenceResolution = new Vector2(1080, 1920);
+            scalerComp.matchWidthOrHeight = 0.5f;
+
             go.AddComponent<GraphicRaycaster>();
             return canvas;
         }

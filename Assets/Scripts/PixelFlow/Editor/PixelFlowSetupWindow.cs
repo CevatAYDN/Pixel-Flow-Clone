@@ -356,6 +356,14 @@ namespace PixelFlow.Editor
             {
                 DispatchSignal(new RedoSignal());
             }
+            if (GUILayout.Button("🧹 Temiz Seviye Yükle (Save Temizle)", GUILayout.Height(28)))
+            {
+                PlayerPrefs.DeleteKey("NT_PuzzleSave_");
+                PlayerPrefs.Save();
+                var lvl1 = ResolveLevelByIndex(0);
+                if (lvl1 != null) PlayLevel(lvl1);
+                Debug.Log("[PixelFlow] Save file cleared in PlayerPrefs! Clean data-driven LevelData reloaded.");
+            }
             GUILayout.EndHorizontal();
 
             GUILayout.Space(6);
