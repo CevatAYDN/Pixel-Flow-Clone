@@ -313,7 +313,7 @@ MonoBehaviour:
   m_VolumeLayerMask:
     serializedVersion: 2
     m_Bits: 1
-  m_VolumeTrigger: {fileID: 0}
+  m_VolumeTrigger: {fileID: 330585546}
   m_VolumeFrameworkUpdateModeOption: 2
   m_RenderPostProcessing: 1
   m_Antialiasing: 0
@@ -523,18 +523,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b9ccf06a515be624a8e205a2402908d6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: PixelFlow::PixelFlow.Views.UpgradeTreeView
-  _panel: {fileID: 0}
-  _title: {fileID: 0}
-  _closeButton: {fileID: 0}
-  _infoText: {fileID: 0}
-  _storageLevel: {fileID: 0}
-  _rateLevel: {fileID: 0}
-  _viaductLevel: {fileID: 0}
-  _offlineLevel: {fileID: 0}
-  _districtLevel: {fileID: 0}
-  _connectionContainer: {fileID: 0}
-  _connectionColor: {r: 0.3, g: 0.7, b: 1, a: 0.6}
-  _connectionMaxedColor: {r: 0.2, g: 0.85, b: 0.3, a: 0.8}
 --- !u!1 &496813854
 GameObject:
   m_ObjectHideFlags: 0
@@ -1088,6 +1076,9 @@ GameObject:
   m_Component:
   - component: {fileID: 731162519}
   - component: {fileID: 731162520}
+  - component: {fileID: 731162523}
+  - component: {fileID: 731162522}
+  - component: {fileID: 731162521}
   m_Layer: 0
   m_Name: HubHUDView
   m_TagString: Untagged
@@ -1127,24 +1118,72 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: PixelFlow::PixelFlow.Views.HubHUDView
   _hubCanvas: {fileID: 0}
-  _coinText: {fileID: 0}
-  _taxRateText: {fileID: 0}
-  _storageBarText: {fileID: 0}
-  _storageFillImage: {fileID: 0}
-  _collectTaxesButton: {fileID: 0}
+  _levelProgressText: {fileID: 0}
   _playLevelButton: {fileID: 0}
-  _toggleUpgradesButton: {fileID: 0}
-  _upgradesPanel: {fileID: 0}
-  _upgradeStorageButton: {fileID: 0}
-  _upgradeRateButton: {fileID: 0}
-  _upgradeViaductButton: {fileID: 0}
-  _upgradeOfflineButton: {fileID: 0}
-  _upgradeDistrictButton: {fileID: 0}
-  _upgradeStorageText: {fileID: 0}
-  _upgradeRateText: {fileID: 0}
-  _upgradeViaductText: {fileID: 0}
-  _upgradeOfflineText: {fileID: 0}
-  _upgradeDistrictText: {fileID: 0}
+--- !u!114 &731162521
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 731162518}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GraphicRaycaster
+  m_IgnoreReversedGraphics: 1
+  m_BlockingObjects: 0
+  m_BlockingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &731162522
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 731162518}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
+  m_UiScaleMode: 0
+  m_ReferencePixelsPerUnit: 100
+  m_ScaleFactor: 1
+  m_ReferenceResolution: {x: 800, y: 600}
+  m_ScreenMatchMode: 0
+  m_MatchWidthOrHeight: 0
+  m_PhysicalUnit: 3
+  m_FallbackScreenDPI: 96
+  m_DefaultSpriteDPI: 96
+  m_DynamicPixelsPerUnit: 1
+  m_PresetInfoIsWorld: 0
+--- !u!223 &731162523
+Canvas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 731162518}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_RenderMode: 2
+  m_Camera: {fileID: 0}
+  m_PlaneDistance: 100
+  m_PixelPerfect: 0
+  m_ReceivesEvents: 1
+  m_OverrideSorting: 0
+  m_OverridePixelPerfect: 0
+  m_SortingBucketNormalizedSize: 0
+  m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
+  m_AdditionalShaderChannelsFlag: 0
+  m_UpdateRectTransformForStandalone: 0
+  m_SortingLayerID: 0
+  m_SortingOrder: 0
+  m_TargetDisplay: 0
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -1725,24 +1764,29 @@ MonoBehaviour:
   m_EditorClassIdentifier: PixelFlow::PixelFlow.Views.HUDView
   _hintButton: {fileID: 610883584}
   _hintCountText: {fileID: 83673101}
-  _scoreText: {fileID: 0}
-  _timerText: {fileID: 0}
+  _scoreText: {fileID: 83673101}
+  _timerText: {fileID: 83673101}
   _starsContainer: {fileID: 0}
   _star1: {fileID: 0}
   _star2: {fileID: 0}
   _star3: {fileID: 0}
   _completionPanel: {fileID: 496813854}
   _completionText: {fileID: 1458959217}
-  _completionScoreText: {fileID: 0}
-  _completionStarsText: {fileID: 0}
+  _completionScoreText: {fileID: 83673101}
+  _completionStarsText: {fileID: 83673101}
   _nextLevelButton: {fileID: 522711642}
-  _returnToHubButton: {fileID: 0}
+  _returnToHubButton: {fileID: 610883584}
   _bloomFlashOverlay: {fileID: 0}
-  _undoButton: {fileID: 0}
-  _redoButton: {fileID: 0}
-  _themeDarkButton: {fileID: 0}
-  _themeLightButton: {fileID: 0}
-  _themeNeonButton: {fileID: 0}
+  _undoButton: {fileID: 610883584}
+  _redoButton: {fileID: 610883584}
+  _themeDarkButton: {fileID: 610883584}
+  _themeLightButton: {fileID: 610883584}
+  _themeNeonButton: {fileID: 610883584}
+  _pauseButton: {fileID: 610883584}
+  _levelFailedPanel: {fileID: 0}
+  _levelFailedText: {fileID: 83673101}
+  _retryButton: {fileID: 610883584}
+  _levelFailedHubButton: {fileID: 610883584}
 --- !u!1 &1695552473
 GameObject:
   m_ObjectHideFlags: 0
@@ -1974,8 +2018,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0c1c42a9deda2954ab7894e47462631c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: PixelFlow::PixelFlow.Views.CityHubView
-  _cityContainer: {fileID: 0}
-  _hubCamera: {fileID: 0}
+  _cityContainer: {fileID: 1856680432}
 --- !u!4 &1856680432
 Transform:
   m_ObjectHideFlags: 0

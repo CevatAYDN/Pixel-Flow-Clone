@@ -112,8 +112,9 @@ namespace PixelFlow.Commands
             GameSessionModel.AddScore(finalScore);
             GameSessionModel.SetStars(stars);
 
-            LoggerService?.Log("[CheckWinConditionCommand] Paths completed! Transitioning to Simulation Phase...");
-            GameStateModel.SetState(GameState.Simulating);
+            // GDD §8: MVCS uyumlu — StartSimulationSignal fırlat, state'i StartSimulationCommand yönetsin
+            LoggerService?.Log("[CheckWinConditionCommand] Paths completed! Firing StartSimulationSignal...");
+            SignalBus.Fire(new PixelFlow.Signals.StartSimulationSignal());
         }
 
         public void Reset()

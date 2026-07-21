@@ -40,17 +40,5 @@ namespace PixelFlow.Services
 
             return ArePerpendicular(existingDir, newEntryDir);
         }
-
-        public static int CountBridgeUsers(
-            Dictionary<ColorType, List<Vector2Int>> paths, Vector2Int bridgePos)
-        {
-            int count = 0;
-            foreach (var path in paths.Values)
-            {
-                if (path.Contains(bridgePos))
-                    count++;
-            }
-            return count;
-        }
     }
 }

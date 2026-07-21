@@ -86,6 +86,13 @@ namespace PixelFlow.Models
         ObservableProperty<ColorType> CrashColorB { get; }
 
         void Initialize(int width, int height);
+        CellData GetCell(int x, int y);
+        CellData GetCell(Vector2Int pos);
+        void PlaceNodes(IEnumerable<GridNode> nodes);
+        void PlaceObstacles(IEnumerable<ObstacleData> obstacles);
+        void PlaceOneWays(IEnumerable<OneWayCell> oneWays);
+        bool AllColorPairsConnected();
+        bool IsGridFullyCovered();
     }
 
     /// <summary>
@@ -150,5 +157,81 @@ namespace PixelFlow.Models
         }
 
         public ValueTask OnBind(CancellationToken ct) => default;
+
+        public CellData GetCell(int x, int y)
+        {
+            if (x < 0 || x >= Width || y < 0 || y >= Height)
+                throw new System.ArgumentOutOfRangeException($"Cell ({x},{y}) out of bounds ({Width}x{Height})");
+            return Grid[x, y];
+        }
+
+        public CellData GetCell(Vector2Int pos) => GetCell(pos.x, pos.y);
+
+        public void PlaceNodes(IEnumerable<GridNode> nodes)
+        {
+            if (nodes == null) return;
+            foreach (var node in nodes)
+            {
+                if (node.position.x < 0 || node.position.x >= Width ||
+                    node.position.y < 0 || node.position.y >= Height)
+                    continue;
+                var cell = Grid[node.position.x, node.position.y];
+                cell.State = CellState.Node;
+                cell.Color = node.color;
+                cell.AddPathColor(node.color);
+            }
+        }
+
+        public void PlaceObstacles(IEnumerable<ObstacleData> obstacles)
+        {
+            if (obstacles == null) return;
+            foreach (var obs in obstacles)
+            {
+                if (obs.position.x < 0 || obs.position.x >= Width ||
+                    obs.position.y < 0 || obs.position.y >= Height)
+                    continue;
+                var cell = Grid[obs.position.x, obs.position.y];
+                cell.State = CellState.Obstacle;
+                cell.ObstacleType = obs.type;
+            }
+        }
+
+        public void PlaceOneWays(IEnumerable<OneWayCell> oneWays)
+        {
+            if (oneWays == null) return;
+            foreach (var ow in oneWays)
+            {
+                if (ow.position.x < 0 || ow.position.x >= Width ||
+                    ow.position.y < 0 || ow.position.y >= Height)
+                    continue;
+                var cell = Grid[ow.position.x, ow.position.y];
+                cell.ObstacleType = ObstacleType.OneWay;
+            }
+        }
+
+        public bool AllColorPairsConnected()
+        {
+            // Her renk için Path kaydı varsa ve path count >= 2 ise bağlı kabul et
+            foreach (var kvp in Paths)
+            {
+                if (kvp.Value == null || kvp.Value.Count < 2)
+                    return false;
+            }
+            return Paths.Count > 0;
+        }
+
+        public bool IsGridFullyCovered()
+        {
+            for (int x = 0; x < Width; x++)
+            {
+                for (int y = 0; y < Height; y++)
+                {
+                    var cell = Grid[x, y];
+                    if (cell.State == CellState.Empty && cell.PathColorCount == 0)
+                        return false;
+                }
+            }
+            return true;
+        }
     }
 }

@@ -21,8 +21,6 @@ namespace PixelFlow.Views
         [Inject] public ILevelProgressionService ProgressionService { get; set; }
         [Inject] public ILocalizationService LocalizationService { get; set; }
 
-        [SerializeField] private LevelPack _fallbackLevelPack;
-
         private Action _themeDarkHandler;
         private Action _themeLightHandler;
         private Action _themeNeonHandler;
@@ -36,7 +34,7 @@ namespace PixelFlow.Views
 
             View.OnHintClicked += HandleHintClicked;
             View.OnNextLevelClicked += HandleNextLevelClicked;
-            View.OnReturnToHubClicked += HandleReturnToHubClicked;
+            View.OnContinueClicked += HandleContinueClicked;
             View.OnUndoClicked += HandleUndoClicked;
             View.OnRedoClicked += HandleRedoClicked;
             View.OnThemeDarkClicked += _themeDarkHandler;
@@ -45,6 +43,9 @@ namespace PixelFlow.Views
             View.OnSimulateDebugPressed += HandleSimulateDebugPressed;
             View.OnCrisisViaductClicked += HandleCrisisViaductClicked;
             View.OnCrisisUndoClicked += HandleCrisisUndoClicked;
+            View.OnPauseClicked += HandlePauseClicked;
+            View.OnRetryClicked += HandleRetryClicked;
+            View.OnLevelFailedContinueClicked += HandleLevelFailedContinueClicked;
 
             HintModel.OnHintCountChanged += HandleHintCountChanged;
             GameSessionModel.OnScoreChanged += HandleScoreChanged;
@@ -68,6 +69,7 @@ namespace PixelFlow.Views
             Subscribe<PathIntersectionWarningSignal>(HandleIntersectionWarning);
             Subscribe<ViaductExhaustedSignal>(HandleViaductExhausted);
             Subscribe<CrisisRetryExhaustedSignal>(HandleCrisisRetryExhausted);
+            Subscribe<LevelFailedSignal>(HandleLevelFailed);
 
             GameStateModel.OnStateChanged += HandleStateChanged;
             UpdateVisibility();
@@ -79,12 +81,15 @@ namespace PixelFlow.Views
         {
             View.OnHintClicked -= HandleHintClicked;
             View.OnNextLevelClicked -= HandleNextLevelClicked;
-            View.OnReturnToHubClicked -= HandleReturnToHubClicked;
+            View.OnContinueClicked -= HandleContinueClicked;
             View.OnUndoClicked -= HandleUndoClicked;
             View.OnRedoClicked -= HandleRedoClicked;
             View.OnSimulateDebugPressed -= HandleSimulateDebugPressed;
             View.OnCrisisViaductClicked -= HandleCrisisViaductClicked;
             View.OnCrisisUndoClicked -= HandleCrisisUndoClicked;
+            View.OnPauseClicked -= HandlePauseClicked;
+            View.OnRetryClicked -= HandleRetryClicked;
+            View.OnLevelFailedContinueClicked -= HandleLevelFailedContinueClicked;
 
             if (_themeDarkHandler != null) View.OnThemeDarkClicked -= _themeDarkHandler;
             if (_themeLightHandler != null) View.OnThemeLightClicked -= _themeLightHandler;
@@ -93,7 +98,8 @@ namespace PixelFlow.Views
             _themeLightHandler = null;
             _themeNeonHandler = null;
 
-            if (_returnToHubCoroutine != null) View.StopCoroutine(_returnToHubCoroutine);
+            if (_continueCoroutine != null) View.StopCoroutine(_continueCoroutine);
+            _continueCoroutine = null;
             HintModel.OnHintCountChanged -= HandleHintCountChanged;
             GameSessionModel.OnScoreChanged -= HandleScoreChanged;
             GameSessionModel.OnTimeChanged -= HandleTimeChanged;
@@ -113,6 +119,7 @@ namespace PixelFlow.Views
         {
             View.HideCompletion();
             View.HideCrisis();
+            View.HideLevelFailed();
         }
 
         private void HandleHintClicked()
@@ -224,16 +231,6 @@ namespace PixelFlow.Views
                 return;
             }
 
-            var pack = ResolveLevelPack();
-            if (pack == null)
-            {
-                Debug.LogWarning("[HUDMediator] ResolveLevelPack returned null.");
-            }
-            else
-            {
-                Debug.Log($"[HUDMediator] LevelPack found. Total levels: {pack.levels?.Count ?? 0}");
-            }
-
             var current = LevelModel.CurrentLevel;
             if (current == null)
             {
@@ -241,25 +238,10 @@ namespace PixelFlow.Views
                 return;
             }
 
-            int currentIndex = pack != null && pack.levels != null ? pack.levels.FindIndex(l => l != null && l.levelIndex == current.levelIndex) : -1;
             int nextLevelIndex = current.levelIndex + 1;
-            Debug.Log($"[HUDMediator] Current Level Index: {current.levelIndex}, Position in Pack: {currentIndex}, Next Target Index: {nextLevelIndex}");
+            Debug.Log($"[HUDMediator] Current Level Index: {current.levelIndex}, Next Target Index: {nextLevelIndex}");
 
-            LevelData nextLevel = null;
-            if (pack != null && pack.levels != null && currentIndex >= 0 && currentIndex + 1 < pack.levels.Count)
-            {
-                nextLevel = pack.levels[currentIndex + 1];
-                if (nextLevel != null)
-                {
-                    Debug.Log($"[HUDMediator] Found next level in LevelPack: {nextLevel.name}");
-                }
-            }
-
-            if (nextLevel == null)
-            {
-                Debug.Log($"[HUDMediator] Next level not in pack. Generating procedurally for index {nextLevelIndex}...");
-                nextLevel = ProgressionService.GetOrGenerateLevel(nextLevelIndex);
-            }
+            LevelData nextLevel = ProgressionService.GetOrGenerateLevel(nextLevelIndex);
 
             if (nextLevel != null)
             {
@@ -271,12 +253,6 @@ namespace PixelFlow.Views
             {
                 Debug.LogError("[HUDMediator] Failed to load or generate next level! nextLevel is null.");
             }
-        }
-
-        private LevelPack ResolveLevelPack()
-        {
-            if (_fallbackLevelPack != null) return _fallbackLevelPack;
-            return Resources.Load<LevelPack>("Levels/MainLevelPack");
         }
 
         private void HandleHintCountChanged(int count)
@@ -311,7 +287,7 @@ namespace PixelFlow.Views
             View.UpdateStars(stars);
         }
 
-        private Coroutine _returnToHubCoroutine;
+        private Coroutine _continueCoroutine;
 
         private void HandleLevelCompleted(LevelCompletedSignal signal)
         {
@@ -325,23 +301,23 @@ namespace PixelFlow.Views
             View.ShowCompletion(GameSessionModel.Score, GameSessionModel.StarsEarned, title, scoreFormat, starsLabel);
 
             if (View.isActiveAndEnabled)
-                _returnToHubCoroutine = View.StartCoroutine(AutoReturnToHubRoutine());
+                _continueCoroutine = View.StartCoroutine(AutoContinueToNextRoutine());
         }
 
-        private System.Collections.IEnumerator AutoReturnToHubRoutine()
+        private System.Collections.IEnumerator AutoContinueToNextRoutine()
         {
             yield return new WaitForSeconds(3f);
             if (View != null && GameStateModel != null && SignalBus != null
                 && GameStateModel.CurrentState == GameState.LevelCompleted)
             {
-                SignalBus.Fire(new RequestReturnToHubSignal());
+                HandleNextLevelClicked();
             }
         }
 
-        private void HandleReturnToHubClicked()
+        private void HandleContinueClicked()
         {
             if (GameStateModel.CurrentState != GameState.LevelCompleted) return;
-            SignalBus.Fire(new RequestReturnToHubSignal());
+            HandleNextLevelClicked();
         }
 
         private void HandleThemeChanged(ThemeChangedSignal signal)
@@ -352,11 +328,55 @@ namespace PixelFlow.Views
         private void HandleViaductExhausted(ViaductExhaustedSignal signal)
         {
             Debug.Log("[HUDMediator] Viaducts exhausted! Showing crisis prompt.");
+            View.ShowViaductLimitReached($"Viaducts exhausted! ({GameSessionModel.AvailableViaducts} remaining)");
         }
 
         private void HandleCrisisRetryExhausted(CrisisRetryExhaustedSignal signal)
         {
             Debug.Log($"[HUDMediator] Crisis retries exhausted ({signal.RetryCount}). Requesting ad/skip.");
+            View.ShowCrisisRetryExhausted(signal.RetryCount);
+        }
+
+        private void HandlePauseClicked()
+        {
+            if (GameStateModel.CurrentState == GameState.Playing || GameStateModel.CurrentState == GameState.Simulating)
+            {
+                SignalBus.Fire(new PauseSimulationSignal());
+            }
+            else if (GameStateModel.CurrentState == GameState.Paused)
+            {
+                GameStateModel.SetState(GameState.Playing);
+            }
+        }
+
+        private void HandleRetryClicked()
+        {
+            if (GameStateModel.CurrentState != GameState.LevelFailed) return;
+            var currentLevel = LevelModel.CurrentLevel;
+            if (currentLevel != null)
+            {
+                SignalBus.Fire(new LoadLevelSignal { LevelToLoad = currentLevel });
+            }
+            View.HideLevelFailed();
+        }
+
+        private void HandleLevelFailed(LevelFailedSignal signal)
+        {
+            if (!Application.isPlaying) return;
+            if (View == null) return;
+
+            string title = LocalizationService?.GetString("level_failed_title") ?? "Seviye Başarısız!";
+            string retryLabel = LocalizationService?.GetString("level_failed_retry") ?? "Tekrar Dene";
+            string hubLabel = LocalizationService?.GetString("level_failed_hub") ?? "Hub'a Dön";
+            string scoreFormat = LocalizationService?.GetString("level_failed_score_format") ?? "Retry: {0}/3";
+
+            View.ShowLevelFailed($"{title} ({signal.Reason})", scoreFormat, retryLabel, hubLabel);
+        }
+
+        private void HandleLevelFailedContinueClicked()
+        {
+            if (GameStateModel.CurrentState != GameState.LevelFailed) return;
+            View.HideLevelFailed();
         }
 
         private void HandleStateChanged(GameState state)
@@ -367,7 +387,7 @@ namespace PixelFlow.Views
         private void UpdateVisibility()
         {
             var state = GameStateModel.CurrentState;
-            bool isGameplay = state == GameState.Playing || state == GameState.Simulating || state == GameState.Paused || state == GameState.LevelCompleted;
+            bool isGameplay = state == GameState.Playing || state == GameState.Simulating || state == GameState.Paused || state == GameState.LevelCompleted || state == GameState.LevelFailed;
             
             // Do not disable the GameObject itself, as that unregisters the View and destroys the Mediator binding.
             // Instead, disable/enable the Canvas component, or control CanvasGroup alpha/interactivity.

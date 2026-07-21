@@ -146,7 +146,7 @@ namespace PixelFlow.Commands
                 if (currentCell.State == CellState.Obstacle)
                     return;
 
-                if (ObstacleService != null && ObstacleService.IsOneWay(signal.GridPosition, GridModel.ActiveColor.Value, signal.GridPosition - GridModel.LastPosition.Value))
+                if (ObstacleService != null && ObstacleService.IsOneWay(signal.GridPosition, signal.GridPosition - GridModel.LastPosition.Value))
                 {
                     return;
                 }

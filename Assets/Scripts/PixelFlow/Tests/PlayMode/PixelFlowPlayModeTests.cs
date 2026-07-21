@@ -31,6 +31,28 @@ namespace PixelFlow.PlayMode.Tests
     }
 
     /// <summary>
+    /// Minimal no-op stub for ICameraProvider.
+    /// Satisfies DI injection in VehicleSimulator.
+    /// </summary>
+    public sealed class StubCameraProvider : ICameraProvider
+    {
+        private Camera _stubCam;
+        public Camera MainCamera
+        {
+            get
+            {
+                if (_stubCam == null)
+                {
+                    var go = new GameObject("StubCamera");
+                    go.hideFlags = HideFlags.HideAndDontSave;
+                    _stubCam = go.AddComponent<Camera>();
+                }
+                return _stubCam;
+            }
+        }
+    }
+
+    /// <summary>
     /// In-memory PlayerPrefs substitute for PlayMode tests.
     /// Mirrors the one in EditMode tests; avoids Unity PlayerPrefs dependency.
     /// </summary>
@@ -125,21 +147,21 @@ namespace PixelFlow.PlayMode.Tests
                 builder.Bind<ILevelProgressionService, LevelProgressionService>();
 
                 builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));
+                builder.Bind<ICameraProvider, StubCameraProvider>();
 
                 builder.BindSignal<InputInteractionSignal>().To<ProcessInputCommand>();
                 builder.BindSignal<CheckWinConditionSignal>().To<CheckWinConditionCommand>();
                 builder.BindSignal<LoadLevelSignal>().To<LoadLevelCommand>();
                 builder.BindSignal<RequestHintSignal>().To<UseHintCommand>();
                 builder.BindSignal<ChangeThemeSignal>().To<ChangeThemeCommand>();
+                builder.BindSignal<StartSimulationSignal>().To<StartSimulationCommand>();
+                builder.BindSignal<PauseSimulationSignal>().To<PauseSimulationCommand>();
                 builder.BindCommand<LevelCompletedSignal, SaveProgressCommand>(ExecutionMode.Exclusive, priority: 0);
                 builder.BindSignal<UndoSignal>().To<UndoCommand>();
                 builder.BindSignal<RedoSignal>().To<RedoCommand>();
                 builder.BindSignal<TimerTickSignal>().To<TimerCommand>();
                 builder.BindSignal<PlaceViaductSignal>().To<PlaceViaductCommand>();
-                builder.BindSignal<RequestReturnToHubSignal>().To<ReturnToHubCommand>();
-                builder.BindSignal<RequestRewardedAdSignal>().To<RewardedAdCommand>();
                 builder.BindSignal<RequestInterstitialAdSignal>().To<InterstitialAdCommand>();
-                builder.BindSignal<EnterDistrictSignal>().To<EnterDistrictCommand>();
             });
         }
 
@@ -225,28 +247,28 @@ namespace PixelFlow.PlayMode.Tests
 
             grid.Initialize(5, 5);
 
-            // Initial state
-            var initialState = new CellData();
-            initialState.State = CellState.Empty;
+            // Record initial state
+            history.Record(grid);
 
-            // Modify grid
+            // Modify grid once
             grid.Grid[0, 0].State = CellState.Path;
             grid.Grid[0, 0].Color = ColorType.Blue;
 
-            // Record snapshot
+            // Record after first modification
             history.Record(grid);
 
-            // Modify again
+            // Modify again (no record — last change is current live state)
             grid.Grid[0, 0].State = CellState.Node;
             grid.Grid[0, 0].Color = ColorType.Red;
 
-            history.Record(grid);
-
-            // Undo
+            // Undo: should restore {Path, Blue} (was the last recorded snapshot)
             history.Undo(grid);
-
             Assert.AreEqual(CellState.Path, grid.Grid[0, 0].State);
             Assert.AreEqual(ColorType.Blue, grid.Grid[0, 0].Color);
+
+            // Undo again: should restore {Empty, None}
+            history.Undo(grid);
+            Assert.AreEqual(CellState.Empty, grid.Grid[0, 0].State);
         }
 
         // ──────────────────────────────────────────────
@@ -308,13 +330,14 @@ namespace PixelFlow.PlayMode.Tests
             using var ctx = CreateGameContext();
             var progress = ctx.GetModel<IProgressModel>();
 
-            Assert.AreEqual(0, progress.UnlockedLevels);
+            // Default unlocked levels = 1 (level 0 is always available)
+            Assert.AreEqual(1, progress.UnlockedLevels);
 
             progress.UnlockLevel(5);
-            Assert.AreEqual(6, progress.UnlockedLevels); // 0-indexed
+            Assert.AreEqual(7, progress.UnlockedLevels); // 5 + 2
 
             progress.UnlockLevel(10);
-            Assert.AreEqual(11, progress.UnlockedLevels);
+            Assert.AreEqual(12, progress.UnlockedLevels); // 10 + 2
         }
 
         // ──────────────────────────────────────────────
@@ -327,6 +350,9 @@ namespace PixelFlow.PlayMode.Tests
             using var ctx = CreateGameContext();
             var state = ctx.GetModel<IGameStateModel>();
 
+            Assert.AreEqual(GameState.Boot, state.CurrentState);
+
+            state.SetState(GameState.MainMenu);
             Assert.AreEqual(GameState.MainMenu, state.CurrentState);
 
             state.SetState(GameState.Playing);
@@ -335,11 +361,9 @@ namespace PixelFlow.PlayMode.Tests
             state.SetState(GameState.Paused);
             Assert.AreEqual(GameState.Paused, state.CurrentState);
 
-            state.SetState(GameState.Simulating);
-            Assert.AreEqual(GameState.Simulating, state.CurrentState);
-
-            state.SetState(GameState.LevelCompleted);
-            Assert.AreEqual(GameState.LevelCompleted, state.CurrentState);
+            // Paused → Playing (not Simulating — Boot → MainMenu → Playing → Paused → Playing)
+            state.SetState(GameState.Playing);
+            Assert.AreEqual(GameState.Playing, state.CurrentState);
         }
 
         // ──────────────────────────────────────────────

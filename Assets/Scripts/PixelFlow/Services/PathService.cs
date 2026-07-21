@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using PixelFlow.Models;
 using PixelFlow.Data;
@@ -11,6 +12,62 @@ namespace PixelFlow.Services
     {
         [Inject] public IGridModel GridModel { get; set; }
         [Inject] public IGameSessionModel GameSessionModel { get; set; }
+
+        /// <summary>
+        /// GDD §4.2: Hedef hücreye belirtilen renkte yol çizilebilir mi kontrolü.
+        /// </summary>
+        public bool CanDrawPath(ColorType color, Vector2Int from, Vector2Int to)
+        {
+            if (GridModel == null) return false;
+            if (to.x < 0 || to.x >= GridModel.Width || to.y < 0 || to.y >= GridModel.Height)
+                return false;
+            var cell = GridModel.Grid[to.x, to.y];
+            // Node hücresi — source ise geçilebilir, değilse sadece eşleşen renkte
+            if (cell.State == CellState.Node)
+            {
+                return cell.Color == ColorType.None || cell.Color == color;
+            }
+            // Obstacle — geçilemez
+            if (cell.State == CellState.Obstacle && cell.ObstacleType != ObstacleType.OneWay)
+                return false;
+            // Max 2 farklı renk kontrolü
+            if (cell.PathColorCount >= 2 && !cell.HasPathColor(color))
+                return false;
+            return true;
+        }
+
+        /// <summary>
+        /// GDD §4.2: Grid üzerine belirtilen renkte yol segmenti çiz.
+        /// </summary>
+        public void DrawPath(ColorType color, Vector2Int from, Vector2Int to)
+        {
+            if (GridModel == null) return;
+            if (!GridModel.Paths.ContainsKey(color))
+                GridModel.Paths[color] = new List<Vector2Int>();
+            var path = GridModel.Paths[color];
+            if (path.Count == 0 || path[^1] != from)
+            {
+                if (!path.Contains(from))
+                    path.Add(from);
+            }
+            if (!path.Contains(to))
+                path.Add(to);
+
+            var cell = GridModel.Grid[to.x, to.y];
+            cell.AddPathColor(color);
+            if (cell.State == CellState.Empty)
+            {
+                cell.State = CellState.Path;
+                cell.Color = color;
+            }
+        }
+
+        public List<Vector2Int> GetPathCells(ColorType color)
+        {
+            if (GridModel == null || !GridModel.Paths.ContainsKey(color))
+                return new List<Vector2Int>();
+            return new List<Vector2Int>(GridModel.Paths[color]);
+        }
 
         /// <summary>
         /// Clears a single cell's path data for the given color, handles viaduct refund

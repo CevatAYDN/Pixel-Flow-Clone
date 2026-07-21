@@ -25,13 +25,25 @@ namespace PixelFlow.Views
         public event Action OnCloseClicked;
         public event Action<int> OnStartCrisisClicked;
 
-        private void Awake()
+        protected override void OnBind(IContext context)
         {
+            base.OnBind(context);
             if (_closeButton != null) _closeButton.onClick.AddListener(() => OnCloseClicked?.Invoke());
             if (_easyButton != null) _easyButton.onClick.AddListener(() => OnStartCrisisClicked?.Invoke(0));
             if (_mediumButton != null) _mediumButton.onClick.AddListener(() => OnStartCrisisClicked?.Invoke(1));
             if (_hardButton != null) _hardButton.onClick.AddListener(() => OnStartCrisisClicked?.Invoke(2));
         }
+
+        protected override void OnUnbind()
+        {
+            base.OnUnbind();
+            if (_closeButton != null) _closeButton.onClick.RemoveAllListeners();
+            if (_easyButton != null) _easyButton.onClick.RemoveAllListeners();
+            if (_mediumButton != null) _mediumButton.onClick.RemoveAllListeners();
+            if (_hardButton != null) _hardButton.onClick.RemoveAllListeners();
+        }
+
+        private void Awake() { } // UI init only; bindings moved to OnBind
 
         public void Show()
         {

@@ -44,6 +44,7 @@ namespace PixelFlow.Editor.Tests
                 builder.BindService<ISaveThrottler, SaveThrottler>();
                 builder.Bind<IFeedbackService, FeedbackService>();
                 builder.Bind<Nexus.Core.Services.IAudioService, StubAudioService>();
+                builder.Bind<ICameraProvider, StubCameraProvider>();
             });
 
             _grid = _ctx.GetModel<IGridModel>();

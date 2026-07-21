@@ -115,7 +115,7 @@ namespace PixelFlow
                                 GridStateSerializer.ApplyToGrid(saved, _gridModel);
                                 GridStateSerializer.EnsureInitialNodesOnGrid(level, _gridModel);
                                 _sessionModel.ApplySave(saved.availableViaducts, saved.maxViaducts,
-                                    saved.elapsedTime, saved.score, saved.stars);
+                                    saved.elapsedTime, saved.score, saved.stars, saved.levelIndex);
 
                                 var obstacleService = nexusRoot.Context.Container.Resolve<IObstacleService>();
                                 obstacleService?.InitializeFromLevel(level);
@@ -142,9 +142,9 @@ namespace PixelFlow
                 }
             }
 
-            // İlk çalıştırma veya save bozuk → Hub'a gir.
-            _loggerService?.Log("[PixelFlow] No valid save file found — entering Hub (MainMenu).");
-            EnterHub();
+            // İlk çalıştırma veya save bozuk → doğrudan Playing state'e geç, ilk level'ı yükle.
+            _loggerService?.Log("[PixelFlow] No valid save file found — loading initial level directly.");
+            EnterPlaying();
         }
 
         private void OnApplicationPause(bool pause)
@@ -180,7 +180,7 @@ namespace PixelFlow
             }
         }
 
-        private void EnterHub()
+        private void EnterPlaying()
         {
             if (initialLevel == null) initialLevel = ResolveInitialLevel();
             if (initialLevel != null)
@@ -188,8 +188,8 @@ namespace PixelFlow
                 _levelModel.SetLevel(initialLevel);
                 GridStateSerializer.ApplyToGrid(BuildFreshGridForLevel(initialLevel), _gridModel);
             }
-            _stateModel.SetState(GameState.MainMenu);
-            _signalBus.Fire(new EnterHubSignal());
+            _stateModel.SetState(GameState.Playing);
+            _signalBus.Fire(new LoadedInitialLevelSignal());
         }
 
         private GridStateSerializer.GridSaveData BuildFreshGridForLevel(LevelData level)

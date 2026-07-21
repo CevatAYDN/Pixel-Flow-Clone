@@ -34,6 +34,7 @@ namespace PixelFlow.Services
         [Inject] public IObstacleService ObstacleService { get; set; }
         [Inject] public ISettingsModel SettingsModel { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject] public ICameraProvider CamProvider { get; set; }
 
         private class VehicleInstance
         {
@@ -84,6 +85,7 @@ namespace PixelFlow.Services
         private const float MaxProgressPerFrame = 0.25f;
         private ISignalSubscription _undoSubscription;
         private ISignalSubscription _redoSubscription;
+        private ISignalSubscription _levelFailedSubscription;
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
@@ -111,6 +113,13 @@ namespace PixelFlow.Services
             _undoSubscription = SignalBus.Subscribe<UndoSignal>(sig => ClearAllVehicles());
             _redoSubscription = SignalBus.Subscribe<RedoSignal>(sig => ClearAllVehicles());
 
+            // GDD §8: LevelFailed sinyalini dinle — state geçişi ve temizlik
+            _levelFailedSubscription = SignalBus.Subscribe<LevelFailedSignal>(sig =>
+            {
+                ClearAllVehicles();
+                GameStateModel.SetState(GameState.LevelFailed);
+            });
+
             return default;
         }
 
@@ -137,6 +146,7 @@ namespace PixelFlow.Services
                 GameStateModel.OnStateChanged -= HandleStateChanged;
             _undoSubscription?.Dispose();
             _redoSubscription?.Dispose();
+            _levelFailedSubscription?.Dispose();
             ClearAllVehicles();
         }
 
@@ -161,7 +171,7 @@ namespace PixelFlow.Services
                 // ClearAllVehicles() kaldırıldı - araçlar yok edilmeden pürüzsüzce hayaletten katı moda geçecek
                 Debug.Log("[VehicleSimulator] Simulation Phase started. All vehicles now transition to solid.");
             }
-            else if (state == GameState.MainMenu || state == GameState.LevelCompleted)
+            else if (state == GameState.MainMenu || state == GameState.LevelCompleted || state == GameState.LevelFailed)
             {
                 ClearAllVehicles();
             }
@@ -305,8 +315,12 @@ namespace PixelFlow.Services
                     _vehicleContainer.SetParent(_cachedGridView.transform, false);
             }
 
+            if (_cachedGridView == null)
+                _cachedGridView = UnityEngine.Object.FindAnyObjectByType<GridView>();
+            Transform parentTransform = _cachedGridView != null ? _cachedGridView.transform : _vehicleContainer;
+
             GameObject visual = new GameObject($"V_{color}");
-            visual.transform.SetParent(_vehicleContainer);
+            visual.transform.SetParent(parentTransform);
 
             VehicleStyle vehicleStyle = SettingsModel != null ? SettingsModel.CurrentVehicleStyle : (VehicleStyle)PlayerPrefs.GetInt("VehicleStyle", 0);
             
@@ -957,7 +971,7 @@ namespace PixelFlow.Services
             GridModel.CrashColorA.Value = colorA;
             GridModel.CrashColorB.Value = colorB;
 
-            var camCtrl = UnityEngine.Object.FindAnyObjectByType<CameraController>();
+            var camCtrl = CamProvider?.MainCamera?.GetComponent<CameraController>();
             if (camCtrl != null)
             {
                 camCtrl.FocusOnCrash(crashPos);

@@ -2,16 +2,11 @@ using UnityEngine;
 
 namespace PixelFlow.Signals
 {
-    public struct EnterHubSignal { }
-
-    public struct RequestReturnToHubSignal { }
-
-    public struct ReturnToPuzzleSignal { }
-
-    public struct EnterDistrictSignal
-    {
-        public int DistrictIndex;
-    }
+    /// <summary>
+    /// Fired by GameBootstrapper after splash screen completes and initial level is loaded.
+    /// Puzzle Mediators (GridMediator, HUDMediator) react to this to begin gameplay.
+    /// </summary>
+    public struct LoadedInitialLevelSignal { }
 
     public struct RequestRewardedAdSignal
     {

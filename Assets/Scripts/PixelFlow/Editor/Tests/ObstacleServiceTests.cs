@@ -75,9 +75,9 @@ namespace PixelFlow.Editor.Tests
             };
             _obstacle.InitializeFromLevel(CreateLevelWithObstacles(new List<ObstacleData>(), oneWayCells));
             // Going left is blocked (wrong direction for right-only)
-            Assert.IsTrue(_obstacle.IsOneWay(new Vector2Int(1, 0), ColorType.Red, Vector2Int.left));
+            Assert.IsTrue(_obstacle.IsOneWay(new Vector2Int(1, 0), Vector2Int.left));
             // Going right is allowed
-            Assert.IsFalse(_obstacle.IsOneWay(new Vector2Int(1, 0), ColorType.Red, Vector2Int.right));
+            Assert.IsFalse(_obstacle.IsOneWay(new Vector2Int(1, 0), Vector2Int.right));
         }
 
         [Test]
@@ -140,7 +140,7 @@ namespace PixelFlow.Editor.Tests
                 new ObstacleData { position = new Vector2Int(1, 0), type = ObstacleType.Lake }
             };
             _obstacle.InitializeFromLevel(CreateLevelWithObstacles(obstacles));
-            Assert.IsFalse(_obstacle.IsOneWay(new Vector2Int(1, 0), ColorType.Red, Vector2Int.left));
+            Assert.IsFalse(_obstacle.IsOneWay(new Vector2Int(1, 0), Vector2Int.left));
         }
 
         [Test]

@@ -41,7 +41,10 @@ namespace PixelFlow.Services
         public void OnDispose() { }
 
         /// <summary>
-        /// Kriz denemesini kaydeder. 3 denemede interstitial reklam tetikler.
+        /// Kriz denemesini kaydeder. 3 denemede:
+        /// 1. Interstitial reklam tetikler
+        /// 2. CrisisRetryExhaustedSignal fırlatır
+        /// 3. GDD §2.4: LevelFailedSignal fırlatır (3 başarısız deneme = level failed)
         /// Viaduct exhaustion kontrolü içermez — CheckViaductExhaustion() ayrı çağrılır.
         /// </summary>
         public void RecordCrisisAttempt()
@@ -55,6 +58,13 @@ namespace PixelFlow.Services
             {
                 SignalBus?.Fire(new RequestInterstitialAdSignal());
                 SignalBus?.Fire(new CrisisRetryExhaustedSignal { RetryCount = RetryCount });
+
+                // GDD §2.4: 3 ardışık kaza denemesi → LevelFailedSignal
+                SignalBus?.Fire(new LevelFailedSignal
+                {
+                    Reason = FailReason.CrashLimitReached,
+                    RetryCount = RetryCount
+                });
             }
         }
 

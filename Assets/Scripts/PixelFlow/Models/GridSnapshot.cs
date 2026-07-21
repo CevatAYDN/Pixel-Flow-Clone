@@ -194,7 +194,7 @@ namespace PixelFlow.Models
         public void ApplySessionTo(IGameSessionModel session)
         {
             if (!HasSessionState || session == null) return;
-            session.ApplySave(SessionAvailableViaducts, SessionMaxViaducts, SessionElapsedTime, SessionScore, SessionStarsEarned);
+            session.ApplySave(SessionAvailableViaducts, SessionMaxViaducts, SessionElapsedTime, SessionScore, SessionStarsEarned, 0);
         }
     }
 }

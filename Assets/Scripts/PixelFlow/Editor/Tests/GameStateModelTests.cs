@@ -21,6 +21,13 @@ namespace PixelFlow.Editor.Tests
         {
             _ctx = CreateGameContext();
             _state = _ctx.GetModel<IGameStateModel>();
+            // Default state is now Boot (per game plan). Tests needing MainMenu call GoToMainMenu().
+        }
+
+        private void GoToMainMenu()
+        {
+            if (_state.CurrentState == GameState.Boot)
+                _state.SetState(GameState.MainMenu);
         }
 
         [TearDown]
@@ -30,14 +37,22 @@ namespace PixelFlow.Editor.Tests
         }
 
         [Test]
-        public void DefaultState_IsMainMenu()
+        public void DefaultState_IsBoot()
         {
+            Assert.AreEqual(GameState.Boot, _state.CurrentState);
+        }
+
+        [Test]
+        public void SetState_BootToMainMenu_Allowed()
+        {
+            _state.SetState(GameState.MainMenu);
             Assert.AreEqual(GameState.MainMenu, _state.CurrentState);
         }
 
         [Test]
         public void SetState_MainMenuToPlaying_Allowed()
         {
+            GoToMainMenu();
             _state.SetState(GameState.Playing);
             Assert.AreEqual(GameState.Playing, _state.CurrentState);
         }
@@ -45,6 +60,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void SetState_PlayingToPaused_Allowed()
         {
+            GoToMainMenu();
             _state.SetState(GameState.Playing);
             _state.SetState(GameState.Paused);
             Assert.AreEqual(GameState.Paused, _state.CurrentState);
@@ -53,6 +69,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void SetState_PausedToPlaying_Allowed()
         {
+            GoToMainMenu();
             _state.SetState(GameState.Playing);
             _state.SetState(GameState.Paused);
             _state.SetState(GameState.Playing);
@@ -62,6 +79,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void SetState_PlayingToSimulating_Allowed()
         {
+            GoToMainMenu();
             _state.SetState(GameState.Playing);
             _state.SetState(GameState.Simulating);
             Assert.AreEqual(GameState.Simulating, _state.CurrentState);
@@ -70,6 +88,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void SetState_SimulatingToLevelCompleted_Allowed()
         {
+            GoToMainMenu();
             _state.SetState(GameState.Playing);
             _state.SetState(GameState.Simulating);
             _state.SetState(GameState.LevelCompleted);
@@ -79,6 +98,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void SetState_MainMenuToLevelCompleted_Blocked()
         {
+            GoToMainMenu();
             LogAssert.Expect(LogType.Error, "[GameStateModel] Illegal transition: MainMenu \u2192 LevelCompleted. Blocked.");
             _state.SetState(GameState.LevelCompleted);
             Assert.AreEqual(GameState.MainMenu, _state.CurrentState,
@@ -88,6 +108,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void SetState_PlayingToLevelCompleted_Allowed()
         {
+            GoToMainMenu();
             _state.SetState(GameState.Playing);
             _state.SetState(GameState.LevelCompleted);
             Assert.AreEqual(GameState.LevelCompleted, _state.CurrentState);
@@ -96,6 +117,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void SetState_PreviousState_TracksLastState()
         {
+            GoToMainMenu();
             _state.SetState(GameState.Playing);
             Assert.AreEqual(GameState.MainMenu, _state.PreviousState);
             _state.SetState(GameState.Simulating);
@@ -105,8 +127,8 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void PreviousState_EqualsCurrent_AfterFirstSetState()
         {
-            _state.SetState(GameState.Playing);
-            Assert.AreEqual(GameState.MainMenu, _state.PreviousState);
+            _state.SetState(GameState.MainMenu);
+            Assert.AreEqual(GameState.Boot, _state.PreviousState);
             _state.SetState(GameState.Playing);
             Assert.AreEqual(GameState.Playing, _state.CurrentState);
             Assert.AreEqual(GameState.MainMenu, _state.PreviousState);
@@ -115,6 +137,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void SetState_MainMenuToMainMenu_NoOp()
         {
+            GoToMainMenu();
             _state.SetState(GameState.MainMenu);
             Assert.AreEqual(GameState.MainMenu, _state.CurrentState);
         }
@@ -122,6 +145,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void SetState_MainMenuToSimulating_Blocked()
         {
+            GoToMainMenu();
             LogAssert.Expect(LogType.Error, "[GameStateModel] Illegal transition: MainMenu \u2192 Simulating. Blocked.");
             _state.SetState(GameState.Simulating);
             Assert.AreEqual(GameState.MainMenu, _state.CurrentState,

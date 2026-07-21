@@ -15,50 +15,40 @@ namespace PixelFlow
         {
             // PlayerPrefs servisini singleton olarak bağla; kalıcı state kullanan tüm
             // modeller bunu constructor injection ile alır (test edilebilir).
-            // EncryptedStorageService: AES-256 + HMAC-SHA256 Anti-Cheat Güvenlikli Depolama
             builder.Bind<IPlayerPrefsService, EncryptedStorageService>();
             
-            // Tüm Nexus Core Çekirdek Servisleri (13 Servis Tam Güç Entegrasyonu)
-            builder.BindService<INexusService, FeedbackService>();
-            builder.Bind<IFeedbackService, FeedbackService>();
-            builder.BindService<INexusService, ObjectPoolService>();
-            builder.Bind<IObjectPoolService, ObjectPoolService>();
-            builder.BindService<INexusService, WindowManager>();
-            builder.Bind<IWindowManager, WindowManager>();
-            builder.BindService<INexusService, EconomyService>();
-            builder.Bind<IEconomyService, EconomyService>();
-            builder.BindService<INexusService, ProgressionService>();
-            builder.Bind<IProgressionService, ProgressionService>();
-            builder.BindService<INexusService, TickService>();
-            builder.Bind<ITickService, TickService>();
-            builder.BindService<INexusService, AdService>();
-            builder.Bind<IAdService, AdService>();
-            builder.BindService<INexusService, IapService>();
-            builder.Bind<IIapService, IapService>();
-            builder.BindService<INexusService, AnalyticsService>();
-            builder.Bind<IAnalyticsService, AnalyticsService>();
+            // Tüm Nexus Core Çekirdek Servisleri — BindService ile tek instance
+            // (BindService<> hem INexusService arayüzünü bağlar hem de auto-init kuyruğuna ekler.
+            // Ayrıca Bind<> ile ikinci instance yaratılmasını önlemek için sadece iş arayüzü kullanılır.)
+            builder.BindService<IFeedbackService, FeedbackService>();
+            builder.BindService<IObjectPoolService, ObjectPoolService>();
+            builder.BindService<IWindowManager, WindowManager>();
+            builder.BindService<IEconomyService, EconomyService>();
+            builder.BindService<IProgressionService, ProgressionService>();
+            builder.BindService<ITickService, TickService>();
+            builder.BindService<IAdService, AdService>();
+            builder.BindService<IIapService, IapService>();
+            builder.BindService<IAnalyticsService, AnalyticsService>();
 
             // PixelFlow Özel Servisleri
             builder.BindService<IPathService, PathService>();
             builder.BindService<IGameHistoryService, GameHistoryService>();
             builder.BindService<IVehicleSimulator, VehicleSimulator>();
+            builder.BindService<ICameraProvider, CameraProvider>();
             builder.BindService<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
             builder.BindService<IGameplayTimerService, GameplayTimerService>();
             builder.Bind<ITimeProvider, UnityTimeProvider>();
             builder.BindService<ISaveThrottler, SaveThrottler>();
-            builder.BindService<INexusService, HapticService>();
-            builder.Bind<IHapticService, HapticService>();
-            builder.BindService<INexusService, LoggerService>();
-            builder.Bind<ILoggerService, LoggerService>();
+            builder.BindService<IHapticService, HapticService>();
+            builder.BindService<ILoggerService, LoggerService>();
             builder.BindService<ITutorialDriver, TutorialDriver>();
             builder.BindService<ICrisisAdService, CrisisAdService>();
             builder.BindService<IObstacleService, ObstacleService>();
-            builder.BindService<INexusService, LocalizationService>();
             builder.BindService<ILocalizationService, LocalizationService>();
             builder.Bind<ILocalizationTableProvider, ResourceLocalizationTableProvider>();
             builder.BindService<IDailyCrisisService, DailyCrisisService>();
             builder.Bind<IPathSolver, RuntimePathSolver>();
-            builder.Bind<IHintService, HintService>();
+            builder.BindService<IHintService, HintService>(); // Fixed: was Bind<> now BindService<> for auto-init
             builder.Bind<ILevelProgressionService, LevelProgressionService>();
 
             // Default recovery: 3 retry → skip on failure
@@ -85,10 +75,10 @@ namespace PixelFlow
             builder.BindSignal<PixelFlow.Signals.RedoSignal>().To<PixelFlow.Commands.RedoCommand>();
             builder.BindSignal<PixelFlow.Signals.TimerTickSignal>().To<PixelFlow.Commands.TimerCommand>();
             builder.BindSignal<PixelFlow.Signals.PlaceViaductSignal>().To<PixelFlow.Commands.PlaceViaductCommand>();
-            builder.BindSignal<PixelFlow.Signals.RequestReturnToHubSignal>().To<PixelFlow.Commands.ReturnToHubCommand>();
-            builder.BindSignal<PixelFlow.Signals.RequestRewardedAdSignal>().To<PixelFlow.Commands.RewardedAdCommand>();
             builder.BindSignal<PixelFlow.Signals.RequestInterstitialAdSignal>().To<PixelFlow.Commands.InterstitialAdCommand>();
-            builder.BindSignal<PixelFlow.Signals.EnterDistrictSignal>().To<PixelFlow.Commands.EnterDistrictCommand>();
+            // GDD §8: Yeni MVCS sinyalleri ve command'leri
+            builder.BindSignal<PixelFlow.Signals.StartSimulationSignal>().To<PixelFlow.Commands.StartSimulationCommand>();
+            builder.BindSignal<PixelFlow.Signals.PauseSimulationSignal>().To<PixelFlow.Commands.PauseSimulationCommand>();
         }
 
         public ValueTask OnInitializeAsync(CancellationToken ct) => default;

@@ -24,7 +24,8 @@ namespace PixelFlow.Views
 
         private void HandleSplashComplete()
         {
-            SignalBus?.Fire(new EnterHubSignal());
+            // Splash tamamlandı. GameBootstrapper.Start() EnterPlaying()'i çağıracak.
+            // Herhangi bir signal'a gerek yok — bootstrapper event-driven.
         }
     }
 }

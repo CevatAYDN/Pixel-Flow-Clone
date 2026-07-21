@@ -15,6 +15,7 @@ namespace PixelFlow.Services
     [Mediator(typeof(CameraControllerMediator))]
     public class CameraController : View
     {
+        [Inject] public ICameraProvider CameraProvider { get; set; }
         public IGameStateModel GameStateModel { get; set; }
         public ISignalBus SignalBus { get; set; }
 
@@ -38,7 +39,8 @@ namespace PixelFlow.Services
         private void Awake()
         {
             _cam = GetComponent<Camera>();
-            if (_cam == null) _cam = Camera.main;
+            if (_cam == null)
+                _cam = GetComponentInChildren<Camera>();
         }
 
         protected override void OnBind(IContext context)

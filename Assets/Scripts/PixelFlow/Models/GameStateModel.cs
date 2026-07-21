@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace PixelFlow.Models
 {
-    public enum GameState { MainMenu, Playing, Simulating, Paused, LevelCompleted }
+    public enum GameState { Boot, Loading, MainMenu, Playing, Simulating, Paused, LevelCompleted, LevelFailed }
 
     public interface IGameStateModel
     {
@@ -26,11 +26,20 @@ namespace PixelFlow.Models
         private static readonly HashSet<(GameState from, GameState to)> AllowedTransitions = new HashSet<(GameState, GameState)>
         {
             // Same-state (no-op)
+            (GameState.Boot, GameState.Boot),
+            (GameState.Loading, GameState.Loading),
             (GameState.MainMenu, GameState.MainMenu),
             (GameState.Playing, GameState.Playing),
             (GameState.Simulating, GameState.Simulating),
             (GameState.Paused, GameState.Paused),
             (GameState.LevelCompleted, GameState.LevelCompleted),
+            (GameState.LevelFailed, GameState.LevelFailed),
+            // Boot → Loading → MainMenu
+            (GameState.Boot, GameState.Loading),
+            (GameState.Loading, GameState.MainMenu),
+            // Direct Boot → Playing (saved game restore) and Boot → MainMenu (fresh start)
+            (GameState.Boot, GameState.MainMenu),
+            (GameState.Boot, GameState.Playing),
             // Hub → Gameplay
             (GameState.MainMenu, GameState.Playing),
             // Playing ↔ Paused
@@ -53,6 +62,12 @@ namespace PixelFlow.Models
             // LevelCompleted → Hub or next level
             (GameState.LevelCompleted, GameState.MainMenu),
             (GameState.LevelCompleted, GameState.Playing),
+            // LevelFailed transitions (GDD §2.4)
+            (GameState.Playing, GameState.LevelFailed),
+            (GameState.Paused, GameState.LevelFailed),
+            (GameState.Simulating, GameState.LevelFailed),
+            (GameState.LevelFailed, GameState.MainMenu),
+            (GameState.LevelFailed, GameState.Playing),
         };
 
         public void SetState(GameState state)

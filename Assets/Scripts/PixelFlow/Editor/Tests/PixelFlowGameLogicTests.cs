@@ -1549,7 +1549,7 @@ namespace PixelFlow.Editor.Tests
             GridStateSerializer.Save(grid, session, level);
             var loaded = GridStateSerializer.Load();
             Assert.IsNotNull(loaded);
-            session.ApplySave(loaded.availableViaducts, loaded.maxViaducts, loaded.elapsedTime, loaded.score, loaded.stars);
+            session.ApplySave(loaded.availableViaducts, loaded.maxViaducts, loaded.elapsedTime, loaded.score, loaded.stars, 0);
             Assert.AreEqual(0, session.RetryCount, "RetryCount should reset on new level load");
         }
     }

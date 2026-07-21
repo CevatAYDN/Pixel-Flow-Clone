@@ -5,7 +5,45 @@ namespace PixelFlow.Data
 {
     public enum ColorType { None, Red, Green, Blue, Yellow, Orange, Purple, Cyan, Magenta }
 
+    /// <summary>GDD §3.2: Renk körü güvenli çift kodlama için şekil tipleri.</summary>
+    public enum ShapeType { Circle, Triangle, Square, Diamond, Star }
+
+    /// <summary>GDD §3.1: Düğüm fonksiyonel tipleri.</summary>
+    public enum NodeType { Home, Office, Hospital, School, Park, Mall }
+
+    /// <summary>GDD §3.1: Orthogonal yönler.</summary>
+    public enum Direction { Up, Down, Left, Right }
+
+    /// <summary>GDD §3.5: Engel tipleri.</summary>
     public enum ObstacleType { None, Construction, Lake, Park, OneWay, Ferry, NarrowPass }
+
+    /// <summary>GDD §5.1: Kazanma koşulu tipleri.</summary>
+    public enum WinConditionType { FlowScoreThreshold, FullGridCoverage }
+
+    /// <summary>GDD §2.4: Kaza çözüm stratejileri.</summary>
+    public enum ViaductResolution { Reroute, OneWay, Viaduct }
+
+    /// <summary>GDD §2.4: Kriz paneli seçenekleri.</summary>
+    public enum CrisisChoice { Undo, Viaduct }
+
+    /// <summary>GDD §8: Tutorial olay tipleri.</summary>
+    public enum TutorialEvent { None, CrashIntro, ViaductIntro, OneWayIntro, ObstacleIntro }
+
+    /// <summary>GDD §3.5: Yıldız kriterleri (string ifadeler).</summary>
+    [System.Serializable]
+    public struct StarCriteria
+    {
+        public string OneStar;
+        public string TwoStars;
+        public string ThreeStars;
+
+        public static StarCriteria Default => new StarCriteria
+        {
+            OneStar = "complete",
+            TwoStars = "viaducts_used <= 2",
+            ThreeStars = "viaducts_used == 0"
+        };
+    }
 
     /// <summary>
     /// GDD §9.4: Tamamen bloklanmış, çizilemez hücreler.
@@ -35,6 +73,14 @@ namespace PixelFlow.Data
     {
         public Vector2Int position;
         public ColorType color;
+        /// <summary>GDD §3.2: Renk körü güvenli çift kodlama için şekil.</summary>
+        public ShapeType shape;
+        /// <summary>GDD §3.1: Düğüm tipi (Home/Office/Hospital/School/Park/Mall).</summary>
+        public NodeType type;
+        /// <summary>GDD §3.4: true = kaynak (ev), false = hedef.</summary>
+        public bool isSource;
+        /// <summary>GDD §3.4: Aynı renkteki çiftin indeksi (0-based).</summary>
+        public int pairIndex;
     }
 
     [System.Serializable]
@@ -68,6 +114,12 @@ namespace PixelFlow.Data
         [Tooltip("Simülasyon başına Flow Score eşik değeri. İlk çalıştırmada bu değere ulaşılınca kazanılır. " +
                  "Faz 1: 3-5, Faz 2: 6-10, Faz 3: 12-18, Faz 4: 18-30.")]
         public int flowScoreThreshold = 5;
+
+        [Header("Yıldız Kriterleri (GDD §3.5)")]
+        public StarCriteria stars = StarCriteria.Default;
+
+        [Header("Tutorial (GDD §8)")]
+        public TutorialEvent tutorialEvent = TutorialEvent.None;
 
         [Header("Engeller (GDD §9.4)")]
         public List<ObstacleData> obstacles = new List<ObstacleData>();

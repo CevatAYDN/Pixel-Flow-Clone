@@ -11,7 +11,7 @@ namespace PixelFlow.Services
 {
     public interface IObstacleService
     {
-        bool IsOneWay(Vector2Int cell, ColorType color, Vector2Int moveDir);
+        bool IsOneWay(Vector2Int cell, Vector2Int moveDir);
         bool IsFerryBlocked(Vector2Int cell);
         bool IsNarrowPass(Vector2Int cell);
         bool CanVehicleEnterNarrowPass(Vector2Int cell, ColorType color);
@@ -129,7 +129,7 @@ namespace PixelFlow.Services
             }
         }
 
-        public bool IsOneWay(Vector2Int cell, ColorType color, Vector2Int moveDir)
+        public bool IsOneWay(Vector2Int cell, Vector2Int moveDir)
         {
             if (!_oneWayDirs.TryGetValue(cell, out var allowedDir)) return false;
             if (allowedDir == Vector2Int.zero) return false;

@@ -1,6 +1,7 @@
 using Nexus.Core;
 using PixelFlow.Models;
 using PixelFlow.Signals;
+using PixelFlow.Services;
 using UnityEngine;
 
 namespace PixelFlow.Views
@@ -13,6 +14,7 @@ namespace PixelFlow.Views
     public class ThemeHandlerMediator : Mediator<ThemeHandlerView>
     {
         [Inject] public ISettingsModel SettingsModel { get; set; }
+        [Inject] public ICameraProvider CameraProvider { get; set; }
 
         protected override void OnBind()
         {
@@ -27,7 +29,7 @@ namespace PixelFlow.Views
 
         private void ApplyTheme(AppTheme theme)
         {
-            Camera cam = Camera.main;
+            Camera cam = CameraProvider?.MainCamera;
             if (cam == null) return;
 
             switch (theme)

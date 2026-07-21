@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Nexus.Core;
 using PixelFlow.Models;
 using PixelFlow.Data;
+using PixelFlow.Services;
 
 namespace PixelFlow.Views
 {
@@ -16,6 +17,9 @@ namespace PixelFlow.Views
         [SerializeField] private CellView _cellPrefab;
         [SerializeField] private Transform _gridContainer;
 
+        [Inject] public ICameraProvider CameraProvider { get; set; }
+
+        private Camera _cam;
         private CellView[,] _cells;
         private List<CellView> _instantiatedCells = new List<CellView>();
         private Queue<CellView> _cellPool = new Queue<CellView>();
@@ -26,17 +30,13 @@ namespace PixelFlow.Views
         private Vector2Int _lastGridPos = new Vector2Int(-1, -1);
         private int _activePointerId = -1;
 
-        // Camera.main her frame FindObjectByType çağırır (yavaş). Scene boyunca değişmediği
-        // için bir kez çözüp cache'liyoruz. Kamera yoksa fallback olarak Update'te tekrar deneriz.
-        private Camera _cachedCamera;
         private float _targetZoom;
-        private const float MinZoom = 2f;
+        private const float MinZoom = 8f;
         private const float MaxZoom = 12f;
 
         private void Awake()
         {
             UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Enable();
-            _cachedCamera = Camera.main;
         }
 
         private void Update()
@@ -54,11 +54,10 @@ namespace PixelFlow.Views
 
             if (isPressed)
             {
-                // Only respond to the pointer that started the interaction (multi-touch guard)
                 if (_isPointerDown && pointerId != _activePointerId) return;
 
-                if (_cachedCamera == null) _cachedCamera = Camera.main;
-                var cam = _cachedCamera;
+                if (_cam == null) _cam = CameraProvider?.MainCamera;
+                var cam = _cam;
                 if (cam != null)
                 {
                     Vector3 worldPos = cam.ScreenToWorldPoint(screenPos);
@@ -115,7 +114,6 @@ namespace PixelFlow.Views
             }
             else
             {
-                // Only release if this is the tracked pointer
                 if (_isPointerDown && pointerId == _activePointerId)
                 {
                     _isPointerDown = false;
@@ -151,7 +149,6 @@ namespace PixelFlow.Views
         {
             UnityEngine.Debug.Log($"[GridView] InitializeGrid called with {width}x{height}");
 
-            // Deactivate and return all previously used cells to the pool
             if (_cells != null)
             {
                 for (int x = 0; x < _cells.GetLength(0); x++)
@@ -167,7 +164,6 @@ namespace PixelFlow.Views
                 }
             }
 
-            // Clean up any path lines from previous level to prevent memory/asset leaks
             foreach (var kvp in _pathLines)
             {
                 if (kvp.Value != null)
@@ -214,9 +210,6 @@ namespace PixelFlow.Views
             UpdatePathVisuals(paths, gridData);
         }
 
-        /// <summary>
-        /// Sadece belirtilen hücrelerin görselini günceller. Tüm grid'i yeniden çizmez.
-        /// </summary>
         public void UpdateDifferential(CellData[,] gridData, AppTheme theme, HashSet<Vector2Int> changedCells, Vector2Int crashPos = default)
         {
             if (_cells == null || changedCells == null) return;
@@ -235,7 +228,6 @@ namespace PixelFlow.Views
         {
             if (paths == null) return;
 
-            // Önce kaldırılan renkleri bul ve gizle
             foreach (var prevColor in _previousPathColors)
             {
                 if (!paths.ContainsKey(prevColor) && _pathLines.TryGetValue(prevColor, out var oldLr))
@@ -317,7 +309,6 @@ namespace PixelFlow.Views
                 }
             }
 
-            // Güncel path renklerini kaydet
             _previousPathColors.Clear();
             foreach (var kvp in paths)
             {
@@ -341,21 +332,14 @@ namespace PixelFlow.Views
                 }
             }
             _pathLines.Clear();
-            // Kamera referansı serbest bırak.
-            _cachedCamera = null;
         }
 
-        /// <summary>
-        /// View üzerinden kamera konumlandırma. Kamera referansı burada cache'lenir;
-        /// her çağrıda FindObjectByType tetiklenmez. Null gelirse kamera yok demektir,
-        /// sonraki çağrıda tekrar denenir (fallback).
-        /// </summary>
-        public Camera GetCachedCamera() => _cachedCamera;
+        public Camera GetCachedCamera() => _cam ?? (_cam = CameraProvider?.MainCamera);
 
         public void CenterCamera(int width, int height)
         {
-            if (_cachedCamera == null) _cachedCamera = Camera.main;
-            var cam = _cachedCamera;
+            if (_cam == null) _cam = CameraProvider?.MainCamera;
+            var cam = _cam;
             if (cam == null) return;
 
             float cx = (width - 1) * 0.5f;
@@ -368,7 +352,6 @@ namespace PixelFlow.Views
             float hSize = (height + padding) * 0.5f;
             float wSize = (width + padding) * 0.5f / aspect;
 
-            // Dikey modda HUD'un grid'i kapatmaması için dikey padding ekle.
             if (aspect < 1f)
             {
                 hSize += 1.5f;
@@ -383,8 +366,8 @@ namespace PixelFlow.Views
             var touches = UnityEngine.InputSystem.EnhancedTouch.Touch.activeTouches;
             if (touches.Count < 2) return;
 
-            if (_cachedCamera == null) _cachedCamera = Camera.main;
-            if (_cachedCamera == null || !_cachedCamera.orthographic) return;
+            if (_cam == null) _cam = CameraProvider?.MainCamera;
+            if (_cam == null || !_cam.orthographic) return;
 
             var t0 = touches[0];
             var t1 = touches[1];
@@ -399,7 +382,7 @@ namespace PixelFlow.Views
 
             float zoomFactor = prevDist / currDist;
             _targetZoom = Mathf.Clamp(_targetZoom * zoomFactor, MinZoom, MaxZoom);
-            _cachedCamera.orthographicSize = Mathf.Lerp(_cachedCamera.orthographicSize, _targetZoom, 0.3f);
+            _cam.orthographicSize = Mathf.Lerp(_cam.orthographicSize, _targetZoom, 0.3f);
         }
     }
 }

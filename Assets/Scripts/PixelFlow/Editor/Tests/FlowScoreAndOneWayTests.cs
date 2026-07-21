@@ -63,12 +63,12 @@ namespace PixelFlow.Editor.Tests
 
             // GDD §2.7: IsOneWay, moveDir izin verilen yönün tersi/farklısı ise restriction olarak true döner
             // Yukarı gitmek serbest (IsOneWay restricted = false), aşağı gitmek bloklu (IsOneWay restricted = true)
-            Assert.IsFalse(_obstacles.IsOneWay(new Vector2Int(2, 2), ColorType.Red, Vector2Int.up));
-            Assert.IsTrue(_obstacles.IsOneWay(new Vector2Int(2, 2), ColorType.Red, Vector2Int.down));
+            Assert.IsFalse(_obstacles.IsOneWay(new Vector2Int(2, 2), Vector2Int.up));
+            Assert.IsTrue(_obstacles.IsOneWay(new Vector2Int(2, 2), Vector2Int.down));
             
             Assert.AreEqual(Vector2Int.up, _obstacles.GetOneWayDirection(new Vector2Int(2, 2)));
             // OneWay olmayan normal hücrede restriction false dönmeli
-            Assert.IsFalse(_obstacles.IsOneWay(new Vector2Int(0, 0), ColorType.Red, Vector2Int.up));
+            Assert.IsFalse(_obstacles.IsOneWay(new Vector2Int(0, 0), Vector2Int.up));
         }
 
         [Test]
@@ -85,10 +85,10 @@ namespace PixelFlow.Editor.Tests
             _obstacles.InitializeFromLevel(level);
 
             // (2, 2) hücresine sağa doğru (Vector2Int.right) hareket etmek kısıtlanmamalı (false dönmeli)
-            Assert.IsFalse(_obstacles.IsOneWay(new Vector2Int(2, 2), ColorType.Red, Vector2Int.right));
+            Assert.IsFalse(_obstacles.IsOneWay(new Vector2Int(2, 2), Vector2Int.right));
 
             // (2, 2) hücresine sola doğru (Vector2Int.left) gitmeye çalışmak kısıtlanmalı (true dönmeli)
-            Assert.IsTrue(_obstacles.IsOneWay(new Vector2Int(2, 2), ColorType.Red, Vector2Int.left));
+            Assert.IsTrue(_obstacles.IsOneWay(new Vector2Int(2, 2), Vector2Int.left));
         }
     }
 }

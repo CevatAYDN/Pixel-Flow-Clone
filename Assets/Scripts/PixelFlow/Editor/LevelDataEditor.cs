@@ -16,6 +16,12 @@ namespace PixelFlow.Editor
         private ColorType _currentColor = ColorType.Red;
         private ObstacleType _currentObstacleType = ObstacleType.Construction;
         private Vector2Int _currentOneWayDirection = Vector2Int.right;
+        // GDD §3.2, §3.4: GridNode editör default değerleri
+        private ShapeType _currentShape = ShapeType.Circle;
+        private NodeType _currentNodeType = PixelFlow.Data.NodeType.Home;
+        private bool _currentIsSource = true;
+        private int _currentPairIndex = 0;
+        private bool _showNodeProperties = false;
         
         private LevelData _data;
         private Vector2Int _lastPaintedCell = new Vector2Int(-1, -1);
@@ -74,6 +80,17 @@ namespace PixelFlow.Editor
             int newViaductLimit = EditorGUILayout.IntSlider("Viaduct Limit", _data.viaductLimit, 0, 10);
             int newFlowThreshold = EditorGUILayout.IntSlider("Flow Score Target", _data.flowScoreThreshold, 1, 50);
             bool newCoverage = EditorGUILayout.Toggle("Require Full Grid Coverage", _data.requireFullGridCoverage);
+
+            // GDD §3.5: Yıldız Kriterleri ve Tutorial Event
+            GUILayout.Space(5);
+            GUILayout.Label("Star Criteria & Tutorial (GDD §3.5, §8)", EditorStyles.boldLabel);
+            EditorGUI.indentLevel++;
+            string new1Star = EditorGUILayout.TextField("1 Star Criteria", _data.stars.OneStar);
+            string new2Star = EditorGUILayout.TextField("2 Stars Criteria", _data.stars.TwoStars);
+            string new3Star = EditorGUILayout.TextField("3 Stars Criteria", _data.stars.ThreeStars);
+            TutorialEvent newTutorial = (TutorialEvent)EditorGUILayout.EnumPopup("Tutorial Event", _data.tutorialEvent);
+            EditorGUI.indentLevel--;
+
             if (EditorGUI.EndChangeCheck())
             {
                 Undo.RecordObject(_data, "Change Level Settings");
@@ -83,6 +100,8 @@ namespace PixelFlow.Editor
                 _data.viaductLimit = newViaductLimit;
                 _data.flowScoreThreshold = newFlowThreshold;
                 _data.requireFullGridCoverage = newCoverage;
+                _data.stars = new StarCriteria { OneStar = new1Star, TwoStars = new2Star, ThreeStars = new3Star };
+                _data.tutorialEvent = newTutorial;
                 _requireFullGridCoverage = newCoverage;
                 SanitizeGridBounds();
                 EditorUtility.SetDirty(_data);
@@ -159,6 +178,21 @@ namespace PixelFlow.Editor
                 else if (newIndex == 2) _currentOneWayDirection = Vector2Int.up;
                 else if (newIndex == 3) _currentOneWayDirection = Vector2Int.down;
                 GUILayout.Space(5);
+            }
+
+            // GDD §3.2, §3.4: Node Properties panel (sadece Node modunda)
+            if (_currentMode == EditMode.Node)
+            {
+                _showNodeProperties = EditorGUILayout.Foldout(_showNodeProperties, "Node Properties (GDD §3.2-3.4)");
+                if (_showNodeProperties)
+                {
+                    EditorGUI.indentLevel++;
+                    _currentShape = (ShapeType)EditorGUILayout.EnumPopup("Shape", _currentShape);
+                    _currentNodeType = (PixelFlow.Data.NodeType)EditorGUILayout.EnumPopup("Node Type", _currentNodeType);
+                    _currentIsSource = EditorGUILayout.Toggle("Is Source", _currentIsSource);
+                    _currentPairIndex = EditorGUILayout.IntField("Pair Index", _currentPairIndex);
+                    EditorGUI.indentLevel--;
+                }
             }
 
             // Color Selector (Horizontal Palette)
@@ -543,6 +577,17 @@ namespace PixelFlow.Editor
             }
             else if (_currentMode == EditMode.Node)
             {
+                // GDD §3.2-3.4: Varolan node property'lerini silmeden ÖNCE oku
+                var existing = _data.initialNodes.Find(n => n.position == pos);
+                if (existing.color != ColorType.None)
+                {
+                    _currentColor = existing.color;
+                    _currentShape = existing.shape;
+                    _currentNodeType = existing.type;
+                    _currentIsSource = existing.isSource;
+                    _currentPairIndex = existing.pairIndex;
+                }
+
                 _data.initialNodes.RemoveAll(n => n.position == pos);
                 if (_data.obstacles != null) _data.obstacles.RemoveAll(o => o.position == pos);
                 if (_data.oneWayCells != null) _data.oneWayCells.RemoveAll(ow => ow.position == pos);
@@ -551,7 +596,16 @@ namespace PixelFlow.Editor
                     if (sol.pathPositions != null)
                         sol.pathPositions.Remove(pos);
                 }
-                _data.initialNodes.Add(new GridNode { position = pos, color = _currentColor });
+
+                _data.initialNodes.Add(new GridNode
+                {
+                    position = pos,
+                    color = _currentColor,
+                    shape = _currentShape,
+                    type = _currentNodeType,
+                    isSource = _currentIsSource,
+                    pairIndex = _currentPairIndex
+                });
             }
             else if (_currentMode == EditMode.Obstacle)
             {
@@ -843,10 +897,10 @@ namespace PixelFlow.Editor
             _data.solutions.Clear();
             _data.bridgePositions.Clear();
 
-            _data.initialNodes.Add(new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red });
-            _data.initialNodes.Add(new GridNode { position = new Vector2Int(4, 0), color = ColorType.Red });
-            _data.initialNodes.Add(new GridNode { position = new Vector2Int(0, 4), color = ColorType.Blue });
-            _data.initialNodes.Add(new GridNode { position = new Vector2Int(4, 4), color = ColorType.Blue });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red, shape = ShapeType.Circle, type = PixelFlow.Data.NodeType.Home, isSource = true, pairIndex = 0 });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(4, 0), color = ColorType.Red, shape = ShapeType.Circle, type = PixelFlow.Data.NodeType.Office, isSource = false, pairIndex = 1 });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(0, 4), color = ColorType.Blue, shape = ShapeType.Triangle, type = PixelFlow.Data.NodeType.Hospital, isSource = true, pairIndex = 0 });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(4, 4), color = ColorType.Blue, shape = ShapeType.Triangle, type = PixelFlow.Data.NodeType.School, isSource = false, pairIndex = 1 });
 
             EditorUtility.SetDirty(_data);
         }
@@ -860,10 +914,10 @@ namespace PixelFlow.Editor
             _data.solutions.Clear();
             _data.bridgePositions.Clear();
 
-            _data.initialNodes.Add(new GridNode { position = new Vector2Int(2, 0), color = ColorType.Green });
-            _data.initialNodes.Add(new GridNode { position = new Vector2Int(2, 4), color = ColorType.Green });
-            _data.initialNodes.Add(new GridNode { position = new Vector2Int(0, 2), color = ColorType.Yellow });
-            _data.initialNodes.Add(new GridNode { position = new Vector2Int(4, 2), color = ColorType.Yellow });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(2, 0), color = ColorType.Green, shape = ShapeType.Diamond, type = PixelFlow.Data.NodeType.Park, isSource = true, pairIndex = 0 });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(2, 4), color = ColorType.Green, shape = ShapeType.Diamond, type = PixelFlow.Data.NodeType.Mall, isSource = false, pairIndex = 1 });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(0, 2), color = ColorType.Yellow, shape = ShapeType.Square, type = PixelFlow.Data.NodeType.Home, isSource = true, pairIndex = 0 });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(4, 2), color = ColorType.Yellow, shape = ShapeType.Square, type = PixelFlow.Data.NodeType.Office, isSource = false, pairIndex = 1 });
 
             EditorUtility.SetDirty(_data);
         }
@@ -882,17 +936,17 @@ namespace PixelFlow.Editor
             _data.bridgePositions.Add(new Vector2Int(3, 3));
 
             // Set nodes
-            _data.initialNodes.Add(new GridNode { position = new Vector2Int(0, 2), color = ColorType.Red });
-            _data.initialNodes.Add(new GridNode { position = new Vector2Int(5, 2), color = ColorType.Red });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(0, 2), color = ColorType.Red, shape = ShapeType.Circle, type = PixelFlow.Data.NodeType.Home, isSource = true, pairIndex = 0 });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(5, 2), color = ColorType.Red, shape = ShapeType.Circle, type = PixelFlow.Data.NodeType.Office, isSource = false, pairIndex = 1 });
 
-            _data.initialNodes.Add(new GridNode { position = new Vector2Int(2, 0), color = ColorType.Blue });
-            _data.initialNodes.Add(new GridNode { position = new Vector2Int(2, 5), color = ColorType.Blue });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(2, 0), color = ColorType.Blue, shape = ShapeType.Triangle, type = PixelFlow.Data.NodeType.Hospital, isSource = true, pairIndex = 0 });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(2, 5), color = ColorType.Blue, shape = ShapeType.Triangle, type = PixelFlow.Data.NodeType.School, isSource = false, pairIndex = 1 });
 
-            _data.initialNodes.Add(new GridNode { position = new Vector2Int(0, 3), color = ColorType.Green });
-            _data.initialNodes.Add(new GridNode { position = new Vector2Int(5, 3), color = ColorType.Green });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(0, 3), color = ColorType.Green, shape = ShapeType.Diamond, type = PixelFlow.Data.NodeType.Park, isSource = true, pairIndex = 0 });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(5, 3), color = ColorType.Green, shape = ShapeType.Diamond, type = PixelFlow.Data.NodeType.Mall, isSource = false, pairIndex = 1 });
 
-            _data.initialNodes.Add(new GridNode { position = new Vector2Int(3, 0), color = ColorType.Yellow });
-            _data.initialNodes.Add(new GridNode { position = new Vector2Int(3, 5), color = ColorType.Yellow });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(3, 0), color = ColorType.Yellow, shape = ShapeType.Square, type = PixelFlow.Data.NodeType.Home, isSource = true, pairIndex = 0 });
+            _data.initialNodes.Add(new GridNode { position = new Vector2Int(3, 5), color = ColorType.Yellow, shape = ShapeType.Square, type = PixelFlow.Data.NodeType.Office, isSource = false, pairIndex = 1 });
 
             EditorUtility.SetDirty(_data);
         }

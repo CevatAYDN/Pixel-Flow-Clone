@@ -59,6 +59,7 @@ namespace PixelFlow.Editor.Tests
                 builder.Bind<ILevelProgressionService, LevelProgressionService>();
 
                 builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));
+                builder.Bind<ICameraProvider, StubCameraProvider>();
 
                 builder.BindSignal<InputInteractionSignal>().To<ProcessInputCommand>();
                 builder.BindSignal<CheckWinConditionSignal>().To<CheckWinConditionCommand>();
@@ -66,6 +67,8 @@ namespace PixelFlow.Editor.Tests
                 builder.BindSignal<RequestHintSignal>().To<UseHintCommand>();
                 builder.BindSignal<ChangeThemeSignal>().To<ChangeThemeCommand>();
                 builder.BindSignal<LevelCompletedSignal>().To<SaveProgressCommand>();
+                builder.BindSignal<StartSimulationSignal>().To<StartSimulationCommand>();
+                builder.BindSignal<PauseSimulationSignal>().To<PauseSimulationCommand>();
                 builder.BindSignal<UndoSignal>().To<UndoCommand>();
                 builder.BindSignal<RedoSignal>().To<RedoCommand>();
             });

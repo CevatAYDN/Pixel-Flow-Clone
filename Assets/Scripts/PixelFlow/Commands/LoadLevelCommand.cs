@@ -105,7 +105,7 @@ namespace PixelFlow.Commands
             HistoryService.Clear();
             int viaductBonus = signal.LevelToLoad.levelIndex / 10; // Her 10 level +1 viyadük bonus
             int totalViaducts = signal.LevelToLoad.viaductLimit + viaductBonus;
-            GameSessionModel.StartSession(totalViaducts, signal.LevelToLoad.flowScoreThreshold);
+            GameSessionModel.StartSession(signal.LevelToLoad.levelIndex, totalViaducts, signal.LevelToLoad.flowScoreThreshold, true);
             HintModel.ResetSessionHints();
             ObstacleService?.InitializeFromLevel(signal.LevelToLoad);
             TutorialDriver?.OnLevelLoaded(signal.LevelToLoad.levelIndex);

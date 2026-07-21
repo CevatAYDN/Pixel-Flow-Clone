@@ -43,7 +43,7 @@ namespace PixelFlow.Models
     {
         private const string PrefKeyCompletedSteps = "NT_TutorialCompleted";
         private readonly IPlayerPrefsService _prefs;
-        private int _completedStepsMask;
+        private long _completedStepsMask; // long (64-bit) for TutorialStep values up to 35
 
         public TutorialStep CurrentStep { get; private set; }
         public bool IsActive { get; private set; }
@@ -53,7 +53,7 @@ namespace PixelFlow.Models
         public TutorialModel(IPlayerPrefsService prefs)
         {
             _prefs = prefs ?? throw new ArgumentNullException(nameof(prefs));
-            _completedStepsMask = _prefs.GetInt(PrefKeyCompletedSteps, 0);
+            _completedStepsMask = _prefs.GetLong(PrefKeyCompletedSteps, 0L);
         }
 
         public void StartStep(TutorialStep step)
@@ -71,9 +71,9 @@ namespace PixelFlow.Models
                 CurrentStep = TutorialStep.None;
 
                 // Mask bit'ini set et ve PlayerPrefs'e kaydet
-                int bit = 1 << (int)step;
+                long bit = 1L << (int)step;
                 _completedStepsMask |= bit;
-                _prefs.SetInt(PrefKeyCompletedSteps, _completedStepsMask);
+                _prefs.SetLong(PrefKeyCompletedSteps, _completedStepsMask);
 
                 OnStepCompleted?.Invoke(step);
             }
@@ -81,7 +81,7 @@ namespace PixelFlow.Models
 
         public bool IsCompleted(TutorialStep step)
         {
-            int bit = 1 << (int)step;
+            long bit = 1L << (int)step;
             return (_completedStepsMask & bit) != 0;
         }
 

@@ -21,7 +21,7 @@ namespace PixelFlow.Views
         [SerializeField] private Text _completionScoreText;
         [SerializeField] private Text _completionStarsText;
         [SerializeField] private Button _nextLevelButton;
-        [SerializeField] private Button _returnToHubButton;
+        [SerializeField] private Button _continueButton;
         [SerializeField] private GameObject _bloomFlashOverlay;
 
         // Undo/Redo butonları
@@ -34,9 +34,18 @@ namespace PixelFlow.Views
         [SerializeField] private Button _themeLightButton;
         [SerializeField] private Button _themeNeonButton;
 
+        // GDD §8: Pause butonu
+        [SerializeField] private Button _pauseButton;
+
+        // GDD §2.4: LevelFailed paneli
+        [SerializeField] private GameObject _levelFailedPanel;
+        [SerializeField] private Text _levelFailedText;
+        [SerializeField] private Button _retryButton;
+        [SerializeField] private Button _levelFailedContinueButton;
+
         public event Action OnHintClicked;
         public event Action OnNextLevelClicked;
-        public event Action OnReturnToHubClicked;
+        public event Action OnContinueClicked;
         public event Action OnUndoClicked;
         public event Action OnRedoClicked;
         public event Action OnThemeDarkClicked;
@@ -45,6 +54,9 @@ namespace PixelFlow.Views
         public event Action OnSimulateDebugPressed;
         public event Action OnCrisisViaductClicked;
         public event Action OnCrisisUndoClicked;
+        public event Action OnPauseClicked;
+        public event Action OnRetryClicked;
+        public event Action OnLevelFailedContinueClicked;
 
         private Button _crisisViaductButton;
         private Button _crisisUndoButton;
@@ -56,8 +68,8 @@ namespace PixelFlow.Views
                 _hintButton.onClick.AddListener(() => OnHintClicked?.Invoke());
             if (_nextLevelButton != null)
                 _nextLevelButton.onClick.AddListener(() => OnNextLevelClicked?.Invoke());
-            if (_returnToHubButton != null)
-                _returnToHubButton.onClick.AddListener(() => OnReturnToHubClicked?.Invoke());
+            if (_continueButton != null)
+                _continueButton.onClick.AddListener(() => OnContinueClicked?.Invoke());
             if (_undoButton != null)
                 _undoButton.onClick.AddListener(() => OnUndoClicked?.Invoke());
             if (_redoButton != null)
@@ -69,8 +81,20 @@ namespace PixelFlow.Views
             if (_themeNeonButton != null)
                 _themeNeonButton.onClick.AddListener(() => OnThemeNeonClicked?.Invoke());
 
+            // GDD §8: Pause butonu
+            if (_pauseButton != null)
+                _pauseButton.onClick.AddListener(() => OnPauseClicked?.Invoke());
+
+            // GDD §2.4: LevelFailed paneli
+            if (_retryButton != null)
+                _retryButton.onClick.AddListener(() => OnRetryClicked?.Invoke());
+            if (_levelFailedContinueButton != null)
+                _levelFailedContinueButton.onClick.AddListener(() => OnLevelFailedContinueClicked?.Invoke());
+
             if (_completionPanel != null)
                 _completionPanel.SetActive(false);
+            if (_levelFailedPanel != null)
+                _levelFailedPanel.SetActive(false);
         }
 
         protected override void OnUnbind()
@@ -80,8 +104,8 @@ namespace PixelFlow.Views
                 _hintButton.onClick.RemoveAllListeners();
             if (_nextLevelButton != null)
                 _nextLevelButton.onClick.RemoveAllListeners();
-            if (_returnToHubButton != null)
-                _returnToHubButton.onClick.RemoveAllListeners();
+            if (_continueButton != null)
+                _continueButton.onClick.RemoveAllListeners();
             if (_undoButton != null)
                 _undoButton.onClick.RemoveAllListeners();
             if (_redoButton != null)
@@ -92,6 +116,12 @@ namespace PixelFlow.Views
                 _themeLightButton.onClick.RemoveAllListeners();
             if (_themeNeonButton != null)
                 _themeNeonButton.onClick.RemoveAllListeners();
+            if (_pauseButton != null)
+                _pauseButton.onClick.RemoveAllListeners();
+            if (_retryButton != null)
+                _retryButton.onClick.RemoveAllListeners();
+            if (_levelFailedContinueButton != null)
+                _levelFailedContinueButton.onClick.RemoveAllListeners();
 
             if (_crisisViaductButton != null)
             {
@@ -336,11 +366,53 @@ namespace PixelFlow.Views
             }
         }
 
+        // GDD §2.4: LevelFailed paneli
+        public void ShowLevelFailed(string title, string scoreFormat, string retryLabel, string hubLabel)
+        {
+            if (_levelFailedPanel != null)
+            {
+                _levelFailedPanel.SetActive(true);
+                if (_levelFailedText != null)
+                    _levelFailedText.text = title;
+                if (_retryButton != null)
+                {
+                    var btnText = _retryButton.GetComponentInChildren<Text>();
+                    if (btnText != null) btnText.text = retryLabel;
+                }
+                if (_levelFailedContinueButton != null)
+                {
+                    var btnText = _levelFailedContinueButton.GetComponentInChildren<Text>();
+                    if (btnText != null) btnText.text = hubLabel;
+                }
+            }
+        }
+
+        public void HideLevelFailed()
+        {
+            if (_levelFailedPanel != null)
+                _levelFailedPanel.SetActive(false);
+        }
+
+        public void SetPauseButtonVisible(bool visible)
+        {
+            if (_pauseButton != null)
+                _pauseButton.gameObject.SetActive(visible);
+        }
+
         public void ShowViaductLimitReached(string message)
         {
             if (_completionStarsText != null)
             {
                 _completionStarsText.text = message;
+                _completionStarsText.color = Color.red;
+            }
+        }
+
+        public void ShowCrisisRetryExhausted(int retryCount)
+        {
+            if (_completionStarsText != null)
+            {
+                _completionStarsText.text = $"Retries exhausted ({retryCount})";
                 _completionStarsText.color = Color.red;
             }
         }

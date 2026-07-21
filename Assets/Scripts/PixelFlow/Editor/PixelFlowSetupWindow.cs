@@ -33,9 +33,8 @@ namespace PixelFlow.Editor
         private bool _gridViewOk, _canvasOk, _hudOk, _eventSystemOk;
         private bool _soundOk, _themeOk, _bootstrapperOk, _levelsOk;
         // Yeni View tanılama
-        private bool _dailyCrisisOk, _confettiOk, _bloomFlashOk, _coinFlowOk;
+        private bool _dailyCrisisOk, _confettiOk, _bloomFlashOk;
         private bool _tutorialOk, _settingsViewOk;
-        private bool _levelPackOk, _mahalleSelectorOk;
         private bool _globalVolumeOk, _cameraControllerOk;
 
         // ─── Seviye Oluşturucu Alanları ───
@@ -193,11 +192,8 @@ namespace PixelFlow.Editor
             _dailyCrisisOk = Object.FindAnyObjectByType<DailyCrisisView>(FindObjectsInactive.Include) != null;
             _confettiOk = Object.FindAnyObjectByType<ConfettiView>(FindObjectsInactive.Include) != null;
             _bloomFlashOk = Object.FindAnyObjectByType<BloomFlashView>(FindObjectsInactive.Include) != null;
-            _coinFlowOk = Object.FindAnyObjectByType<CoinFlowView>(FindObjectsInactive.Include) != null;
             _tutorialOk = Object.FindAnyObjectByType<TutorialView>(FindObjectsInactive.Include) != null;
             _settingsViewOk = Object.FindAnyObjectByType<SettingsView>(FindObjectsInactive.Include) != null;
-            _levelPackOk = Object.FindAnyObjectByType<LevelPackView>(FindObjectsInactive.Include) != null;
-            _mahalleSelectorOk = Object.FindAnyObjectByType<MahalleSelectorView>(FindObjectsInactive.Include) != null;
 
             // Global Volume & Kamera
             _globalVolumeOk = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include).Any(go => go.name.Contains("Volume") || go.GetComponent("Volume") != null);
@@ -339,13 +335,9 @@ namespace PixelFlow.Editor
                 CompleteCurrentLevel();
             }
             GUI.backgroundColor = Color.white;
-            if (GUILayout.Button("🔄 Seviyeyi Yeniden Başlat", GUILayout.Height(32)))
+            if (GUILayout.Button("🔁 Seviyeyi Yeniden Başlat", GUILayout.Height(32)))
             {
                 RestartCurrentLevel();
-            }
-            if (GUILayout.Button("🏠 Ana Menüye Dön", GUILayout.Height(32)))
-            {
-                ReturnToHub();
             }
             GUILayout.EndHorizontal();
 
@@ -401,9 +393,6 @@ namespace PixelFlow.Editor
 
                 GUILayout.Label("Oyun Akışı Sinyalleri:", EditorStyles.boldLabel);
                 GUILayout.BeginHorizontal();
-                DrawSignalButton("EnterHub", () => DispatchSignal(new EnterHubSignal()));
-                DrawSignalButton("ReturnToHub", () => DispatchSignal(new RequestReturnToHubSignal()));
-                DrawSignalButton("ReturnToPuzzle", () => DispatchSignal(new ReturnToPuzzleSignal()));
                 DrawSignalButton("LevelCompleted", () => DispatchSignal(new LevelCompletedSignal()));
                 GUILayout.EndHorizontal();
 
@@ -561,11 +550,8 @@ namespace PixelFlow.Editor
             DrawDiagnosticRow("DailyCrisisView (Günlük Kriz)", _dailyCrisisOk, SetupExtendedViews);
             DrawDiagnosticRow("ConfettiView (Kutlama Efekti)", _confettiOk, SetupExtendedViews);
             DrawDiagnosticRow("BloomFlashView (Işık Patlaması)", _bloomFlashOk, SetupExtendedViews);
-            DrawDiagnosticRow("CoinFlowView (Altın Akışı)", _coinFlowOk, SetupExtendedViews);
             DrawDiagnosticRow("TutorialView (Eğitim Sistemi)", _tutorialOk, SetupExtendedViews);
             DrawDiagnosticRow("SettingsView (Ayarlar Paneli)", _settingsViewOk, SetupExtendedViews);
-            DrawDiagnosticRow("LevelPackView (Seviye Paketi)", _levelPackOk, SetupExtendedViews);
-            DrawDiagnosticRow("MahalleSelectorView (Mahalle Seçici)", _mahalleSelectorOk, SetupExtendedViews);
 
             GUILayout.EndVertical();
             GUILayout.Space(8);
@@ -607,8 +593,8 @@ namespace PixelFlow.Editor
             // 5. Toplu İşlem Butonları
             bool allCoreOk = _prefabsOk && _cellWarningIconOk && _rootOk && _contextDataOk && _gridViewOk &&
                             _canvasOk && _hudOk && _eventSystemOk && _soundOk && _themeOk && _bootstrapperOk && _levelsOk;
-            bool allExtOk = _dailyCrisisOk && _confettiOk && _bloomFlashOk && _coinFlowOk &&
-                           _tutorialOk && _settingsViewOk && _levelPackOk && _mahalleSelectorOk;
+            bool allExtOk = _dailyCrisisOk && _confettiOk && _bloomFlashOk &&
+                           _tutorialOk && _settingsViewOk;
             bool allEnvOk = _globalVolumeOk && _cameraControllerOk;
 
             if (allCoreOk && allExtOk && allEnvOk)
@@ -1214,14 +1200,6 @@ namespace PixelFlow.Editor
             }
         }
 
-        private void ReturnToHub()
-        {
-            if (Application.isPlaying)
-            {
-                DispatchSignal(new RequestReturnToHubSignal());
-            }
-        }
-
         private void UnlockAllLevels()
         {
             int maxCount = Mathf.Max(1, _cachedLevels.Count);
@@ -1681,23 +1659,42 @@ namespace PixelFlow.Editor
                 RefreshLevelsCache();
             }
 
-            // 1. Context kurulumu
+            // Root hierarchy: [PixelFlow]
+            GameObject rootObj = GameObject.Find("[PixelFlow]");
+            if (rootObj == null)
+            {
+                rootObj = new GameObject("[PixelFlow]");
+                Undo.RegisterCreatedObjectUndo(rootObj, "[PixelFlow] Root oluştur");
+            }
+
+            // Kategori parent'ları — EnsureChild ile bul/oluştur
+            Transform contextParent = EnsureChild(rootObj.transform, "_Context");
+            Transform cameraParent = EnsureChild(rootObj.transform, "_Camera");
+            Transform uiParent = EnsureChild(rootObj.transform, "_UI");
+            Transform gridParent = EnsureChild(rootObj.transform, "_Grid");
+            Transform servicesParent = EnsureChild(rootObj.transform, "_Services");
+            Transform bootParent = EnsureChild(rootObj.transform, "_Bootstrapper");
+
+            // 1. Context kurulumu → _Context altına
             Root context = Object.FindAnyObjectByType<Root>();
             if (context == null)
             {
-                GameObject contextObj = new GameObject("PixelFlow_Context");
+                GameObject contextObj = new GameObject("NexusRoot");
                 context = contextObj.AddComponent<Root>();
                 contextObj.AddComponent<GameContextLifecycle>();
+                contextObj.transform.SetParent(contextParent);
                 Undo.RegisterCreatedObjectUndo(contextObj, "Context Oluştur");
+            }
+            else
+            {
+                context.transform.SetParent(contextParent);
             }
 
             if (context != null && context.ContextData == null)
             {
                 string settingsFolder = "Assets/Settings";
                 if (!AssetDatabase.IsValidFolder(settingsFolder))
-                {
                     AssetDatabase.CreateFolder("Assets", "Settings");
-                }
 
                 string assetPath = "Assets/Settings/PixelFlowContextData.asset";
                 ContextData contextDataAsset = AssetDatabase.LoadAssetAtPath<ContextData>(assetPath);
@@ -1719,18 +1716,20 @@ namespace PixelFlow.Editor
                 }
             }
 
-            // 2. GridView kurulumu
+            // 2. GridView kurulumu → _Grid altına
             GridView gridView = Object.FindAnyObjectByType<GridView>();
             GameObject gridObj;
             if (gridView == null)
             {
                 gridObj = new GameObject("GridView");
                 gridView = gridObj.AddComponent<GridView>();
+                gridObj.transform.SetParent(gridParent);
                 Undo.RegisterCreatedObjectUndo(gridObj, "GridView Oluştur");
             }
             else
             {
                 gridObj = gridView.gameObject;
+                gridObj.transform.SetParent(gridParent);
             }
 
             Transform container = gridObj.transform.Find("CellsContainer");
@@ -1742,14 +1741,13 @@ namespace PixelFlow.Editor
             }
 
             CellView cellPrefab = AssetDatabase.LoadAssetAtPath<CellView>("Assets/Prefabs/CellView.prefab");
-
             SerializedObject gridSo = new SerializedObject(gridView);
             gridSo.FindProperty("_gridContainer").objectReferenceValue = container;
             gridSo.FindProperty("_cellPrefab").objectReferenceValue = cellPrefab;
             gridSo.ApplyModifiedProperties();
             EditorUtility.SetDirty(gridView);
 
-            // 3. UI kurulumu (Canvas & HUDView)
+            // 3. UI kurulumu (Canvas & HUDView) → _UI altına
             Canvas canvas = Object.FindAnyObjectByType<Canvas>();
             GameObject canvasObj;
             if (canvas == null)
@@ -1759,11 +1757,13 @@ namespace PixelFlow.Editor
                 canvas.renderMode = RenderMode.ScreenSpaceOverlay;
                 canvasObj.AddComponent<CanvasScaler>();
                 canvasObj.AddComponent<GraphicRaycaster>();
+                canvasObj.transform.SetParent(uiParent);
                 Undo.RegisterCreatedObjectUndo(canvasObj, "Canvas Oluştur");
             }
             else
             {
                 canvasObj = canvas.gameObject;
+                canvasObj.transform.SetParent(uiParent);
             }
 
             var eventSystem = Object.FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>();
@@ -1772,10 +1772,12 @@ namespace PixelFlow.Editor
                 GameObject eventSystemObj = new GameObject("EventSystem");
                 eventSystemObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
                 eventSystemObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                eventSystemObj.transform.SetParent(uiParent);
                 Undo.RegisterCreatedObjectUndo(eventSystemObj, "EventSystem Oluştur");
             }
             else
             {
+                eventSystem.transform.SetParent(uiParent);
                 var standaloneModule = eventSystem.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
                 if (standaloneModule != null)
                 {
@@ -1784,6 +1786,7 @@ namespace PixelFlow.Editor
                 }
             }
 
+            // HUDView
             HUDView hudView = Object.FindAnyObjectByType<HUDView>();
             GameObject hudObj;
             if (hudView == null)
@@ -1802,15 +1805,13 @@ namespace PixelFlow.Editor
                 hudObj.transform.SetParent(canvasObj.transform, false);
             }
 
-            // Hint Button kurulumu
+            // Hint Button
             Transform hintBtnTransform = hudObj.transform.Find("HintButton");
             GameObject hintBtnObj = hintBtnTransform != null ? hintBtnTransform.gameObject : new GameObject("HintButton", typeof(RectTransform));
             hintBtnObj.transform.SetParent(hudObj.transform, false);
-
             Image hintImg = hintBtnObj.GetComponent<Image>() ?? hintBtnObj.AddComponent<Image>();
             hintImg.color = new Color(0.15f, 0.15f, 0.18f, 1f);
             Button hintBtn = hintBtnObj.GetComponent<Button>() ?? hintBtnObj.AddComponent<Button>();
-
             RectTransform hintRect = hintBtnObj.GetComponent<RectTransform>();
             hintRect.anchorMin = new Vector2(0.5f, 0f);
             hintRect.anchorMax = new Vector2(0.5f, 0f);
@@ -1818,64 +1819,52 @@ namespace PixelFlow.Editor
             hintRect.anchoredPosition = new Vector2(0f, 60f);
             hintRect.sizeDelta = new Vector2(160f, 50f);
 
-            // Hint Count Text kurulumu
             Transform hintTextTransform = hintBtnObj.transform.Find("HintCountText");
             GameObject hintTextObj = hintTextTransform != null ? hintTextTransform.gameObject : new GameObject("HintCountText", typeof(RectTransform));
             hintTextObj.transform.SetParent(hintBtnObj.transform, false);
-
             Text hintText = hintTextObj.GetComponent<Text>() ?? hintTextObj.AddComponent<Text>();
             hintText.text = "İPUCU (3)";
             hintText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf") ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
             hintText.fontSize = 18;
             hintText.alignment = TextAnchor.MiddleCenter;
             hintText.color = Color.white;
-
             RectTransform textRect = hintTextObj.GetComponent<RectTransform>();
             textRect.anchorMin = Vector2.zero;
             textRect.anchorMax = Vector2.one;
             textRect.sizeDelta = Vector2.zero;
 
-            // Completion Panel kurulumu
+            // Completion Panel
             Transform compPanelTransform = hudObj.transform.Find("CompletionPanel");
             GameObject completionPanel = compPanelTransform != null ? compPanelTransform.gameObject : new GameObject("CompletionPanel", typeof(RectTransform));
             completionPanel.transform.SetParent(hudObj.transform, false);
-
             Image panelImg = completionPanel.GetComponent<Image>() ?? completionPanel.AddComponent<Image>();
             panelImg.color = new Color(0.08f, 0.08f, 0.1f, 0.85f);
-
             RectTransform panelRect = completionPanel.GetComponent<RectTransform>();
             panelRect.anchorMin = Vector2.zero;
             panelRect.anchorMax = Vector2.one;
             panelRect.sizeDelta = Vector2.zero;
             completionPanel.SetActive(false);
 
-            // Completion Text kurulumu
             Transform compTextTransform = completionPanel.transform.Find("CompletionText");
             GameObject completionTextObj = compTextTransform != null ? compTextTransform.gameObject : new GameObject("CompletionText", typeof(RectTransform));
             completionTextObj.transform.SetParent(completionPanel.transform, false);
-
             Text compText = completionTextObj.GetComponent<Text>() ?? completionTextObj.AddComponent<Text>();
             compText.text = "Tebrikler!";
             compText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf") ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
             compText.fontSize = 32;
             compText.color = new Color(0.2f, 0.85f, 0.3f);
             compText.alignment = TextAnchor.MiddleCenter;
-
             RectTransform compTextRect = completionTextObj.GetComponent<RectTransform>();
             compTextRect.anchorMin = new Vector2(0f, 0.6f);
             compTextRect.anchorMax = new Vector2(1f, 0.9f);
             compTextRect.sizeDelta = Vector2.zero;
 
-            // Next Level Button kurulumu
             Transform nextLvlBtnTransform = completionPanel.transform.Find("NextLevelButton");
             GameObject nextLvlBtnObj = nextLvlBtnTransform != null ? nextLvlBtnTransform.gameObject : new GameObject("NextLevelButton", typeof(RectTransform));
             nextLvlBtnObj.transform.SetParent(completionPanel.transform, false);
-
             Image nextLvlImg = nextLvlBtnObj.GetComponent<Image>() ?? nextLvlBtnObj.AddComponent<Image>();
             nextLvlImg.color = new Color(0.15f, 0.6f, 0.25f, 1f);
-
             Button nextLvlBtn = nextLvlBtnObj.GetComponent<Button>() ?? nextLvlBtnObj.AddComponent<Button>();
-
             RectTransform nextLvlRect = nextLvlBtnObj.GetComponent<RectTransform>();
             nextLvlRect.anchorMin = new Vector2(0.5f, 0.4f);
             nextLvlRect.anchorMax = new Vector2(0.5f, 0.4f);
@@ -1886,14 +1875,12 @@ namespace PixelFlow.Editor
             Transform nextLvlTextTransform = nextLvlBtnObj.transform.Find("Text");
             GameObject nextLvlTextObj = nextLvlTextTransform != null ? nextLvlTextTransform.gameObject : new GameObject("Text", typeof(RectTransform));
             nextLvlTextObj.transform.SetParent(nextLvlBtnObj.transform, false);
-
             Text nextLvlText = nextLvlTextObj.GetComponent<Text>() ?? nextLvlTextObj.AddComponent<Text>();
             nextLvlText.text = "SONRAKİ SEVİYE";
             nextLvlText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf") ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
             nextLvlText.fontSize = 18;
             nextLvlText.alignment = TextAnchor.MiddleCenter;
             nextLvlText.color = Color.white;
-
             RectTransform nextLvlTextRect = nextLvlTextObj.GetComponent<RectTransform>();
             nextLvlTextRect.anchorMin = Vector2.zero;
             nextLvlTextRect.anchorMax = Vector2.one;
@@ -1908,34 +1895,49 @@ namespace PixelFlow.Editor
             hudSo.ApplyModifiedProperties();
             EditorUtility.SetDirty(hudView);
 
-            // 4. SoundHandlerView kurulumu
+            // 4. SoundHandlerView → _Services
             SoundHandlerView soundView = Object.FindAnyObjectByType<SoundHandlerView>();
             if (soundView == null)
             {
                 GameObject soundObj = new GameObject("SoundHandlerView");
                 soundView = soundObj.AddComponent<SoundHandlerView>();
+                soundObj.transform.SetParent(servicesParent);
                 Undo.RegisterCreatedObjectUndo(soundObj, "SoundHandlerView Oluştur");
             }
+            else
+            {
+                soundView.transform.SetParent(servicesParent);
+            }
 
-            // 5. ThemeHandlerView kurulumu
+            // 5. ThemeHandlerView → _Services
             ThemeHandlerView themeView = Object.FindAnyObjectByType<ThemeHandlerView>();
             if (themeView == null)
             {
                 GameObject themeObj = new GameObject("ThemeHandlerView");
                 themeView = themeObj.AddComponent<ThemeHandlerView>();
+                themeObj.transform.SetParent(servicesParent);
                 Undo.RegisterCreatedObjectUndo(themeObj, "ThemeHandlerView Oluştur");
             }
+            else
+            {
+                themeView.transform.SetParent(servicesParent);
+            }
 
-            // 6. GameBootstrapper kurulumu
+            // 6. GameBootstrapper → _Bootstrapper
             GameBootstrapper bootstrapper = Object.FindAnyObjectByType<GameBootstrapper>();
             if (bootstrapper == null)
             {
                 GameObject bootObj = new GameObject("GameBootstrapper");
                 bootstrapper = bootObj.AddComponent<GameBootstrapper>();
+                bootObj.transform.SetParent(bootParent);
                 Undo.RegisterCreatedObjectUndo(bootObj, "GameBootstrapper Oluştur");
             }
+            else
+            {
+                bootstrapper.transform.SetParent(bootParent);
+            }
 
-            // 7. SplashView kurulumu
+            // 7. SplashView → Canvas altına (_UI > Canvas)
             SplashView splashView = Object.FindAnyObjectByType<SplashView>();
             if (splashView == null)
             {
@@ -1962,29 +1964,14 @@ namespace PixelFlow.Editor
                 splashSo.FindProperty("_canvasGroup").objectReferenceValue = splashCanvas;
                 splashSo.ApplyModifiedProperties();
             }
-
-            // 8. CityHubView + HubHUDView kurulumu
-            CityHubView cityHub = Object.FindAnyObjectByType<CityHubView>();
-            if (cityHub == null)
+            else
             {
-                GameObject hubObj = new GameObject("CityHubView");
-                hubObj.AddComponent<CityHubView>();
-                Undo.RegisterCreatedObjectUndo(hubObj, "CityHubView Oluştur");
+                splashView.transform.SetParent(canvasObj.transform, false);
             }
 
-            HubHUDView hubHUD = Object.FindAnyObjectByType<HubHUDView>();
-            if (hubHUD == null)
-            {
-                GameObject hubHUDObj = new GameObject("HubHUDView", typeof(RectTransform));
-                hubHUDObj.transform.SetParent(canvasObj.transform, false);
-                hubHUD = hubHUDObj.AddComponent<HubHUDView>();
-                RectTransform hubHUDRect = hubHUDObj.GetComponent<RectTransform>();
-                hubHUDRect.anchorMin = Vector2.zero;
-                hubHUDRect.anchorMax = Vector2.one;
-                hubHUDRect.sizeDelta = Vector2.zero;
-            }
+            // 8. Direct puzzle boot: Bootstrapper handles Playing → Playing state transition
 
-            // Bootstrapper hedeflerini ayarla
+            // Bootstrapper referansları
             bootstrapper.initialLevel = ResolveLevelByIndex(0);
             if (bootstrapper.nexusRoot == null)
             {
@@ -1992,72 +1979,68 @@ namespace PixelFlow.Editor
             }
             EditorUtility.SetDirty(bootstrapper);
 
-            // 9. Ana Kamera kurulumu
-            if (Camera.main != null)
+            // 9. Ana Kamera kurulumu → _Camera altına
+            Camera mainCam = Camera.main;
+            if (mainCam == null)
+                mainCam = Object.FindAnyObjectByType<Camera>(FindObjectsInactive.Include);
+
+            if (mainCam != null)
             {
-                Camera.main.orthographic = true;
-                Camera.main.orthographicSize = 5;
-                if (Camera.main.GetComponent<CameraController>() == null)
-                    Camera.main.gameObject.AddComponent<CameraController>();
-                EditorUtility.SetDirty(Camera.main);
+                mainCam.gameObject.name = "MainCamera";
+                mainCam.transform.SetParent(cameraParent);
+                mainCam.orthographic = true;
+                mainCam.orthographicSize = 5;
+                if (mainCam.GetComponent<CameraController>() == null)
+                    mainCam.gameObject.AddComponent<CameraController>();
+                EditorUtility.SetDirty(mainCam.gameObject);
+            }
+            else
+            {
+                GameObject camObj = new GameObject("MainCamera");
+                camObj.transform.SetParent(cameraParent);
+                mainCam = camObj.AddComponent<Camera>();
+                mainCam.orthographic = true;
+                mainCam.orthographicSize = 5;
+                camObj.AddComponent<CameraController>();
+                Undo.RegisterCreatedObjectUndo(camObj, "MainCamera Oluştur");
             }
 
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
             Debug.Log("[PixelFlow] Sahne kurulumu başarıyla tamamlandı.");
         }
 
-        // ─── Genişletilmiş View'leri Kurma ───
+        // ─── Yardımcı: Parent altında child bul veya oluştur ───
+        private Transform EnsureChild(Transform parent, string childName)
+        {
+            var existing = parent.Find(childName);
+            if (existing != null) return existing;
+            var go = new GameObject(childName);
+            go.transform.SetParent(parent);
+            Undo.RegisterCreatedObjectUndo(go, $"Parent '{childName}' oluştur");
+            return go.transform;
+        }
 
         private void SetupExtendedViews()
         {
             Debug.Log("[PixelFlow] Genişletilmiş View bileşenleri kuruluyor...");
 
+            // Kök hierarchy'yi bul
+            GameObject rootObj = GameObject.Find("[PixelFlow]");
+            Transform servicesParent = rootObj != null ? EnsureChild(rootObj.transform, "_Services") : null;
+
             Canvas canvas = Object.FindAnyObjectByType<Canvas>();
             GameObject canvasObj = canvas != null ? canvas.gameObject : null;
 
-            // DailyCrisisView
-            if (Object.FindAnyObjectByType<DailyCrisisView>(FindObjectsInactive.Include) == null)
-            {
-                var obj = new GameObject("DailyCrisisView");
-                obj.AddComponent<DailyCrisisView>();
-                Undo.RegisterCreatedObjectUndo(obj, "DailyCrisisView Oluştur");
-                Debug.Log("[PixelFlow] DailyCrisisView oluşturuldu.");
-            }
-
-            // ConfettiView
-            if (Object.FindAnyObjectByType<ConfettiView>(FindObjectsInactive.Include) == null)
-            {
-                var obj = new GameObject("ConfettiView");
-                obj.AddComponent<ConfettiView>();
-                Undo.RegisterCreatedObjectUndo(obj, "ConfettiView Oluştur");
-                Debug.Log("[PixelFlow] ConfettiView oluşturuldu.");
-            }
-
-            // BloomFlashView
-            if (Object.FindAnyObjectByType<BloomFlashView>(FindObjectsInactive.Include) == null)
-            {
-                var obj = new GameObject("BloomFlashView");
-                obj.AddComponent<BloomFlashView>();
-                Undo.RegisterCreatedObjectUndo(obj, "BloomFlashView Oluştur");
-                Debug.Log("[PixelFlow] BloomFlashView oluşturuldu.");
-            }
-
-            // CoinFlowView
-            if (Object.FindAnyObjectByType<CoinFlowView>(FindObjectsInactive.Include) == null)
-            {
-                var obj = new GameObject("CoinFlowView");
-                obj.AddComponent<CoinFlowView>();
-                Undo.RegisterCreatedObjectUndo(obj, "CoinFlowView Oluştur");
-                Debug.Log("[PixelFlow] CoinFlowView oluşturuldu.");
-            }
+            // Servis View'leri → _Services altına
+            CreateServiceViewIfMissing<DailyCrisisView>("DailyCrisisView", servicesParent);
+            CreateServiceViewIfMissing<ConfettiView>("ConfettiView", servicesParent);
+            CreateServiceViewIfMissing<BloomFlashView>("BloomFlashView", servicesParent);
 
             // UI tabanlı View'ler (Canvas altına)
             if (canvasObj != null)
             {
                 CreateUIViewIfMissing<TutorialView>("TutorialView", canvasObj);
                 CreateUIViewIfMissing<SettingsView>("SettingsView", canvasObj);
-                CreateUIViewIfMissing<LevelPackView>("LevelPackView", canvasObj);
-                CreateUIViewIfMissing<MahalleSelectorView>("MahalleSelectorView", canvasObj);
             }
             else
             {
@@ -2066,6 +2049,23 @@ namespace PixelFlow.Editor
 
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
             Debug.Log("[PixelFlow] Genişletilmiş View'ler kurulumu tamamlandı.");
+        }
+
+        private void CreateServiceViewIfMissing<T>(string name, Transform parent) where T : Component
+        {
+            var existing = Object.FindAnyObjectByType<T>(FindObjectsInactive.Include);
+            if (existing == null)
+            {
+                var obj = new GameObject(name);
+                obj.AddComponent<T>();
+                if (parent != null) obj.transform.SetParent(parent);
+                Undo.RegisterCreatedObjectUndo(obj, $"{name} Oluştur");
+                Debug.Log($"[PixelFlow] {name} oluşturuldu.");
+            }
+            else
+            {
+                if (parent != null) existing.transform.SetParent(parent);
+            }
         }
 
         private void CreateUIViewIfMissing<T>(string name, GameObject parent) where T : Component

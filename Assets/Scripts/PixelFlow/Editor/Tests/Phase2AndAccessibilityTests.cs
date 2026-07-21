@@ -166,7 +166,7 @@ namespace PixelFlow.Editor.Tests
         public void GameSession_ApplySave_RestoresAllFields()
         {
             var session = _ctx.GetModel<IGameSessionModel>();
-            session.ApplySave(availableViaducts: 2, maxViaducts: 5, elapsedTime: 12.5f, score: 800, stars: 3);
+            session.ApplySave(availableViaducts: 2, maxViaducts: 5, elapsedTime: 12.5f, score: 800, stars: 3, levelId: 0);
 
             Assert.AreEqual(2, session.AvailableViaducts);
             Assert.AreEqual(5, session.MaxViaducts);
