@@ -30,6 +30,11 @@ namespace PixelFlow
             builder.BindService<IIapService, IapService>();
             builder.BindService<IAnalyticsService, AnalyticsService>();
 
+            // Nexus Altyapı Bağımlılıkları (FeedbackService, WindowManager, EconomyService için)
+            builder.BindService<Nexus.Core.Services.IAudioService, Nexus.Core.Services.AudioService>();
+            builder.BindService<Nexus.Core.Services.IUIAssetProvider, Nexus.Core.Services.ResourcesUIAssetProvider>();
+            builder.Bind<Nexus.Core.Services.INetworkEconomyValidator, LocalEconomyValidator>();
+
             // PixelFlow Özel Servisleri
             builder.BindService<IPathService, PathService>();
             builder.BindService<IGameHistoryService, GameHistoryService>();
@@ -79,6 +84,7 @@ namespace PixelFlow
             // GDD §8: Yeni MVCS sinyalleri ve command'leri
             builder.BindSignal<PixelFlow.Signals.StartSimulationSignal>().To<PixelFlow.Commands.StartSimulationCommand>();
             builder.BindSignal<PixelFlow.Signals.PauseSimulationSignal>().To<PixelFlow.Commands.PauseSimulationCommand>();
+            builder.BindSignal<PixelFlow.Signals.LoadedInitialLevelSignal>();
         }
 
         public ValueTask OnInitializeAsync(CancellationToken ct) => default;
