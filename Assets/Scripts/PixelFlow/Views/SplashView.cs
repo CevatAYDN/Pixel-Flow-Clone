@@ -15,6 +15,8 @@ namespace PixelFlow.Views
 
         public event System.Action OnSplashComplete;
 
+        public bool IsComplete { get; private set; }
+
         private void Start()
         {
             if (_canvasGroup == null) _canvasGroup = GetComponent<CanvasGroup>();
@@ -45,6 +47,7 @@ namespace PixelFlow.Views
                 yield return null;
             }
 
+            IsComplete = true;
             OnSplashComplete?.Invoke();
             gameObject.SetActive(false);
         }

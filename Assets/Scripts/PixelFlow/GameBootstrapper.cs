@@ -71,15 +71,17 @@ namespace PixelFlow
                 yield break;
             }
 
-            var splash = FindAnyObjectByType<Views.SplashView>();
-            if (splash != null)
+#if !UNITY_EDITOR
+            var splash = FindAnyObjectByType<Views.SplashView>(FindObjectsInactive.Include);
+            if (splash != null && !splash.IsComplete && splash.gameObject.activeInHierarchy)
             {
                 _loggerService?.Log("[PixelFlow] Waiting for Splash screen completion...");
                 bool splashDone = false;
                 splash.OnSplashComplete += () => splashDone = true;
-                yield return new WaitUntil(() => splashDone);
+                yield return new WaitUntil(() => splashDone || splash.IsComplete);
                 _loggerService?.Log("[PixelFlow] Splash screen complete.");
             }
+#endif
 
             var prefs = nexusRoot.Context.Container.Resolve<IPlayerPrefsService>();
             if (GridStateSerializer.HasSavedGame(prefs))
@@ -186,10 +188,12 @@ namespace PixelFlow
             if (initialLevel == null) initialLevel = ResolveInitialLevel();
             if (initialLevel != null)
             {
-                _levelModel.SetLevel(initialLevel);
-                GridStateSerializer.ApplyToGrid(BuildFreshGridForLevel(initialLevel), _gridModel);
+                _signalBus.Fire(new LoadLevelSignal { LevelToLoad = initialLevel });
             }
-            _stateModel.SetState(GameState.Playing);
+            else
+            {
+                _stateModel.SetState(GameState.Playing);
+            }
             _signalBus.Fire(new LoadedInitialLevelSignal());
         }
 
