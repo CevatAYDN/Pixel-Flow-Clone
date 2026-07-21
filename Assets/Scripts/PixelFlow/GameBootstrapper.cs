@@ -50,6 +50,7 @@ namespace PixelFlow
                 _loggerService?.Log("[PixelFlow] Nexus Root initialized successfully. Resolving services...");
 
                 _signalBus = container.Resolve<ISignalBus>();
+                _signalBus?.Subscribe<LoadedInitialLevelSignal>(_ => _loggerService?.Log("[PixelFlow] Initial level loaded signal received."));
                 _stateModel = container.Resolve<IGameStateModel>();
                 _gridModel = container.Resolve<IGridModel>();
                 _sessionModel = container.Resolve<IGameSessionModel>();

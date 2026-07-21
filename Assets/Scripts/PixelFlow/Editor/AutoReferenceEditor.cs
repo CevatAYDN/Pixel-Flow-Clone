@@ -47,7 +47,7 @@ namespace PixelFlow.Editor
         [MenuItem("GameObject/Pixel Flow/Auto-Reference All Views In Scene", false, 11)]
         private static void AutoReferenceAllViews()
         {
-            var allViews = Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var allViews = Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include);
             int totalFixed = 0;
             int viewCount = 0;
             var processed = new HashSet<GameObject>();

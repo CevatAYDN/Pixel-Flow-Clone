@@ -31,8 +31,9 @@ namespace PixelFlow
             builder.BindService<IAnalyticsService, AnalyticsService>();
 
             // Nexus Altyapı Bağımlılıkları (FeedbackService, WindowManager, EconomyService için)
-            builder.BindService<Nexus.Core.Services.IAudioService, Nexus.Core.Services.AudioService>();
-            builder.BindService<Nexus.Core.Services.IUIAssetProvider, Nexus.Core.Services.ResourcesUIAssetProvider>();
+            builder.Bind<Nexus.Core.Services.IAudioService, Nexus.Core.Services.AudioService>();
+            builder.Bind<Nexus.Core.Services.IAudioRootProvider, Nexus.Core.Services.DefaultAudioRootProvider>();
+            builder.Bind<Nexus.Core.Services.IUIAssetProvider, Nexus.Core.Services.ResourcesUIAssetProvider>();
             builder.Bind<Nexus.Core.Services.INetworkEconomyValidator, LocalEconomyValidator>();
 
             // PixelFlow Özel Servisleri
