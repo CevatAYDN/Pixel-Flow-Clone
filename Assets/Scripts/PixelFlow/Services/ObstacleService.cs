@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Signals;
@@ -34,6 +35,7 @@ namespace PixelFlow.Services
         [Inject] public IGridModel GridModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject, OptionalInject] public Data.GameConfig Config { get; set; }
+        [Inject] public ILoggerService LoggerService { get; set; }
 
         private readonly Dictionary<Vector2Int, ObstacleType> _obstacles = new Dictionary<Vector2Int, ObstacleType>();
         private readonly Dictionary<Vector2Int, Vector2Int> _oneWayDirs = new Dictionary<Vector2Int, Vector2Int>();
@@ -45,6 +47,7 @@ namespace PixelFlow.Services
         public ValueTask InitializeAsync(CancellationToken ct) => default;
         public void OnDispose()
         {
+            LoggerService?.Log("[PixelFlow.ObstacleService] Disposing and clearing static caches.");
             _obstacles.Clear();
             _oneWayDirs.Clear();
             _ferryBlocked.Clear();
@@ -58,7 +61,11 @@ namespace PixelFlow.Services
             _ferryBlocked.Clear();
             _narrowPassOccupants.Clear();
             _ferryTimer = 0f;
-            if (level == null) return;
+            if (level == null)
+            {
+                LoggerService?.LogWarning("[PixelFlow.ObstacleService] InitializeFromLevel: level is null.");
+                return;
+            }
 
             // 1. Geleneksel engelleri yükle (GDD §9.4)
             if (level.obstacles != null)
@@ -91,6 +98,7 @@ namespace PixelFlow.Services
                     _oneWayDirs[owc.position] = owc.allowedDirection != Vector2Int.zero ? owc.allowedDirection : Vector2Int.right;
                 }
             }
+            LoggerService?.Log($"[PixelFlow.ObstacleService] Initialized from Level {level.levelIndex + 1}. Mapped: obstacles={_obstacles.Count}, oneWays={_oneWayDirs.Count}, ferries={_ferryBlocked.Count}, narrowPasses={_narrowPassOccupants.Count}");
         }
 
         public void Tick(float deltaTime)
@@ -104,6 +112,7 @@ namespace PixelFlow.Services
             for (int i = 0; i < keys.Count; i++)
             {
                 _ferryBlocked[keys[i]] = !_ferryBlocked[keys[i]];
+                LoggerService?.Log($"[PixelFlow.ObstacleService] Ferry at {keys[i]} block status toggled: {_ferryBlocked[keys[i]]}");
             }
 
             SignalBus?.Fire(new GridUpdatedSignal());
@@ -113,7 +122,12 @@ namespace PixelFlow.Services
         {
             if (!_oneWayDirs.TryGetValue(cell, out var allowedDir)) return false;
             if (allowedDir == Vector2Int.zero) return false;
-            return moveDir != allowedDir && moveDir != Vector2Int.zero;
+            bool violated = moveDir != allowedDir && moveDir != Vector2Int.zero;
+            if (violated)
+            {
+                LoggerService?.LogWarning($"[PixelFlow.ObstacleService] OneWay violation check at {cell}. Allowed: {allowedDir}, Trying: {moveDir}");
+            }
+            return violated;
         }
 
         public Vector2Int GetOneWayDirection(Vector2Int cell)
@@ -135,13 +149,19 @@ namespace PixelFlow.Services
         {
             if (!IsNarrowPass(cell)) return true;
             if (!_narrowPassOccupants.TryGetValue(cell, out var occupant)) return true;
-            return occupant == ColorType.None || occupant == color;
+            bool allowed = occupant == ColorType.None || occupant == color;
+            if (!allowed)
+            {
+                LoggerService?.LogWarning($"[PixelFlow.ObstacleService] NarrowPass entry blocked at {cell} for color {color}. Occupant is {occupant}.");
+            }
+            return allowed;
         }
 
         public void OnVehicleEnteredNarrowPass(Vector2Int cell, ColorType color)
         {
             if (!IsNarrowPass(cell)) return;
             _narrowPassOccupants[cell] = color;
+            LoggerService?.Log($"[PixelFlow.ObstacleService] NarrowPass at {cell} entered/locked by vehicle color {color}.");
         }
 
         public void OnVehicleLeftNarrowPass(Vector2Int cell, ColorType color)
@@ -150,6 +170,7 @@ namespace PixelFlow.Services
             if (_narrowPassOccupants.TryGetValue(cell, out var occ) && occ == color)
             {
                 _narrowPassOccupants[cell] = ColorType.None;
+                LoggerService?.Log($"[PixelFlow.ObstacleService] NarrowPass at {cell} released by vehicle color {color}.");
             }
         }
     }

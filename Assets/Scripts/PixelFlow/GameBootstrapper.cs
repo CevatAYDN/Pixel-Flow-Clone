@@ -44,39 +44,46 @@ namespace PixelFlow
 
         private IEnumerator Start()
         {
+            FallbackLogger?.Log("[PixelFlow.GameBootstrapper] Bootstrapper starting up. Waiting for Nexus Root...");
             yield return WaitForRoot();
             if (_cachedRoot == null)
             {
-                FallbackLogger?.LogError("[PixelFlow] ERROR: Nexus Root not found after retries. Game cannot start.");
+                FallbackLogger?.LogError("[PixelFlow.GameBootstrapper] ERROR: Nexus Root not found after retries. Game cannot start.");
                 yield break;
             }
             nexusRoot = _cachedRoot;
+            FallbackLogger?.Log("[PixelFlow.GameBootstrapper] Nexus Root reference cached. Waiting for context initialization...");
 
             while (!nexusRoot.IsInitialized)
                 yield return null;
 
+            FallbackLogger?.Log("[PixelFlow.GameBootstrapper] Nexus Root context initialized. Resolving services...");
             // Container'dan tüm bağımlılıkları tek seferde çözümle.
             if (!ResolveServices()) yield break;
 
-            _loggerService?.Log("[PixelFlow] DI Services resolved successfully.");
+            _loggerService?.Log("[PixelFlow.GameBootstrapper] DI Services resolved successfully. Starting lifecycle check...");
 
 #if !UNITY_EDITOR
             var splash = FindAnyObjectByType<Views.SplashView>(FindObjectsInactive.Include);
             if (splash != null && !splash.IsComplete && splash.gameObject.activeInHierarchy)
             {
-                _loggerService?.Log("[PixelFlow] Waiting for Splash screen completion...");
+                _loggerService?.Log("[PixelFlow.GameBootstrapper] Waiting for Splash screen completion...");
                 bool splashDone = false;
                 splash.OnSplashComplete += () => splashDone = true;
                 yield return new WaitUntil(() => splashDone || splash.IsComplete);
-                _loggerService?.Log("[PixelFlow] Splash screen complete.");
+                _loggerService?.Log("[PixelFlow.GameBootstrapper] Splash screen complete.");
             }
 #endif
 
+            _loggerService?.Log("[PixelFlow.GameBootstrapper] Checking for saved game states to restore...");
             if (TryRestoreSavedGame())
+            {
+                _loggerService?.Log("[PixelFlow.GameBootstrapper] Saved game state restored successfully. Startup complete.");
                 yield break;
+            }
 
             // İlk çalıştırma veya save bozuk → doğrudan Playing state'e geç, ilk level'ı yükle.
-            _loggerService?.Log("[PixelFlow] No valid save file found — loading initial level directly.");
+            _loggerService?.Log("[PixelFlow.GameBootstrapper] No valid save file found — loading initial level directly.");
             EnterPlaying();
         }
 
@@ -120,9 +127,13 @@ namespace PixelFlow
             if (!GridStateSerializer.HasSavedGame(_prefs))
                 return false;
 
-            _loggerService?.Log("[PixelFlow] Saved game detected in PlayerPrefs. Checking save validity...");
+            _loggerService?.Log("[PixelFlow.GameBootstrapper] Saved game detected in PlayerPrefs. Checking save validity...");
             var saved = GridStateSerializer.Load(_prefs);
-            if (saved == null) return false;
+            if (saved == null)
+            {
+                _loggerService?.LogWarning("[PixelFlow.GameBootstrapper] Failed to load saved game snapshot.");
+                return false;
+            }
 
             var cloud = Models.CloudSaveManager.LoadCloudRecord(_prefs);
             string localJson = _prefs.GetString("NT_PuzzleSave_", "");
@@ -135,15 +146,20 @@ namespace PixelFlow
             string resolvedJson = Models.CloudSaveManager.ResolveConflict(local, cloud);
             if (!string.IsNullOrEmpty(resolvedJson) && resolvedJson != localJson)
             {
+                _loggerService?.Log("[PixelFlow.GameBootstrapper] Cloud conflict resolved. Updating local save json.");
                 _prefs.SetString("NT_PuzzleSave_", resolvedJson);
                 saved = GridStateSerializer.Load(_prefs);
             }
 
-            if (saved == null || saved.cells == null || saved.cells.Count == 0) return false;
+            if (saved == null || saved.cells == null || saved.cells.Count == 0)
+            {
+                _loggerService?.LogWarning("[PixelFlow.GameBootstrapper] Saved game cells collection is empty or null.");
+                return false;
+            }
 
             if (saved.paths == null || saved.paths.Count == 0)
             {
-                _loggerService?.LogWarning("[PixelFlow] Saved game snapshot had 0 nodes/paths. Clearing empty save file.");
+                _loggerService?.LogWarning("[PixelFlow.GameBootstrapper] Saved game snapshot had 0 nodes/paths. Clearing empty save file.");
                 GridStateSerializer.ClearSave(_prefs);
                 return false;
             }
@@ -151,18 +167,18 @@ namespace PixelFlow
             var level = ResolveLevelByIndex(saved.levelIndex);
             if (level == null)
             {
-                _loggerService?.LogWarning($"[PixelFlow] Could not resolve LevelData asset for index {saved.levelIndex}. Falling back to Hub.");
+                _loggerService?.LogWarning($"[PixelFlow.GameBootstrapper] Could not resolve LevelData asset for index {saved.levelIndex}. Falling back to Hub.");
                 return false;
             }
 
             if (!GridStateSerializer.IsSaveDataValidForLevel(saved, level))
             {
-                _loggerService?.LogWarning($"[PixelFlow] Outdated or invalid saved game layout detected for Level {saved.levelIndex + 1}. Discarding save...");
+                _loggerService?.LogWarning($"[PixelFlow.GameBootstrapper] Outdated or invalid saved game layout detected for Level {saved.levelIndex + 1}. Discarding save...");
                 GridStateSerializer.ClearSave(_prefs);
                 return false;
             }
 
-            _loggerService?.Log($"[PixelFlow] Restoring valid saved game: Level {saved.levelIndex + 1} ({level.name}, Grid: {saved.width}x{saved.height}, Cells: {saved.cells.Count}, Paths: {saved.paths.Count})");
+            _loggerService?.Log($"[PixelFlow.GameBootstrapper] Restoring valid saved game: Level {saved.levelIndex + 1} ({level.name}, Grid: {saved.width}x{saved.height}, Cells: {saved.cells.Count}, Paths: {saved.paths.Count})");
             _levelModel.SetLevel(level);
             GridStateSerializer.ApplyToGrid(saved, _gridModel);
             GridStateSerializer.EnsureInitialNodesOnGrid(level, _gridModel);
@@ -179,7 +195,7 @@ namespace PixelFlow
             var crashCell = FindFirstCrashCell(_gridModel);
             if (crashCell.HasValue)
             {
-                _loggerService?.Log($"[PixelFlow] Restored game has unresolved intersection at {crashCell.Value}. Showing crisis panel.");
+                _loggerService?.Log($"[PixelFlow.GameBootstrapper] Restored game has unresolved intersection at {crashCell.Value}. Showing crisis panel.");
                 var cell = _gridModel.GetCell(crashCell.Value);
                 var colors = new System.Collections.Generic.List<ColorType>();
                 foreach (var pc in cell.GetPathColors())
@@ -201,7 +217,7 @@ namespace PixelFlow
                 _signalBus.Fire(new GridUpdatedSignal());
                 _stateModel.SetState(GameState.Playing);
                 _stateModel.SetState(GameState.Paused);
-                _loggerService?.Log($"[PixelFlow] Game state transitioned to Paused for crisis resolution at {crashCell.Value}.");
+                _loggerService?.Log($"[PixelFlow.GameBootstrapper] Game state transitioned to Paused for crisis resolution at {crashCell.Value}.");
             }
             else
             {

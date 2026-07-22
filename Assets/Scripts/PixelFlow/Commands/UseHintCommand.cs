@@ -26,40 +26,51 @@ namespace PixelFlow.Commands
 
         public void Execute(RequestHintSignal signal)
         {
+            LoggerService?.Log($"[PixelFlow.UseHintCommand] RequestHintSignal received. Hints remaining: {HintModel.HintsRemaining}");
             if (HintModel.HintsRemaining <= 0)
             {
-                LoggerService?.LogWarning("[UseHintCommand] Abort: no hints remaining.");
+                LoggerService?.LogWarning("[PixelFlow.UseHintCommand] Abort: no hints remaining.");
                 return;
             }
 
             var level = LevelModel.CurrentLevel;
             if (level == null)
             {
-                LoggerService?.LogWarning("[UseHintCommand] Abort: LevelModel.CurrentLevel is null.");
+                LoggerService?.LogWarning("[PixelFlow.UseHintCommand] Abort: LevelModel.CurrentLevel is null.");
                 return;
             }
 
+            LoggerService?.Log("[PixelFlow.UseHintCommand] Generating hint path via HintService...");
             var hintPath = HintService.GetNextUnsolvedHint(level, GridModel, steps: 3);
             if (hintPath == null || hintPath.Count == 0)
             {
-                LoggerService?.LogWarning($"[UseHintCommand] Abort: GetNextUnsolvedHint returned {(hintPath == null ? "null" : "empty")}. Grid has {GridModel.Paths.Count} paths.");
+                LoggerService?.LogWarning($"[PixelFlow.UseHintCommand] Abort: GetNextUnsolvedHint returned {(hintPath == null ? "null" : "empty")}. Grid has {GridModel.Paths.Count} paths.");
                 return;
             }
 
-            LoggerService?.Log($"[UseHintCommand] Hint path: {hintPath.Count} cells. Applying...");
+            LoggerService?.Log($"[PixelFlow.UseHintCommand] Hint path generated: {hintPath.Count} cells. Analyzing connection color...");
 
             HistoryService.Record(GridModel, GameSessionModel);
 
             var colorToHint = ResolveHintColor(level, hintPath);
-            if (colorToHint == ColorType.None) return;
+            LoggerService?.Log($"[PixelFlow.UseHintCommand] Resolved color for hint: {colorToHint}");
+            if (colorToHint == ColorType.None)
+            {
+                LoggerService?.LogWarning("[PixelFlow.UseHintCommand] Abort: Could not resolve target color for hint path.");
+                return;
+            }
 
             if (!GridModel.Paths.ContainsKey(colorToHint))
                 GridModel.Paths[colorToHint] = new List<Vector2Int>();
 
+            LoggerService?.Log($"[PixelFlow.UseHintCommand] Applying hint cells for color {colorToHint} onto grid...");
             foreach (var pos in hintPath)
             {
                 if (pos.x < 0 || pos.x >= GridModel.Width || pos.y < 0 || pos.y >= GridModel.Height)
+                {
+                    LoggerService?.LogWarning($"[PixelFlow.UseHintCommand] Skipping out-of-bounds hint position: {pos}");
                     continue;
+                }
 
                 if (!GridModel.Paths[colorToHint].Contains(pos))
                 {
@@ -74,6 +85,7 @@ namespace PixelFlow.Commands
                 }
                 else if (cell.Color != colorToHint && cell.State == CellState.Path)
                 {
+                    LoggerService?.Log($"[PixelFlow.UseHintCommand] Breaking conflicting path for color {cell.Color} at {pos}.");
                     PathService.BreakPath(cell.Color, pos);
                     cell.State = CellState.Path;
                     cell.Color = colorToHint;
@@ -81,6 +93,7 @@ namespace PixelFlow.Commands
             }
 
             HintModel.UseHint();
+            LoggerService?.Log($"[PixelFlow.UseHintCommand] Hint applied successfully. Remaining: {HintModel.HintsRemaining}");
             SignalBus.Fire(new GridUpdatedSignal());
             SignalBus.Fire(new CheckWinConditionSignal());
             SaveHelper.TrySave(SaveThrottler, GridModel, GameSessionModel, LevelModel, PlayerPrefsService);

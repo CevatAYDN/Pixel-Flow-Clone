@@ -217,7 +217,8 @@ namespace PixelFlow.Services
             // ÖNCE parçaları pool'a geri ver, SONRA root'u destroy et
             // SafeDestroy sadece Destroy çağırır, pool'a geri vermez → pool depletion → GC spike
             VehicleVisualFactory.RecycleVehicle(v.Visual);
-            Nexus.Core.Services.NexusLog.Info("VehicleMovementService", "CompleteVehicleMovement", "?", "Vehicle of color " + v.Color + " completed its path. Recycled visual.");
+            string scoreInfo = _gameSessionModel != null ? $" (Score: {_gameSessionModel.CurrentFlowScore}/{_gameSessionModel.TargetFlowScore})" : "";
+            Nexus.Core.Services.NexusLog.Info("VehicleMovementService", "CompleteVehicleMovement", "?", "Vehicle of color " + v.Color + " completed its path" + scoreInfo + ". Recycled visual.");
             activeVehicles.RemoveAt(index);
         }
 

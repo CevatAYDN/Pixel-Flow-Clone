@@ -58,6 +58,7 @@ namespace PixelFlow.Services
 
             LevelModel.SetLevel(ld);
             GridModel.Initialize(ld.width, ld.height);
+            LoggerService?.Log($"[PixelFlow.LevelLoaderService] Initialized grid model with size {ld.width}x{ld.height}.");
 
             // Place Initial Nodes
             if (ld.initialNodes != null)
@@ -67,6 +68,7 @@ namespace PixelFlow.Services
                     if (node.position.x >= 0 && node.position.x < GridModel.Width &&
                         node.position.y >= 0 && node.position.y < GridModel.Height)
                     {
+                        LoggerService?.Log($"[PixelFlow.LevelLoaderService] Placing initial node at {node.position} with color {node.color}.");
                         var cell = GridModel.Grid[node.position.x, node.position.y];
                         cell.State = CellState.Node;
                         cell.Color = node.color;
@@ -74,6 +76,10 @@ namespace PixelFlow.Services
                         {
                             cell.AddPathColor(node.color);
                         }
+                    }
+                    else
+                    {
+                        LoggerService?.LogWarning($"[PixelFlow.LevelLoaderService] Out-of-bounds initial node position: {node.position}");
                     }
                 }
             }
@@ -86,9 +92,14 @@ namespace PixelFlow.Services
                     if (bridgePos.x >= 0 && bridgePos.x < GridModel.Width &&
                         bridgePos.y >= 0 && bridgePos.y < GridModel.Height)
                     {
+                        LoggerService?.Log($"[PixelFlow.LevelLoaderService] Placing pre-placed bridge (viaduct) at {bridgePos}.");
                         var cell = GridModel.Grid[bridgePos.x, bridgePos.y];
                         cell.State = CellState.Bridge;
                         cell.HasViaduct = true;
+                    }
+                    else
+                    {
+                        LoggerService?.LogWarning($"[PixelFlow.LevelLoaderService] Out-of-bounds bridge position: {bridgePos}");
                     }
                 }
             }
@@ -101,9 +112,14 @@ namespace PixelFlow.Services
                     if (obs.position.x >= 0 && obs.position.x < GridModel.Width &&
                         obs.position.y >= 0 && obs.position.y < GridModel.Height)
                     {
+                        LoggerService?.Log($"[PixelFlow.LevelLoaderService] Placing obstacle of type {obs.type} at {obs.position}.");
                         var cell = GridModel.Grid[obs.position.x, obs.position.y];
                         cell.State = CellState.Obstacle;
                         cell.ObstacleType = obs.type;
+                    }
+                    else
+                    {
+                        LoggerService?.LogWarning($"[PixelFlow.LevelLoaderService] Out-of-bounds obstacle position: {obs.position}");
                     }
                 }
             }
@@ -116,14 +132,20 @@ namespace PixelFlow.Services
                     if (owc.position.x >= 0 && owc.position.x < GridModel.Width &&
                         owc.position.y >= 0 && owc.position.y < GridModel.Height)
                     {
+                        LoggerService?.Log($"[PixelFlow.LevelLoaderService] Placing OneWay cell at {owc.position} with direction {owc.allowedDirection}.");
                         var cell = GridModel.Grid[owc.position.x, owc.position.y];
                         cell.State = CellState.Empty;
                         cell.ObstacleType = ObstacleType.OneWay;
+                    }
+                    else
+                    {
+                        LoggerService?.LogWarning($"[PixelFlow.LevelLoaderService] Out-of-bounds OneWay cell position: {owc.position}");
                     }
                 }
             }
 
             // Clear history for fresh level
+            LoggerService?.Log("[PixelFlow.LevelLoaderService] Clearing history service stacks.");
             HistoryService.Clear();
 
             // Session setup with viaduct bonus (GDD §9 — EconomyConfigAsset)
@@ -131,14 +153,17 @@ namespace PixelFlow.Services
                 ? EconomyConfig.CalculateViaductBonus(ld.levelIndex)
                 : ld.levelIndex / 10;
             int totalViaducts = ld.viaductLimit + viaductBonus;
+            LoggerService?.Log($"[PixelFlow.LevelLoaderService] Starting session: levelIndex={ld.levelIndex}, viaducts={totalViaducts} (base: {ld.viaductLimit}, bonus: {viaductBonus}), targetFlowScore={ld.flowScoreThreshold}");
             GameSessionModel.StartSession(ld.levelIndex, totalViaducts, ld.flowScoreThreshold, true);
 
+            LoggerService?.Log("[PixelFlow.LevelLoaderService] Resetting hints, initializing obstacles, notifying tutorial driver.");
             HintModel.ResetSessionHints();
             ObstacleService?.InitializeFromLevel(ld);
             TutorialDriver?.OnLevelLoaded(ld.levelIndex);
 
             // Finalize
             SignalBus.Fire(new GridUpdatedSignal());
+            LoggerService?.Log($"[PixelFlow.LevelLoaderService] GameState changing: {GameStateModel.CurrentState} -> Playing");
             GameStateModel.SetState(GameState.Playing);
             SaveThrottler?.TryRequestSave(() => GridStateSerializer.Save(GridModel, GameSessionModel, LevelModel, PlayerPrefsService));
 

@@ -146,14 +146,18 @@ namespace PixelFlow.Services
 
         private void HandleStateChanged(GameState state)
         {
-            // Eğer duraklatılmış (Paused) durumdan çıkıyorsak (unpausing), araçları temizleme!
-            if (GameStateModel.PreviousState == GameState.Paused)
+            LoggerService?.Log($"[PixelFlow.VehicleSimulator] HandleStateChanged: {GameStateModel.PreviousState} -> {state}");
+            
+            // Eğer duraklatılmış (Paused) durumdan Simulating durumuna geçiyorsak (viyadük yerleştirildi), araçları temizleme!
+            if (GameStateModel.PreviousState == GameState.Paused && state == GameState.Simulating)
             {
+                LoggerService?.Log("[PixelFlow.VehicleSimulator] Resuming simulation from Paused state. Preserving existing vehicles.");
                 return;
             }
 
             if (state == GameState.Playing)
             {
+                LoggerService?.Log("[PixelFlow.VehicleSimulator] GameState set to Playing. Resetting simulation timer and clearing vehicles.");
                 _simulationPhaseTimer = 0f;
                 _cachedEndpoints.Clear();
                 ClearAllVehicles();  // ClearAllVehicles içinde InvalidateSplineCache() çağrılır
@@ -164,10 +168,11 @@ namespace PixelFlow.Services
                 _cachedEndpoints.Clear();
                 _movementService?.InvalidateSplineCache();
                 // ClearAllVehicles() kaldırıldı - araçlar yok edilmeden pürüzsüzce hayaletten katı moda geçecek
-                LoggerService?.Log("[VehicleSimulator] Simulation Phase started. All vehicles now transition to solid.");
+                LoggerService?.Log("[PixelFlow.VehicleSimulator] Simulation Phase started. All vehicles now transition to solid.");
             }
             else if (state == GameState.MainMenu || state == GameState.LevelCompleted || state == GameState.LevelFailed)
             {
+                LoggerService?.Log($"[PixelFlow.VehicleSimulator] GameState set to {state}. Clearing all vehicles.");
                 ClearAllVehicles();
             }
         }
@@ -198,6 +203,24 @@ namespace PixelFlow.Services
             _movementService?.InvalidateSplineCache();
         }
 
+        private bool IsVehiclePathStale(VehicleInstance v)
+        {
+            if (GridModel?.Paths == null) return true;
+            if (!GridModel.Paths.TryGetValue(v.Color, out var currentPath) || currentPath == null)
+                return true; // No path exists anymore
+
+            if (v.Path == null || v.Path.Count != currentPath.Count)
+                return true;
+
+            for (int i = 0; i < v.Path.Count; i++)
+            {
+                if (v.Path[i] != currentPath[i])
+                    return true;
+            }
+
+            return false;
+        }
+
         public void Tick(float deltaTime)
         {
             var state = GameStateModel.CurrentState;
@@ -212,6 +235,20 @@ namespace PixelFlow.Services
             if (ObstacleService != null)
             {
                 ObstacleService.Tick(deltaTime);
+            }
+
+            // Remove stale vehicles whose paths have been modified
+            for (int i = _activeVehicles.Count - 1; i >= 0; i--)
+            {
+                if (IsVehiclePathStale(_activeVehicles[i]))
+                {
+                    LoggerService?.Log($"[PixelFlow.VehicleSimulator] Path for color {_activeVehicles[i].Color} was modified. Recycling stale vehicle.");
+                    if (_activeVehicles[i].Visual != null)
+                    {
+                        VehicleVisualFactory.RecycleVehicle(_activeVehicles[i].Visual);
+                    }
+                    _activeVehicles.RemoveAt(i);
+                }
             }
 
             UpdateSpawning(deltaTime);
@@ -312,7 +349,10 @@ namespace PixelFlow.Services
             {
                 Vector2Int startCell = path[0];
                 if (ObstacleService.IsNarrowPass(startCell) && !ObstacleService.CanVehicleEnterNarrowPass(startCell, color))
+                {
+                    LoggerService?.Log($"[PixelFlow.VehicleSimulator] Spawn blocked: Narrow pass at start cell {startCell} is occupied for color {color}.");
                     return;
+                }
             }
 
             if (_cachedGridView == null)
@@ -352,6 +392,8 @@ namespace PixelFlow.Services
                 Coupler1Transform = coupler1,
                 Coupler2Transform = coupler2
             };
+
+            LoggerService?.Log($"[PixelFlow.VehicleSimulator] Spawning vehicle of color {color} with style {vehicleStyle} and speed {inst.Speed}. Path points: {path.Count}");
 
             visual.transform.localPosition = vehicleStyle == VehicleStyle.Train ? Vector3.zero : inst.CurrentPosition;
 
@@ -467,7 +509,7 @@ namespace PixelFlow.Services
 
         private void TriggerCrash(Vector2Int crashPos, ColorType colorA, ColorType colorB)
         {
-            LoggerService?.LogError($"[VehicleSimulator] TRAFFIC CRASH detected at {crashPos} between {colorA} and {colorB}!");
+            LoggerService?.LogError($"[PixelFlow.VehicleSimulator] TRAFFIC CRASH detected at cell {crashPos} between color {colorA} and {colorB}! Focusing camera and setting state to Paused.");
 
             GridModel.LastCrashPosition.Value = crashPos;
             GridModel.CrashColorA.Value = colorA;
@@ -507,19 +549,20 @@ namespace PixelFlow.Services
             // Flow Score kazanma kontrolü
             if (GameSessionModel != null && GameSessionModel.CurrentFlowScore >= GameSessionModel.TargetFlowScore)
             {
+                LoggerService?.Log($"[PixelFlow.VehicleSimulator] Flow score threshold reached: {GameSessionModel.CurrentFlowScore} / {GameSessionModel.TargetFlowScore}. Completing level.");
                 CompleteLevel();
             }
             else if (_simulationPhaseTimer >= maxDuration)
             {
                 // Güvenlik zaman aşımı durumunda (kazasız ama akış yetersiz)
-                LoggerService?.LogWarning("[VehicleSimulator] Simulation safety timeout reached. Returning to playing state due to grid congestion.");
+                LoggerService?.LogWarning($"[PixelFlow.VehicleSimulator] Simulation safety timeout reached ({maxDuration}s). Flow score achieved: {GameSessionModel.CurrentFlowScore}/{GameSessionModel.TargetFlowScore}. Returning to playing state due to grid congestion.");
                 StopSimulationPhase();
             }
         }
 
         private void CompleteLevel()
         {
-            LoggerService?.Log("[VehicleSimulator] Simulation completed successfully with no crashes! LEVEL COMPLETED!");
+            LoggerService?.Log($"[PixelFlow.VehicleSimulator] Simulation completed successfully with no crashes! LEVEL COMPLETED! Target: {GameSessionModel.TargetFlowScore}, Flow achieved: {GameSessionModel.CurrentFlowScore}.");
 
             GameStateModel.SetState(GameState.LevelCompleted);
             HapticService?.Vibrate(HapticType.Success);

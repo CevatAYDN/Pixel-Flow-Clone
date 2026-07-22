@@ -24,8 +24,8 @@ namespace PixelFlow.Commands
         [Inject] public ISaveThrottler SaveThrottler { get; set; }
         [Inject] public IHapticService HapticService { get; set; }
         [Inject] public IObstacleService ObstacleService { get; set; }
-
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
+        [Inject] public ILoggerService LoggerService { get; set; }
 
         // Batched history bypass edilerek her adımda snapshot kaydı sağlanır (Testler ve oyun hassasiyeti için)
         private bool _hasPendingHistory;
@@ -53,8 +53,9 @@ namespace PixelFlow.Commands
 
             if (state == GameState.Simulating && signal.Type == InputType.PointerDown)
             {
+                LoggerService?.Log($"[PixelFlow.ProcessInputCommand] PointerDown received in Simulating state. Reverting to Playing state.");
                 GameStateModel.SetState(GameState.Playing);
-                return;
+                state = GameState.Playing;
             }
 
             if (state != GameState.Playing && state != GameState.Paused)
@@ -63,7 +64,10 @@ namespace PixelFlow.Commands
             }
 
             if (signal.GridPosition.x < 0 || signal.GridPosition.y < 0 || signal.GridPosition.x >= GridModel.Width || signal.GridPosition.y >= GridModel.Height)
+            {
+                LoggerService?.LogWarning($"[PixelFlow.ProcessInputCommand] Input position out of bounds: {signal.GridPosition}");
                 return;
+            }
 
             var currentCell = GridModel.Grid[signal.GridPosition.x, signal.GridPosition.y];
 
@@ -71,13 +75,26 @@ namespace PixelFlow.Commands
             {
                 if (signal.Type == InputType.PointerDown)
                 {
-                if (currentCell.PathColorCount >= 2 && !currentCell.HasViaduct)
-                {
-                    SignalBus.Fire(new PlaceViaductSignal { Position = signal.GridPosition });
+                    LoggerService?.Log($"[PixelFlow.ProcessInputCommand] PointerDown in Paused state at {signal.GridPosition}. PathColorCount: {currentCell.PathColorCount}, HasViaduct: {currentCell.HasViaduct}");
+                    if (currentCell.PathColorCount >= 2 && !currentCell.HasViaduct)
+                    {
+                        LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Firing PlaceViaductSignal for position {signal.GridPosition}.");
+                        SignalBus.Fire(new PlaceViaductSignal { Position = signal.GridPosition });
                         HapticService?.Vibrate(HapticType.Medium);
+                        return;
+                    }
+                    else
+                    {
+                        LoggerService?.Log($"[PixelFlow.ProcessInputCommand] PointerDown in Paused state on non-crossing cell {signal.GridPosition}. Recovering from crisis, reverting to Playing state.");
+                        GameSessionModel?.MarkCrisisUndoUsed();
+                        GameStateModel.SetState(GameState.Playing);
+                        state = GameState.Playing;
                     }
                 }
-                return;
+                else
+                {
+                    return;
+                }
             }
 
             if (signal.Type == InputType.PointerDown)
@@ -86,10 +103,13 @@ namespace PixelFlow.Commands
                     : currentCell.PathColorCount > 0 ? currentCell.FirstPathColor
                     : ColorType.None;
 
+                LoggerService?.Log($"[PixelFlow.ProcessInputCommand] PointerDown at {signal.GridPosition}. ColorType resolved: {clickedColor}");
+
                 if (clickedColor != ColorType.None)
                 {
                     if (GridModel.LockedColors.Contains(clickedColor))
                     {
+                        LoggerService?.LogWarning($"[PixelFlow.ProcessInputCommand] Color {clickedColor} is locked. Interaction blocked.");
                         return;
                     }
 
@@ -105,11 +125,13 @@ namespace PixelFlow.Commands
 
                     if (currentCell.State == CellState.Node)
                     {
+                        LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Starting new path for color {clickedColor} from source node {signal.GridPosition}.");
                         PathService.ClearPath(clickedColor);
                         GridModel.Paths[clickedColor].Add(signal.GridPosition);
                     }
                     else if (currentCell.State == CellState.Path || currentCell.State == CellState.Bridge)
                     {
+                        LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Backtracking path for color {clickedColor} from cell {signal.GridPosition}.");
                         PathService.BacktrackPath(clickedColor, signal.GridPosition);
                     }
                     // GridUpdatedSignal ATLANIR — path henüz tamamlanmadı (sadece 1 hücre).
@@ -124,7 +146,10 @@ namespace PixelFlow.Commands
                     return;
 
                 if (signal.GridPosition.x < 0 || signal.GridPosition.y < 0 || signal.GridPosition.x >= GridModel.Width || signal.GridPosition.y >= GridModel.Height)
+                {
+                    LoggerService?.LogWarning($"[PixelFlow.ProcessInputCommand] Drag position out of bounds: {signal.GridPosition}");
                     return;
+                }
 
                 int distance = Mathf.Abs(signal.GridPosition.x - GridModel.LastPosition.Value.x) + Mathf.Abs(signal.GridPosition.y - GridModel.LastPosition.Value.y);
                 if (distance != 1)
@@ -134,6 +159,7 @@ namespace PixelFlow.Commands
 
                 if (path.Contains(signal.GridPosition))
                 {
+                    LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Drag backtrack to path position {signal.GridPosition} for color {GridModel.ActiveColor.Value}.");
                     EnsureHistoryRecorded();
                     PathService.BacktrackPath(GridModel.ActiveColor.Value, signal.GridPosition);
                     GridModel.LastPosition.Value = signal.GridPosition;
@@ -150,11 +176,17 @@ namespace PixelFlow.Commands
                     Vector2Int entryDir = bridgePos - path[path.Count - 2];
                     Vector2Int moveDir = signal.GridPosition - bridgePos;
                     if (moveDir != entryDir)
+                    {
+                        LoggerService?.LogWarning($"[PixelFlow.ProcessInputCommand] Drag blocked: Bridge exit direction must continue straight. EntryDir: {entryDir}, MoveDir: {moveDir} at {bridgePos}");
                         return;
+                    }
                 }
 
                 if (currentCell.State == CellState.Obstacle)
+                {
+                    LoggerService?.LogWarning($"[PixelFlow.ProcessInputCommand] Drag blocked: Hit static obstacle at {signal.GridPosition}.");
                     return;
+                }
 
                 Vector2Int drawMoveDir = signal.GridPosition - GridModel.LastPosition.Value;
                 if (ObstacleService != null)
@@ -162,6 +194,7 @@ namespace PixelFlow.Commands
                     if (ObstacleService.IsOneWay(signal.GridPosition, drawMoveDir) ||
                         ObstacleService.IsOneWay(GridModel.LastPosition.Value, drawMoveDir))
                     {
+                        LoggerService?.LogWarning($"[PixelFlow.ProcessInputCommand] Drag blocked: OneWay constraint violation entering {signal.GridPosition} from direction {drawMoveDir}.");
                         return;
                     }
                 }
@@ -171,6 +204,7 @@ namespace PixelFlow.Commands
 
                 if (currentCell.State == CellState.Empty || (isDrawableObstacle && currentCell.PathColorCount == 0))
                 {
+                    LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Drag extending path for color {GridModel.ActiveColor.Value} to {signal.GridPosition}.");
                     EnsureHistoryRecorded();
                     currentCell.Color = GridModel.ActiveColor.Value;
                     currentCell.State = CellState.Path;
@@ -190,6 +224,7 @@ namespace PixelFlow.Commands
                 {
                     if (path.Count > 0 && path[path.Count - 1] == signal.GridPosition) return;
 
+                    LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Drag completed connection for color {GridModel.ActiveColor.Value} at target node {signal.GridPosition}.");
                     EnsureHistoryRecorded();
                     if (!currentCell.HasPathColor(GridModel.ActiveColor.Value))
                     {
@@ -219,7 +254,7 @@ namespace PixelFlow.Commands
                             if (!BridgeValidationUtility.IsValidBridgeCrossing(
                                 otherPath, path, signal.GridPosition, entryDir))
                             {
-                                // Instead of blocking drawing, sever/backtrack the conflicting path at the intersection point
+                                LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Path crossing conflict at {signal.GridPosition} between {GridModel.ActiveColor.Value} and {existingColor}. Backtracking conflicting path.");
                                 EnsureHistoryRecorded();
                                 PathService.BacktrackPath(existingColor, signal.GridPosition);
                             }
@@ -230,16 +265,19 @@ namespace PixelFlow.Commands
                     {
                         // If still full, backtrack the conflicting color to make space
                         ColorType firstColor = currentCell.FirstPathColor;
+                        LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Cell at {signal.GridPosition} remains full after backtrack. Forcing backtrack of {firstColor} color.");
                         EnsureHistoryRecorded();
                         PathService.BacktrackPath(firstColor, signal.GridPosition);
                     }
 
                     if (currentCell.PathColorCount >= BridgeValidationUtility.MaxPathsPerBridge)
                     {
+                        LoggerService?.LogWarning($"[PixelFlow.ProcessInputCommand] Drag blocked at {signal.GridPosition}: Cell already occupied by max paths.");
                         Nexus.Core.Services.NexusLog.Warn("ProcessInputCommand", "HandleDrag", "?", "Cell already occupied by max paths. Drawing blocked.");
                         return;
                     }
 
+                    LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Drag crossing at {signal.GridPosition} for color {GridModel.ActiveColor.Value}. Existing path color count: {currentCell.PathColorCount}");
                     EnsureHistoryRecorded();
                     if (currentCell.PathColorCount == 0)
                     {
@@ -256,6 +294,7 @@ namespace PixelFlow.Commands
 
                     if (!currentCell.HasViaduct && currentCell.PathColorCount >= 2)
                     {
+                        LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Firing PathIntersectionWarningSignal for {signal.GridPosition} due to viaductless crossing.");
                         SignalBus.Fire(new PathIntersectionWarningSignal { Position = signal.GridPosition });
                     }
 
@@ -267,6 +306,7 @@ namespace PixelFlow.Commands
             {
                 if (GridModel.ActiveColor.Value != ColorType.None)
                 {
+                    LoggerService?.Log($"[PixelFlow.ProcessInputCommand] PointerUp. Resetting ActiveColor from {GridModel.ActiveColor.Value}. Requesting Save.");
                     EnsureHistoryRecorded();
                     GridModel.ActiveColor.Value = ColorType.None;
                     GridModel.LastPosition.Value = new Vector2Int(-1, -1);

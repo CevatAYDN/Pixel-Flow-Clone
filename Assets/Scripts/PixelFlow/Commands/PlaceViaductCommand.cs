@@ -24,25 +24,32 @@ namespace PixelFlow.Commands
 
         public void Execute(PlaceViaductSignal signal)
         {
+            Vector2Int pos = signal.Position;
+            LoggerService?.Log($"[PixelFlow.PlaceViaductCommand] Attempting to place viaduct at {pos}. Current state: {GameStateModel.CurrentState}");
+
             if (GameStateModel.CurrentState != GameState.Playing && GameStateModel.CurrentState != GameState.Paused)
             {
+                LoggerService?.LogWarning($"[PixelFlow.PlaceViaductCommand] Aborted: Cannot place viaduct while in state {GameStateModel.CurrentState}");
                 return;
             }
 
-            Vector2Int pos = signal.Position;
             if (pos.x < 0 || pos.y < 0 || pos.x >= GridModel.Width || pos.y >= GridModel.Height)
+            {
+                LoggerService?.LogError($"[PixelFlow.PlaceViaductCommand] Aborted: Position {pos} is out of bounds (Grid size: {GridModel.Width}x{GridModel.Height})");
                 return;
+            }
 
             var cell = GridModel.Grid[pos.x, pos.y];
 
             // Viyadük sadece en az 2 yolun kesiştiği yerlere ve henüz viyadük olmayan hücrelere konulabilir
             if (cell.PathColorCount < 2 || cell.PathColorCount > BridgeValidationUtility.MaxPathsPerBridge || cell.HasViaduct)
             {
-                LoggerService?.LogWarning($"[PlaceViaductCommand] Cannot place viaduct at {pos}. Paths: {cell.PathColorCount}, HasViaduct: {cell.HasViaduct}");
+                LoggerService?.LogWarning($"[PixelFlow.PlaceViaductCommand] Cannot place viaduct at {pos}. PathColorCount: {cell.PathColorCount}, HasViaduct: {cell.HasViaduct}");
                 return;
             }
 
             // Viyadük limitini kontrol et ve harca
+            LoggerService?.Log($"[PixelFlow.PlaceViaductCommand] Checking viaduct limits. Max: {GameSessionModel.MaxViaducts}, Available: {GameSessionModel.AvailableViaducts}");
             if (GameSessionModel.TryUseViaduct())
             {
                 HistoryService.Record(GridModel, GameSessionModel);
@@ -82,7 +89,7 @@ namespace PixelFlow.Commands
                     cell.OverColor = colors[1];
                 }
 
-                LoggerService?.Log($"[PlaceViaductCommand] Placed viaduct at {pos}. Under: {cell.UnderColor}, Over: {cell.OverColor}. Remaining viaducts: {GameSessionModel.AvailableViaducts}");
+                LoggerService?.Log($"[PixelFlow.PlaceViaductCommand] Successfully placed viaduct at {pos}. Under: {cell.UnderColor}, Over: {cell.OverColor}. Remaining viaducts: {GameSessionModel.AvailableViaducts}");
                 
                 // Eğer kriz durumunda duraklatılmışsak, kazadan önceki orijinal oyun durumuna geri dön!
                 if (GameStateModel.CurrentState == GameState.Paused)
@@ -90,6 +97,7 @@ namespace PixelFlow.Commands
                     var targetState = GameStateModel.PreviousState == GameState.Simulating 
                         ? GameState.Simulating 
                         : GameState.Playing;
+                    LoggerService?.Log($"[PixelFlow.PlaceViaductCommand] Resuming game from Paused state to: {targetState}");
                     GameStateModel.SetState(targetState);
                 }
                 
@@ -99,7 +107,7 @@ namespace PixelFlow.Commands
             }
             else
             {
-                LoggerService?.LogWarning("[PlaceViaductCommand] Out of viaducts!");
+                LoggerService?.LogWarning("[PixelFlow.PlaceViaductCommand] Aborted: Out of viaducts limit!");
                 SignalBus.Fire(new ViaductExhaustedSignal());
             }
         }

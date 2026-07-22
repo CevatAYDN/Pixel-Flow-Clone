@@ -14,6 +14,7 @@ namespace PixelFlow
     {
         public void OnConfigure(IContextBuilder builder)
         {
+            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] OnConfigure: Initializing framework dependency injection bindings...");
             // PlayerPrefs servisini singleton olarak bağla; kalıcı state kullanan tüm
             // modeller bunu constructor injection ile alır (test edilebilir).
             builder.Bind<IPlayerPrefsService, EncryptedStorageService>();
@@ -97,7 +98,11 @@ namespace PixelFlow
             {
                 config = UnityEngine.ScriptableObject.CreateInstance<GameConfig>();
                 config.name = "GameConfig (Runtime Default)";
-                NexusRuntime.Logger?.LogWarning("[PixelFlow] GameConfig.asset not found in Resources. Using runtime defaults.");
+                NexusRuntime.Logger?.LogWarning("[PixelFlow.GameContextLifecycle] GameConfig.asset not found in Resources. Using runtime defaults.");
+            }
+            else
+            {
+                NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] Configs/GameConfig asset loaded successfully.");
             }
             builder.BindInstance(config);
 
@@ -107,7 +112,11 @@ namespace PixelFlow
             {
                 palette = UnityEngine.ScriptableObject.CreateInstance<ThemePaletteAsset>();
                 palette.name = "ThemePalette (Runtime Default)";
-                NexusRuntime.Logger?.LogWarning("[PixelFlow] ThemePalette.asset not found in Resources. Using runtime defaults.");
+                NexusRuntime.Logger?.LogWarning("[PixelFlow.GameContextLifecycle] ThemePalette.asset not found in Resources. Using runtime defaults.");
+            }
+            else
+            {
+                NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] Configs/ThemePalette asset loaded successfully.");
             }
             builder.BindInstance(palette);
 
@@ -117,7 +126,11 @@ namespace PixelFlow
             {
                 colorBlindPalette = UnityEngine.ScriptableObject.CreateInstance<ColorBlindPaletteAsset>();
                 colorBlindPalette.name = "ColorBlindPalette (Runtime Default)";
-                NexusRuntime.Logger?.LogWarning("[PixelFlow] ColorBlindPalette.asset not found in Resources. Using runtime defaults.");
+                NexusRuntime.Logger?.LogWarning("[PixelFlow.GameContextLifecycle] ColorBlindPalette.asset not found in Resources. Using runtime defaults.");
+            }
+            else
+            {
+                NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] Configs/ColorBlindPalette asset loaded successfully.");
             }
             builder.BindInstance(colorBlindPalette);
             Models.ColorBlindPalette.Initialize(colorBlindPalette);
@@ -128,7 +141,11 @@ namespace PixelFlow
             {
                 vehicleMatConfig = UnityEngine.ScriptableObject.CreateInstance<VehicleMaterialConfigAsset>();
                 vehicleMatConfig.name = "VehicleMaterialConfig (Runtime Default)";
-                NexusRuntime.Logger?.LogWarning("[PixelFlow] VehicleMaterialConfig.asset not found in Resources. Using runtime defaults.");
+                NexusRuntime.Logger?.LogWarning("[PixelFlow.GameContextLifecycle] VehicleMaterialConfig.asset not found in Resources. Using runtime defaults.");
+            }
+            else
+            {
+                NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] Configs/VehicleMaterialConfig asset loaded successfully.");
             }
             builder.BindInstance(vehicleMatConfig);
             Views.VehicleVisualFactory.Initialize(vehicleMatConfig);
@@ -139,7 +156,11 @@ namespace PixelFlow
             {
                 economyConfig = UnityEngine.ScriptableObject.CreateInstance<EconomyConfigAsset>();
                 economyConfig.name = "EconomyConfig (Runtime Default)";
-                NexusRuntime.Logger?.LogWarning("[PixelFlow] EconomyConfig.asset not found in Resources. Using runtime defaults.");
+                NexusRuntime.Logger?.LogWarning("[PixelFlow.GameContextLifecycle] EconomyConfig.asset not found in Resources. Using runtime defaults.");
+            }
+            else
+            {
+                NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] Configs/EconomyConfig asset loaded successfully.");
             }
             builder.BindInstance(economyConfig);
 
@@ -149,7 +170,11 @@ namespace PixelFlow
             {
                 levelCatalog = UnityEngine.ScriptableObject.CreateInstance<LevelCatalogAsset>();
                 levelCatalog.name = "LevelCatalog (Runtime Default)";
-                NexusRuntime.Logger?.LogWarning("[PixelFlow] Configs/LevelCatalog.asset not found in Resources. Using runtime defaults (fallback to Resources.Load chain).");
+                NexusRuntime.Logger?.LogWarning("[PixelFlow.GameContextLifecycle] Configs/LevelCatalog.asset not found in Resources. Using runtime defaults (fallback to Resources.Load chain).");
+            }
+            else
+            {
+                NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] Configs/LevelCatalog asset loaded successfully.");
             }
             builder.BindInstance(levelCatalog);
         }
