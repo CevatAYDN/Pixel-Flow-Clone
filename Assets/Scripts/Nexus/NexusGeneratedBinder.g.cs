@@ -282,6 +282,7 @@ namespace Nexus.Generated
                 instance.SettingsModel = di.Resolve<PixelFlow.Models.ISettingsModel>();
                 instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
                 instance.CamProvider = di.Resolve<PixelFlow.Services.ICameraProvider>();
+                instance.CrisisAdService = di.Resolve<PixelFlow.Services.ICrisisAdService>();
             });
             NexusDI.RegisterClearer<PixelFlow.Services.VehicleSimulator>(instance =>
             {
@@ -297,6 +298,7 @@ namespace Nexus.Generated
                 instance.SettingsModel = null;
                 instance.LoggerService = null;
                 instance.CamProvider = null;
+                instance.CrisisAdService = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.ChangeThemeCommand>((instance, di) =>
             {
@@ -352,6 +354,7 @@ namespace Nexus.Generated
                 instance.TutorialDriver = di.Resolve<PixelFlow.Services.ITutorialDriver>();
                 instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
                 instance.PlayerPrefsService = di.Resolve<Nexus.Core.Services.IPlayerPrefsService>();
+                instance.LevelLoaderService = di.Resolve<PixelFlow.Services.ILevelLoaderService>();
             });
             NexusDI.RegisterClearer<PixelFlow.Commands.LoadLevelCommand>(instance =>
             {
@@ -367,6 +370,7 @@ namespace Nexus.Generated
                 instance.TutorialDriver = null;
                 instance.LoggerService = null;
                 instance.PlayerPrefsService = null;
+                instance.LevelLoaderService = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.PauseSimulationCommand>((instance, di) =>
             {
@@ -676,6 +680,8 @@ namespace Nexus.Generated
                 _ = _p_VehicleSimulator_LoggerService; // Suppress CS0219 warning
                 var _p_VehicleSimulator_CamProvider = default(PixelFlow.Services.VehicleSimulator).CamProvider;
                 _ = _p_VehicleSimulator_CamProvider; // Suppress CS0219 warning
+                var _p_VehicleSimulator_CrisisAdService = default(PixelFlow.Services.VehicleSimulator).CrisisAdService;
+                _ = _p_VehicleSimulator_CrisisAdService; // Suppress CS0219 warning
                 var _p_ChangeThemeCommand_SettingsModel = default(PixelFlow.Commands.ChangeThemeCommand).SettingsModel;
                 _ = _p_ChangeThemeCommand_SettingsModel; // Suppress CS0219 warning
                 var _p_ChangeThemeCommand_SignalBus = default(PixelFlow.Commands.ChangeThemeCommand).SignalBus;
@@ -722,6 +728,8 @@ namespace Nexus.Generated
                 _ = _p_LoadLevelCommand_LoggerService; // Suppress CS0219 warning
                 var _p_LoadLevelCommand_PlayerPrefsService = default(PixelFlow.Commands.LoadLevelCommand).PlayerPrefsService;
                 _ = _p_LoadLevelCommand_PlayerPrefsService; // Suppress CS0219 warning
+                var _p_LoadLevelCommand_LevelLoaderService = default(PixelFlow.Commands.LoadLevelCommand).LevelLoaderService;
+                _ = _p_LoadLevelCommand_LevelLoaderService; // Suppress CS0219 warning
                 var _p_PauseSimulationCommand_VehicleSimulator = default(PixelFlow.Commands.PauseSimulationCommand).VehicleSimulator;
                 _ = _p_PauseSimulationCommand_VehicleSimulator; // Suppress CS0219 warning
                 var _p_PauseSimulationCommand_GameStateModel = default(PixelFlow.Commands.PauseSimulationCommand).GameStateModel;

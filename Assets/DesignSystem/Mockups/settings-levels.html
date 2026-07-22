@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Flow - Settings & Menu Screens</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0c12; color: #e8eaf0; min-height: 100vh; padding: 20px; }
+        .screens-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px; max-width: 1400px; margin: 0 auto; }
+        .device-frame { width: 100%; max-width: 390px; aspect-ratio: 9 / 19.5; margin: 0 auto; background: #1a1a2e; border-radius: 36px; box-shadow: 0 0 0 8px #1a1a2e, 0 40px 80px -20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05); position: relative; overflow: hidden; }
+        .device-frame::before { content: ''; position: absolute; top: 16px; left: 50%; transform: translateX(-50%); width: 140px; height: 6px; background: #2a2a3e; border-radius: 3px; z-index: 10; }
+        .screen { width: 100%; height: 100%; position: relative; overflow: hidden; background: #0a0c12; }
+        .bg-gradient { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 30%, rgba(108, 92, 231, 0.15) 0%, transparent 60%), radial-gradient(ellipse at 50% 70%, rgba(0, 212, 255, 0.1) 0%, transparent 50%); }
+        
+        /* Shared Components */
+        .app-bar { position: absolute; top: 0; left: 0; right: 0; padding: 16px 20px 12px; display: flex; align-items: center; justify-content: space-between; z-index: 5; background: linear-gradient(180deg, rgba(10,12,18,0.95) 0%, transparent 100%); }
+        .back-btn { width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; color: #e8eaf0; cursor: pointer; transition: all 0.2s; }
+        .back-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.15); }
+        .screen-title { font-size: 1.1rem; font-weight: 600; color: #fff; }
+        
+        /* Bento Card */
+        .bento-card { background: linear-gradient(145deg, rgba(20,22,32,0.9) 0%, rgba(12,14,22,0.95) 100%); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 20px; margin: 16px; backdrop-filter: blur(20px); position: relative; }
+        .bento-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent); }
+        
+        /* Section Header */
+        .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding: 0 4px; }
+        .section-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+        .section-title { font-size: 0.85rem; font-weight: 600; color: #b8b0ff; text-transform: uppercase; letter-spacing: 0.08em; }
+        
+        /* Toggle Row */
+        .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 16px 4px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .toggle-row:last-child { border-bottom: none; }
+        .toggle-info { display: flex; flex-direction: column; gap: 4px; }
+        .toggle-label { font-size: 0.95rem; font-weight: 500; color: #e8eaf0; }
+        .toggle-desc { font-size: 0.75rem; color: #8a8f9e; }
+        .toggle-switch { width: 52px; height: 28px; border-radius: 14px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.08); position: relative; cursor: pointer; transition: all 0.2s; }
+        .toggle-switch.active { background: linear-gradient(135deg, #6c5ce7, #00d4ff); border-color: transparent; }
+        .toggle-switch.active .toggle-thumb { transform: translateX(24px); }
+        .toggle-thumb { width: 22px; height: 22px; border-radius: 11px; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.3); position: absolute; top: 2px; left: 2px; transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1); }
+        
+        /* Slider Row */
+        .slider-row { padding: 16px 4px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .slider-row:last-child { border-bottom: none; }
+        .slider-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .slider-label { font-size: 0.95rem; font-weight: 500; }
+        .slider-value { font-size: 0.85rem; font-weight: 600; color: #b8b0ff; font-variant-numeric: tabular-nums; }
+        .slider-track { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; position: relative; }
+        .slider-fill { height: 100%; background: linear-gradient(90deg, #6c5ce7, #00d4ff); border-radius: 2px; }
+        .slider-thumb { width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.3); position: absolute; top: 50%; transform: translate(-50%, -50%); cursor: pointer; transition: box-shadow 0.2s; }
+        .slider-thumb:hover { box-shadow: 0 2px 12px rgba(108, 92, 231, 0.5); }
+        
+        /* Select Row */
+        .select-row { padding: 16px 4px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .select-row:last-child { border-bottom: none; }
+        .select-trigger { width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; color: #e8eaf0; font-size: 0.9rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.2s; }
+        .select-trigger:hover { border-color: rgba(108, 92, 231, 0.4); background: rgba(108, 92, 231, 0.05); }
+        .select-value { font-weight: 500; }
+        .select-chevron { width: 18px; height: 18px; opacity: 0.5; transition: transform 0.2s; }
+        .select-trigger.open .select-chevron { transform: rotate(180deg); }
+        
+        /* Color Blind Palette Preview */
+        .palette-preview { display: flex; gap: 8px; margin-top: 12px; }
+        .palette-dot { width: 36px; height: 36px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.1); position: relative; }
+        .palette-dot::after { content: attr(data-shape); position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 0.6rem; color: #8a8f9e; white-space: nowrap; }
+        
+        /* Button Primary */
+        .btn-primary { width: 100%; padding: 16px; background: linear-gradient(135deg, #6c5ce7, #00d4ff); border: none; border-radius: 14px; color: #0a0c12; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s; margin-top: 8px; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px -8px rgba(108, 92, 231, 0.5); }
+        
+        /* Danger Button */
+        .btn-danger { width: 100%; padding: 16px; background: rgba(255, 94, 140, 0.1); border: 1px solid rgba(255, 94, 140, 0.3); border-radius: 14px; color: #ff5e8c; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-danger:hover { background: rgba(255, 94, 140, 0.2); border-color: #ff5e8c; }
+        
+        /* Content Area */
+        .content-area { position: absolute; top: 70px; bottom: 0; left: 0; right: 0; overflow-y: auto; padding-bottom: 100px; }
+        
+        /* Level Select Grid */
+        .level-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 16px; }
+        .level-card { aspect-ratio: 1; background: linear-gradient(145deg, rgba(20,22,32,0.9) 0%, rgba(12,14,22,0.95) 100%); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 16px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
+        .card { background: linear-gradient(145deg, rgba(20,22,32,0.9) 0%, rgba(12,14,22,0.95) 100%); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 20px; margin: 16px; backdrop-filter: blur(20px); position: relative; }
+        .level-card:hover { transform: scale(1.02); border-color: rgba(108, 92, 231, 0.3); box-shadow: 0 12px 32px -8px rgba(108, 92, 231, 0.2); }
+        .level-card.locked { opacity: 0.4; pointer-events: none; }
+        .level-card.locked::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; }
+        .level-num { font-size: 1.5rem; font-weight: 700; color: #fff; }
+        .level-phase { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 8px; border-radius: 100px; background: rgba(108, 92, 231, 0.2); color: #b8b0ff; }
+        .level-stars { display: flex; gap: 2px; }
+        .star { width: 14px; height: 14px; fill: none; stroke: rgba(255,255,255,0.2); stroke-width: 1.5; }
+        .star.earned { fill: #ffd93d; stroke: #ffd93d; }
+        
+        /* Bottom Nav */
+        .bottom-nav { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 20px 24px; background: linear-gradient(0deg, rgba(10,12,18,0.98) 0%, transparent 100%); display: flex; justify-content: space-around; z-index: 5; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 16px; border-radius: 12px; color: #8a8f9e; cursor: pointer; transition: all 0.2s; }
+        .nav-item.active { color: #6c5ce7; background: rgba(108, 92, 231, 0.1); }
+        .nav-icon { width: 24px; height: 24px; }
+        .nav-label { font-size: 0.65rem; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="screens-grid">
+        <!-- SETTINGS SCREEN -->
+        <div class="device-frame">
+            <div class="screen">
+                <div class="bg-gradient"></div>
+                <div class="app-bar">
+                    <button class="back-btn" aria-label="Back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+                    <span class="screen-title">Settings</span>
+                    <div style="width: 40px;"></div>
+                </div>
+                <div class="content-area">
+                    <!-- Theme Section -->
+                    <div class="bento-card">
+                        <div class="section-header">
+                            <div class="section-icon" style="background: rgba(108, 92, 231, 0.2); color: #6c5ce7;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></div>
+                            <span class="section-title">Theme</span>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <span class="toggle-label">Dark Mode</span>
+                                <span class="toggle-desc">OLED-friendly deep dark (default)</span>
+                            </div>
+                            <div class="toggle-switch active" data-theme="dark"><div class="toggle-thumb"></div></div>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <span class="toggle-label">Light Mode</span>
+                                <span class="toggle-desc">High contrast for bright environments</span>
+                            </div>
+                            <div class="toggle-switch" data-theme="light"><div class="toggle-thumb"></div></div>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <span class="toggle-label">Neon Mode</span>
+                                <span class="toggle-desc">Vibrant cyberpunk aesthetic</span>
+                            </div>
+                            <div class="toggle-switch" data-theme="neon"><div class="toggle-thumb"></div></div>
+                        </div>
+                    </div>
+
+                    <!-- Audio Section -->
+                    <div class="bento-card">
+                        <div class="section-header">
+                            <div class="section-icon" style="background: rgba(0, 212, 255, 0.2); color: #00d4ff;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></div>
+                            <span class="section-title">Audio</span>
+                        </div>
+                        <div class="slider-row">
+                            <div class="slider-header"><span class="slider-label">Master Volume</span><span class="slider-value" id="masterVal">80%</span></div>
+                            <div class="slider-track"><div class="slider-fill" style="width: 80%;"></div><div class="slider-thumb" style="left: 80%;"></div></div>
+                        </div>
+                        <div class="slider-row">
+                            <div class="slider-header"><span class="slider-label">Music Volume</span><span class="slider-value" id="musicVal">60%</span></div>
+                            <div class="slider-track"><div class="slider-fill" style="width: 60%;"></div><div class="slider-thumb" style="left: 60%;"></div></div>
+                        </div>
+                        <div class="slider-row">
+                            <div class="slider-header"><span class="slider-label">SFX Volume</span><span class="slider-value" id="sfxVal">90%</span></div>
+                            <div class="slider-track"><div class="slider-fill" style="width: 90%;"></div><div class="slider-thumb" style="left: 90%;"></div></div>
+                        </div>
+                        <div class="slider-row">
+                            <div class="slider-header"><span class="slider-label">Haptic Intensity</span><span class="slider-value" id="hapticVal">70%</span></div>
+                            <div class="slider-track"><div class="slider-fill" style="width: 70%;"></div><div class="slider-thumb" style="left: 70%;"></div></div>
+                        </div>
+                    </div>
+
+                    <!-- Accessibility Section -->
+                    <div class="bento-card">
+                        <div class="section-header">
+                            <div class="section-icon" style="background: rgba(255, 94, 140, 0.2); color: #ff5e8c;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/><path d="M12 10v4"/></svg></div>
+                            <span class="section-title">Accessibility</span>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <span class="toggle-label">Color Blind Support</span>
+                                <span class="toggle-desc">Daltonization for Protanopia/Deuteranopia/Tritanopia</span>
+                            </div>
+                            <div class="toggle-switch active" id="cbToggle"><div class="toggle-thumb"></div></div>
+                        </div>
+                        <div class="select-row" id="cbModeRow">
+                            <div class="toggle-info">
+                                <span class="toggle-label">Color Blind Mode</span>
+                                <span class="toggle-desc">Select your vision type</span>
+                            </div>
+                            <div class="select-trigger" id="cbSelect">
+                                <span class="select-value">Deuteranopia</span>
+                                <svg class="select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                            </div>
+                        </div>
+                        <div class="palette-preview" id="palettePreview">
+                            <div class="palette-dot" style="background: #ff3d7f;" data-shape="▲"></div>
+                            <div class="palette-dot" style="background: #6bcb77;" data-shape="◆"></div>
+                            <div class="palette-dot" style="background: #00d4ff;" data-shape="●"></div>
+                            <div class="palette-dot" style="background: #ffd93d;" data-shape="■"></div>
+                            <div class="palette-dot" style="background: #b36bff;" data-shape="★"></div>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <span class="toggle-label">Reduce Motion</span>
+                                <span class="toggle-desc">Minimize animations and transitions</span>
+                            </div>
+                            <div class="toggle-switch" id="reduceMotion"><div class="toggle-thumb"></div></div>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <span class="toggle-label">High Contrast UI</span>
+                                <span class="toggle-desc">Increased contrast for better readability</span>
+                            </div>
+                            <div class="toggle-switch" id="highContrast"><div class="toggle-thumb"></div></div>
+                        </div>
+                    </div>
+
+                    <!-- Gameplay Section -->
+                    <div class="bento-card">
+                        <div class="section-header">
+                            <div class="section-icon" style="background: rgba(255, 217, 61, 0.2); color: #ffd93d;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+                            <span class="section-title">Gameplay</span>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <span class="toggle-label">Auto-Save</span>
+                                <span class="toggle-desc">Automatically save progress after each move</span>
+                            </div>
+                            <div class="toggle-switch active" id="autoSave"><div class="toggle-thumb"></div></div>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <span class="toggle-label">Show Path Preview</span>
+                                <span class="toggle-desc">Ghost path while dragging</span>
+                            </div>
+                            <div class="toggle-switch active" id="pathPreview"><div class="toggle-thumb"></div></div>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <span class="toggle-label">Viaduct Confirmation</span>
+                                <span class="toggle-desc">Ask before placing viaduct</span>
+                            </div>
+                            <div class="toggle-switch active" id="viaductConfirm"><div class="toggle-thumb"></div></div>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <span class="toggle-label">Tutorial Hints</span>
+                                <span class="toggle-desc">Contextual help for new mechanics</span>
+                            </div>
+                            <div class="toggle-switch active" id="tutorialHints"><div class="toggle-thumb"></div></div>
+                        </div>
+                    </div>
+
+                    <!-- Data Section -->
+                    <div class="bento-card">
+                        <div class="section-header">
+                            <div class="section-icon" style="background: rgba(255, 94, 140, 0.2); color: #ff5e8c;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+                            <span class="section-title">Data & Privacy</span>
+                        </div>
+                        <button class="btn-primary" style="margin: 0 16px 16px;">Export Save Data</button>
+                        <button class="btn-danger" style="margin: 0 16px 16px;">Delete All Progress</button>
+                        <p style="padding: 0 20px 16px; font-size: 0.75rem; color: #8a8f9e; text-align: center;">Your data never leaves this device. No analytics, no tracking.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LEVEL SELECT SCREEN -->
+        <div class="device-frame">
+            <div class="screen">
+                <div class="bg-gradient"></div>
+                <div class="app-bar">
+                    <button class="back-btn" aria-label="Back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+                    <span class="screen-title">Select Level</span>
+                    <div style="width: 40px;"></div>
+                </div>
+                <div class="content-area">
+                    <div style="padding: 0 16px 8px; display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 28px; height: 28px; border-radius: 8px; background: rgba(108, 92, 231, 0.2); display: flex; align-items: center; justify-content: center; color: #6c5ce7;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 8 12 3 7 8"/><path d="M17 8v12"/><path d="M7 8v12"/></svg></div>
+                            <span style="font-size: 0.85rem; font-weight: 600; color: #b8b0ff; text-transform: uppercase; letter-spacing: 0.08em;">Phase 1</span>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button style="padding: 6px 12px; border-radius: 100px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: #8a8f9e; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;">Phase 1</button>
+                            <button style="padding: 6px 12px; border-radius: 100px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: #8a8f9e; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;">Phase 2</button>
+                            <button style="padding: 6px 12px; border-radius: 100px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: #8a8f9e; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;">Phase 3</button>
+                            <button style="padding: 6px 12px; border-radius: 100px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: #8a8f9e; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;">Phase 4</button>
+                        </div>
+                    </div>
+                    <div class="level-grid" id="levelGrid"></div>
+                </div>
+                <div class="bottom-nav">
+                    <div class="nav-item active"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg><span class="nav-label">Levels</span></div>
+                    <div class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span class="nav-label">Daily</span></div>
+                    <div class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg><span class="nav-label">Settings</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DAILY CRISIS SCREEN -->
+        <div class="device-frame">
+            <div class="screen">
+                <div class="bg-gradient"></div>
+                <div class="app-bar">
+                    <button class="back-btn" aria-label="Back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+                    <span class="screen-title">Daily Crisis</span>
+                    <div style="width: 40px;"></div>
+                </div>
+                <div class="content-area" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; text-align: center;">
+                    <div style="width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, rgba(255, 94, 140, 0.2), rgba(108, 92, 231, 0.2)); border: 1px solid rgba(255, 94, 140, 0.3); display: flex; align-items: center; justify-content: center; margin-bottom: 32px; position: relative;">
+                        <div style="width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(from 0deg, #ff5e8c, #6c5ce7, #00d4ff, #ff5e8c); mask: radial-gradient(circle at center, transparent 30%, black 31%);"></div>
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #fff; filter: drop-shadow(0 0 8px rgba(255,255,255,0.3));"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                    </div>
+                    <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 8px;">Day 47 Crisis</h2>
+                    <p style="color: #8a8f9e; margin-bottom: 32px; max-width: 280px;">A new procedural challenge awaits. Complete it to earn exclusive rewards and climb the leaderboard.</p>
+                    <div style="display: flex; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; justify-content: center;">
+                        <div style="padding: 16px 24px; background: linear-gradient(145deg, rgba(20,22,32,0.9) 0%, rgba(12,14,22,0.95) 100%); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; backdrop-filter: blur(20px); min-width: 140px;">
+                            <div style="font-size: 0.65rem; font-weight: 600; color: #b8b0ff; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">Grid Size</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #fff;">9×9</div>
+                        </div>
+                        <div style="padding: 16px 24px; background: linear-gradient(145deg, rgba(20,22,32,0.9) 0%, rgba(12,14,22,0.95) 100%); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; backdrop-filter: blur(20px); min-width: 140px;">
+                            <div style="font-size: 0.65rem; font-weight: 600; color: #b8b0ff; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">Colors</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #fff;">4</div>
+                        </div>
+                        <div style="padding: 16px 24px; background: linear-gradient(145deg, rgba(20,22,32,0.9) 0%, rgba(12,14,22,0.95) 100%); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; backdrop-filter: blur(20px); min-width: 140px;">
+                            <div style="font-size: 0.65rem; font-weight: 600; color: #b8b0ff; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">Viaducts</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #ff5e8c;">3</div>
+                        </div>
+                    </div>
+                    <button class="btn-primary" style="width: 100%; max-width: 280px; padding: 18px;">Start Daily Crisis</button>
+                    <p style="margin-top: 16px; font-size: 0.75rem; color: #8a8f9e;">Resets in 3h 24m</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- CRISIS MODAL (shown over gameplay) -->
+        <div class="device-frame" style="opacity: 0.3;">
+            <div class="screen">
+                <div class="bg-gradient"></div>
+                <div id="crisisOverlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 24px; opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);">
+                    <div style="width: 100%; max-width: 320px; background: linear-gradient(145deg, rgba(20,22,32,0.98) 0%, rgba(12,14,22,0.98) 100%); border: 1px solid rgba(255, 94, 140, 0.4); border-radius: 20px; padding: 32px 24px; box-shadow: 0 32px 64px -12px rgba(255, 94, 140, 0.3); transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);">
+                        <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #ff5e8c, #ff3d7f); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; box-shadow: 0 8px 24px -4px rgba(255, 94, 140, 0.5);"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div>
+                        <h3 style="font-size: 1.25rem; font-weight: 700; text-align: center; margin-bottom: 8px; color: #ff5e8c;">TRAFFIC CRISIS!</h3>
+                        <p style="text-align: center; color: #8a8f9e; margin-bottom: 24px; font-size: 0.9rem;">Two paths collide. Place a viaduct to separate them, or undo your last move.</p>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <button class="btn-primary" style="padding: 16px;">Use Viaduct (2 left)</button>
+                            <button style="padding: 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; color: #e8eaf0; font-weight: 600; font-size: 1rem;">Undo Last Move</button>
+                        </div>
+                        <p style="margin-top: 16px; text-align: center; font-size: 0.7rem; color: #8a8f9e;">Viaduct used: Max viaducts reduced permanently</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle switches
+        document.querySelectorAll('.toggle-switch').forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                if (toggle.parentElement.querySelector('.toggle-switch.active') && toggle.classList.contains('active')) return;
+                if (toggle.closest('.bento-card')?.querySelector('[data-theme]')) {
+                    // Theme radio group
+                    toggle.closest('.bento-card').querySelectorAll('.toggle-switch').forEach(t => t.classList.remove('active'));
+                }
+                toggle.classList.toggle('active');
+            });
+        });
+
+        // Theme selection
+        document.querySelectorAll('[data-theme]').forEach(t => {
+            t.addEventListener('click', () => {
+                document.querySelectorAll('[data-theme]').forEach(x => x.classList.remove('active'));
+                t.classList.add('active');
+            });
+        });
+
+        // Select dropdown
+        const selectTrigger = document.getElementById('cbSelect');
+        if (selectTrigger) {
+            selectTrigger.addEventListener('click', () => selectTrigger.classList.toggle('open'));
+        }
+
+        // Sliders
+        document.querySelectorAll('.slider-track').forEach(track => {
+            track.addEventListener('click', (e) => {
+                const rect = track.getBoundingClientRect();
+                const percent = (e.clientX - rect.left) / rect.width;
+                const fill = track.querySelector('.slider-fill');
+                const thumb = track.querySelector('.slider-thumb');
+                fill.style.width = `${percent * 100}%`;
+                thumb.style.left = `${percent * 100}%`;
+            });
+        });
+
+        // Crisis overlay active state
+        document.getElementById('crisisOverlay').classList.add('active');
+
+        // Level grid generation
+        const levelGrid = document.getElementById('levelGrid');
+        if (levelGrid) {
+            for (let i = 1; i <= 12; i++) {
+                const card = document.createElement('div');
+                card.className = 'level-card' + (i > 8 ? ' locked' : '');
+                const stars = Math.min(3, Math.max(0, 3 - Math.floor((i - 1) / 4)));
+                let starsHtml = '';
+                for (let s = 0; s < 3; s++) {
+                    starsHtml += `<svg class="star${s < stars ? ' earned' : ''}" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+                }
+                const phaseNames = ['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4'];
+                const phaseIdx = Math.min(3, Math.floor((i - 1) / 4));
+                card.innerHTML = `<div class="level-num">${i}</div><div class="level-phase">${phaseNames[phaseIdx]}</div><div class="level-stars">${starsHtml}</div>`;
+                levelGrid.appendChild(card);
+            }
+        }
+
+        // Color blind palette update
+        const cbModes = {
+            none: ['#ff3d7f', '#6bcb77', '#00d4ff', '#ffd93d', '#b36bff'],
+            protanopia: ['#f2e640', '#00a6c0', '#0073d9', '#f2d934', '#8c4cd9'],
+            deuteranopia: ['#d99a1a', '#1a80f2', '#1a80f2', '#f2e64d', '#a64df2'],
+            tritanopia: ['#ff3d7f', '#ff8c00', '#ffd93d', '#00d4ff', '#b36bff']
+        };
+        const paletteDots = document.querySelectorAll('.palette-dot');
+        document.getElementById('cbSelect')?.addEventListener('click', () => {
+            // Would open dropdown in real implementation
+        });
+    </script>
+</body>
+</html>

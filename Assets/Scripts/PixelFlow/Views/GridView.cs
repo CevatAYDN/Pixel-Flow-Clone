@@ -210,6 +210,20 @@ namespace PixelFlow.Views
             UpdatePathVisuals(paths, gridData);
         }
 
+        /// <summary>
+        /// GDD §4.2: 3. renk reddedildiğinde ilgili hücrede kırmızı pulse animasyonu oynatır.
+        /// GridMediator aracılığıyla çağrılır.
+        /// </summary>
+        public void TriggerThirdColorRejectionPulse(Vector2Int position)
+        {
+            if (_cells == null) return;
+            if (position.x >= 0 && position.x < _cells.GetLength(0) &&
+                position.y >= 0 && position.y < _cells.GetLength(1))
+            {
+                _cells[position.x, position.y].TriggerThirdColorRejectionPulse();
+            }
+        }
+
         public void UpdateDifferential(CellData[,] gridData, AppTheme theme, HashSet<Vector2Int> changedCells, Vector2Int crashPos = default)
         {
             if (_cells == null || changedCells == null) return;

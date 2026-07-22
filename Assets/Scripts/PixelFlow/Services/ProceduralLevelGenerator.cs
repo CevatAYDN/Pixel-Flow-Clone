@@ -9,6 +9,7 @@ namespace PixelFlow.Services
     /// Zorluk parametrelerine göre çözülebilir level üretir.
     /// Önce rastgele renk dağılımı + bridge yerleşimi yapar,
     /// sonra runtime solver ile çözümü doğrular.
+    /// GDD §9: Difficulty Formula = (Colors×10)+(Intersections×5)+(Obstacles×3)-(ViaductLimit×4)
     /// </summary>
     public sealed class ProceduralLevelGenerator
     {
@@ -38,11 +39,55 @@ namespace PixelFlow.Services
                 if (level != null)
                 {
                     level.name = $"Procedural_{param.gridWidth}x{param.gridHeight}_{param.colorCount}c";
+                    // GDD §9: Difficulty score hesapla ve level'a yaz
+                    level.difficultyScore = CalculateDifficultyScore(level, param);
                     return level;
                 }
             }
             Debug.LogWarning($"[ProceduralLevelGenerator] Failed to generate solvable level after {maxAttempts} attempts.");
             return null;
+        }
+
+        /// <summary>
+        /// GDD §9: Procedural zorluk formülü.
+        /// Difficulty = (Colors × 10) + (Intersections × 5) + (Obstacles × 3) - (ViaductLimit × 4)
+        /// </summary>
+        public static int CalculateDifficultyScore(LevelData level, DifficultyParams param)
+        {
+            int colors = param.colorCount;
+            
+            // Intersection sayısını hesapla (bridge'lerden farklı - çakışan yollar)
+            int intersections = 0;
+            if (level.solutions != null)
+            {
+                var pathLookup = new Dictionary<Vector2Int, List<ColorType>>();
+                foreach (var sol in level.solutions)
+                {
+                    foreach (var pos in sol.pathPositions)
+                    {
+                        if (!pathLookup.TryGetValue(pos, out var list))
+                        {
+                            list = new List<ColorType>();
+                            pathLookup[pos] = list;
+                        }
+                        list.Add(sol.color);
+                    }
+                }
+                foreach (var kvp in pathLookup)
+                {
+                    if (kvp.Value.Count >= 2) intersections++;
+                }
+            }
+            else
+            {
+                // Fallback: bridge count as approximation
+                intersections = level.bridgePositions?.Count ?? 0;
+            }
+            
+            int obstacles = level.obstacles?.Count ?? 0;
+            int viaductLimit = param.bridgeCount;
+            
+            return (colors * 10) + (intersections * 5) + (obstacles * 3) - (viaductLimit * 4);
         }
 
         private LevelData TryGenerate(DifficultyParams param)
@@ -123,6 +168,13 @@ namespace PixelFlow.Services
                 color = kvp.Key,
                 pathPositions = new List<Vector2Int>(kvp.Value)
             }).ToList();
+
+            // GDD §9.5: Difficulty formula — (Colors×10)+(Intersections×5)+(Obstacles×3)-(ViaductLimit×4)
+            int solutionColorCount = selectedColors.Count;
+            int intersections = bridges.Count;
+            int obstacleCount = level.obstacles != null ? level.obstacles.Count : 0;
+            int viaductLimit = level.viaductLimit;
+            level.difficultyScore = (solutionColorCount * 10) + (intersections * 5) + (obstacleCount * 3) - (viaductLimit * 4);
 
             return level;
         }

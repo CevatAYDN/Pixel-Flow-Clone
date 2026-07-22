@@ -35,6 +35,9 @@ namespace PixelFlow.Services
         [Inject] public ISettingsModel SettingsModel { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public ICameraProvider CamProvider { get; set; }
+        [Inject] public ICrisisAdService CrisisAdService { get; set; }
+
+        private ICrisisAdService _crisisAdService => CrisisAdService;
 
         private class VehicleInstance
         {
@@ -888,7 +891,11 @@ namespace PixelFlow.Services
                 var cell = GridModel.Grid[gridPos.x, gridPos.y];
                 if (cell.HasViaduct && cell.OverColor == color)
                 {
-                    return -0.5f; // Yükseltilmiş yol
+                    return -0.4f; // Over: Yükseltilmiş yol (GDD §4.4)
+                }
+                if (cell.HasViaduct && cell.UnderColor == color)
+                {
+                    return -0.1f; // Under: Alçaltılmış yol (GDD §4.4)
                 }
             }
             return -0.2f; // Normal yol
@@ -981,6 +988,9 @@ namespace PixelFlow.Services
 
             HapticService?.Vibrate(HapticType.Warning);
             AudioService?.PlaySfx(SfxType.Crash);
+
+            // GDD §2.4: 3 ardışık kaza denemesi → LevelFailed
+            _crisisAdService?.RecordCrisisAttempt();
 
             SignalBus.Fire(new CrashDetectedSignal
             {

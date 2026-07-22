@@ -23,6 +23,7 @@ namespace PixelFlow.Views
         {
             Subscribe<GridUpdatedSignal>(HandleGridUpdated);
             Subscribe<ThemeChangedSignal>(HandleThemeChanged);
+            Subscribe<ThirdColorRejectionSignal>(HandleThirdColorRejection);
 
             View.OnGlobalPointerDown += HandleGlobalPointerDown;
             View.OnGlobalPointerDrag += HandleGlobalPointerDrag;
@@ -166,6 +167,12 @@ namespace PixelFlow.Views
                 }
             }
             Logger?.Log($"[PixelFlow.GridMediator] 📷 Grid initialized ({GridModel.Width}x{GridModel.Height}) and camera centered at ({cx}, {cy}).");
+        }
+
+        private void HandleThirdColorRejection(ThirdColorRejectionSignal signal)
+        {
+            if (!View.IsInitialized) return;
+            View.TriggerThirdColorRejectionPulse(signal.Position);
         }
     }
 }

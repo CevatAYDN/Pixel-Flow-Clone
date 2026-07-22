@@ -3,7 +3,11 @@ using System.Collections.Generic;
 
 namespace PixelFlow.Data
 {
-    public enum ColorType { None, Red, Green, Blue, Yellow, Orange, Purple, Cyan, Magenta }
+    /// <summary>
+/// GDD §3.2: 5 renk paleti — her renk bir şekille eşleşir (renk körlüğü erişilebilirlik).
+/// Blue=Circle, Red=Triangle, Yellow=Square, Green=Diamond, Purple=Star
+/// </summary>
+public enum ColorType { None, Red, Green, Blue, Yellow, Purple }
 
     /// <summary>GDD §3.2: Renk körü güvenli çift kodlama için şekil tipleri.</summary>
     public enum ShapeType { Circle, Triangle, Square, Diamond, Star }
@@ -114,6 +118,10 @@ namespace PixelFlow.Data
         [Tooltip("Simülasyon başına Flow Score eşik değeri. İlk çalıştırmada bu değere ulaşılınca kazanılır. " +
                  "Faz 1: 3-5, Faz 2: 6-10, Faz 3: 12-18, Faz 4: 18-30.")]
         public int flowScoreThreshold = 5;
+
+        [Header("Procedural Difficulty (GDD §9)")]
+        [Tooltip("GDD §9 formülüyle hesaplanan zorluk skoru: (Colors×10)+(Intersections×5)+(Obstacles×3)-(ViaductLimit×4)")]
+        public int difficultyScore;
 
         [Header("Yıldız Kriterleri (GDD §3.5)")]
         public StarCriteria stars = StarCriteria.Default;

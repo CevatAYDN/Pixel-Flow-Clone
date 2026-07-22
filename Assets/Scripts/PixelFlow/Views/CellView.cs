@@ -354,11 +354,22 @@ namespace PixelFlow.Views
         }
 
         private Coroutine _bounceCoroutine;
+        private Coroutine _thirdColorRejectPulseCoroutine;
 
         public void TriggerBounceAnimation(float pressScale = 0.95f, float duration = 0.12f)
         {
             if (_bounceCoroutine != null) StopCoroutine(_bounceCoroutine);
             _bounceCoroutine = StartCoroutine(DoBounceAnimation(pressScale, duration));
+        }
+
+        /// <summary>
+        /// GDD §4.2: 3. renk reddedildiğinde hücrede kırmızı pulse animasyonu oynatır.
+        /// ProcessInputCommand'den çağrılır (CanDrawPath false döndüğünde).
+        /// </summary>
+        public void TriggerThirdColorRejectionPulse(float duration = 0.6f)
+        {
+            if (_thirdColorRejectPulseCoroutine != null) StopCoroutine(_thirdColorRejectPulseCoroutine);
+            _thirdColorRejectPulseCoroutine = StartCoroutine(DoThirdColorRejectionPulse(duration));
         }
 
         private System.Collections.IEnumerator DoBounceAnimation(float pressScale, float duration)
@@ -386,6 +397,27 @@ namespace PixelFlow.Views
             }
 
             transform.localScale = originalScale;
+        }
+
+        private System.Collections.IEnumerator DoThirdColorRejectionPulse(float duration)
+        {
+            if (_bgRenderer == null) yield break;
+
+            Color originalColor = _bgRenderer.color;
+            Color rejectionColor = new Color(0.937f, 0.267f, 0.267f, 1f); // Bright red
+            float elapsed = 0f;
+            const float pulseFrequency = 15f; // Fast pulsing for urgency feel
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+                float pulse = (Mathf.Sin(Time.time * pulseFrequency) + 1f) * 0.5f;
+                _bgRenderer.color = Color.Lerp(rejectionColor, originalColor, t + pulse * (1f - t) * 0.3f);
+                yield return null;
+            }
+
+            _bgRenderer.color = originalColor;
         }
 
         public static Color GetColor(ColorType colorType)

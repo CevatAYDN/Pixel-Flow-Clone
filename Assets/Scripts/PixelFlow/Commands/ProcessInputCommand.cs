@@ -190,7 +190,11 @@ namespace PixelFlow.Commands
                         return;
 
                     if (currentCell.PathColorCount >= BridgeValidationUtility.MaxPathsPerBridge)
+                    {
+                        // GDD §4.2: 3. renk reddedildi — görsel geri bildirim için sinyal ateşle
+                        SignalBus.Fire(new ThirdColorRejectionSignal { Position = signal.GridPosition });
                         return;
+                    }
 
                     Vector2Int entryDir = signal.GridPosition - GridModel.LastPosition.Value;
 

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Flow — Splash Screen</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0c12; color: #e8eaf0; min-height: 100vh; display: flex; flex-direction: column; }
+        .device-frame { width: 100%; max-width: 390px; aspect-ratio: 9 / 19.5; margin: 0 auto; background: #1a1a2e; border-radius: 36px; box-shadow: 0 0 0 8px #1a1a2e, 0 40px 80px -20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05); position: relative; overflow: hidden; }
+        .device-frame::before { content: ''; position: absolute; top: 16px; left: 50%; transform: translateX(-50%); width: 140px; height: 6px; background: #2a2a3e; border-radius: 3px; z-index: 10; }
+        .screen { width: 100%; height: 100%; position: relative; overflow: hidden; background: #0a0c12; }
+        .bg-gradient { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 30%, rgba(108, 92, 231, 0.18) 0%, transparent 60%), radial-gradient(ellipse at 50% 70%, rgba(0, 212, 255, 0.12) 0%, transparent 50%); }
+        .particles { position: absolute; inset: 0; background-image: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.03) 1px, transparent 1px), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.02) 1px, transparent 1px); background-size: 60px 60px, 80px 80px; animation: drift 20s linear infinite; pointer-events: none; }
+        @keyframes drift { 0% { transform: translate(0, 0); } 100% { transform: translate(-60px, -60px); } }
+        .logo-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 5; }
+        .logo-icon { width: 120px; height: 120px; margin: 0 auto 24px; position: relative; }
+        .logo-icon svg { width: 100%; height: 100%; }
+        .logo-ring { stroke-dasharray: 283; stroke-dashoffset: 283; animation: ringDraw 1.2s cubic-bezier(0.2, 0, 0, 1) 0.3s forwards; }
+        .logo-shape { transform-origin: center; animation: shapePop 0.6s cubic-bezier(0.2, 0, 0, 1) 1s forwards; opacity: 0; }
+        @keyframes ringDraw { to { stroke-dashoffset: 0; } }
+        @keyframes shapePop { 0% { transform: scale(0.3); opacity: 0; } 60% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
+        .logo-text { font-size: 1.8rem; font-weight: 800; letter-spacing: 0.02em; background: linear-gradient(135deg, #fff 0%, #b8b0ff 50%, #80f0ff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: textReveal 0.8s cubic-bezier(0.2, 0, 0, 1) 1.3s forwards; opacity: 0; transform: translateY(12px); }
+        @keyframes textReveal { to { opacity: 1; transform: translateY(0); } }
+        .progress-ring { width: 72px; height: 72px; margin: 40px auto 0; transform: rotate(-90deg); }
+        .progress-ring circle { fill: none; stroke-width: 3; stroke-linecap: round; }
+        .progress-bg { stroke: rgba(255,255,255,0.08); }
+        .progress-fill { stroke: url(#progressGradient); stroke-dasharray: 201; stroke-dashoffset: 201; animation: progressFill 2.5s cubic-bezier(0.2, 0, 0, 1) 1.8s forwards; }
+        @keyframes progressFill { to { stroke-dashoffset: 0; } }
+        .version { position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: rgba(255,255,255,0.25); letter-spacing: 0.1em; text-transform: uppercase; animation: fadeIn 0.5s ease 3s forwards; opacity: 0; }
+        @keyframes fadeIn { to { opacity: 1; } }
+        .theme-indicator { position: absolute; top: 100px; right: 24px; display: flex; gap: 6px; z-index: 5; animation: slideIn 0.5s cubic-bezier(0.2, 0, 0, 1) 2.2s forwards; opacity: 0; transform: translateX(20px); }
+        @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
+        .theme-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); cursor: pointer; transition: all 0.2s ease; }
+        .theme-dot.active { border-color: currentColor; transform: scale(1.2); box-shadow: 0 0 12px currentColor; }
+        .theme-dot.dark { background: #0a0c12; color: #6c5ce7; }
+        .theme-dot.light { background: #f0f0f5; color: #6c5ce7; }
+        .theme-dot.neon { background: #0d0520; color: #00d4ff; }
+    </style>
+</head>
+<body>
+    <div class="device-frame">
+        <div class="screen">
+            <div class="bg-gradient"></div>
+            <div class="particles"></div>
+            
+            <div class="theme-indicator">
+                <div class="theme-dot dark active" title="Dark"></div>
+                <div class="theme-dot light" title="Light"></div>
+                <div class="theme-dot neon" title="Neon"></div>
+            </div>
+
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#6c5ce7"/>
+                                <stop offset="50%" stop-color="#00d4ff"/>
+                                <stop offset="100%" stop-color="#ff5e8c"/>
+                            </linearGradient>
+                            <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#6c5ce7"/>
+                                <stop offset="100%" stop-color="#00d4ff"/>
+                            </linearGradient>
+                        </defs>
+                        <circle cx="60" cy="60" r="45" class="logo-ring" stroke="url(#ringGradient)" stroke-width="4" fill="none"/>
+                        <!-- Five colored shapes representing the 5 GDD colors -->
+                        <g class="logo-shape">
+                            <circle cx="60" cy="60" r="28" fill="none" stroke="#00d4ff" stroke-width="2" stroke-dasharray="8 12" opacity="0.6"/>
+                            <circle cx="60" cy="32" r="8" fill="#00d4ff"/>      <!-- Blue - Circle -->
+                            <polygon points="60,88 48,108 72,108" fill="#ff3d7f"/>    <!-- Red - Triangle -->
+                            <rect x="28" y="80" width="16" height="16" fill="#ffd93d" rx="2"/>  <!-- Yellow - Square -->
+                            <polygon points="92,60 104,60 110,68 104,76 92,76 86,68" fill="#6bcb77"/>  <!-- Green - Diamond -->
+                            <polygon points="20,40 24,52 36,52 26,58 30,70 20,62 10,70 14,58 6,52 18,52" fill="#b36bff"/>  <!-- Purple - Star -->
+                        </g>
+                    </svg>
+                </div>
+                <div class="logo-text">Pixel Flow</div>
+                
+                <svg class="progress-ring" viewBox="0 0 72 72">
+                    <circle class="progress-bg" cx="36" cy="36" r="32"/>
+                    <circle class="progress-fill" cx="36" cy="36" r="32"/>
+                </svg>
+            </div>
+            
+            <div class="version">v1.0.0 build 2026.07</div>
+        </div>
+    </div>
+
+    <script>
+        // Theme selector interaction
+        document.querySelectorAll('.theme-dot').forEach(dot => {
+            dot.addEventListener('click', () => {
+                document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active'));
+                dot.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

@@ -56,6 +56,7 @@ namespace PixelFlow
             builder.Bind<IPathSolver, RuntimePathSolver>();
             builder.BindService<IHintService, HintService>(); // Fixed: was Bind<> now BindService<> for auto-init
             builder.Bind<ILevelProgressionService, LevelProgressionService>();
+            builder.Bind<ILevelLoaderService, LevelLoaderService>(); // GDD §8
 
             // Default recovery: 3 retry → skip on failure
             builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));

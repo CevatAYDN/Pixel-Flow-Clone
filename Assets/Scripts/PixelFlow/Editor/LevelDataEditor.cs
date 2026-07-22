@@ -81,6 +81,25 @@ namespace PixelFlow.Editor
             int newFlowThreshold = EditorGUILayout.IntSlider("Flow Score Target", _data.flowScoreThreshold, 1, 50);
             bool newCoverage = EditorGUILayout.Toggle("Require Full Grid Coverage", _data.requireFullGridCoverage);
 
+            // GDD §3.6: PhaseDefinition ScriptableObject Assignment
+            GUILayout.Space(5);
+            GUILayout.Label("Phase Configuration (GDD §3.6)", EditorStyles.boldLabel);
+            EditorGUI.indentLevel++;
+            PhaseDefinitionAsset phaseAsset = (PhaseDefinitionAsset)EditorGUILayout.ObjectField(
+                "Phase Template", null, typeof(PhaseDefinitionAsset), false);
+            if (phaseAsset != null)
+            {
+                // Auto-fill fields from PhaseDefinition if assigned
+                EditorGUILayout.HelpBox($"Phase: {phaseAsset.Phase} | Levels {phaseAsset.StartLevelIndex}-{phaseAsset.EndLevelIndex}", MessageType.Info);
+            }
+            EditorGUI.indentLevel--;
+
+            // GDD §9: Difficulty Score Display
+            if (_data.difficultyScore > 0)
+            {
+                GUILayout.Label($"Procedural Difficulty Score (GDD §9): {_data.difficultyScore}", tierBadgeStyle);
+            }
+
             // GDD §3.5: Yıldız Kriterleri ve Tutorial Event
             GUILayout.Space(5);
             GUILayout.Label("Star Criteria & Tutorial (GDD §3.5, §8)", EditorStyles.boldLabel);
@@ -202,8 +221,7 @@ namespace PixelFlow.Editor
                 GUILayout.BeginHorizontal();
                 ColorType[] colors = {
                     ColorType.Red, ColorType.Green, ColorType.Blue,
-                    ColorType.Yellow, ColorType.Orange, ColorType.Purple,
-                    ColorType.Cyan, ColorType.Magenta
+                    ColorType.Yellow, ColorType.Purple
                 };
 
                 foreach (var c in colors)
@@ -825,10 +843,7 @@ namespace PixelFlow.Editor
                 case ColorType.Green: return new Color(0.2f, 0.85f, 0.3f); // Emerald green
                 case ColorType.Blue: return new Color(0.2f, 0.55f, 1f); // Royal blue
                 case ColorType.Yellow: return new Color(1f, 0.85f, 0.1f); // Warm yellow
-                case ColorType.Orange: return new Color(1f, 0.55f, 0.05f); // Neon orange
                 case ColorType.Purple: return new Color(0.68f, 0.25f, 0.95f); // Rich purple
-                case ColorType.Cyan: return new Color(0.08f, 0.88f, 0.92f); // Electric cyan
-                case ColorType.Magenta: return new Color(0.95f, 0.2f, 0.72f); // Bright magenta
                 default: return Color.gray;
             }
         }

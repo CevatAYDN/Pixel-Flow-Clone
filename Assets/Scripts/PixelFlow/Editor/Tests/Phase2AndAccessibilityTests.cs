@@ -70,9 +70,8 @@ namespace PixelFlow.Editor.Tests
             {
                 Assert.IsTrue(GddColorPalette.IsGddStandard(c));
             }
-            Assert.IsFalse(GddColorPalette.IsGddStandard(ColorType.Orange));
-            Assert.IsFalse(GddColorPalette.IsGddStandard(ColorType.Cyan));
-            Assert.IsFalse(GddColorPalette.IsGddStandard(ColorType.Magenta));
+            // Orange/Cyan/Magenta artık enum'da yok — GDD'ye tam uyum sağlandı.
+            // 5 renk: Red, Green, Blue, Yellow, Purple
         }
 
         [Test]

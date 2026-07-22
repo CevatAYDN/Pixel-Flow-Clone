@@ -18,22 +18,23 @@ namespace PixelFlow.Services
     /// Zorluk progresyon algoritması. Level index'ine göre zorluk parametrelerini
     /// belirler ve gerekirse ProceduralLevelGenerator ile level üretir.
     /// 
-    /// Progresyon eğrisi (her kademede LevelsPerDifficulty level):
-    ///   Easy    (1-3)   : 5x5,  3 renk, 0 bridge
-    ///   Medium  (4-7)   : 6x6,  4 renk, 1 bridge
-    ///   Hard    (8-12)  : 7x7,  5 renk, 2 bridge
-    ///   Expert  (13-18) : 8x8,  6 renk, 3 bridge
-    ///   Master  (19+)   : 10x10, 8 renk, 4 bridge
+    /// GDD §3.6: Phase konfigürasyonu PhaseDefinitionAsset ScriptableObject'ten
+    /// okunur — editör tarafından data-driven yönetilir.
     /// </summary>
     public sealed class LevelProgressionService : ILevelProgressionService, INexusService
     {
         private readonly ProceduralLevelGenerator _generator;
         private readonly Dictionary<int, LevelData> _generatedCache;
+        private PhaseConfigAsset _phaseConfig;
 
         public int LevelsPerDifficulty => 5;
 
         [Inject]
-        public LevelProgressionService() : this(new ProceduralLevelGenerator(new RuntimePathSolver())) { }
+        public LevelProgressionService() : this(new ProceduralLevelGenerator(new RuntimePathSolver()))
+        {
+            // GDD §3.6: Resources'tan PhaseConfigAsset yükle (editörde oluşturulmuş olmalı)
+            _phaseConfig = Resources.Load<PhaseConfigAsset>("PhaseConfig");
+        }
 
         internal LevelProgressionService(ProceduralLevelGenerator generator)
         {
@@ -43,12 +44,21 @@ namespace PixelFlow.Services
 
         public DifficultyParams GetDifficultyForLevel(int levelIndex)
         {
-            // GDD §3.5: 4 faz progresyon eğrisi.
-            // Faz 1: 0-11 (Seviye 1-12), 5×5→6×6, 1-2 renk, kaza yok, viyadük yok
-            // Faz 2: 12-27 (Seviye 13-28), 7×7, 2-3 renk, kaza+viyadük (3 hak)
-            // Faz 3: 28-44 (Seviye 29-45), 8-9×8-9, 3-4 renk, engeller, full coverage
-            // Faz 4: 45-59 (Seviye 46-60), 10×10, 4-5 renk, tüm engeller
-            var phase = PhaseDefinition.GetPhaseForLevel(levelIndex);
+            // GDD §3.6: Önce ScriptableObject asset, yoksa struct fallback
+            PhaseDefinition phase;
+            if (_phaseConfig != null)
+            {
+                var phaseAsset = _phaseConfig.GetPhaseForLevel(levelIndex);
+                if (phaseAsset != null)
+                    phase = phaseAsset.ToStruct();
+                else
+                    phase = PhaseDefinition.GetPhaseForLevel(levelIndex);
+            }
+            else
+            {
+                phase = PhaseDefinition.GetPhaseForLevel(levelIndex);
+            }
+
             return PhaseToDifficulty(phase, levelIndex);
         }
 
