@@ -92,11 +92,15 @@ namespace PixelFlow
             builder.BindSignal<PixelFlow.Signals.ProgressUpdatedSignal>();
 
             // GameConfig ScriptableObject — Resources'tan yüklenir, tüm servislere enjekte edilebilir.
+            // Eğer asset bulunamazsa (ilk kurulum veya bozuk Resource), default fallback oluştur.
             var config = UnityEngine.Resources.Load<GameConfig>("GameConfig");
-            if (config != null)
+            if (config == null)
             {
-                builder.BindInstance(config);
+                config = UnityEngine.ScriptableObject.CreateInstance<GameConfig>();
+                config.name = "GameConfig (Runtime Default)";
+                NexusRuntime.Logger?.LogWarning("[PixelFlow] GameConfig.asset not found in Resources. Using runtime defaults.");
             }
+            builder.BindInstance(config);
         }
 
         public ValueTask OnInitializeAsync(CancellationToken ct) => default;

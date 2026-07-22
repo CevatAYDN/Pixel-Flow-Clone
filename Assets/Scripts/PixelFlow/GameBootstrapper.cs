@@ -36,7 +36,7 @@ namespace PixelFlow
             yield return WaitForRoot();
             if (_cachedRoot == null)
             {
-                Debug.LogError("[PixelFlow] ERROR: Nexus Root not found after retries. Game cannot start.");
+                FallbackLogger?.LogError("[PixelFlow] ERROR: Nexus Root not found after retries. Game cannot start.");
                 yield break;
             }
             nexusRoot = _cachedRoot;
