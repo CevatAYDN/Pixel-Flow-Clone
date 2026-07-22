@@ -44,14 +44,21 @@ namespace PixelFlow.Commands
         public void Execute(InputInteractionSignal signal)
         {
             var state = GameStateModel.CurrentState;
+            NexusLog.Info("ProcessInputCommand", "Execute", "?",
+                $"Signal={signal.Type} Pos={signal.GridPosition} State={state}");
+
             if (state == GameState.Simulating && signal.Type == InputType.PointerDown)
             {
+                NexusLog.Info("ProcessInputCommand", "Execute", "?",
+                    "Simulating → Playing transition on PointerDown");
                 GameStateModel.SetState(GameState.Playing);
                 return;
             }
 
             if (state != GameState.Playing && state != GameState.Paused)
             {
+                NexusLog.Warn("ProcessInputCommand", "Execute", "?",
+                    $"Input BLOCKED — State={state} (expected Playing or Paused)");
                 return;
             }
 
@@ -82,8 +89,14 @@ namespace PixelFlow.Commands
                 if (clickedColor != ColorType.None)
                 {
                     if (GridModel.LockedColors.Contains(clickedColor))
+                    {
+                        NexusLog.Warn("ProcessInputCommand", "PointerDown", "?",
+                            $"Color {clickedColor} is LOCKED — ignoring");
                         return;
+                    }
 
+                    NexusLog.Info("ProcessInputCommand", "PointerDown", "?",
+                        $"Selected color={clickedColor} at {signal.GridPosition}");
                     EnsureHistoryRecorded();
 
                     GridModel.ActiveColor.Value = clickedColor;

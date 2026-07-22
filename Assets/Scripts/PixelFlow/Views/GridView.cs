@@ -66,6 +66,12 @@ namespace PixelFlow.Views
 
             // Input state machine GridInputService'te yönetilir
             if (_cam == null) _cam = CameraProvider?.MainCamera;
+            if (_cam == null)
+            {
+                NexusLog.Warn("GridView", "OnTick", "?", "Camera is NULL — input skipped");
+                return;
+            }
+
             var result = _inputService?.ProcessInput(_cam, _cells.GetLength(0), _cells.GetLength(1));
 
             if (result == null || !result.Value.HasEvent) return;
@@ -73,6 +79,7 @@ namespace PixelFlow.Views
             var r = result.Value;
             if (r.IsDown)
             {
+                NexusLog.Info("GridView", "OnTick", "?", $"PointerDown at {r.GridPosition}");
                 _lastDragPos = r.GridPosition;
                 OnGlobalPointerDown?.Invoke(r.GridPosition);
             }
@@ -98,6 +105,7 @@ namespace PixelFlow.Views
             }
             else if (r.IsUp)
             {
+                NexusLog.Info("GridView", "OnTick", "?", $"PointerUp at {r.GridPosition}");
                 _lastDragPos = new Vector2Int(-1, -1);
                 OnGlobalPointerUp?.Invoke(r.GridPosition);
             }

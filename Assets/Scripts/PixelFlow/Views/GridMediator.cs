@@ -50,6 +50,7 @@ namespace PixelFlow.Views
 
         private void HandleGlobalPointerDown(Vector2Int pos)
         {
+            NexusLog.Info("GridMediator", "PointerDown", "?", $"Firing InputInteractionSignal at {pos}");
             SignalBus.Fire(new InputInteractionSignal { Type = InputType.PointerDown, GridPosition = pos });
         }
 
@@ -60,6 +61,7 @@ namespace PixelFlow.Views
 
         private void HandleGlobalPointerUp(Vector2Int pos)
         {
+            NexusLog.Info("GridMediator", "PointerUp", "?", $"Firing InputInteractionSignal at {pos}");
             SignalBus.Fire(new InputInteractionSignal { Type = InputType.PointerUp, GridPosition = pos });
         }
 
