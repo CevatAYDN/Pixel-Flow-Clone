@@ -24,7 +24,6 @@ namespace PixelFlow.Commands
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
 
-
         public void Execute(RequestHintSignal signal)
         {
             if (HintModel.HintsRemaining <= 0)
@@ -84,7 +83,7 @@ namespace PixelFlow.Commands
             HintModel.UseHint();
             SignalBus.Fire(new GridUpdatedSignal());
             SignalBus.Fire(new CheckWinConditionSignal());
-            SaveThrottler?.TryRequestSave(() => GridStateSerializer.Save(GridModel, GameSessionModel, LevelModel, PlayerPrefsService));
+            SaveHelper.TrySave(SaveThrottler, GridModel, GameSessionModel, LevelModel, PlayerPrefsService);
             HapticService?.Vibrate(HapticType.Light);
         }
 

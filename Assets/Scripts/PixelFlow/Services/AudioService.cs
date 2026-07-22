@@ -87,22 +87,7 @@ namespace PixelFlow.Services
 
         private static AudioClip CreateClipForType(SfxType type)
         {
-            switch (type)
-            {
-                case SfxType.Crash: return ProceduralAudioFactory.CreateCrash();
-                case SfxType.Horn: return ProceduralAudioFactory.CreateHorn();
-                case SfxType.ViaductPlace: return ProceduralAudioFactory.CreateViaductPlace();
-                case SfxType.LevelComplete: return ProceduralAudioFactory.CreateLevelComplete();
-                case SfxType.CoinCollect: return ProceduralAudioFactory.CreateCoinCollect();
-                case SfxType.UIClick: return ProceduralAudioFactory.CreateUIClick();
-                case SfxType.AmbientHub: return ProceduralAudioFactory.CreateAmbientHub();
-                case SfxType.AmbientPuzzle: return ProceduralAudioFactory.CreateAmbientPuzzle();
-                case SfxType.AmbientOverclock: return ProceduralAudioFactory.CreateAmbientOverclock();
-                case SfxType.MainTheme: return ProceduralAudioFactory.CreateMainTheme();
-                case SfxType.VehicleEngine: return ProceduralAudioFactory.CreateVehicleEngine();
-                case SfxType.PathDraw: return ProceduralAudioFactory.CreatePathDraw();
-                default: return null;
-            }
+            return AudioClipProvider.Load(type);
         }
 
         public void OnDispose()

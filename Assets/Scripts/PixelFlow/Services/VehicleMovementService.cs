@@ -3,6 +3,7 @@ using UnityEngine;
 using PixelFlow.Models;
 using PixelFlow.Data;
 using PixelFlow.Signals;
+using PixelFlow.Views;
 using Nexus.Core;
 using Nexus.Core.Services;
 
@@ -12,6 +13,10 @@ namespace PixelFlow.Services
     /// Araç hareket mantığını yönetir: path takibi, spline interpolasyonu,
     /// tren/vagon dönüşümleri, narrow pass geçişleri, flow score güncellemeleri.
     /// VehicleSimulator'dan ayrıştırıldı (Single Responsibility).
+    ///
+    /// Performans: Catmull-Rom spline kontrol noktaları önbelleğe alınır.
+    /// Her (ColorType, segmentIndex) çifti için 4 kontrol noktası bir kere
+    /// hesaplanır ve path değişene kadar önbellekte kalır.
     /// </summary>
     public class VehicleMovementService
     {
@@ -22,6 +27,52 @@ namespace PixelFlow.Services
         private readonly IAudioService _audioService;
         private readonly IObstacleService _obstacleService;
         private readonly GameConfig _config;
+
+        // ─── Spline Segment Cache ───────────────────────────────────────────
+        // Her (ColorType, segmentIndex) için 4 Catmull-Rom kontrol noktası.
+        // Cache, path değiştiğinde (vehicles cleared) InvalidateSplineCache()
+        // ile temizlenir.
+        private struct SegmentCacheEntry
+        {
+            public Vector3 P0;
+            public Vector3 P1;
+            public Vector3 P2;
+            public Vector3 P3;
+        }
+
+        private Dictionary<(ColorType color, int segment), SegmentCacheEntry> _splineCache
+            = new Dictionary<(ColorType, int), SegmentCacheEntry>();
+
+        /// <summary>
+        /// Spline önbelleğini temizler. Path değiştiğinde (çizim, undo/redo,
+        /// level yükleme) VehicleSimulator tarafından çağrılır.
+        /// </summary>
+        public void InvalidateSplineCache()
+        {
+            _splineCache.Clear();
+        }
+
+        /// <summary>
+        /// Belirtilen renk için tüm cache girdilerini temizler.
+        /// Sadece tek bir renk değiştiğinde kullanılır.
+        /// </summary>
+        // Reusable list for batch key removal — GC alloc'u önlemek için field'a çıkarıldı
+        private readonly List<(ColorType color, int segment)> _keysToRemove = new List<(ColorType, int)>();
+
+        public void InvalidateSplineCache(ColorType color)
+        {
+            if (_splineCache.Count == 0) return;
+            
+            _keysToRemove.Clear();
+            foreach (var key in _splineCache.Keys)
+            {
+                if (key.color == color)
+                    _keysToRemove.Add(key);
+            }
+            for (int i = 0; i < _keysToRemove.Count; i++)
+                _splineCache.Remove(_keysToRemove[i]);
+            _keysToRemove.Clear();
+        }
 
         public VehicleMovementService(
             IGridModel gridModel,
@@ -140,7 +191,9 @@ namespace PixelFlow.Services
                 _audioService?.PlaySfx(SfxType.UIClick);
             }
 
-            SafeDestroy(v.Visual);
+            // ÖNCE parçaları pool'a geri ver, SONRA root'u destroy et
+            // SafeDestroy sadece Destroy çağırır, pool'a geri vermez → pool depletion → GC spike
+            VehicleVisualFactory.RecycleVehicle(v.Visual);
             activeVehicles.RemoveAt(index);
         }
 
@@ -265,6 +318,27 @@ namespace PixelFlow.Services
             return true;
         }
 
+        /// <summary>
+        /// Spline segmenti için 4 kontrol noktasını cache'den alır veya hesaplar.
+        /// </summary>
+        private SegmentCacheEntry GetOrComputeSegment(int segmentIndex, List<Vector2Int> path, ColorType color)
+        {
+            var key = (color, segmentIndex);
+            if (_splineCache.TryGetValue(key, out var cached))
+                return cached;
+
+            // Cache miss — hesapla ve önbelleğe ekle
+            var entry = new SegmentCacheEntry
+            {
+                P0 = GetSplineControlPoint(path, segmentIndex - 1, color),
+                P1 = GetSplineControlPoint(path, segmentIndex, color),
+                P2 = GetSplineControlPoint(path, segmentIndex + 1, color),
+                P3 = GetSplineControlPoint(path, segmentIndex + 2, color)
+            };
+            _splineCache[key] = entry;
+            return entry;
+        }
+
         private Vector3 EvaluatePathPosition(List<Vector2Int> path, float pathDistance, ColorType color, float zOffset)
         {
             if (path == null || path.Count == 0) return Vector3.zero;
@@ -279,12 +353,9 @@ namespace PixelFlow.Services
             }
             float t = clampedDist - seg;
 
-            Vector3 p0 = GetSplineControlPoint(path, seg - 1, color);
-            Vector3 p1 = GetSplineControlPoint(path, seg, color);
-            Vector3 p2 = GetSplineControlPoint(path, seg + 1, color);
-            Vector3 p3 = GetSplineControlPoint(path, seg + 2, color);
+            var cache = GetOrComputeSegment(seg, path, color);
 
-            Vector3 pos = CatmullRom(p0, p1, p2, p3, t);
+            Vector3 pos = CatmullRom(cache.P0, cache.P1, cache.P2, cache.P3, t);
             pos.z = zOffset;
             return pos;
         }
@@ -302,12 +373,9 @@ namespace PixelFlow.Services
             }
             float t = clampedDist - seg;
 
-            Vector3 p0 = GetSplineControlPoint(path, seg - 1, color);
-            Vector3 p1 = GetSplineControlPoint(path, seg, color);
-            Vector3 p2 = GetSplineControlPoint(path, seg + 1, color);
-            Vector3 p3 = GetSplineControlPoint(path, seg + 2, color);
+            var cache = GetOrComputeSegment(seg, path, color);
 
-            return CatmullRomTangent(p0, p1, p2, p3, t);
+            return CatmullRomTangent(cache.P0, cache.P1, cache.P2, cache.P3, t);
         }
 
         private float GetZOffset(Vector2Int gridPos, ColorType color)

@@ -462,6 +462,11 @@ namespace PixelFlow.Views
 
         protected override void OnTick(float deltaTime)
         {
+            // Early-out: çoğu hücre çoğu frame'de animasyonsuzdur
+            // 400 hücre × 60 fps = 24.000 kontrol/sn — iki bool check ihmal edilebilir
+            if (!_isBouncing && !_isRejecting)
+                return;
+
             if (_isBouncing)
             {
                 _bounceTimer += deltaTime;

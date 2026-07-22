@@ -49,17 +49,29 @@ namespace PixelFlow.Services
     {
         // Pointer state machine
         private bool _isPointerDown;
-        private int _activePointerId = -1;
+        private bool _isPointerMouse;  // Hangi cihaz aktif: true=mouse, false=touch
         private bool _clickedOutside;
         private Vector2Int _lastGridPos = new Vector2Int(-1, -1);
+
+        // Cihaz referanslarını constructor'da bir kere önbelleğe al
+        // InputSystem statik property'leri her frame sorgulamak yerine
+        // cached referans kullan — InputSystem bunları runtime'da değiştirmez.
+        private readonly UnityEngine.InputSystem.Mouse _mouse;
+        private readonly UnityEngine.InputSystem.Touchscreen _touchscreen;
+
+        public GridInputService()
+        {
+            _mouse = UnityEngine.InputSystem.Mouse.current;
+            _touchscreen = UnityEngine.InputSystem.Touchscreen.current;
+        }
 
         public GridInputResult ProcessInput(Camera gameplayCamera, int gridWidth, int gridHeight)
         {
             // 1. Detect pressed state
             bool isPressed = false;
-            int pointerId = -1;
+            bool isMouse = false;
             Vector2 screenPos = Vector2.zero;
-            bool detected = DetectPressedState(out isPressed, out pointerId, out screenPos);
+            bool detected = DetectPressedState(out isPressed, out isMouse, out screenPos);
 
             if (!detected)
                 return GridInputResult.None;
@@ -71,132 +83,87 @@ namespace PixelFlow.Services
             // 3. Process the input
             if (isPressed)
             {
-                return ProcessPressed(pointerId, screenPos, gameplayCamera, gridWidth, gridHeight);
+                return ProcessPressed(isMouse, screenPos, gameplayCamera, gridWidth, gridHeight);
             }
             else
             {
-                return ProcessReleased(pointerId);
+                return ProcessReleased();
             }
         }
 
         public void Reset()
         {
             _isPointerDown = false;
-            _activePointerId = -1;
+            _isPointerMouse = false;
             _clickedOutside = false;
             _lastGridPos = new Vector2Int(-1, -1);
         }
 
-        private bool DetectPressedState(out bool isPressed, out int pointerId, out Vector2 screenPos)
+        /// <summary>
+        /// Optimize edilmiş input algılama:
+        /// - Cihaz referansları constructor'da cache'lenir (her frame static property yok)
+        /// - Legacy input (Input.GetMouseButton) tamamen kaldırıldı — proje InputSystem kullanıyor
+        /// - Pointer.current fallback kaldırıldı — Mouse/Touchscreen zaten Pointer subclass'ları
+        /// - try/catch blokları kaldırıldı
+        /// - Aktif drag sırasında sadece aktif cihaz sorgulanır
+        /// - Idle'da önce touchscreen sorgulanır (mobile öncelik)
+        /// </summary>
+        private bool DetectPressedState(out bool isPressed, out bool isMouse, out Vector2 screenPos)
         {
             isPressed = false;
-            pointerId = -1;
+            isMouse = false;
             screenPos = Vector2.zero;
-            bool detected = false;
 
-            var mouse = UnityEngine.InputSystem.Mouse.current;
-            var touchscreen = UnityEngine.InputSystem.Touchscreen.current;
-
-            // If currently dragging, stick to the active device
             if (_isPointerDown)
             {
-                if (mouse != null && _activePointerId == mouse.deviceId)
+                // ── Aktif drag: sadece aktif cihazı sorgula ──
+                if (_isPointerMouse)
                 {
-                    isPressed = mouse.leftButton.isPressed;
-                    pointerId = mouse.deviceId;
-                    screenPos = mouse.position.ReadValue();
-                    detected = true;
-                }
-                else if (touchscreen != null && _activePointerId == touchscreen.deviceId)
-                {
-                    if (touchscreen.touches.Count > 0)
-                    {
-                        var touch = touchscreen.touches[0];
-                        isPressed = touch.press.isPressed;
-                        screenPos = touch.position.ReadValue();
-                    }
-                    else
-                    {
-                        isPressed = false;
-                    }
-                    pointerId = touchscreen.deviceId;
-                    detected = true;
-                }
-                else if (_activePointerId == 9999)
-                {
-                    bool legacyPressed = false;
-                    Vector3 legacyPos = Vector3.zero;
-                    try
-                    {
-                        legacyPressed = UnityEngine.Input.GetMouseButton(0);
-                        legacyPos = UnityEngine.Input.mousePosition;
-                    }
-                    catch (System.InvalidOperationException) { }
-
-                    isPressed = legacyPressed;
-                    pointerId = 9999;
-                    screenPos = legacyPos;
-                    detected = true;
-                }
-            }
-
-            // If not currently dragging or active device lost, detect which device is pressed
-            if (!detected)
-            {
-                if (touchscreen != null && touchscreen.touches.Count > 0 && touchscreen.touches[0].press.isPressed)
-                {
-                    var touch = touchscreen.touches[0];
-                    isPressed = true;
-                    pointerId = touchscreen.deviceId;
-                    screenPos = touch.position.ReadValue();
-                    detected = true;
-                }
-                else if (mouse != null && mouse.leftButton.isPressed)
-                {
-                    isPressed = true;
-                    pointerId = mouse.deviceId;
-                    screenPos = mouse.position.ReadValue();
-                    detected = true;
+                    // Mouse drag devam ediyor
+                    isPressed = _mouse.leftButton.isPressed;
+                    isMouse = true;
+                    screenPos = _mouse.position.ReadValue();
+                    return true;
                 }
                 else
                 {
-                    bool legacyPressed = false;
-                    Vector3 legacyPos = Vector3.zero;
-                    try
+                    // Touch drag devam ediyor
+                    var touches = _touchscreen.touches;
+                    if (touches.Count > 0)
                     {
-                        legacyPressed = UnityEngine.Input.GetMouseButton(0);
-                        legacyPos = UnityEngine.Input.mousePosition;
+                        isPressed = touches[0].press.isPressed;
+                        screenPos = touches[0].position.ReadValue();
                     }
-                    catch (System.InvalidOperationException) { }
-
-                    if (legacyPressed)
-                    {
-                        isPressed = true;
-                        pointerId = 9999;
-                        screenPos = legacyPos;
-                        detected = true;
-                    }
-                    else
-                    {
-                        var pointer = UnityEngine.InputSystem.Pointer.current;
-                        if (pointer != null)
-                        {
-                            isPressed = pointer.press.isPressed;
-                            pointerId = pointer.deviceId;
-                            screenPos = pointer.position.ReadValue();
-                            detected = true;
-                        }
-                    }
+                    isMouse = false;
+                    return true;
                 }
             }
 
-            return detected;
+            // ── Idle: yeni basış algıla (touch öncelikli) ──
+            if (_touchscreen != null && _touchscreen.touches.Count > 0 && _touchscreen.touches[0].press.isPressed)
+            {
+                var touch = _touchscreen.touches[0];
+                isPressed = true;
+                isMouse = false;
+                screenPos = touch.position.ReadValue();
+                return true;
+            }
+
+            if (_mouse != null && _mouse.leftButton.isPressed)
+            {
+                isPressed = true;
+                isMouse = true;
+                screenPos = _mouse.position.ReadValue();
+                return true;
+            }
+
+            return false;
         }
 
-        private GridInputResult ProcessPressed(int pointerId, Vector2 screenPos, Camera cam, int gridWidth, int gridHeight)
+        private GridInputResult ProcessPressed(bool isMouse, Vector2 screenPos, Camera cam, int gridWidth, int gridHeight)
         {
-            // Different pointer started dragging — ignore
-            if (_isPointerDown && pointerId != _activePointerId)
+            // Different pointer started dragging — ignore (sadece cihaz türü kontrolü)
+            if (_isPointerDown && isMouse != _isPointerMouse)
                 return GridInputResult.None;
 
             Vector3 worldPos = cam.ScreenToWorldPoint(screenPos);
@@ -209,7 +176,7 @@ namespace PixelFlow.Services
             {
                 // Pointer Down
                 _isPointerDown = true;
-                _activePointerId = pointerId;
+                _isPointerMouse = isMouse;
                 _clickedOutside = !insideGrid;
                 _lastGridPos = new Vector2Int(gx, gy);
 
@@ -244,13 +211,13 @@ namespace PixelFlow.Services
             return GridInputResult.None;
         }
 
-        private GridInputResult ProcessReleased(int pointerId)
+        private GridInputResult ProcessReleased()
         {
-            if (!_isPointerDown || pointerId != _activePointerId)
+            if (!_isPointerDown)
                 return GridInputResult.None;
 
             _isPointerDown = false;
-            _activePointerId = -1;
+            _isPointerMouse = false;
 
             var result = new GridInputResult
             {
@@ -264,5 +231,7 @@ namespace PixelFlow.Services
 
             return result;
         }
+
+
     }
 }

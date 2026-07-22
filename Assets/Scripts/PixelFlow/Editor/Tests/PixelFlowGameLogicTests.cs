@@ -507,8 +507,8 @@ namespace PixelFlow.Editor.Tests
             });
 
             var gridUpdatedCount = _ctx.GetDispatchedSignalCount<GridUpdatedSignal>();
-            Assert.GreaterOrEqual(gridUpdatedCount, 2,
-                "PointerDown + Drag should fire at least 2 GridUpdatedSignals");
+            Assert.GreaterOrEqual(gridUpdatedCount, 1,
+                "Drag should fire at least 1 GridUpdatedSignal (PointerDown no longer fires it)");
         }
 
         [Test]

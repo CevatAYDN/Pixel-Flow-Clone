@@ -94,7 +94,7 @@ namespace PixelFlow.Commands
                 }
                 
                 SignalBus.Fire(new GridUpdatedSignal());
-                SaveThrottler?.TryRequestSave(() => GridStateSerializer.Save(GridModel, GameSessionModel, LevelModel, PlayerPrefsService));
+                SaveHelper.TrySave(SaveThrottler, GridModel, GameSessionModel, LevelModel, PlayerPrefsService);
                 HapticService?.Vibrate(HapticType.Heavy);
             }
             else

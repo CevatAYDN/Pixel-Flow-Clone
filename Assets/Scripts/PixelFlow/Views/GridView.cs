@@ -34,6 +34,10 @@ namespace PixelFlow.Views
         private Vector2Int _lastDragPos = new Vector2Int(-1, -1);
 
         private float _targetZoom;
+
+        // Glow pulse frame skipping: her 3 frame'de 1 güncelle, CPU tasarrufu (~66% azalma)
+        private int _glowFrameSkip;
+        private const int GlowUpdateInterval = 3;
         private float ConfigMinZoom => Config != null ? Config.MinZoom : 8f;
         private float ConfigMaxZoom => Config != null ? Config.MaxZoom : 12f;
 
@@ -45,17 +49,22 @@ namespace PixelFlow.Views
 
         protected override void OnTick(float deltaTime)
         {
-            // Cyberpunk neon pulse animation on the outer glows
+            // Cyberpunk neon pulse animation on the outer glows (skipevery N frames)
             if (_glowLines != null && _glowLines.Count > 0)
             {
-                float glowPulse = 0.52f + Mathf.Sin(Time.time * 6.5f) * 0.05f;
-                foreach (var kvp in _glowLines)
+                _glowFrameSkip++;
+                if (_glowFrameSkip >= GlowUpdateInterval)
                 {
-                    var glowRenderer = kvp.Value;
-                    if (glowRenderer != null && glowRenderer.gameObject.activeSelf)
+                    _glowFrameSkip = 0;
+                    float glowPulse = 0.52f + Mathf.Sin(Time.time * 6.5f) * 0.05f;
+                    foreach (var kvp in _glowLines)
                     {
-                        glowRenderer.startWidth = glowPulse;
-                        glowRenderer.endWidth = glowPulse;
+                        var glowRenderer = kvp.Value;
+                        if (glowRenderer != null && glowRenderer.gameObject.activeSelf)
+                        {
+                            glowRenderer.startWidth = glowPulse;
+                            glowRenderer.endWidth = glowPulse;
+                        }
                     }
                 }
             }
@@ -79,7 +88,6 @@ namespace PixelFlow.Views
             var r = result.Value;
             if (r.IsDown)
             {
-                NexusLog.Info("GridView", "OnTick", "?", $"PointerDown at {r.GridPosition}");
                 _lastDragPos = r.GridPosition;
                 OnGlobalPointerDown?.Invoke(r.GridPosition);
             }
@@ -105,7 +113,6 @@ namespace PixelFlow.Views
             }
             else if (r.IsUp)
             {
-                NexusLog.Info("GridView", "OnTick", "?", $"PointerUp at {r.GridPosition}");
                 _lastDragPos = new Vector2Int(-1, -1);
                 OnGlobalPointerUp?.Invoke(r.GridPosition);
             }

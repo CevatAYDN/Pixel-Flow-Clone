@@ -47,7 +47,7 @@ namespace PixelFlow.Editor.Tests
             _ctx.Dispatch(new InputInteractionSignal { Type = InputType.Drag, GridPosition = new Vector2Int(1, 0) });
 
             int count = _ctx.GetDispatchedSignalCount<GridUpdatedSignal>();
-            Assert.GreaterOrEqual(count, 2, "PointerDown + Drag should fire at least 2 GridUpdatedSignals");
+            Assert.GreaterOrEqual(count, 1, "Drag should fire at least 1 GridUpdatedSignal (PointerDown no longer fires it)");
         }
 
         [Test]

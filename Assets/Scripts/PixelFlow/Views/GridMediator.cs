@@ -32,7 +32,7 @@ namespace PixelFlow.Views
             View.OnGlobalPointerDrag += HandleGlobalPointerDrag;
             View.OnGlobalPointerUp += HandleGlobalPointerUp;
 
-            CacheCellState();
+            ComputeAndCacheCells();
 
             if (GridModel.Width > 0 && GridModel.Height > 0)
             {
@@ -84,7 +84,7 @@ namespace PixelFlow.Views
             if (GridModel.Width <= 0 || GridModel.Height <= 0) return;
 
             Vector2Int crashPos = GridModel.LastCrashPosition.Value;
-            ComputeChangedCells();
+            ComputeAndCacheCells();
             if (_changedCells.Count > 0)
             {
                 View.UpdateDifferential(GridModel.Grid, SettingsModel.CurrentTheme, _changedCells, crashPos, _stateChangedCells);
@@ -129,59 +129,27 @@ namespace PixelFlow.Views
                 _completedColors.Add(color);
             }
 
-            CacheCellState();
-
             GridModel.LastCrashPosition.Value = new Vector2Int(-1, -1);
         }
 
-        private void ComputeChangedCells()
+        /// <summary>
+        /// Tek pass: hem değişen hücreleri tespit eder hem de cache'i günceller.
+        /// Önceden ComputeChangedCells() + CacheCellState() iki ayrı full grid
+        /// iterasyonu yapıyordu. Şimdi tek iterasyonda yapılıyor.
+        /// </summary>
+        private void ComputeAndCacheCells()
         {
             _changedCells.Clear();
             _stateChangedCells.Clear();
             int w = GridModel.Width;
             int h = GridModel.Height;
-
-            if (_previousCellStates == null || _previousCellStates.GetLength(0) != w || _previousCellStates.GetLength(1) != h)
-            {
-                for (int x = 0; x < w; x++)
-                {
-                    for (int y = 0; y < h; y++)
-                    {
-                        _changedCells.Add(new Vector2Int(x, y));
-                        _stateChangedCells.Add(new Vector2Int(x, y));
-                    }
-                }
-                return;
-            }
-
-            for (int x = 0; x < w; x++)
-            {
-                for (int y = 0; y < h; y++)
-                {
-                    var current = GridModel.Grid[x, y];
-                    bool stateChanged = _previousCellStates[x, y] != current.State;
-                    bool colorChanged = _previousCellColors[x, y] != current.Color;
-                    bool pathColorsChanged = _previousPathColorMasks != null
-                        && _previousPathColorMasks[x, y] != current.PathColorsMask;
-                    if (stateChanged || colorChanged || pathColorsChanged)
-                    {
-                        _changedCells.Add(new Vector2Int(x, y));
-                        if (stateChanged)
-                        {
-                            _stateChangedCells.Add(new Vector2Int(x, y));
-                        }
-                    }
-                }
-            }
-        }
-
-        private void CacheCellState()
-        {
-            int w = GridModel.Width;
-            int h = GridModel.Height;
             if (w <= 0 || h <= 0) return;
 
-            if (_previousCellStates == null || _previousCellStates.GetLength(0) != w || _previousCellStates.GetLength(1) != h)
+            bool needsResize = _previousCellStates == null 
+                || _previousCellStates.GetLength(0) != w 
+                || _previousCellStates.GetLength(1) != h;
+
+            if (needsResize)
             {
                 _previousCellStates = new CellState[w, h];
                 _previousCellColors = new ColorType[w, h];
@@ -192,16 +160,41 @@ namespace PixelFlow.Views
             {
                 for (int y = 0; y < h; y++)
                 {
-                    _previousCellStates[x, y] = GridModel.Grid[x, y].State;
-                    _previousCellColors[x, y] = GridModel.Grid[x, y].Color;
-                    _previousPathColorMasks[x, y] = GridModel.Grid[x, y].PathColorsMask;
+                    var current = GridModel.Grid[x, y];
+                    
+                    if (needsResize)
+                    {
+                        // İlk init: tüm hücreler değişmiş kabul edilir
+                        _changedCells.Add(new Vector2Int(x, y));
+                        _stateChangedCells.Add(new Vector2Int(x, y));
+                    }
+                    else
+                    {
+                        // Normal güncelleme: sadece değişen hücreleri tespit et
+                        bool stateChanged = _previousCellStates[x, y] != current.State;
+                        bool colorChanged = _previousCellColors[x, y] != current.Color;
+                        bool pathColorsChanged = _previousPathColorMasks[x, y] != current.PathColorsMask;
+                        if (stateChanged || colorChanged || pathColorsChanged)
+                        {
+                            _changedCells.Add(new Vector2Int(x, y));
+                            if (stateChanged)
+                            {
+                                _stateChangedCells.Add(new Vector2Int(x, y));
+                            }
+                        }
+                    }
+
+                    // Cache'i tek pass'te güncelle
+                    _previousCellStates[x, y] = current.State;
+                    _previousCellColors[x, y] = current.Color;
+                    _previousPathColorMasks[x, y] = current.PathColorsMask;
                 }
             }
         }
 
         private void InitializeAndCenter()
         {
-            CacheCellState();
+            ComputeAndCacheCells();
             View.InitializeGrid(GridModel.Width, GridModel.Height);
             View.UpdateGridVisuals(GridModel.Grid, GridModel.Width, GridModel.Height, SettingsModel.CurrentTheme, GridModel.Paths, GridModel.LastCrashPosition.Value);
             View.CenterCamera(GridModel.Width, GridModel.Height);

@@ -36,6 +36,13 @@ namespace PixelFlow.Services
             public int x, y;
             public int state;
             public int color;
+            /// <summary>
+            /// Bitmask of path colors: bit 1=Red, 2=Green, 3=Blue, 4=Yellow, 5=Purple.
+            /// Replaces List{int} pathColors to eliminate per-cell List allocation.
+            /// Backward-compatible: old saves use pathColors list instead.
+            /// </summary>
+            public byte pathsMask;
+            [System.Obsolete("Use pathsMask byte instead. Kept for backward compatibility with old save files.")]
             public List<int> pathColors = new List<int>();
             public bool hasViaduct;
             public int underColor;
@@ -90,10 +97,9 @@ namespace PixelFlow.Services
                         hasViaduct = cell.HasViaduct,
                         underColor = (int)cell.UnderColor,
                         overColor = (int)cell.OverColor,
-                        obstacleType = (int)cell.ObstacleType
+                        obstacleType = (int)cell.ObstacleType,
+                        pathsMask = cell.PathColorsMask
                     };
-                    foreach (var pc in cell.GetPathColors())
-                        csd.pathColors.Add((int)pc);
                     data.cells.Add(csd);
                 }
             }
@@ -158,9 +164,20 @@ namespace PixelFlow.Services
                 cell.UnderColor = (ColorType)csd.underColor;
                 cell.OverColor = (ColorType)csd.overColor;
                 cell.ClearPathColors();
-                foreach (var pc in csd.pathColors)
-                    cell.AddPathColor((ColorType)pc);
                 cell.ObstacleType = (ObstacleType)csd.obstacleType;
+                
+                // Restore path colors: prefer pathsMask (new format), fallback to pathColors list (old saves)
+                if (csd.pathsMask != 0)
+                {
+                    cell.PathColorsMask = csd.pathsMask;
+                }
+#pragma warning disable CS0618 // Obsolete field — backward compatibility with old save files
+                else if (csd.pathColors != null && csd.pathColors.Count > 0)
+                {
+                    foreach (var pc in csd.pathColors)
+                        cell.AddPathColor((ColorType)pc);
+                }
+#pragma warning restore CS0618
             }
 
             grid.Paths.Clear();

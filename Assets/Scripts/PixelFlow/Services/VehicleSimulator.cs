@@ -156,12 +156,13 @@ namespace PixelFlow.Services
             {
                 _simulationPhaseTimer = 0f;
                 _cachedEndpoints.Clear();
-                ClearAllVehicles();
+                ClearAllVehicles();  // ClearAllVehicles içinde InvalidateSplineCache() çağrılır
             }
             else if (state == GameState.Simulating)
             {
                 _simulationPhaseTimer = 0f;
                 _cachedEndpoints.Clear();
+                _movementService?.InvalidateSplineCache();
                 // ClearAllVehicles() kaldırıldı - araçlar yok edilmeden pürüzsüzce hayaletten katı moda geçecek
                 LoggerService?.Log("[VehicleSimulator] Simulation Phase started. All vehicles now transition to solid.");
             }
@@ -194,6 +195,7 @@ namespace PixelFlow.Services
             _spawnTimers.Clear();
             _cellOccupancy.Clear();
             _occupancyListPool.Clear();
+            _movementService?.InvalidateSplineCache();
         }
 
         public void Tick(float deltaTime)
@@ -318,7 +320,10 @@ namespace PixelFlow.Services
             {
                 Color = color,
                 Style = vehicleStyle,
-                Path = path,
+                // Path'in KOPYASINI al — referans değil!
+                // Aksi halde kullanıcı çizimi değiştirince daha önce spawnlanmış
+                // araçların Path'i de değişir (aynı List referansı) → teleportasyon
+                Path = new List<Vector2Int>(path),
                 SegmentIndex = 0,
                 Progress = 0f,
                 Visual = visual,

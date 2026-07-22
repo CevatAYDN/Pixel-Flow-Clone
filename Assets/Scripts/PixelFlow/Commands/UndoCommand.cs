@@ -38,7 +38,7 @@ namespace PixelFlow.Commands
                     CrisisAdService.RecordCrisisAttempt();
                 }
                 SignalBus.Fire(new GridUpdatedSignal());
-                SaveThrottler?.TryRequestSave(() => GridStateSerializer.Save(GridModel, GameSessionModel, LevelModel, PlayerPrefsService));
+                SaveHelper.TrySave(SaveThrottler, GridModel, GameSessionModel, LevelModel, PlayerPrefsService);
                 HapticService.Vibrate(HapticType.Light);
             }
         }

@@ -1,3 +1,4 @@
+using System;
 using Nexus.Core;
 using Nexus.Core.Services;
 using PixelFlow.Models;
@@ -36,29 +37,28 @@ namespace PixelFlow.Commands
             _ = _hasPendingHistory; // Suppress CS0414 warning
         }
 
+        // Önbelleğe alınmış save Action — her RequestSave()'de yeni closure alloc'u önler
+        private Action _cachedSaveAction;
+
         private void RequestSave()
         {
-            SaveThrottler?.TryRequestSave(() => GridStateSerializer.Save(GridModel, GameSessionModel, LevelModel, PlayerPrefsService));
+            if (_cachedSaveAction == null)
+                _cachedSaveAction = () => GridStateSerializer.Save(GridModel, GameSessionModel, LevelModel, PlayerPrefsService);
+            SaveThrottler?.TryRequestSave(_cachedSaveAction);
         }
 
         public void Execute(InputInteractionSignal signal)
         {
             var state = GameStateModel.CurrentState;
-            NexusLog.Info("ProcessInputCommand", "Execute", "?",
-                $"Signal={signal.Type} Pos={signal.GridPosition} State={state}");
 
             if (state == GameState.Simulating && signal.Type == InputType.PointerDown)
             {
-                NexusLog.Info("ProcessInputCommand", "Execute", "?",
-                    "Simulating → Playing transition on PointerDown");
                 GameStateModel.SetState(GameState.Playing);
                 return;
             }
 
             if (state != GameState.Playing && state != GameState.Paused)
             {
-                NexusLog.Warn("ProcessInputCommand", "Execute", "?",
-                    $"Input BLOCKED — State={state} (expected Playing or Paused)");
                 return;
             }
 
@@ -90,13 +90,9 @@ namespace PixelFlow.Commands
                 {
                     if (GridModel.LockedColors.Contains(clickedColor))
                     {
-                        NexusLog.Warn("ProcessInputCommand", "PointerDown", "?",
-                            $"Color {clickedColor} is LOCKED — ignoring");
                         return;
                     }
 
-                    NexusLog.Info("ProcessInputCommand", "PointerDown", "?",
-                        $"Selected color={clickedColor} at {signal.GridPosition}");
                     EnsureHistoryRecorded();
 
                     GridModel.ActiveColor.Value = clickedColor;
@@ -116,8 +112,9 @@ namespace PixelFlow.Commands
                     {
                         PathService.BacktrackPath(clickedColor, signal.GridPosition);
                     }
-                    SignalBus.Fire(new GridUpdatedSignal());
-                    RequestSave();
+                    // GridUpdatedSignal ATLANIR — path henüz tamamlanmadı (sadece 1 hücre).
+                    // İlk Drag olayı zaten bu sinyali fırlatır ve görsel güncellenir.
+                    // RequestSave();  ← kaldırıldı: henüz kaydedilecek path yok
                     HapticService?.Vibrate(HapticType.Light);
                 }
             }
@@ -141,7 +138,7 @@ namespace PixelFlow.Commands
                     PathService.BacktrackPath(GridModel.ActiveColor.Value, signal.GridPosition);
                     GridModel.LastPosition.Value = signal.GridPosition;
                     SignalBus.Fire(new GridUpdatedSignal());
-                    RequestSave();
+                    // RequestSave();  ← kaldırıldı: backtrack intermediate, save gerekmez
                     return;
                 }
 
@@ -177,7 +174,9 @@ namespace PixelFlow.Commands
                     GridModel.LastPosition.Value = signal.GridPosition;
                     SignalBus.Fire(new GridUpdatedSignal());
                     SoundModel.PlayDrawSound(path.Count);
-                    RequestSave();
+                    // Batched save: drag intermetiate steps atlanır — PointerUp veya path
+                    // complete kaydeder. SaveThrottler 2s throttle ile zaten bekletiyor.
+                    // RequestSave();  ← kaldırıldı: intermediate drag step, save gerekmez
                 }
                 else if (currentCell.State == CellState.Node && currentCell.Color == GridModel.ActiveColor.Value)
                 {
@@ -247,7 +246,7 @@ namespace PixelFlow.Commands
                     }
 
                     SignalBus.Fire(new GridUpdatedSignal());
-                    RequestSave();
+                    // RequestSave();  ← kaldırıldı: bridge crossing intermediate, save gerekmez
                 }
             }
             else if (signal.Type == InputType.PointerUp)
