@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: feab22daf90d7ac4cb01124d929db8af, type: 3}
   m_Name: MainLevelPack
   m_EditorClassIdentifier: PixelFlow::PixelFlow.Data.LevelPack
-  packName: 5x5 Beginner Pack
+  packName: "5x5 Ba\u015Flang\u0131\xE7 Paketi"
   levels:
   - {fileID: 11400000, guid: 689214afa7b54b84db204ac91f72ed7f, type: 2}
   - {fileID: 11400000, guid: b3673cc57d19b1b409f5177d151d45e1, type: 2}

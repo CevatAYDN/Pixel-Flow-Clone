@@ -189,13 +189,6 @@ namespace PixelFlow.Commands
                     if (currentCell.HasPathColor(GridModel.ActiveColor.Value))
                         return;
 
-                    if (currentCell.PathColorCount >= BridgeValidationUtility.MaxPathsPerBridge)
-                    {
-                        // GDD §4.2: 3. renk reddedildi — görsel geri bildirim için sinyal ateşle
-                        SignalBus.Fire(new ThirdColorRejectionSignal { Position = signal.GridPosition });
-                        return;
-                    }
-
                     Vector2Int entryDir = signal.GridPosition - GridModel.LastPosition.Value;
 
                     if (currentCell.PathColorCount > 0)
@@ -206,9 +199,19 @@ namespace PixelFlow.Commands
                             if (!BridgeValidationUtility.IsValidBridgeCrossing(
                                 otherPath, path, signal.GridPosition, entryDir))
                             {
-                                return;
+                                // Instead of blocking drawing, sever/backtrack the conflicting path at the intersection point
+                                EnsureHistoryRecorded();
+                                PathService.BacktrackPath(existingColor, signal.GridPosition);
                             }
                         }
+                    }
+
+                    if (currentCell.PathColorCount >= BridgeValidationUtility.MaxPathsPerBridge)
+                    {
+                        // If still full, backtrack the conflicting color to make space
+                        ColorType firstColor = currentCell.FirstPathColor;
+                        EnsureHistoryRecorded();
+                        PathService.BacktrackPath(firstColor, signal.GridPosition);
                     }
 
                     EnsureHistoryRecorded();

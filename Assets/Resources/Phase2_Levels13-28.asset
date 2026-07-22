@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fe09c955e687cf46b1027062b136134, type: 3}
+  m_Name: Phase2_Levels13-28
+  m_EditorClassIdentifier: PixelFlow::PixelFlow.Data.PhaseDefinitionAsset
+  Phase: 2
+  StartLevelIndex: 12
+  EndLevelIndex: 27
+  GridSizeMin: 6
+  GridSizeMax: 7
+  ColorCountMin: 2
+  ColorCountMax: 3
+  BridgeCountMin: 3
+  BridgeCountMax: 3
+  RequireFullCoverage: 0
+  ObstaclesEnabled: 1
+  OneWayEnabled: 0
+  FerryEnabled: 0
+  NarrowPassEnabled: 0
+  OverrideTargetFlowScore: 0

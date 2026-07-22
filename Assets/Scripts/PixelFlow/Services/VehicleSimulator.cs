@@ -543,6 +543,17 @@ namespace PixelFlow.Services
                 }
             }
 
+            // GDD §16.2 / Hissiyat: Add glowing neon trail to train
+            var trail = root.AddComponent<TrailRenderer>();
+            trail.time = 0.55f;
+            trail.startWidth = 0.22f;
+            trail.endWidth = 0f;
+            trail.numCornerVertices = 4;
+            trail.material = _sharedSpriteMat;
+            Color cVal = PixelFlow.Views.CellView.GetColor(color);
+            trail.startColor = new Color(cVal.r, cVal.g, cVal.b, 0.45f);
+            trail.endColor = new Color(cVal.r, cVal.g, cVal.b, 0f);
+
             return renderers;
         }
 
@@ -629,6 +640,17 @@ namespace PixelFlow.Services
                     }
                 }
             }
+
+            // GDD §16.2 / Hissiyat: Add glowing neon trail to vehicle
+            var trail = root.AddComponent<TrailRenderer>();
+            trail.time = 0.45f;
+            trail.startWidth = 0.18f;
+            trail.endWidth = 0f;
+            trail.numCornerVertices = 4;
+            trail.material = _sharedSpriteMat;
+            Color cVal = PixelFlow.Views.CellView.GetColor(color);
+            trail.startColor = new Color(cVal.r, cVal.g, cVal.b, 0.45f);
+            trail.endColor = new Color(cVal.r, cVal.g, cVal.b, 0f);
 
             return renderers;
         }

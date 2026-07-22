@@ -185,6 +185,45 @@ namespace PixelFlow.Services
             grid.LastPosition.Value = new Vector2Int(data.lastPosX, data.lastPosY);
         }
 
+        public static bool IsSaveDataValidForLevel(GridSaveData save, LevelData level)
+        {
+            if (save == null || level == null) return false;
+            if (save.width != level.width || save.height != level.height) return false;
+
+            var levelNodes = new Dictionary<Vector2Int, ColorType>();
+            foreach (var n in level.initialNodes)
+            {
+                levelNodes[n.position] = n.color;
+            }
+
+            int matchedNodes = 0;
+
+            foreach (var csd in save.cells)
+            {
+                var pos = new Vector2Int(csd.x, csd.y);
+                bool hasLevelNode = levelNodes.TryGetValue(pos, out var expectedColor);
+                bool isSaveNode = (CellState)csd.state == CellState.Node;
+
+                if (isSaveNode)
+                {
+                    if (!hasLevelNode || expectedColor != (ColorType)csd.color)
+                    {
+                        return false;
+                    }
+                    matchedNodes++;
+                }
+                else
+                {
+                    if (hasLevelNode)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return matchedNodes == level.initialNodes.Count;
+        }
+
         public static void EnsureInitialNodesOnGrid(LevelData level, IGridModel grid)
         {
             if (level == null || level.initialNodes == null || grid == null || grid.Grid == null) return;

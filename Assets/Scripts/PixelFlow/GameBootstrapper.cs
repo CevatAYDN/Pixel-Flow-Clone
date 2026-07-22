@@ -113,23 +113,31 @@ namespace PixelFlow
                             var level = ResolveLevelByIndex(saved.levelIndex);
                             if (level != null)
                             {
-                                _loggerService?.Log($"[PixelFlow] Restoring valid saved game: Level {saved.levelIndex + 1} ({level.name}, Grid: {saved.width}x{saved.height}, Cells: {saved.cells.Count}, Paths: {saved.paths.Count})");
-                                _levelModel.SetLevel(level);
-                                GridStateSerializer.ApplyToGrid(saved, _gridModel);
-                                GridStateSerializer.EnsureInitialNodesOnGrid(level, _gridModel);
-                                _sessionModel.ApplySave(saved.availableViaducts, saved.maxViaducts,
-                                    saved.elapsedTime, saved.score, saved.stars, saved.levelIndex);
+                                if (GridStateSerializer.IsSaveDataValidForLevel(saved, level))
+                                {
+                                    _loggerService?.Log($"[PixelFlow] Restoring valid saved game: Level {saved.levelIndex + 1} ({level.name}, Grid: {saved.width}x{saved.height}, Cells: {saved.cells.Count}, Paths: {saved.paths.Count})");
+                                    _levelModel.SetLevel(level);
+                                    GridStateSerializer.ApplyToGrid(saved, _gridModel);
+                                    GridStateSerializer.EnsureInitialNodesOnGrid(level, _gridModel);
+                                    _sessionModel.ApplySave(saved.availableViaducts, saved.maxViaducts,
+                                        saved.elapsedTime, saved.score, saved.stars, saved.levelIndex);
 
-                                var obstacleService = nexusRoot.Context.Container.Resolve<IObstacleService>();
-                                obstacleService?.InitializeFromLevel(level);
+                                    var obstacleService = nexusRoot.Context.Container.Resolve<IObstacleService>();
+                                    obstacleService?.InitializeFromLevel(level);
 
-                                var tutorialDriver = nexusRoot.Context.Container.Resolve<ITutorialDriver>();
-                                tutorialDriver?.OnLevelLoaded(level.levelIndex);
+                                    var tutorialDriver = nexusRoot.Context.Container.Resolve<ITutorialDriver>();
+                                    tutorialDriver?.OnLevelLoaded(level.levelIndex);
 
-                                _signalBus.Fire(new GridUpdatedSignal());
-                                _stateModel.SetState(GameState.Playing);
-                                _loggerService?.Log($"[PixelFlow] Game state transitioned to Playing. Level {level.levelIndex + 1} restored.");
-                                yield break;
+                                    _signalBus.Fire(new GridUpdatedSignal());
+                                    _stateModel.SetState(GameState.Playing);
+                                    _loggerService?.Log($"[PixelFlow] Game state transitioned to Playing. Level {level.levelIndex + 1} restored.");
+                                    yield break;
+                                }
+                                else
+                                {
+                                    _loggerService?.LogWarning($"[PixelFlow] Outdated or invalid saved game layout detected for Level {saved.levelIndex + 1}. Discarding save...");
+                                    GridStateSerializer.ClearSave(prefs);
+                                }
                             }
                             else
                             {
@@ -185,10 +193,34 @@ namespace PixelFlow
 
         private void EnterPlaying()
         {
-            if (initialLevel == null) initialLevel = ResolveInitialLevel();
-            if (initialLevel != null)
+            LevelData targetLevel = null;
+            try
             {
-                _signalBus.Fire(new LoadLevelSignal { LevelToLoad = initialLevel });
+                var progressModel = nexusRoot.Context.Container.Resolve<IProgressModel>();
+                if (progressModel != null)
+                {
+                    int unlocked = progressModel.UnlockedLevels;
+                    int targetIndex = unlocked - 1; // 0-based level index
+                    targetLevel = ResolveLevelByIndex(targetIndex);
+                    if (targetLevel != null)
+                    {
+                        _loggerService?.Log($"[PixelFlow] Progression indicates Level {unlocked} is unlocked. Resolved starting level asset: {targetLevel.name}");
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                _loggerService?.LogWarning($"[PixelFlow] Failed to resolve level from progression model: {ex.Message}");
+            }
+
+            if (targetLevel == null)
+            {
+                targetLevel = initialLevel != null ? initialLevel : ResolveInitialLevel();
+            }
+
+            if (targetLevel != null)
+            {
+                _signalBus.Fire(new LoadLevelSignal { LevelToLoad = targetLevel });
             }
             else
             {

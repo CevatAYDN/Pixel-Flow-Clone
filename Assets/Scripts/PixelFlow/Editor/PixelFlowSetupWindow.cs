@@ -358,11 +358,12 @@ namespace PixelFlow.Editor
             }
             if (GUILayout.Button("🧹 Temiz Seviye Yükle (Save Temizle)", GUILayout.Height(28)))
             {
-                PlayerPrefs.DeleteKey("NT_PuzzleSave_");
-                PlayerPrefs.Save();
+                var prefs = GetPrefsService();
+                prefs.DeleteKey("NT_PuzzleSave_");
+                prefs.Save();
                 var lvl1 = ResolveLevelByIndex(0);
                 if (lvl1 != null) PlayLevel(lvl1);
-                Debug.Log("[PixelFlow] Save file cleared in PlayerPrefs! Clean data-driven LevelData reloaded.");
+                Debug.Log("[PixelFlow] Save file cleared in EncryptedStorage! Clean data-driven LevelData reloaded.");
             }
             GUILayout.EndHorizontal();
 
@@ -732,21 +733,23 @@ namespace PixelFlow.Editor
             GUILayout.Label($"📁 Proje Seviye Kaydı ({_cachedLevels.Count} Seviye)", _sectionHeaderStyle);
             GUILayout.Space(5);
 
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("3 Seviyeli Başlangıç Paketi Oluştur", GUILayout.Height(25)))
+            {
+                CreateThreeLevelPack();
+                RefreshData();
+            }
+            if (GUILayout.Button("Faz 1+2 El Yapımı Paket Oluştur (12 seviye)", GUILayout.Height(25)))
+            {
+                CreatePhase1And2HandCraftedPack();
+                RefreshData();
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.Space(8);
+
             if (_cachedLevels.Count == 0)
             {
                 GUILayout.Label("Bu projede hiç LevelData varlığı bulunamadı.", EditorStyles.miniLabel);
-                GUILayout.Space(5);
-                if (GUILayout.Button("3 Seviyeli Başlangıç Paketi Oluştur", GUILayout.Height(25)))
-                {
-                    CreateThreeLevelPack();
-                    RefreshData();
-                }
-                GUILayout.Space(3);
-                if (GUILayout.Button("Faz 1+2 El Yapımı Paket Oluştur (12 seviye)", GUILayout.Height(25)))
-                {
-                    CreatePhase1And2HandCraftedPack();
-                    RefreshData();
-                }
             }
             else
             {
@@ -1224,10 +1227,11 @@ namespace PixelFlow.Editor
 
         private void ResetProgress()
         {
-            PlayerPrefs.SetInt("UnlockedLevels", 1);
-            PlayerPrefs.SetInt("NT_UnlockedLevels", 1);
-            PlayerPrefs.DeleteKey("NT_PuzzleSave_");
-            PlayerPrefs.Save();
+            var prefs = GetPrefsService();
+            prefs.SetInt("UnlockedLevels", 1);
+            prefs.SetInt("NT_UnlockedLevels", 1);
+            prefs.DeleteKey("NT_PuzzleSave_");
+            prefs.Save();
             Debug.Log("[PixelFlow] İlerleme Seviye 1'e sıfırlandı.");
         }
 
@@ -1238,7 +1242,8 @@ namespace PixelFlow.Editor
             var level = GetModel<ILevelModel>();
             if (grid != null && session != null && level != null && level.CurrentLevel != null)
             {
-                GridStateSerializer.Save(grid, session, level);
+                var prefs = GetPrefsService();
+                GridStateSerializer.Save(grid, session, level, prefs);
                 Debug.Log("[PixelFlow] Oyun durumu zorla kaydedildi.");
             }
         }
@@ -1248,9 +1253,38 @@ namespace PixelFlow.Editor
             if (EditorUtility.DisplayDialog("Kayıt & PlayerPrefs Temizle",
                 "Tüm kaydedilmiş ilerleme ve oyuncu tercihlerini silmek istediğinizden emin misiniz?", "Evet", "Hayır"))
             {
+                var prefs = GetPrefsService();
+                prefs.DeleteKey("UnlockedLevels");
+                prefs.DeleteKey("NT_UnlockedLevels");
+                prefs.DeleteKey("NT_PuzzleSave_");
+                prefs.DeleteKey("VehicleStyle");
+                prefs.DeleteKey("HintCount");
+                prefs.DeleteKey("AppTheme");
+                prefs.DeleteKey("ColorBlindMode");
+                prefs.DeleteKey("MasterVolume");
+                prefs.DeleteKey("SfxVolume");
+                prefs.DeleteKey("MusicVolume");
+                prefs.DeleteKey("HapticsDisabled");
+                prefs.Save();
+
+                // Clear the folder too!
+                string secureDataFolder = Path.Combine(Application.persistentDataPath, "SecureData");
+                if (Directory.Exists(secureDataFolder))
+                {
+                    try
+                    {
+                        Directory.Delete(secureDataFolder, true);
+                        Directory.CreateDirectory(secureDataFolder);
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogWarning($"[PixelFlow] SecureData directory could not be fully deleted: {ex.Message}");
+                    }
+                }
+
                 PlayerPrefs.DeleteAll();
                 PlayerPrefs.Save();
-                Debug.Log("[PixelFlow] PlayerPrefs tamamen temizlendi.");
+                Debug.Log("[PixelFlow] Tüm kayıtlı veriler (encrypted & standard PlayerPrefs) tamamen temizlendi.");
             }
         }
 
@@ -2176,27 +2210,18 @@ namespace PixelFlow.Editor
             lvl1.flowScoreThreshold = 5;
             lvl1.initialNodes = new System.Collections.Generic.List<GridNode>
             {
-                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
-                new GridNode { position = new Vector2Int(4, 0), color = ColorType.Red },
-                new GridNode { position = new Vector2Int(0, 1), color = ColorType.Blue },
-                new GridNode { position = new Vector2Int(0, 4), color = ColorType.Blue },
-                new GridNode { position = new Vector2Int(1, 1), color = ColorType.Green },
-                new GridNode { position = new Vector2Int(4, 1), color = ColorType.Green },
-                new GridNode { position = new Vector2Int(1, 2), color = ColorType.Yellow },
-                new GridNode { position = new Vector2Int(4, 2), color = ColorType.Yellow },
-                new GridNode { position = new Vector2Int(1, 3), color = ColorType.Purple },
-                new GridNode { position = new Vector2Int(4, 3), color = ColorType.Purple },
-                new GridNode { position = new Vector2Int(1, 4), color = ColorType.Purple },
-                new GridNode { position = new Vector2Int(4, 4), color = ColorType.Purple }
+                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red, shape = ShapeType.Triangle },
+                new GridNode { position = new Vector2Int(4, 0), color = ColorType.Red, shape = ShapeType.Triangle },
+                new GridNode { position = new Vector2Int(0, 1), color = ColorType.Blue, shape = ShapeType.Circle },
+                new GridNode { position = new Vector2Int(0, 4), color = ColorType.Blue, shape = ShapeType.Circle },
+                new GridNode { position = new Vector2Int(1, 1), color = ColorType.Green, shape = ShapeType.Diamond },
+                new GridNode { position = new Vector2Int(4, 1), color = ColorType.Green, shape = ShapeType.Diamond }
             };
             lvl1.solutions = new System.Collections.Generic.List<PathSolution>
             {
                 new PathSolution { color = ColorType.Red, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(0,0), new Vector2Int(1,0), new Vector2Int(2,0), new Vector2Int(3,0), new Vector2Int(4,0) } },
                 new PathSolution { color = ColorType.Blue, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(0,1), new Vector2Int(0,2), new Vector2Int(0,3), new Vector2Int(0,4) } },
-                new PathSolution { color = ColorType.Green, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(1,1), new Vector2Int(2,1), new Vector2Int(3,1), new Vector2Int(4,1) } },
-                new PathSolution { color = ColorType.Yellow, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(1,2), new Vector2Int(2,2), new Vector2Int(3,2), new Vector2Int(4,2) } },
-                new PathSolution { color = ColorType.Purple, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(1,3), new Vector2Int(2,3), new Vector2Int(3,3), new Vector2Int(4,3) } },
-                new PathSolution { color = ColorType.Purple, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(1,4), new Vector2Int(2,4), new Vector2Int(3,4), new Vector2Int(4,4) } }
+                new PathSolution { color = ColorType.Green, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(1,1), new Vector2Int(2,1), new Vector2Int(3,1), new Vector2Int(4,1) } }
             };
             AssetDatabase.CreateAsset(lvl1, $"{folder}/Level1.asset");
 
@@ -2208,14 +2233,14 @@ namespace PixelFlow.Editor
             lvl2.flowScoreThreshold = 5;
             lvl2.initialNodes = new System.Collections.Generic.List<GridNode>
             {
-                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red },
-                new GridNode { position = new Vector2Int(4, 0), color = ColorType.Red },
-                new GridNode { position = new Vector2Int(0, 2), color = ColorType.Blue },
-                new GridNode { position = new Vector2Int(4, 4), color = ColorType.Blue },
-                new GridNode { position = new Vector2Int(1, 2), color = ColorType.Green },
-                new GridNode { position = new Vector2Int(4, 1), color = ColorType.Green },
-                new GridNode { position = new Vector2Int(3, 2), color = ColorType.Yellow },
-                new GridNode { position = new Vector2Int(4, 2), color = ColorType.Yellow }
+                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Red, shape = ShapeType.Triangle },
+                new GridNode { position = new Vector2Int(4, 0), color = ColorType.Red, shape = ShapeType.Triangle },
+                new GridNode { position = new Vector2Int(0, 2), color = ColorType.Blue, shape = ShapeType.Circle },
+                new GridNode { position = new Vector2Int(4, 4), color = ColorType.Blue, shape = ShapeType.Circle },
+                new GridNode { position = new Vector2Int(1, 2), color = ColorType.Green, shape = ShapeType.Diamond },
+                new GridNode { position = new Vector2Int(4, 1), color = ColorType.Green, shape = ShapeType.Diamond },
+                new GridNode { position = new Vector2Int(3, 2), color = ColorType.Yellow, shape = ShapeType.Square },
+                new GridNode { position = new Vector2Int(4, 2), color = ColorType.Yellow, shape = ShapeType.Square }
             };
             lvl2.solutions = new System.Collections.Generic.List<PathSolution>
             {
@@ -2235,18 +2260,16 @@ namespace PixelFlow.Editor
             lvl3.bridgePositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(2, 2) };
             lvl3.initialNodes = new System.Collections.Generic.List<GridNode>
             {
-                new GridNode { position = new Vector2Int(0, 2), color = ColorType.Red },
-                new GridNode { position = new Vector2Int(4, 2), color = ColorType.Red },
-                new GridNode { position = new Vector2Int(2, 0), color = ColorType.Blue },
-                new GridNode { position = new Vector2Int(2, 4), color = ColorType.Blue },
-                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Green },
-                new GridNode { position = new Vector2Int(0, 1), color = ColorType.Green },
-                new GridNode { position = new Vector2Int(3, 0), color = ColorType.Yellow },
-                new GridNode { position = new Vector2Int(3, 1), color = ColorType.Yellow },
-                new GridNode { position = new Vector2Int(0, 3), color = ColorType.Green },
-                new GridNode { position = new Vector2Int(0, 4), color = ColorType.Green },
-                new GridNode { position = new Vector2Int(3, 3), color = ColorType.Purple },
-                new GridNode { position = new Vector2Int(3, 4), color = ColorType.Purple }
+                new GridNode { position = new Vector2Int(0, 2), color = ColorType.Red, shape = ShapeType.Triangle },
+                new GridNode { position = new Vector2Int(4, 2), color = ColorType.Red, shape = ShapeType.Triangle },
+                new GridNode { position = new Vector2Int(2, 0), color = ColorType.Blue, shape = ShapeType.Circle },
+                new GridNode { position = new Vector2Int(2, 4), color = ColorType.Blue, shape = ShapeType.Circle },
+                new GridNode { position = new Vector2Int(0, 0), color = ColorType.Green, shape = ShapeType.Diamond },
+                new GridNode { position = new Vector2Int(0, 1), color = ColorType.Green, shape = ShapeType.Diamond },
+                new GridNode { position = new Vector2Int(3, 0), color = ColorType.Yellow, shape = ShapeType.Square },
+                new GridNode { position = new Vector2Int(3, 1), color = ColorType.Yellow, shape = ShapeType.Square },
+                new GridNode { position = new Vector2Int(3, 3), color = ColorType.Purple, shape = ShapeType.Star },
+                new GridNode { position = new Vector2Int(3, 4), color = ColorType.Purple, shape = ShapeType.Star }
             };
             lvl3.solutions = new System.Collections.Generic.List<PathSolution>
             {
@@ -2254,7 +2277,6 @@ namespace PixelFlow.Editor
                 new PathSolution { color = ColorType.Blue, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(2,0), new Vector2Int(2,1), new Vector2Int(2,2), new Vector2Int(2,3), new Vector2Int(2,4) } },
                 new PathSolution { color = ColorType.Green, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(0,0), new Vector2Int(1,0), new Vector2Int(1,1), new Vector2Int(0,1) } },
                 new PathSolution { color = ColorType.Yellow, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(3,0), new Vector2Int(4,0), new Vector2Int(4,1), new Vector2Int(3,1) } },
-                new PathSolution { color = ColorType.Green, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(0,3), new Vector2Int(1,3), new Vector2Int(1,4), new Vector2Int(0,4) } },
                 new PathSolution { color = ColorType.Purple, pathPositions = new System.Collections.Generic.List<Vector2Int> { new Vector2Int(3,3), new Vector2Int(4,3), new Vector2Int(4,4), new Vector2Int(3,4) } }
             };
             AssetDatabase.CreateAsset(lvl3, $"{folder}/Level3.asset");
@@ -2417,8 +2439,9 @@ namespace PixelFlow.Editor
             }
             else
             {
-                PlayerPrefs.SetInt("VehicleStyle", (int)style);
-                PlayerPrefs.Save();
+                var prefs = GetPrefsService();
+                prefs.SetInt("VehicleStyle", (int)style);
+                prefs.Save();
             }
             var sim = GetService<IVehicleSimulator>();
             if (sim != null)
@@ -2426,6 +2449,23 @@ namespace PixelFlow.Editor
                 sim.ClearAllVehicles();
             }
             Debug.Log($"[PixelFlow] Araç stili değiştirildi: {style}");
+        }
+
+        private IPlayerPrefsService GetPrefsService()
+        {
+            if (Application.isPlaying)
+            {
+                var bootstrapper = Object.FindAnyObjectByType<GameBootstrapper>();
+                if (bootstrapper != null && bootstrapper.nexusRoot != null && bootstrapper.nexusRoot.Context != null)
+                {
+                    try
+                    {
+                        return bootstrapper.nexusRoot.Context.Container.Resolve<IPlayerPrefsService>();
+                    }
+                    catch { }
+                }
+            }
+            return new Nexus.Core.Services.EncryptedStorageService();
         }
     }
 }

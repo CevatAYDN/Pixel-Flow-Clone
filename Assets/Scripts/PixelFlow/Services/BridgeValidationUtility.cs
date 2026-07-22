@@ -11,8 +11,20 @@ namespace PixelFlow.Services
         public static Vector2Int GetCrossingDirection(IList<Vector2Int> path, Vector2Int bridgePos)
         {
             int idx = path.IndexOf(bridgePos);
-            if (idx <= 0 || idx >= path.Count - 1)
+            if (idx < 0)
                 return Vector2Int.zero;
+
+            // Start node of the path cannot be crossed
+            if (idx == 0)
+                return Vector2Int.zero;
+
+            // If it is the end of the path (which is a regular path cell if the path is incomplete)
+            if (idx == path.Count - 1)
+            {
+                if (path.Count < 2)
+                    return Vector2Int.zero;
+                return bridgePos - path[idx - 1];
+            }
 
             var prev = path[idx - 1];
             var next = path[idx + 1];

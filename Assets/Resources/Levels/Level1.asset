@@ -20,74 +20,38 @@ MonoBehaviour:
     color: 1
     shape: 1
     type: 0
-    isSource: 1
+    isSource: 0
     pairIndex: 0
   - position: {x: 4, y: 0}
     color: 1
     shape: 1
-    type: 1
+    type: 0
     isSource: 0
-    pairIndex: 1
+    pairIndex: 0
   - position: {x: 0, y: 1}
     color: 3
     shape: 0
-    type: 2
-    isSource: 1
+    type: 0
+    isSource: 0
     pairIndex: 0
   - position: {x: 0, y: 4}
     color: 3
     shape: 0
-    type: 3
+    type: 0
     isSource: 0
-    pairIndex: 1
+    pairIndex: 0
   - position: {x: 1, y: 1}
     color: 2
     shape: 3
-    type: 4
-    isSource: 1
+    type: 0
+    isSource: 0
     pairIndex: 0
   - position: {x: 4, y: 1}
     color: 2
     shape: 3
-    type: 5
-    isSource: 0
-    pairIndex: 1
-  - position: {x: 1, y: 2}
-    color: 4
-    shape: 2
     type: 0
-    isSource: 1
-    pairIndex: 0
-  - position: {x: 4, y: 2}
-    color: 4
-    shape: 2
-    type: 1
     isSource: 0
-    pairIndex: 1
-  - position: {x: 1, y: 3}
-    color: 5
-    shape: 4
-    type: 2
-    isSource: 1
     pairIndex: 0
-  - position: {x: 4, y: 3}
-    color: 5
-    shape: 4
-    type: 3
-    isSource: 0
-    pairIndex: 1
-  - position: {x: 1, y: 4}
-    color: 6
-    shape: 4
-    type: 4
-    isSource: 1
-    pairIndex: 0
-  - position: {x: 4, y: 4}
-    color: 6
-    shape: 4
-    type: 5
-    isSource: 0
-    pairIndex: 1
   solutions:
   - color: 1
     pathPositions:
@@ -108,28 +72,11 @@ MonoBehaviour:
     - {x: 2, y: 1}
     - {x: 3, y: 1}
     - {x: 4, y: 1}
-  - color: 4
-    pathPositions:
-    - {x: 1, y: 2}
-    - {x: 2, y: 2}
-    - {x: 3, y: 2}
-    - {x: 4, y: 2}
-  - color: 5
-    pathPositions:
-    - {x: 1, y: 3}
-    - {x: 2, y: 3}
-    - {x: 3, y: 3}
-    - {x: 4, y: 3}
-  - color: 6
-    pathPositions:
-    - {x: 1, y: 4}
-    - {x: 2, y: 4}
-    - {x: 3, y: 4}
-    - {x: 4, y: 4}
   bridgePositions: []
   viaductLimit: 3
   requireFullGridCoverage: 0
   flowScoreThreshold: 5
+  difficultyScore: 0
   stars:
     OneStar: complete
     TwoStars: viaducts_used <= 2

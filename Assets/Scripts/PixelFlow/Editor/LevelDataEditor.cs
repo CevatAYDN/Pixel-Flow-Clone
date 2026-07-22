@@ -50,6 +50,27 @@ namespace PixelFlow.Editor
             serializedObject.Update();
             InitStyles();
 
+            // Auto-align shapes with colors in LevelData
+            bool updatedAny = false;
+            if (_data != null && _data.initialNodes != null)
+            {
+                for (int i = 0; i < _data.initialNodes.Count; i++)
+                {
+                    var node = _data.initialNodes[i];
+                    var expectedShape = GetDefaultShapeForColor(node.color);
+                    if (node.shape != expectedShape)
+                    {
+                        node.shape = expectedShape;
+                        _data.initialNodes[i] = node;
+                        updatedAny = true;
+                    }
+                }
+            }
+            if (updatedAny)
+            {
+                EditorUtility.SetDirty(_data);
+            }
+
             int complexityScore = CalculateComplexityScore(_data);
             string tierName = GetDifficultyTierName(complexityScore);
             Color tierColor = GetDifficultyTierColor(complexityScore);
@@ -241,6 +262,7 @@ namespace PixelFlow.Editor
                     if (GUILayout.Button(label, buttonStyle, GUILayout.Width(35), GUILayout.Height(30)))
                     {
                         _currentColor = c;
+                        _currentShape = GetDefaultShapeForColor(c);
                     }
                 }
                 GUI.backgroundColor = Color.white; // Reset
@@ -538,12 +560,7 @@ namespace PixelFlow.Editor
                     {
                         Vector2 center = cellRect.center;
                         Color nodeColor = GetVisualColor(node.color);
-                        Handles.BeginGUI();
-                        Handles.color = Color.black;
-                        Handles.DrawSolidDisc(new Vector3(center.x, center.y, 0), Vector3.forward, cellSize * 0.32f);
-                        Handles.color = nodeColor;
-                        Handles.DrawSolidDisc(new Vector3(center.x, center.y, 0), Vector3.forward, cellSize * 0.26f);
-                        Handles.EndGUI();
+                        DrawNodeShape(center, cellSize * 0.26f, nodeColor, node.shape);
                     }
                 }
             }
@@ -1029,6 +1046,97 @@ namespace PixelFlow.Editor
             if (score < 42) return new Color(0.2f, 0.6f, 1f);
             if (score < 62) return new Color(0.9f, 0.6f, 0.1f);
             return new Color(0.85f, 0.2f, 0.18f);
+        }
+
+        private void DrawNodeShape(Vector3 center, float radius, Color color, ShapeType shape)
+        {
+            Handles.BeginGUI();
+            switch (shape)
+            {
+                case ShapeType.Circle:
+                    Handles.color = Color.black;
+                    Handles.DrawSolidDisc(center, Vector3.forward, radius * 1.25f);
+                    Handles.color = color;
+                    Handles.DrawSolidDisc(center, Vector3.forward, radius);
+                    break;
+                case ShapeType.Square:
+                    float size = radius * 1.6f;
+                    EditorGUI.DrawRect(new Rect(center.x - size * 0.625f, center.y - size * 0.625f, size * 1.25f, size * 1.25f), Color.black);
+                    EditorGUI.DrawRect(new Rect(center.x - size * 0.5f, center.y - size * 0.5f, size, size), color);
+                    break;
+                case ShapeType.Triangle:
+                    Vector3[] outlineTri = new Vector3[] {
+                        new Vector3(center.x, center.y - radius * 1.25f, 0),
+                        new Vector3(center.x - radius * 1.1f, center.y + radius * 0.75f, 0),
+                        new Vector3(center.x + radius * 1.1f, center.y + radius * 0.75f, 0)
+                    };
+                    Handles.color = Color.black;
+                    Handles.DrawAAConvexPolygon(outlineTri);
+                    
+                    Vector3[] fillTri = new Vector3[] {
+                        new Vector3(center.x, center.y - radius, 0),
+                        new Vector3(center.x - radius * 0.866f, center.y + radius * 0.5f, 0),
+                        new Vector3(center.x + radius * 0.866f, center.y + radius * 0.5f, 0)
+                    };
+                    Handles.color = color;
+                    Handles.DrawAAConvexPolygon(fillTri);
+                    break;
+                case ShapeType.Diamond:
+                    Vector3[] outlineDia = new Vector3[] {
+                        new Vector3(center.x, center.y - radius * 1.25f, 0),
+                        new Vector3(center.x + radius * 1.25f, center.y, 0),
+                        new Vector3(center.x, center.y + radius * 1.25f, 0),
+                        new Vector3(center.x - radius * 1.25f, center.y, 0)
+                    };
+                    Handles.color = Color.black;
+                    Handles.DrawAAConvexPolygon(outlineDia);
+                    
+                    Vector3[] fillDia = new Vector3[] {
+                        new Vector3(center.x, center.y - radius, 0),
+                        new Vector3(center.x + radius, center.y, 0),
+                        new Vector3(center.x, center.y + radius, 0),
+                        new Vector3(center.x - radius, center.y, 0)
+                    };
+                    Handles.color = color;
+                    Handles.DrawAAConvexPolygon(fillDia);
+                    break;
+                case ShapeType.Star:
+                    Handles.color = Color.black;
+                    DrawStarPolygons(center, radius * 1.25f);
+                    Handles.color = color;
+                    DrawStarPolygons(center, radius);
+                    break;
+            }
+            Handles.EndGUI();
+        }
+
+        private void DrawStarPolygons(Vector3 center, float radius)
+        {
+            Vector3[] tri1 = new Vector3[] {
+                new Vector3(center.x, center.y - radius, 0),
+                new Vector3(center.x - radius * 0.866f, center.y + radius * 0.5f, 0),
+                new Vector3(center.x + radius * 0.866f, center.y + radius * 0.5f, 0)
+            };
+            Vector3[] tri2 = new Vector3[] {
+                new Vector3(center.x, center.y + radius, 0),
+                new Vector3(center.x - radius * 0.866f, center.y - radius * 0.5f, 0),
+                new Vector3(center.x + radius * 0.866f, center.y - radius * 0.5f, 0)
+            };
+            Handles.DrawAAConvexPolygon(tri1);
+            Handles.DrawAAConvexPolygon(tri2);
+        }
+
+        public static ShapeType GetDefaultShapeForColor(ColorType color)
+        {
+            switch (color)
+            {
+                case ColorType.Blue:    return ShapeType.Circle;
+                case ColorType.Red:     return ShapeType.Triangle;
+                case ColorType.Yellow:  return ShapeType.Square;
+                case ColorType.Green:   return ShapeType.Diamond;
+                case ColorType.Purple:  return ShapeType.Star;
+                default:                return ShapeType.Circle;
+            }
         }
     }
 }

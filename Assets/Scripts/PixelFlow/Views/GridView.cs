@@ -41,16 +41,127 @@ namespace PixelFlow.Views
 
         private void Update()
         {
+            // Cyberpunk neon pulse animation on the outer glows
+            if (_glowLines != null && _glowLines.Count > 0)
+            {
+                float glowPulse = 0.52f + Mathf.Sin(Time.time * 6.5f) * 0.05f;
+                foreach (var kvp in _glowLines)
+                {
+                    var glowRenderer = kvp.Value;
+                    if (glowRenderer != null && glowRenderer.gameObject.activeSelf)
+                    {
+                        glowRenderer.startWidth = glowPulse;
+                        glowRenderer.endWidth = glowPulse;
+                    }
+                }
+            }
+
             if (_cells == null) return;
 
             HandlePinchZoom();
 
-            var pointer = UnityEngine.InputSystem.Pointer.current;
-            if (pointer == null) return;
+            bool isPressed = false;
+            int pointerId = -1;
+            Vector2 screenPos = Vector2.zero;
+            bool hasInput = false;
 
-            bool isPressed = pointer.press.isPressed;
-            int pointerId = pointer.deviceId;
-            Vector2 screenPos = pointer.position.ReadValue();
+            var mouse = UnityEngine.InputSystem.Mouse.current;
+            var touchscreen = UnityEngine.InputSystem.Touchscreen.current;
+
+            // If currently dragging, stick to the active device
+            if (_isPointerDown)
+            {
+                if (mouse != null && _activePointerId == mouse.deviceId)
+                {
+                    isPressed = mouse.leftButton.isPressed;
+                    pointerId = mouse.deviceId;
+                    screenPos = mouse.position.ReadValue();
+                    hasInput = true;
+                }
+                else if (touchscreen != null && _activePointerId == touchscreen.deviceId)
+                {
+                    if (touchscreen.touches.Count > 0)
+                    {
+                        var touch = touchscreen.touches[0];
+                        isPressed = touch.press.isPressed;
+                        screenPos = touch.position.ReadValue();
+                    }
+                    else
+                    {
+                        isPressed = false;
+                    }
+                    pointerId = touchscreen.deviceId;
+                    hasInput = true;
+                }
+                else if (_activePointerId == 9999)
+                {
+                    bool legacyMousePressed = false;
+                    Vector3 legacyMousePos = Vector3.zero;
+                    try
+                    {
+                        legacyMousePressed = UnityEngine.Input.GetMouseButton(0);
+                        legacyMousePos = UnityEngine.Input.mousePosition;
+                    }
+                    catch (System.InvalidOperationException) { }
+
+                    isPressed = legacyMousePressed;
+                    pointerId = 9999;
+                    screenPos = legacyMousePos;
+                    hasInput = true;
+                }
+            }
+
+            // If not currently dragging or active device lost, detect which device is pressed
+            if (!hasInput)
+            {
+                if (touchscreen != null && touchscreen.touches.Count > 0 && touchscreen.touches[0].press.isPressed)
+                {
+                    var touch = touchscreen.touches[0];
+                    isPressed = true;
+                    pointerId = touchscreen.deviceId;
+                    screenPos = touch.position.ReadValue();
+                    hasInput = true;
+                }
+                else if (mouse != null && mouse.leftButton.isPressed)
+                {
+                    isPressed = true;
+                    pointerId = mouse.deviceId;
+                    screenPos = mouse.position.ReadValue();
+                    hasInput = true;
+                }
+                else
+                {
+                    bool legacyMousePressed = false;
+                    Vector3 legacyMousePos = Vector3.zero;
+                    try
+                    {
+                        legacyMousePressed = UnityEngine.Input.GetMouseButton(0);
+                        legacyMousePos = UnityEngine.Input.mousePosition;
+                    }
+                    catch (System.InvalidOperationException) { }
+
+                    if (legacyMousePressed)
+                    {
+                        isPressed = true;
+                        pointerId = 9999;
+                        screenPos = legacyMousePos;
+                        hasInput = true;
+                    }
+                    else
+                    {
+                        var pointer = UnityEngine.InputSystem.Pointer.current;
+                        if (pointer != null)
+                        {
+                            isPressed = pointer.press.isPressed;
+                            pointerId = pointer.deviceId;
+                            screenPos = pointer.position.ReadValue();
+                            hasInput = true;
+                        }
+                    }
+                }
+            }
+
+            if (!hasInput) return;
 
             if (isPressed)
             {
@@ -194,6 +305,7 @@ namespace PixelFlow.Views
         }
 
         private Dictionary<ColorType, LineRenderer> _pathLines = new Dictionary<ColorType, LineRenderer>();
+        private Dictionary<ColorType, LineRenderer> _glowLines = new Dictionary<ColorType, LineRenderer>();
         private HashSet<ColorType> _previousPathColors = new HashSet<ColorType>();
         private static Shader _cachedSpriteShader;
 
@@ -224,7 +336,7 @@ namespace PixelFlow.Views
             }
         }
 
-        public void UpdateDifferential(CellData[,] gridData, AppTheme theme, HashSet<Vector2Int> changedCells, Vector2Int crashPos = default)
+        public void UpdateDifferential(CellData[,] gridData, AppTheme theme, HashSet<Vector2Int> changedCells, Vector2Int crashPos = default, HashSet<Vector2Int> stateChangedCells = null)
         {
             if (_cells == null || changedCells == null) return;
             foreach (var pos in changedCells)
@@ -232,8 +344,23 @@ namespace PixelFlow.Views
                 if (pos.x >= 0 && pos.x < _cells.GetLength(0) && pos.y >= 0 && pos.y < _cells.GetLength(1))
                 {
                     _cells[pos.x, pos.y].UpdateVisuals(gridData[pos.x, pos.y], theme, crashPos);
-                    _cells[pos.x, pos.y].TriggerBounceAnimation(0.95f, 0.12f);
+                    
+                    bool shouldBounce = stateChangedCells != null && stateChangedCells.Contains(pos);
+                    if (shouldBounce)
+                    {
+                        _cells[pos.x, pos.y].TriggerBounceAnimation(0.95f, 0.12f);
+                    }
                 }
+            }
+        }
+
+        public void TriggerJuicyBounce(Vector2Int position, float scale = 1.25f, float duration = 0.4f)
+        {
+            if (_cells == null) return;
+            if (position.x >= 0 && position.x < _cells.GetLength(0) &&
+                position.y >= 0 && position.y < _cells.GetLength(1))
+            {
+                _cells[position.x, position.y].TriggerBounceAnimation(scale, duration);
             }
         }
 
@@ -244,9 +371,12 @@ namespace PixelFlow.Views
 
             foreach (var prevColor in _previousPathColors)
             {
-                if (!paths.ContainsKey(prevColor) && _pathLines.TryGetValue(prevColor, out var oldLr))
+                if (!paths.ContainsKey(prevColor))
                 {
-                    oldLr.gameObject.SetActive(false);
+                    if (_pathLines.TryGetValue(prevColor, out var oldLr))
+                        oldLr.gameObject.SetActive(false);
+                    if (_glowLines.TryGetValue(prevColor, out var oldGlow))
+                        oldGlow.gameObject.SetActive(false);
                 }
             }
 
@@ -259,6 +389,8 @@ namespace PixelFlow.Views
                 {
                     if (_pathLines.TryGetValue(colorType, out var inactiveLr))
                         inactiveLr.gameObject.SetActive(false);
+                    if (_glowLines.TryGetValue(colorType, out var inactiveGlow))
+                        inactiveGlow.gameObject.SetActive(false);
                     continue;
                 }
 
@@ -268,12 +400,12 @@ namespace PixelFlow.Views
                     lineObj.transform.SetParent(_gridContainer);
                     lineRenderer = lineObj.AddComponent<LineRenderer>();
                     
-                    lineRenderer.startWidth = 0.35f;
-                    lineRenderer.endWidth = 0.35f;
+                    lineRenderer.startWidth = 0.2f;
+                    lineRenderer.endWidth = 0.2f;
                     lineRenderer.numCornerVertices = 8;
                     lineRenderer.numCapVertices = 8;
                     lineRenderer.useWorldSpace = false;
-                    lineRenderer.sortingOrder = 0;
+                    lineRenderer.sortingOrder = 5;
                     
                     Shader spriteShader = _cachedSpriteShader ?? (_cachedSpriteShader = Shader.Find("Sprites/Default"));
                     Material mat = new Material(spriteShader != null ? spriteShader : Shader.Find("Unlit/Color"));
@@ -282,10 +414,34 @@ namespace PixelFlow.Views
                     _pathLines[colorType] = lineRenderer;
                 }
 
+                if (!_glowLines.TryGetValue(colorType, out var glowRenderer))
+                {
+                    GameObject glowObj = new GameObject($"PathLineGlow_{colorType}");
+                    glowObj.transform.SetParent(_gridContainer);
+                    glowRenderer = glowObj.AddComponent<LineRenderer>();
+                    
+                    glowRenderer.startWidth = 0.55f;
+                    glowRenderer.endWidth = 0.55f;
+                    glowRenderer.numCornerVertices = 8;
+                    glowRenderer.numCapVertices = 8;
+                    glowRenderer.useWorldSpace = false;
+                    glowRenderer.sortingOrder = 2;
+                    
+                    Shader spriteShader = _cachedSpriteShader ?? (_cachedSpriteShader = Shader.Find("Sprites/Default"));
+                    Material mat = new Material(spriteShader != null ? spriteShader : Shader.Find("Unlit/Color"));
+                    glowRenderer.material = mat;
+                    
+                    _glowLines[colorType] = glowRenderer;
+                }
+
                 lineRenderer.gameObject.SetActive(true);
                 lineRenderer.positionCount = pathPositions.Count;
+
+                glowRenderer.gameObject.SetActive(true);
+                glowRenderer.positionCount = pathPositions.Count;
                 
                 Color pipeColor = CellView.GetColor(colorType);
+                Color glowColor = new Color(pipeColor.r, pipeColor.g, pipeColor.b, 0.35f);
 
                 bool isCrashColor = crashPos.x >= 0 && 
                     (colorType == crashColorA || colorType == crashColorB);
@@ -293,19 +449,24 @@ namespace PixelFlow.Views
                 lineRenderer.startColor = pipeColor;
                 lineRenderer.endColor = pipeColor;
 
+                glowRenderer.startColor = glowColor;
+                glowRenderer.endColor = glowColor;
+
                 int gw = gridData != null ? gridData.GetLength(0) : 0;
                 int gh = gridData != null ? gridData.GetLength(1) : 0;
 
                 for (int i = 0; i < pathPositions.Count; i++)
                 {
                     Vector2Int gridPos = pathPositions[i];
-                    float z = -0.05f;
+                    float z = -0.12f;
+                    float zGlow = -0.11f;
                     if (gridPos.x >= 0 && gridPos.x < gw && gridPos.y >= 0 && gridPos.y < gh)
                     {
                         var cell = gridData[gridPos.x, gridPos.y];
                         if (cell.HasViaduct && cell.OverColor == colorType)
                         {
-                            z = -0.35f;
+                            z = -0.32f;
+                            zGlow = -0.31f;
                         }
                     }
 
@@ -314,12 +475,18 @@ namespace PixelFlow.Views
                         int dist = Mathf.Abs(gridPos.x - crashPos.x) + Mathf.Abs(gridPos.y - crashPos.y);
                         if (dist <= 2)
                         {
-                            lineRenderer.startColor = Color.Lerp(Color.red, pipeColor, dist / 3f);
-                            lineRenderer.endColor = Color.Lerp(Color.red, pipeColor, dist / 3f);
+                            Color crashColor = Color.red;
+                            lineRenderer.startColor = Color.Lerp(crashColor, pipeColor, dist / 3f);
+                            lineRenderer.endColor = Color.Lerp(crashColor, pipeColor, dist / 3f);
+
+                            Color crashGlow = new Color(1f, 0f, 0f, 0.35f);
+                            glowRenderer.startColor = Color.Lerp(crashGlow, glowColor, dist / 3f);
+                            glowRenderer.endColor = Color.Lerp(crashGlow, glowColor, dist / 3f);
                         }
                     }
 
                     lineRenderer.SetPosition(i, new Vector3(gridPos.x, gridPos.y, z));
+                    glowRenderer.SetPosition(i, new Vector3(gridPos.x, gridPos.y, zGlow));
                 }
             }
 
@@ -331,6 +498,7 @@ namespace PixelFlow.Views
             }
         }
 
+
         private void OnDestroy()
         {
             UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Disable();
@@ -339,13 +507,22 @@ namespace PixelFlow.Views
                 if (kvp.Value != null)
                 {
                     if (kvp.Value.material != null)
-                    {
                         Destroy(kvp.Value.material);
-                    }
                     Destroy(kvp.Value.gameObject);
                 }
             }
             _pathLines.Clear();
+
+            foreach (var kvp in _glowLines)
+            {
+                if (kvp.Value != null)
+                {
+                    if (kvp.Value.material != null)
+                        Destroy(kvp.Value.material);
+                    Destroy(kvp.Value.gameObject);
+                }
+            }
+            _glowLines.Clear();
         }
 
         public Camera GetCachedCamera() => _cam ?? (_cam = CameraProvider?.MainCamera);

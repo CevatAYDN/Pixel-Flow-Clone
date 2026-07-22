@@ -56,6 +56,11 @@ namespace PixelFlow.Views
                     _bgRenderer = bgObj.AddComponent<SpriteRenderer>();
                 }
             }
+            if (_bgRenderer != null)
+            {
+                _bgRenderer.transform.localPosition = new Vector3(0, 0, 0f);
+            }
+
             if (_dotRenderer == null)
             {
                 var dotObj = transform.Find("DotNode");
@@ -64,10 +69,11 @@ namespace PixelFlow.Views
                 {
                     var newDot = new GameObject("DotNode");
                     newDot.transform.SetParent(transform, false);
-                    newDot.transform.localPosition = new Vector3(0, 0, -0.1f);
                     _dotRenderer = newDot.AddComponent<SpriteRenderer>();
                 }
             }
+            _dotRenderer.transform.localPosition = new Vector3(0, 0, -0.4f);
+
             if (_bridgeRenderer == null)
             {
                 var bridgeObj = transform.Find("Bridge");
@@ -76,10 +82,11 @@ namespace PixelFlow.Views
                 {
                     var newBridge = new GameObject("Bridge");
                     newBridge.transform.SetParent(transform, false);
-                    newBridge.transform.localPosition = new Vector3(0, 0, -0.2f);
                     _bridgeRenderer = newBridge.AddComponent<SpriteRenderer>();
                 }
             }
+            _bridgeRenderer.transform.localPosition = new Vector3(0, 0, -0.2f);
+
             if (_warningRenderer == null)
             {
                 var warnObj = transform.Find("Warning");
@@ -88,10 +95,10 @@ namespace PixelFlow.Views
                 {
                     var newWarn = new GameObject("Warning");
                     newWarn.transform.SetParent(transform, false);
-                    newWarn.transform.localPosition = new Vector3(0, 0, -0.3f);
                     _warningRenderer = newWarn.AddComponent<SpriteRenderer>();
                 }
             }
+            _warningRenderer.transform.localPosition = new Vector3(0, 0, -0.5f);
 
             if (_bgRenderer != null && _bgRenderer.sprite == null)
             {
@@ -104,71 +111,116 @@ namespace PixelFlow.Views
         {
             if (_fallbackSquare != null) return;
 
-            int size = 64;
+            int size = 128;
+            Vector2 center = new Vector2(size * 0.5f, size * 0.5f);
+
+            // 1. Square / Bg with rounded corners and anti-aliased borders
             Texture2D texSquare = new Texture2D(size, size);
             Color[] colorsSq = new Color[size * size];
+            float cornerRadius = 24f;
+            float outerHalfWidth = 58f;
+            float innerHalfWidth = 54f;
+            Color borderColor = new Color(0.18f, 0.22f, 0.32f, 0.85f);
+            Color innerColor = Color.white;
+
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
                 {
-                    bool border = (x <= 2 || x >= size - 3 || y <= 2 || y >= size - 3);
-                    colorsSq[y * size + x] = border ? new Color(0.2f, 0.25f, 0.35f, 0.8f) : Color.white;
+                    float px = x - center.x;
+                    float py = y - center.y;
+
+                    // Outer rounded rectangle
+                    float dxOuter = Mathf.Max(Mathf.Abs(px) - outerHalfWidth + cornerRadius, 0f);
+                    float dyOuter = Mathf.Max(Mathf.Abs(py) - outerHalfWidth + cornerRadius, 0f);
+                    float distOuter = Mathf.Sqrt(dxOuter * dxOuter + dyOuter * dyOuter) - cornerRadius;
+
+                    // Inner rounded rectangle
+                    float dxInner = Mathf.Max(Mathf.Abs(px) - innerHalfWidth + (cornerRadius - 4f), 0f);
+                    float dyInner = Mathf.Max(Mathf.Abs(py) - innerHalfWidth + (cornerRadius - 4f), 0f);
+                    float distInner = Mathf.Sqrt(dxInner * dxInner + dyInner * dyInner) - (cornerRadius - 4f);
+
+                    float alphaOuter = Mathf.Clamp01(1f - (distOuter + 0.5f));
+                    float alphaInner = Mathf.Clamp01(1f - (distInner + 0.5f));
+
+                    Color pixelColor = Color.Lerp(borderColor, innerColor, alphaInner);
+                    pixelColor.a *= alphaOuter;
+                    colorsSq[y * size + x] = pixelColor;
                 }
             }
             texSquare.SetPixels(colorsSq);
             texSquare.Apply();
-            _fallbackSquare = Sprite.Create(texSquare, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 64f);
+            _fallbackSquare = Sprite.Create(texSquare, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 128f);
             _fallbackBg = _fallbackSquare;
 
+            // 2. Circle with anti-aliasing
             Texture2D texCircle = new Texture2D(size, size);
             Color[] colorsCirc = new Color[size * size];
-            float r = size * 0.45f;
-            Vector2 center = new Vector2(size * 0.5f, size * 0.5f);
+            float radius = size * 0.42f;
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
                 {
                     float dist = Vector2.Distance(new Vector2(x, y), center);
-                    colorsCirc[y * size + x] = dist <= r ? Color.white : Color.clear;
+                    float alpha = Mathf.Clamp01(radius - dist);
+                    colorsCirc[y * size + x] = new Color(1f, 1f, 1f, alpha);
                 }
             }
             texCircle.SetPixels(colorsCirc);
             texCircle.Apply();
-            _fallbackCircle = Sprite.Create(texCircle, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 64f);
+            _fallbackCircle = Sprite.Create(texCircle, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 128f);
 
+            // 3. Triangle with anti-aliasing
             Texture2D texTri = new Texture2D(size, size);
             Color[] colorsTri = new Color[size * size];
+            Vector2 A = new Vector2(size * 0.5f, size * 0.85f);
+            Vector2 B = new Vector2(size * 0.18f, size * 0.22f);
+            Vector2 C = new Vector2(size * 0.82f, size * 0.22f);
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
                 {
-                    float normY = (float)y / size;
-                    float halfWidth = normY * 0.45f * size;
-                    float distFromMid = Mathf.Abs(x - size * 0.5f);
-                    colorsTri[y * size + x] = (distFromMid <= halfWidth && y >= 6) ? Color.white : Color.clear;
+                    Vector2 P = new Vector2(x, y);
+                    float d1 = DistToLine(P, A, B);
+                    float d2 = DistToLine(P, B, C);
+                    float d3 = DistToLine(P, C, A);
+                    float dist = Mathf.Min(d1, Mathf.Min(d2, d3));
+                    float alpha = Mathf.Clamp01(dist);
+                    colorsTri[y * size + x] = new Color(1f, 1f, 1f, alpha);
                 }
             }
             texTri.SetPixels(colorsTri);
             texTri.Apply();
-            _fallbackTriangle = Sprite.Create(texTri, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 64f);
+            _fallbackTriangle = Sprite.Create(texTri, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 128f);
 
+            // 4. Diamond with anti-aliasing
             Texture2D texDiamond = new Texture2D(size, size);
             Color[] colorsDia = new Color[size * size];
+            float diamondRadius = size * 0.44f;
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
                 {
-                    float dx = Mathf.Abs(x - size * 0.5f) / (size * 0.45f);
-                    float dy = Mathf.Abs(y - size * 0.5f) / (size * 0.45f);
-                    colorsDia[y * size + x] = (dx + dy <= 1f) ? Color.white : Color.clear;
+                    float dx = Mathf.Abs(x - center.x);
+                    float dy = Mathf.Abs(y - center.y);
+                    float edgeDist = (diamondRadius - (dx + dy)) * 0.7071f;
+                    float alpha = Mathf.Clamp01(edgeDist);
+                    colorsDia[y * size + x] = new Color(1f, 1f, 1f, alpha);
                 }
             }
             texDiamond.SetPixels(colorsDia);
             texDiamond.Apply();
-            _fallbackDiamond = Sprite.Create(texDiamond, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 64f);
+            _fallbackDiamond = Sprite.Create(texDiamond, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 128f);
 
             _fallbackStar = _fallbackDiamond;
             _fallbackWarning = _fallbackTriangle;
+        }
+
+        private static float DistToLine(Vector2 p, Vector2 a, Vector2 b)
+        {
+            Vector2 v = b - a;
+            Vector2 n = new Vector2(-v.y, v.x).normalized;
+            return Vector2.Dot(p - a, n);
         }
 
         public static Color GetCellBackgroundColor(AppTheme theme)
@@ -353,13 +405,74 @@ namespace PixelFlow.Views
             }
         }
 
-        private Coroutine _bounceCoroutine;
-        private Coroutine _thirdColorRejectPulseCoroutine;
+        // GC-free animations variables
+        private float _bounceScale = 1f;
+        private float _bounceDuration = 0f;
+        private float _bounceTimer = 0f;
+        private bool _isBouncing = false;
+        private Vector3 _baseLocalScale = Vector3.one;
+
+        private float _rejectionDuration = 0f;
+        private float _rejectionTimer = 0f;
+        private bool _isRejecting = false;
+        private Color _rejectionOriginalColor;
+        private Color _rejectionColor = new Color(0.937f, 0.267f, 0.267f, 1f);
+        private const float _rejectionPulseFrequency = 15f;
+
+        private void Update()
+        {
+            if (_isBouncing)
+            {
+                _bounceTimer += Time.deltaTime;
+                if (_bounceTimer >= _bounceDuration)
+                {
+                    _isBouncing = false;
+                    transform.localScale = _baseLocalScale;
+                }
+                else
+                {
+                    float t = _bounceTimer / _bounceDuration;
+                    float freq = 2.5f; // Oscillations frequency
+                    float decay = 4.0f; // Damping decay rate
+                    float amplitude = Mathf.Sin(t * freq * Mathf.PI) * Mathf.Exp(-decay * t);
+                    float scaleFactor = 1f + (_bounceScale - 1f) * amplitude;
+                    transform.localScale = _baseLocalScale * scaleFactor;
+                }
+            }
+
+            if (_isRejecting)
+            {
+                _rejectionTimer += Time.deltaTime;
+                if (_rejectionTimer >= _rejectionDuration)
+                {
+                    _isRejecting = false;
+                    if (_bgRenderer != null)
+                    {
+                        _bgRenderer.color = _rejectionOriginalColor;
+                    }
+                }
+                else
+                {
+                    if (_bgRenderer != null)
+                    {
+                        float t = _rejectionTimer / _rejectionDuration;
+                        float pulse = (Mathf.Sin(Time.time * _rejectionPulseFrequency) + 1f) * 0.5f;
+                        _bgRenderer.color = Color.Lerp(_rejectionColor, _rejectionOriginalColor, t + pulse * (1f - t) * 0.3f);
+                    }
+                }
+            }
+        }
 
         public void TriggerBounceAnimation(float pressScale = 0.95f, float duration = 0.12f)
         {
-            if (_bounceCoroutine != null) StopCoroutine(_bounceCoroutine);
-            _bounceCoroutine = StartCoroutine(DoBounceAnimation(pressScale, duration));
+            if (!_isBouncing)
+            {
+                _baseLocalScale = Vector3.one;
+            }
+            _bounceScale = pressScale;
+            _bounceDuration = duration;
+            _bounceTimer = 0f;
+            _isBouncing = true;
         }
 
         /// <summary>
@@ -368,56 +481,14 @@ namespace PixelFlow.Views
         /// </summary>
         public void TriggerThirdColorRejectionPulse(float duration = 0.6f)
         {
-            if (_thirdColorRejectPulseCoroutine != null) StopCoroutine(_thirdColorRejectPulseCoroutine);
-            _thirdColorRejectPulseCoroutine = StartCoroutine(DoThirdColorRejectionPulse(duration));
-        }
-
-        private System.Collections.IEnumerator DoBounceAnimation(float pressScale, float duration)
-        {
-            Vector3 originalScale = Vector3.one;
-            float elapsed = 0f;
-            float halfDuration = duration * 0.5f;
-            Vector3 pressedScale = originalScale * pressScale;
-
-            while (elapsed < halfDuration)
+            if (_bgRenderer == null) return;
+            if (!_isRejecting)
             {
-                elapsed += Time.deltaTime;
-                float t = elapsed / halfDuration;
-                transform.localScale = Vector3.Lerp(originalScale, pressedScale, t);
-                yield return null;
+                _rejectionOriginalColor = _bgRenderer.color;
             }
-
-            elapsed = 0f;
-            while (elapsed < halfDuration)
-            {
-                elapsed += Time.deltaTime;
-                float t = elapsed / halfDuration;
-                transform.localScale = Vector3.Lerp(pressedScale, originalScale, t);
-                yield return null;
-            }
-
-            transform.localScale = originalScale;
-        }
-
-        private System.Collections.IEnumerator DoThirdColorRejectionPulse(float duration)
-        {
-            if (_bgRenderer == null) yield break;
-
-            Color originalColor = _bgRenderer.color;
-            Color rejectionColor = new Color(0.937f, 0.267f, 0.267f, 1f); // Bright red
-            float elapsed = 0f;
-            const float pulseFrequency = 15f; // Fast pulsing for urgency feel
-
-            while (elapsed < duration)
-            {
-                elapsed += Time.deltaTime;
-                float t = elapsed / duration;
-                float pulse = (Mathf.Sin(Time.time * pulseFrequency) + 1f) * 0.5f;
-                _bgRenderer.color = Color.Lerp(rejectionColor, originalColor, t + pulse * (1f - t) * 0.3f);
-                yield return null;
-            }
-
-            _bgRenderer.color = originalColor;
+            _rejectionDuration = duration;
+            _rejectionTimer = 0f;
+            _isRejecting = true;
         }
 
         public static Color GetColor(ColorType colorType)

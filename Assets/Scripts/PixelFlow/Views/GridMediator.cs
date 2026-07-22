@@ -13,11 +13,14 @@ namespace PixelFlow.Views
         [Inject] public IGridModel GridModel { get; set; }
         [Inject] public ISettingsModel SettingsModel { get; set; }
         [Inject] public ILoggerService Logger { get; set; }
+        [Inject] public PixelFlow.Services.IAudioService AudioService { get; set; }
 
         private CellState[,] _previousCellStates;
         private ColorType[,] _previousCellColors;
         private byte[,] _previousPathColorMasks;
         private readonly HashSet<Vector2Int> _changedCells = new HashSet<Vector2Int>();
+        private readonly HashSet<Vector2Int> _stateChangedCells = new HashSet<Vector2Int>();
+        private readonly HashSet<ColorType> _completedColors = new HashSet<ColorType>();
 
         protected override void OnBind()
         {
@@ -82,10 +85,48 @@ namespace PixelFlow.Views
             ComputeChangedCells();
             if (_changedCells.Count > 0)
             {
-                View.UpdateDifferential(GridModel.Grid, SettingsModel.CurrentTheme, _changedCells, crashPos);
+                View.UpdateDifferential(GridModel.Grid, SettingsModel.CurrentTheme, _changedCells, crashPos, _stateChangedCells);
             }
 
             View.UpdatePathVisuals(GridModel.Paths, GridModel.Grid, crashPos, GridModel.CrashColorA.Value, GridModel.CrashColorB.Value);
+
+            // Path connection feedback (juice and chimes)
+            var currentCompletedColors = new HashSet<ColorType>();
+            foreach (var kvp in GridModel.Paths)
+            {
+                var color = kvp.Key;
+                var path = kvp.Value;
+                if (path == null || path.Count < 2) continue;
+
+                // Validate if both start and end cells are nodes of the correct color
+                var startCell = GridModel.Grid[path[0].x, path[0].y];
+                var endCell = GridModel.Grid[path[path.Count - 1].x, path[path.Count - 1].y];
+
+                if (startCell.State == CellState.Node && startCell.Color == color &&
+                    endCell.State == CellState.Node && endCell.Color == color)
+                {
+                    currentCompletedColors.Add(color);
+                }
+            }
+
+            foreach (var color in currentCompletedColors)
+            {
+                if (!_completedColors.Contains(color))
+                {
+                    // Newly completed path connection: play ascending chime and springy bounce both nodes
+                    AudioService?.PlaySfx(PixelFlow.Services.SfxType.CoinCollect);
+                    var path = GridModel.Paths[color];
+                    View.TriggerJuicyBounce(path[0], 1.25f, 0.4f);
+                    View.TriggerJuicyBounce(path[path.Count - 1], 1.25f, 0.4f);
+                }
+            }
+
+            _completedColors.Clear();
+            foreach (var color in currentCompletedColors)
+            {
+                _completedColors.Add(color);
+            }
+
             CacheCellState();
 
             GridModel.LastCrashPosition.Value = new Vector2Int(-1, -1);
@@ -94,14 +135,20 @@ namespace PixelFlow.Views
         private void ComputeChangedCells()
         {
             _changedCells.Clear();
+            _stateChangedCells.Clear();
             int w = GridModel.Width;
             int h = GridModel.Height;
 
             if (_previousCellStates == null || _previousCellStates.GetLength(0) != w || _previousCellStates.GetLength(1) != h)
             {
                 for (int x = 0; x < w; x++)
+                {
                     for (int y = 0; y < h; y++)
+                    {
                         _changedCells.Add(new Vector2Int(x, y));
+                        _stateChangedCells.Add(new Vector2Int(x, y));
+                    }
+                }
                 return;
             }
 
@@ -117,6 +164,10 @@ namespace PixelFlow.Views
                     if (stateChanged || colorChanged || pathColorsChanged)
                     {
                         _changedCells.Add(new Vector2Int(x, y));
+                        if (stateChanged)
+                        {
+                            _stateChangedCells.Add(new Vector2Int(x, y));
+                        }
                     }
                 }
             }

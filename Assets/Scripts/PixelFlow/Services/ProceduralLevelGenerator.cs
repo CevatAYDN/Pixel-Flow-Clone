@@ -123,8 +123,17 @@ namespace PixelFlow.Services
                 var positions = PickTwoPositions(param.gridWidth, param.gridHeight, usedPositions);
                 if (positions == null) { nodesOk = false; break; }
 
-                nodes.Add(new GridNode { position = positions.Value.pos1, color = color });
-                nodes.Add(new GridNode { position = positions.Value.pos2, color = color });
+                ShapeType shape = color switch
+                {
+                    ColorType.Blue => ShapeType.Circle,
+                    ColorType.Red => ShapeType.Triangle,
+                    ColorType.Yellow => ShapeType.Square,
+                    ColorType.Green => ShapeType.Diamond,
+                    ColorType.Purple => ShapeType.Star,
+                    _ => ShapeType.Circle
+                };
+                nodes.Add(new GridNode { position = positions.Value.pos1, color = color, shape = shape });
+                nodes.Add(new GridNode { position = positions.Value.pos2, color = color, shape = shape });
                 usedPositions.Add(positions.Value.pos1);
                 usedPositions.Add(positions.Value.pos2);
             }
