@@ -156,12 +156,20 @@ namespace PixelFlow.Commands
                 if (currentCell.State == CellState.Obstacle)
                     return;
 
-                if (ObstacleService != null && ObstacleService.IsOneWay(signal.GridPosition, signal.GridPosition - GridModel.LastPosition.Value))
+                Vector2Int drawMoveDir = signal.GridPosition - GridModel.LastPosition.Value;
+                if (ObstacleService != null)
                 {
-                    return;
+                    if (ObstacleService.IsOneWay(signal.GridPosition, drawMoveDir) ||
+                        ObstacleService.IsOneWay(GridModel.LastPosition.Value, drawMoveDir))
+                    {
+                        return;
+                    }
                 }
 
-                if (currentCell.State == CellState.Empty)
+                bool isDrawableObstacle = currentCell.State == CellState.Obstacle &&
+                    (currentCell.ObstacleType == ObstacleType.Ferry || currentCell.ObstacleType == ObstacleType.NarrowPass);
+
+                if (currentCell.State == CellState.Empty || (isDrawableObstacle && currentCell.PathColorCount == 0))
                 {
                     EnsureHistoryRecorded();
                     currentCell.Color = GridModel.ActiveColor.Value;

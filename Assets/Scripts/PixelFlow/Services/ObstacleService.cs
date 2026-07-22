@@ -104,28 +104,6 @@ namespace PixelFlow.Services
             for (int i = 0; i < keys.Count; i++)
             {
                 _ferryBlocked[keys[i]] = !_ferryBlocked[keys[i]];
-                if (GridModel != null && _ferryBlocked[keys[i]])
-                {
-                    // Bloklandığında hücreyi Obstacle yap.
-                    if (keys[i].x >= 0 && keys[i].x < GridModel.Width && keys[i].y >= 0 && keys[i].y < GridModel.Height)
-                    {
-                        GridModel.Grid[keys[i].x, keys[i].y].State = CellState.Obstacle;
-                    }
-                }
-                else
-                {
-                    // Blok kalktığında hücreyi eski haline döndür.
-                    if (GridModel != null && keys[i].x >= 0 && keys[i].x < GridModel.Width && keys[i].y >= 0 && keys[i].y < GridModel.Height)
-                    {
-                        var cell = GridModel.Grid[keys[i].x, keys[i].y];
-                        if (cell.State == CellState.Obstacle)
-                        {
-                            cell.State = CellState.Empty;
-                            cell.Color = ColorType.None;
-                            cell.ClearPathColors();
-                        }
-                    }
-                }
             }
 
             SignalBus?.Fire(new GridUpdatedSignal());

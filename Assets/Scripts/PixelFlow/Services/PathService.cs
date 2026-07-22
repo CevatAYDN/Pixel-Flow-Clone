@@ -28,7 +28,10 @@ namespace PixelFlow.Services
                 return cell.Color == ColorType.None || cell.Color == color;
             }
             // Obstacle — geçilemez
-            if (cell.State == CellState.Obstacle && cell.ObstacleType != ObstacleType.OneWay)
+            if (cell.State == CellState.Obstacle && 
+                cell.ObstacleType != ObstacleType.OneWay && 
+                cell.ObstacleType != ObstacleType.Ferry && 
+                cell.ObstacleType != ObstacleType.NarrowPass)
                 return false;
             // Max 2 farklı renk kontrolü
             if (cell.PathColorCount >= 2 && !cell.HasPathColor(color))

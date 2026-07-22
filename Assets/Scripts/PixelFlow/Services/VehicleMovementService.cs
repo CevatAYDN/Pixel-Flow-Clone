@@ -124,8 +124,23 @@ namespace PixelFlow.Services
                 // Per-frame SetPropertyBlock tamamen kalktı — tüm araç renderer'ları
                 // SRP Batcher ile tek batch'te toplanabilir
 
-                // Distance progression
-                v.TotalDistance += Mathf.Min(v.Speed * deltaTime, ConfigMaxProgressPerFrame);
+                // Distance progression with obstacle blocking (Ferry & NarrowPass)
+                float proposedDistance = v.TotalDistance + Mathf.Min(v.Speed * deltaTime, ConfigMaxProgressPerFrame);
+                int currentSeg = Mathf.FloorToInt(v.TotalDistance);
+                
+                if (currentSeg + 1 < v.Path.Count)
+                {
+                    Vector2Int nextCell = v.Path[currentSeg + 1];
+                    if (_obstacleService != null && (_obstacleService.IsFerryBlocked(nextCell) || !_obstacleService.CanVehicleEnterNarrowPass(nextCell, v.Color)))
+                    {
+                        proposedDistance = Mathf.Min(proposedDistance, currentSeg);
+                    }
+                }
+                
+                v.TotalDistance = proposedDistance;
+                v.SegmentIndex = Mathf.FloorToInt(v.TotalDistance);
+                v.Progress = v.TotalDistance - v.SegmentIndex;
+
                 float maxAllowedDist = (v.Style == VehicleStyle.Train) ? (v.Path.Count - 1) + 0.85f : (v.Path.Count - 1);
 
                 if (v.TotalDistance >= maxAllowedDist)

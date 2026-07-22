@@ -3,6 +3,7 @@ using System;
 using PixelFlow.Core;
 using PixelFlow.Data;
 using PixelFlow.Models;
+using PixelFlow.Services;
 using Nexus.Core;
 
 namespace PixelFlow.Views
@@ -10,6 +11,7 @@ namespace PixelFlow.Views
     public class CellView : View
     {
         [Inject] public ThemePaletteAsset ThemePalette { get; set; }
+        [Inject, OptionalInject] public IObstacleService ObstacleService { get; set; }
         [Header("Sprite Renderers")]
         [SerializeField] private SpriteRenderer _bgRenderer;
         [SerializeField] private SpriteRenderer _dotRenderer;
@@ -296,47 +298,63 @@ namespace PixelFlow.Views
                     _warningRenderer.sprite = _warningSprite;
             }
 
-            switch (cellData.State)
+            if (cellData.ObstacleType != ObstacleType.None)
             {
-                case CellState.Empty:
-                    _bgRenderer.color = cellBg;
-                    _bgRenderer.enabled = true;
-                    _dotRenderer.enabled = false;
-                    _bridgeRenderer.enabled = false;
-                    if (_oneWayArrow != null) _oneWayArrow.enabled = false;
-                    break;
+                ApplyObstacleVisual(cellBg, cellData.ObstacleType);
+                if (cellData.HasViaduct || cellData.State == CellState.Bridge)
+                {
+                    if (_bridgeRenderer != null)
+                    {
+                        _bridgeRenderer.enabled = true;
+                        _bridgeRenderer.color = Color.white;
+                    }
+                    if (_bridge3D != null) _bridge3D.SetActive(true);
+                }
+            }
+            else
+            {
+                switch (cellData.State)
+                {
+                    case CellState.Empty:
+                        _bgRenderer.color = cellBg;
+                        _bgRenderer.enabled = true;
+                        _dotRenderer.enabled = false;
+                        _bridgeRenderer.enabled = false;
+                        if (_oneWayArrow != null) _oneWayArrow.enabled = false;
+                        break;
 
-                case CellState.Node:
-                    _bgRenderer.color = cellBg;
-                    _bgRenderer.enabled = true;
-                    _dotRenderer.enabled = true;
-                    _dotRenderer.color = GetColor(cellData.Color);
-                    AssignShapeSprite(_dotRenderer, cellData.Color);
-                    _dotRenderer.transform.localScale = new Vector3(0.45f, 0.45f, 1f);
-                    _bridgeRenderer.enabled = false;
-                    if (_oneWayArrow != null) _oneWayArrow.enabled = false;
-                    break;
+                    case CellState.Node:
+                        _bgRenderer.color = cellBg;
+                        _bgRenderer.enabled = true;
+                        _dotRenderer.enabled = true;
+                        _dotRenderer.color = GetColor(cellData.Color);
+                        AssignShapeSprite(_dotRenderer, cellData.Color);
+                        _dotRenderer.transform.localScale = new Vector3(0.45f, 0.45f, 1f);
+                        _bridgeRenderer.enabled = false;
+                        if (_oneWayArrow != null) _oneWayArrow.enabled = false;
+                        break;
 
-                case CellState.Path:
-                    _bgRenderer.color = cellBg;
-                    _bgRenderer.enabled = true;
-                    _dotRenderer.enabled = false;
-                    _bridgeRenderer.enabled = false;
-                    if (_oneWayArrow != null) _oneWayArrow.enabled = false;
-                    break;
+                    case CellState.Path:
+                        _bgRenderer.color = cellBg;
+                        _bgRenderer.enabled = true;
+                        _dotRenderer.enabled = false;
+                        _bridgeRenderer.enabled = false;
+                        if (_oneWayArrow != null) _oneWayArrow.enabled = false;
+                        break;
 
-                case CellState.Obstacle:
-                    ApplyObstacleVisual(cellBg, cellData.ObstacleType);
-                    break;
+                    case CellState.Obstacle:
+                        ApplyObstacleVisual(cellBg, cellData.ObstacleType);
+                        break;
 
-                case CellState.Bridge:
-                    _bgRenderer.color = cellBg;
-                    _bgRenderer.enabled = true;
-                    _dotRenderer.enabled = false;
-                    _bridgeRenderer.enabled = true;
-                    _bridgeRenderer.color = Color.white;
-                    if (_oneWayArrow != null) _oneWayArrow.enabled = false;
-                    break;
+                    case CellState.Bridge:
+                        _bgRenderer.color = cellBg;
+                        _bgRenderer.enabled = true;
+                        _dotRenderer.enabled = false;
+                        _bridgeRenderer.enabled = true;
+                        _bridgeRenderer.color = Color.white;
+                        if (_oneWayArrow != null) _oneWayArrow.enabled = false;
+                        break;
+                }
             }
         }
 
@@ -364,9 +382,17 @@ namespace PixelFlow.Views
                         baseBg = pal.Background; iconColor = pal.Icon; iconSprite = _triangleSprite; break;
                     case ObstacleType.OneWay:
                         baseBg = cellBg * 0.8f; iconColor = pal.Icon; iconSprite = _triangleSprite;
-                        iconScale = 0.6f; showOneWayArrow = true; arrowAngle = 0f; break;
+                        iconScale = 0.6f; showOneWayArrow = true; 
+                        Vector2Int dir = ObstacleService != null ? ObstacleService.GetOneWayDirection(GridPosition) : Vector2Int.right;
+                        arrowAngle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+                        break;
                     case ObstacleType.Ferry:
-                        baseBg = pal.Background; iconColor = pal.Icon; iconSprite = _diamondSprite; iconScale = 0.6f; break;
+                        bool isFerryBlocked = ObstacleService != null && ObstacleService.IsFerryBlocked(GridPosition);
+                        baseBg = isFerryBlocked ? pal.Background * 0.5f : pal.Background;
+                        iconColor = isFerryBlocked ? pal.Icon * 0.5f : pal.Icon;
+                        iconSprite = _diamondSprite; 
+                        iconScale = 0.6f; 
+                        break;
                     case ObstacleType.NarrowPass:
                         baseBg = pal.Background; iconColor = pal.Icon; iconSprite = _squareSprite; iconScale = 0.35f; break;
                     default:
@@ -399,11 +425,15 @@ namespace PixelFlow.Views
                         iconSprite = _triangleSprite;
                         iconScale = 0.6f;
                         showOneWayArrow = true;
-                        arrowAngle = 0f;
+                        Vector2Int dirFallback = ObstacleService != null ? ObstacleService.GetOneWayDirection(GridPosition) : Vector2Int.right;
+                        arrowAngle = Mathf.Atan2(dirFallback.y, dirFallback.x) * Mathf.Rad2Deg;
                         break;
                     case ObstacleType.Ferry:
-                        baseBg = new Color(0.15f, 0.35f, 0.50f, 1f);
-                        iconColor = new Color(0.30f, 0.65f, 0.85f, 1f);
+                        bool isFerryBlockedFallback = ObstacleService != null && ObstacleService.IsFerryBlocked(GridPosition);
+                        Color baseFerryBg = new Color(0.15f, 0.35f, 0.50f, 1f);
+                        Color baseFerryIconColor = new Color(0.30f, 0.65f, 0.85f, 1f);
+                        baseBg = isFerryBlockedFallback ? baseFerryBg * 0.5f : baseFerryBg;
+                        iconColor = isFerryBlockedFallback ? baseFerryIconColor * 0.5f : baseFerryIconColor;
                         iconSprite = _diamondSprite;
                         iconScale = 0.6f;
                         break;
