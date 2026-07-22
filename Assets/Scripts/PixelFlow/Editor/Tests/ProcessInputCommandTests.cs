@@ -148,5 +148,24 @@ namespace PixelFlow.Editor.Tests
             Assert.AreEqual(2, _grid.Paths[ColorType.Red].Count,
                 "Red path should not extend into cell occupied by 2 other colors (Max 2 paths limit)");
         }
+
+        [Test]
+        public void DragBackToAnyCellInPath_SmoothBacktracks()
+        {
+            LoadLevel();
+            _ctx.Dispatch(new InputInteractionSignal { Type = InputType.PointerDown, GridPosition = new Vector2Int(0, 0) });
+            _ctx.Dispatch(new InputInteractionSignal { Type = InputType.Drag, GridPosition = new Vector2Int(0, 1) });
+            _ctx.Dispatch(new InputInteractionSignal { Type = InputType.Drag, GridPosition = new Vector2Int(0, 2) });
+            _ctx.Dispatch(new InputInteractionSignal { Type = InputType.Drag, GridPosition = new Vector2Int(0, 3) });
+            Assert.AreEqual(4, _grid.Paths[ColorType.Red].Count);
+
+            // Drag back: first to (0,2)
+            _ctx.Dispatch(new InputInteractionSignal { Type = InputType.Drag, GridPosition = new Vector2Int(0, 2) });
+            // Then to (0,1)
+            _ctx.Dispatch(new InputInteractionSignal { Type = InputType.Drag, GridPosition = new Vector2Int(0, 1) });
+
+            Assert.AreEqual(2, _grid.Paths[ColorType.Red].Count, "Path must shorten to 2 cells");
+            Assert.AreEqual(new Vector2Int(0, 1), _grid.LastPosition.Value);
+        }
     }
 }

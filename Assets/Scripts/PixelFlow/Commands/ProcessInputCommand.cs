@@ -132,7 +132,7 @@ namespace PixelFlow.Commands
 
                 var path = GridModel.Paths[GridModel.ActiveColor.Value];
 
-                if (path.Count > 1 && path[path.Count - 2] == signal.GridPosition)
+                if (path.Contains(signal.GridPosition))
                 {
                     EnsureHistoryRecorded();
                     PathService.BacktrackPath(GridModel.ActiveColor.Value, signal.GridPosition);
