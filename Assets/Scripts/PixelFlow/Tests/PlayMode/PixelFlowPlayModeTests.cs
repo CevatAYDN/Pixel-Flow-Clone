@@ -145,7 +145,7 @@ namespace PixelFlow.PlayMode.Tests
                 builder.BindReactiveModel<ISoundModel, SoundModel>();
                 builder.BindReactiveModel<ITutorialModel, TutorialModel>();
                 builder.Bind<ILevelProgressionService, LevelProgressionService>();
-                builder.Bind<ILevelLoaderService, LevelLoaderService>();
+                builder.BindService<ILevelLoaderService, LevelLoaderService>();
 
                 builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));
                 builder.Bind<ICameraProvider, StubCameraProvider>();

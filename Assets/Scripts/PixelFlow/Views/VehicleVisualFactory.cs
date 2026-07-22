@@ -7,7 +7,7 @@ namespace PixelFlow.Views
 {
     /// <summary>
     /// Procedural araç/tren görsel üretiminden sorumlu static fabrika.
-    /// Shared material'lar ve MaterialPropertyBlock ile GC alloc minimize edilir.
+    /// VehiclePartPool ile runtime CreatePrimitive/Destroy GC alloc'ları önlenir.
     /// VehicleSimulator'dan ayrıştırıldı (1247 satır → ~450 satır).
     /// </summary>
     public static class VehicleVisualFactory
@@ -53,6 +53,21 @@ namespace PixelFlow.Views
         }
 
         /// <summary>
+        /// Recycles all vehicle part primitives under the given visual root back to VehiclePartPool,
+        /// then destroys the root GameObject itself.
+        /// Call this instead of Object.Destroy(visual) when cleaning up a vehicle.
+        /// </summary>
+        public static void RecycleVehicle(GameObject visualRoot)
+        {
+            if (visualRoot == null) return;
+            VehiclePartPool.RecycleVehicle(visualRoot.transform);
+            if (Application.isPlaying)
+                Object.Destroy(visualRoot);
+            else
+                Object.DestroyImmediate(visualRoot);
+        }
+
+        /// <summary>
         /// Tren görselini procedural olarak oluşturur: Loco + Coupler1 + Wagon1 + Coupler2 + Wagon2.
         /// Her parça ayrı Transform olarak döndürülür (VehicleSimulator.UpdateMovement'te kullanılır).
         /// </summary>
@@ -70,40 +85,35 @@ namespace PixelFlow.Views
             locoObj.transform.SetParent(root.transform, false);
             loco = locoObj.transform;
 
-            var locoBody = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var locoBody = VehiclePartPool.GetCube(loco);
             locoBody.name = "EngineBody";
-            locoBody.transform.SetParent(loco, false);
             locoBody.transform.localScale = new Vector3(0.38f, 0.22f, 0.18f);
             var rLoco = locoBody.GetComponent<Renderer>();
             if (rLoco != null) { rLoco.material = _sharedSpriteMat; rLoco.sortingOrder = 10; renderers.Add(rLoco); }
 
-            var locoCab = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var locoCab = VehiclePartPool.GetCube(loco);
             locoCab.name = "EngineCabin";
-            locoCab.transform.SetParent(loco, false);
             locoCab.transform.localScale = new Vector3(0.18f, 0.20f, 0.16f);
             locoCab.transform.localPosition = new Vector3(-0.06f, 0f, -0.10f);
             var rCab = locoCab.GetComponent<Renderer>();
             if (rCab != null) { rCab.material = _sharedSpriteMat; rCab.sortingOrder = 10; renderers.Add(rCab); }
 
-            var windshield = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var windshield = VehiclePartPool.GetCube(loco);
             windshield.name = "Windshield";
-            windshield.transform.SetParent(loco, false);
             windshield.transform.localScale = new Vector3(0.04f, 0.18f, 0.08f);
             windshield.transform.localPosition = new Vector3(0.19f, 0f, -0.06f);
             var rWin = windshield.GetComponent<Renderer>();
             if (rWin != null) { rWin.material = _sharedWindowMat; rWin.sortingOrder = 10; renderers.Add(rWin); }
 
-            var headlight = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var headlight = VehiclePartPool.GetCube(loco);
             headlight.name = "TrainHeadlight";
-            headlight.transform.SetParent(loco, false);
             headlight.transform.localScale = new Vector3(0.05f, 0.08f, 0.06f);
             headlight.transform.localPosition = new Vector3(0.20f, 0f, 0.02f);
             var rHead = headlight.GetComponent<Renderer>();
             if (rHead != null) { rHead.material = _sharedHeadlightMat; rHead.sortingOrder = 10; renderers.Add(rHead); }
 
-            var stripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var stripe = VehiclePartPool.GetCube(loco);
             stripe.name = "RoofStripe";
-            stripe.transform.SetParent(loco, false);
             stripe.transform.localScale = new Vector3(0.36f, 0.06f, 0.04f);
             stripe.transform.localPosition = new Vector3(0f, 0f, -0.19f);
             var rStripe = stripe.GetComponent<Renderer>();
@@ -114,9 +124,8 @@ namespace PixelFlow.Views
             {
                 for (int side = -1; side <= 1; side += 2)
                 {
-                    var wheel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    var wheel = VehiclePartPool.GetCylinder(loco);
                     wheel.name = "Wheel";
-                    wheel.transform.SetParent(loco, false);
                     wheel.transform.localScale = new Vector3(0.07f, 0.02f, 0.07f);
                     wheel.transform.localPosition = new Vector3(x, side * 0.09f, 0.05f);
                     wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
@@ -126,9 +135,8 @@ namespace PixelFlow.Views
             }
 
             // 2. COUPLER 1
-            var c1Obj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var c1Obj = VehiclePartPool.GetCube(root.transform);
             c1Obj.name = "Coupler1";
-            c1Obj.transform.SetParent(root.transform, false);
             c1Obj.transform.localScale = new Vector3(0.10f, 0.06f, 0.06f);
             coupler1 = c1Obj.transform;
             var rC1 = c1Obj.GetComponent<Renderer>();
@@ -139,18 +147,16 @@ namespace PixelFlow.Views
             w1Obj.transform.SetParent(root.transform, false);
             wagon1 = w1Obj.transform;
 
-            var w1Body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var w1Body = VehiclePartPool.GetCube(wagon1);
             w1Body.name = "WagonBody";
-            w1Body.transform.SetParent(wagon1, false);
             w1Body.transform.localScale = new Vector3(0.34f, 0.20f, 0.16f);
             var rW1 = w1Body.GetComponent<Renderer>();
             if (rW1 != null) { rW1.material = _sharedSpriteMat; rW1.sortingOrder = 10; renderers.Add(rW1); }
 
             for (int side = -1; side <= 1; side += 2)
             {
-                var wWin = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                var wWin = VehiclePartPool.GetCube(wagon1);
                 wWin.name = "WagonWindows";
-                wWin.transform.SetParent(wagon1, false);
                 wWin.transform.localScale = new Vector3(0.24f, 0.02f, 0.06f);
                 wWin.transform.localPosition = new Vector3(0f, side * 0.10f, -0.03f);
                 var rWWin = wWin.GetComponent<Renderer>();
@@ -161,9 +167,8 @@ namespace PixelFlow.Views
             {
                 for (int side = -1; side <= 1; side += 2)
                 {
-                    var wheel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    var wheel = VehiclePartPool.GetCylinder(wagon1);
                     wheel.name = "Wheel";
-                    wheel.transform.SetParent(wagon1, false);
                     wheel.transform.localScale = new Vector3(0.07f, 0.02f, 0.07f);
                     wheel.transform.localPosition = new Vector3(x, side * 0.09f, 0.05f);
                     wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
@@ -173,9 +178,8 @@ namespace PixelFlow.Views
             }
 
             // 4. COUPLER 2
-            var c2Obj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var c2Obj = VehiclePartPool.GetCube(root.transform);
             c2Obj.name = "Coupler2";
-            c2Obj.transform.SetParent(root.transform, false);
             c2Obj.transform.localScale = new Vector3(0.10f, 0.06f, 0.06f);
             coupler2 = c2Obj.transform;
             var rC2 = c2Obj.GetComponent<Renderer>();
@@ -186,9 +190,8 @@ namespace PixelFlow.Views
             w2Obj.transform.SetParent(root.transform, false);
             wagon2 = w2Obj.transform;
 
-            var w2Body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var w2Body = VehiclePartPool.GetCube(wagon2);
             w2Body.name = "WagonBody";
-            w2Body.transform.SetParent(wagon2, false);
             w2Body.transform.localScale = new Vector3(0.32f, 0.20f, 0.16f);
             var rW2 = w2Body.GetComponent<Renderer>();
             if (rW2 != null) { rW2.material = _sharedSpriteMat; rW2.sortingOrder = 10; renderers.Add(rW2); }
@@ -197,9 +200,8 @@ namespace PixelFlow.Views
             {
                 for (int side = -1; side <= 1; side += 2)
                 {
-                    var wheel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    var wheel = VehiclePartPool.GetCylinder(wagon2);
                     wheel.name = "Wheel";
-                    wheel.transform.SetParent(wagon2, false);
                     wheel.transform.localScale = new Vector3(0.07f, 0.02f, 0.07f);
                     wheel.transform.localPosition = new Vector3(x, side * 0.09f, 0.05f);
                     wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
@@ -232,9 +234,8 @@ namespace PixelFlow.Views
             EnsureAllSharedMaterialsCreated();
 
             // 1. Main Chassis / Body
-            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var body = VehiclePartPool.GetCube(root.transform);
             body.name = "Chassis";
-            body.transform.SetParent(root.transform, false);
             body.transform.localScale = new Vector3(0.44f, 0.26f, 0.16f);
             var rBody = body.GetComponent<Renderer>();
             if (rBody != null)
@@ -245,9 +246,8 @@ namespace PixelFlow.Views
             }
 
             // 2. Cabin / Windshield
-            var cabin = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var cabin = VehiclePartPool.GetCube(root.transform);
             cabin.name = "Cabin";
-            cabin.transform.SetParent(root.transform, false);
             cabin.transform.localScale = new Vector3(0.24f, 0.20f, 0.12f);
             cabin.transform.localPosition = new Vector3(-0.03f, 0f, -0.12f);
             var rCabin = cabin.GetComponent<Renderer>();
@@ -258,10 +258,9 @@ namespace PixelFlow.Views
                 renderers.Add(rCabin);
             }
 
-            // 3. Headlights (Bright Cyan/White at front bumper +X)
-            var headL = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            // 3. Headlights (Brighter at front bumper +X)
+            var headL = VehiclePartPool.GetCube(root.transform);
             headL.name = "Headlights";
-            headL.transform.SetParent(root.transform, false);
             headL.transform.localScale = new Vector3(0.04f, 0.20f, 0.06f);
             headL.transform.localPosition = new Vector3(0.22f, 0f, -0.02f);
             var rHead = headL.GetComponent<Renderer>();
@@ -273,9 +272,8 @@ namespace PixelFlow.Views
             }
 
             // 4. Taillights (Red at rear bumper -X)
-            var tailL = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var tailL = VehiclePartPool.GetCube(root.transform);
             tailL.name = "Taillights";
-            tailL.transform.SetParent(root.transform, false);
             tailL.transform.localScale = new Vector3(0.04f, 0.20f, 0.05f);
             tailL.transform.localPosition = new Vector3(-0.22f, 0f, -0.02f);
             var rTail = tailL.GetComponent<Renderer>();
@@ -293,9 +291,8 @@ namespace PixelFlow.Views
             {
                 foreach (float y in wy)
                 {
-                    var wheel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    var wheel = VehiclePartPool.GetCylinder(root.transform);
                     wheel.name = "Wheel";
-                    wheel.transform.SetParent(root.transform, false);
                     wheel.transform.localScale = new Vector3(0.09f, 0.02f, 0.09f);
                     wheel.transform.localPosition = new Vector3(x, y, 0.06f);
                     wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);

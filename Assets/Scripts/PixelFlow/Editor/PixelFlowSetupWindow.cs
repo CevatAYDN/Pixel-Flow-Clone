@@ -273,12 +273,21 @@ namespace PixelFlow.Editor
         private void WipeSaveData()
         {
             if (!EditorUtility.DisplayDialog("Kayıt & PlayerPrefs Temizle", "Tüm kaydedilmiş ilerlemeyi silmek istediğinizden emin misiniz?", "Evet", "Hayır")) return;
+
+            // Nexus IPlayerPrefsService — null ise fallback'e geç
             var prefs = GetPrefsService();
-            foreach (var key in new[] { "UnlockedLevels", "NT_UnlockedLevels", "NT_PuzzleSave_", "VehicleStyle", "HintCount", "AppTheme", "ColorBlindMode", "MasterVolume", "SfxVolume", "MusicVolume", "HapticsDisabled" })
-                prefs.DeleteKey(key);
-            prefs.Save();
+            if (prefs != null)
+            {
+                foreach (var key in new[] { "UnlockedLevels", "NT_UnlockedLevels", "NT_PuzzleSave_", "VehicleStyle", "HintCount", "AppTheme", "ColorBlindMode", "MasterVolume", "SfxVolume", "MusicVolume", "HapticsDisabled" })
+                    prefs.DeleteKey(key);
+                prefs.Save();
+            }
+
+            // SecureData klasörünü temizle
             string secureDataFolder = Path.Combine(Application.persistentDataPath, "SecureData");
             if (Directory.Exists(secureDataFolder)) { try { Directory.Delete(secureDataFolder, true); Directory.CreateDirectory(secureDataFolder); } catch { } }
+
+            // Raw PlayerPrefs fallback (her zaman güvenli)
             PlayerPrefs.DeleteAll(); PlayerPrefs.Save();
             Debug.Log("[PixelFlow] Tüm kayıtlı veriler temizlendi.");
         }

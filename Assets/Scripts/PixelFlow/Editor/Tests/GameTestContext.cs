@@ -60,7 +60,7 @@ namespace PixelFlow.Editor.Tests
 
                 builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));
                 builder.Bind<ICameraProvider, StubCameraProvider>();
-                builder.Bind<ILevelLoaderService, LevelLoaderService>();
+                builder.BindService<ILevelLoaderService, LevelLoaderService>();
 
                 builder.BindSignal<InputInteractionSignal>().To<ProcessInputCommand>();
                 builder.BindSignal<CheckWinConditionSignal>().To<CheckWinConditionCommand>();

@@ -57,7 +57,7 @@ namespace PixelFlow
             builder.Bind<IPathSolver, RuntimePathSolver>();
             builder.BindService<IHintService, HintService>(); // Fixed: was Bind<> now BindService<> for auto-init
             builder.Bind<ILevelProgressionService, LevelProgressionService>();
-            builder.Bind<ILevelLoaderService, LevelLoaderService>(); // GDD §8
+            builder.BindService<ILevelLoaderService, LevelLoaderService>(); // GDD §8: DI injection for level loading
 
             // Default recovery: 3 retry → skip on failure
             builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));
@@ -101,6 +101,16 @@ namespace PixelFlow
                 NexusRuntime.Logger?.LogWarning("[PixelFlow] GameConfig.asset not found in Resources. Using runtime defaults.");
             }
             builder.BindInstance(config);
+
+            // ThemePaletteAsset — GameConfig ile aynı pattern'de yüklenir.
+            var palette = UnityEngine.Resources.Load<ThemePaletteAsset>("ThemePalette");
+            if (palette == null)
+            {
+                palette = UnityEngine.ScriptableObject.CreateInstance<ThemePaletteAsset>();
+                palette.name = "ThemePalette (Runtime Default)";
+                NexusRuntime.Logger?.LogWarning("[PixelFlow] ThemePalette.asset not found in Resources. Using runtime defaults.");
+            }
+            builder.BindInstance(palette);
         }
 
         public ValueTask OnInitializeAsync(CancellationToken ct) => default;

@@ -8,6 +8,7 @@ namespace PixelFlow.Views
 {
     public class CellView : View
     {
+        [Inject] public ThemePaletteAsset ThemePalette { get; set; }
         [Header("Sprite Renderers")]
         [SerializeField] private SpriteRenderer _bgRenderer;
         [SerializeField] private SpriteRenderer _dotRenderer;
@@ -30,6 +31,7 @@ namespace PixelFlow.Views
         [SerializeField] private Sprite _warningSprite;
 
         private static Sprite _fallbackCircle, _fallbackSquare, _fallbackTriangle, _fallbackDiamond, _fallbackStar, _fallbackWarning, _fallbackBg;
+        private static Color _fallbackBorderColor = new Color(0.18f, 0.22f, 0.32f, 0.85f);
 
         public Vector2Int GridPosition { get; private set; }
 
@@ -37,6 +39,8 @@ namespace PixelFlow.Views
         {
             GridPosition = pos;
             EnsureRenderersAndSprites();
+            if (ThemePalette != null)
+                _rejectionColor = ThemePalette.RejectionPulse;
         }
 
         private void Awake()
@@ -124,7 +128,7 @@ namespace PixelFlow.Views
             float cornerRadius = 24f;
             float outerHalfWidth = 58f;
             float innerHalfWidth = 54f;
-            Color borderColor = new Color(0.18f, 0.22f, 0.32f, 0.85f);
+            Color borderColor = _fallbackBorderColor;
             Color innerColor = Color.white;
 
             for (int y = 0; y < size; y++)
@@ -228,18 +232,19 @@ namespace PixelFlow.Views
             return Vector2.Dot(p - a, n);
         }
 
-        public static Color GetCellBackgroundColor(AppTheme theme)
+        public Color GetCellBackgroundColor(AppTheme theme)
+        {
+            return ThemePalette != null ? ThemePalette.GetCellBackground(theme) : GetDefaultCellBackground(theme);
+        }
+
+        private static Color GetDefaultCellBackground(AppTheme theme)
         {
             switch (theme)
             {
-                case AppTheme.Dark:
-                    return new Color(0.043f, 0.059f, 0.098f, 1f);
-                case AppTheme.Light:
-                    return new Color(0.92f, 0.92f, 0.94f, 1f);
-                case AppTheme.Neon:
-                    return new Color(0.078f, 0.055f, 0.157f, 1f);
-                default:
-                    return new Color(0.043f, 0.059f, 0.098f, 1f);
+                case AppTheme.Dark: return new Color(0.043f, 0.059f, 0.098f, 1f);
+                case AppTheme.Light: return new Color(0.92f, 0.92f, 0.94f, 1f);
+                case AppTheme.Neon: return new Color(0.078f, 0.055f, 0.157f, 1f);
+                default: return new Color(0.043f, 0.059f, 0.098f, 1f);
             }
         }
 
@@ -265,10 +270,13 @@ namespace PixelFlow.Views
         {
             Color cellBg = GetCellBackgroundColor(theme);
 
+            Color crashBright = ThemePalette != null ? ThemePalette.CrashPulseBright : new Color(0.937f, 0.267f, 0.267f);
+            Color crashDark = ThemePalette != null ? ThemePalette.CrashPulseDark : new Color(0.6f, 0.1f, 0.1f);
+
             if (crashPos.x >= 0 && crashPos.y >= 0 && GridPosition == crashPos)
             {
                 float pulse = (Mathf.Sin(Time.time * 8f) + 1f) * 0.5f;
-                cellBg = Color.Lerp(new Color(0.937f, 0.267f, 0.267f), new Color(0.6f, 0.1f, 0.1f), pulse);
+                cellBg = Color.Lerp(crashBright, crashDark, pulse);
             }
 
             _bgRenderer.transform.localScale = new Vector3(0.92f, 0.92f, 1f);
@@ -341,47 +349,74 @@ namespace PixelFlow.Views
             bool showOneWayArrow = false;
             float arrowAngle = 0f;
 
-            switch (type)
+            // Use ThemePaletteAsset if available, fallback to per-type defaults
+            if (ThemePalette != null)
             {
-                case ObstacleType.Lake:
-                    baseBg = new Color(0.10f, 0.28f, 0.55f, 1f);
-                    iconColor = new Color(0.20f, 0.55f, 0.85f, 1f);
-                    iconSprite = _circleSprite;
-                    break;
-                case ObstacleType.Park:
-                    baseBg = new Color(0.15f, 0.40f, 0.20f, 1f);
-                    iconColor = new Color(0.25f, 0.65f, 0.30f, 1f);
-                    iconSprite = _diamondSprite;
-                    break;
-                case ObstacleType.Construction:
-                    baseBg = new Color(0.55f, 0.40f, 0.10f, 1f);
-                    iconColor = new Color(0.85f, 0.65f, 0.15f, 1f);
-                    iconSprite = _triangleSprite;
-                    break;
-                case ObstacleType.OneWay:
-                    baseBg = cellBg * 0.8f;
-                    iconColor = new Color(0.8f, 0.8f, 0.85f, 1f);
-                    iconSprite = _triangleSprite;
-                    iconScale = 0.6f;
-                    showOneWayArrow = true;
-                    arrowAngle = 0f;
-                    break;
-                case ObstacleType.Ferry:
-                    baseBg = new Color(0.15f, 0.35f, 0.50f, 1f);
-                    iconColor = new Color(0.30f, 0.65f, 0.85f, 1f);
-                    iconSprite = _diamondSprite;
-                    iconScale = 0.6f;
-                    break;
-                case ObstacleType.NarrowPass:
-                    baseBg = new Color(0.45f, 0.45f, 0.50f, 1f);
-                    iconColor = new Color(0.85f, 0.85f, 0.90f, 1f);
-                    iconSprite = _squareSprite;
-                    iconScale = 0.35f;
-                    break;
-                default:
-                    baseBg = cellBg * 0.6f;
-                    iconColor = cellBg * 0.4f;
-                    break;
+                var pal = ThemePalette.GetObstaclePalette(type);
+                switch (type)
+                {
+                    case ObstacleType.Lake:
+                        baseBg = pal.Background; iconColor = pal.Icon; iconSprite = _circleSprite; break;
+                    case ObstacleType.Park:
+                        baseBg = pal.Background; iconColor = pal.Icon; iconSprite = _diamondSprite; break;
+                    case ObstacleType.Construction:
+                        baseBg = pal.Background; iconColor = pal.Icon; iconSprite = _triangleSprite; break;
+                    case ObstacleType.OneWay:
+                        baseBg = cellBg * 0.8f; iconColor = pal.Icon; iconSprite = _triangleSprite;
+                        iconScale = 0.6f; showOneWayArrow = true; arrowAngle = 0f; break;
+                    case ObstacleType.Ferry:
+                        baseBg = pal.Background; iconColor = pal.Icon; iconSprite = _diamondSprite; iconScale = 0.6f; break;
+                    case ObstacleType.NarrowPass:
+                        baseBg = pal.Background; iconColor = pal.Icon; iconSprite = _squareSprite; iconScale = 0.35f; break;
+                    default:
+                        baseBg = cellBg * 0.6f; iconColor = cellBg * 0.4f; break;
+                }
+            }
+            else
+            {
+                // Hardcoded fallback (no asset injected)
+                switch (type)
+                {
+                    case ObstacleType.Lake:
+                        baseBg = new Color(0.10f, 0.28f, 0.55f, 1f);
+                        iconColor = new Color(0.20f, 0.55f, 0.85f, 1f);
+                        iconSprite = _circleSprite;
+                        break;
+                    case ObstacleType.Park:
+                        baseBg = new Color(0.15f, 0.40f, 0.20f, 1f);
+                        iconColor = new Color(0.25f, 0.65f, 0.30f, 1f);
+                        iconSprite = _diamondSprite;
+                        break;
+                    case ObstacleType.Construction:
+                        baseBg = new Color(0.55f, 0.40f, 0.10f, 1f);
+                        iconColor = new Color(0.85f, 0.65f, 0.15f, 1f);
+                        iconSprite = _triangleSprite;
+                        break;
+                    case ObstacleType.OneWay:
+                        baseBg = cellBg * 0.8f;
+                        iconColor = new Color(0.8f, 0.8f, 0.85f, 1f);
+                        iconSprite = _triangleSprite;
+                        iconScale = 0.6f;
+                        showOneWayArrow = true;
+                        arrowAngle = 0f;
+                        break;
+                    case ObstacleType.Ferry:
+                        baseBg = new Color(0.15f, 0.35f, 0.50f, 1f);
+                        iconColor = new Color(0.30f, 0.65f, 0.85f, 1f);
+                        iconSprite = _diamondSprite;
+                        iconScale = 0.6f;
+                        break;
+                    case ObstacleType.NarrowPass:
+                        baseBg = new Color(0.45f, 0.45f, 0.50f, 1f);
+                        iconColor = new Color(0.85f, 0.85f, 0.90f, 1f);
+                        iconSprite = _squareSprite;
+                        iconScale = 0.35f;
+                        break;
+                    default:
+                        baseBg = cellBg * 0.6f;
+                        iconColor = cellBg * 0.4f;
+                        break;
+                }
             }
 
             _bgRenderer.color = baseBg;
@@ -421,7 +456,7 @@ namespace PixelFlow.Views
         private float _rejectionTimer = 0f;
         private bool _isRejecting = false;
         private Color _rejectionOriginalColor;
-        private Color _rejectionColor = new Color(0.937f, 0.267f, 0.267f, 1f);
+        private Color _rejectionColor = new Color(0.937f, 0.267f, 0.267f, 1f); // Default fallback; overridden by ThemePaletteAsset
         private const float _rejectionPulseFrequency = 15f;
 
         private void Update()

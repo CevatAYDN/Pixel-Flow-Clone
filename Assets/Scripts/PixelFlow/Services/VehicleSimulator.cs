@@ -188,7 +188,7 @@ namespace PixelFlow.Services
             {
                 if (v.Visual != null)
                 {
-                    SafeDestroy(v.Visual);
+                    VehicleVisualFactory.RecycleVehicle(v.Visual);
                 }
             }
             _activeVehicles.Clear();
