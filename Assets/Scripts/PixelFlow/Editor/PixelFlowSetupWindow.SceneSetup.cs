@@ -275,6 +275,65 @@ namespace PixelFlow.Editor
             AssetDatabase.SaveAssets();
             Debug.Log($"[PixelFlow] Batch generation complete: {count} levels.");
         }
+
+        // ═══════════════════════════════════════════════════
+        // SEVİYE KOPYALAMA / DUPLİKASYON
+        // ═══════════════════════════════════════════════════
+
+        /// <summary>
+        /// Var olan bir LevelData'yı derin kopyalayıp yeni index'e kaydeder.
+        /// </summary>
+        private void DuplicateLevel(int sourceIndex, int targetIndex)
+        {
+            // Kaynak seviyeyi bul
+            var source = _cachedLevels.FirstOrDefault(l => l != null && l.levelIndex == sourceIndex);
+            if (source == null)
+            {
+                Debug.LogWarning($"[PixelFlow] Duplicate: Source level {sourceIndex} bulunamadı!");
+                return;
+            }
+
+            // Hedef path çakışma kontrolü
+            string targetPath = $"Assets/Resources/Levels/Level{targetIndex}.asset";
+            if (File.Exists(targetPath))
+            {
+                if (!EditorUtility.DisplayDialog("Seviye Zaten Var",
+                    $"Level{targetIndex}.asset zaten mevcut. Üzerine yazılsın mı?",
+                    "Evet", "Hayır"))
+                    return;
+                AssetDatabase.DeleteAsset(targetPath);
+            }
+
+            // JSON ile derin kopyalama (ScriptableObject.Copy İÇERİĞİ kopyalamaz, referans kopyalar)
+            string json = EditorJsonUtility.ToJson(source);
+            var duplicate = ScriptableObject.CreateInstance<LevelData>();
+            EditorJsonUtility.FromJsonOverwrite(json, duplicate);
+
+            // Yeni identity ata
+            duplicate.levelIndex = targetIndex;
+            duplicate.name = $"Level{targetIndex}";
+
+            if (!Directory.Exists("Assets/Resources/Levels"))
+                Directory.CreateDirectory("Assets/Resources/Levels");
+
+            AssetDatabase.CreateAsset(duplicate, targetPath);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[PixelFlow] Level {sourceIndex} → {targetIndex} kopyalandı: {targetPath}");
+        }
+
+        /// <summary>
+        /// Bir kaynaktan batch halinde seviye kopyalama.
+        /// </summary>
+        private void DuplicateLevelBatch(int sourceIndex, int startTargetIndex, int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                DuplicateLevel(sourceIndex, startTargetIndex + i);
+            }
+            AssetDatabase.SaveAssets();
+            RefreshData();
+            Debug.Log($"[PixelFlow] Batch duplicate: Level {sourceIndex} → {startTargetIndex}-{startTargetIndex + count - 1} ({count} adet)");
+        }
     }
 }
 #endif

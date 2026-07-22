@@ -32,17 +32,19 @@ namespace PixelFlow.Editor
         private float _cellSizeSlider = 38f;
         private string _solveStatus = "";
 
-        // UI Styles
+        // UI Styles — cached once in InitStyles, never per-frame
         private GUIStyle _headerStyle;
-        private GUIStyle _toolbarStyle;
-        private GUIStyle _colorSwatchStyle;
         private GUIStyle _cardStyle;
         private GUIStyle _statusOkStyle;
         private GUIStyle _statusWarnStyle;
+        private GUIStyle _tierBadgeStyle;
+        private GUIStyle _bridgeCountStyle;
+        private GUIStyle _arrowStyle; // cached for one-way cell arrows
 
         private void OnEnable()
         {
             _data = (LevelData)target;
+            _tierBadgeStyle = null; // force re-init on next GUI
         }
 
         public override void OnInspectorGUI()
@@ -74,17 +76,13 @@ namespace PixelFlow.Editor
             int complexityScore = CalculateComplexityScore(_data);
             string tierName = GetDifficultyTierName(complexityScore);
             Color tierColor = GetDifficultyTierColor(complexityScore);
-            GUIStyle tierBadgeStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                normal = { textColor = tierColor }
-            };
+            _tierBadgeStyle.normal.textColor = tierColor;
 
             // Header Banner
             GUILayout.BeginVertical(_cardStyle);
             GUILayout.Space(5);
             GUILayout.Label("Pixel Flow Level Editor (Master Studio)", _headerStyle);
-            GUILayout.Label($"Difficulty: {tierName} ({complexityScore} pts) | Rule: {(_data.requireFullGridCoverage ? "Full Grid" : "Flexible")}", tierBadgeStyle);
+            GUILayout.Label($"Difficulty: {tierName} ({complexityScore} pts) | Rule: {(_data.requireFullGridCoverage ? "Full Grid" : "Flexible")}", _tierBadgeStyle);
             GUILayout.Space(5);
             GUILayout.EndVertical();
 
@@ -118,7 +116,7 @@ namespace PixelFlow.Editor
             // GDD §9: Difficulty Score Display
             if (_data.difficultyScore > 0)
             {
-                GUILayout.Label($"Procedural Difficulty Score (GDD §9): {_data.difficultyScore}", tierBadgeStyle);
+                GUILayout.Label($"Procedural Difficulty Score (GDD §9): {_data.difficultyScore}", _tierBadgeStyle);
             }
 
             // GDD §3.5: Yıldız Kriterleri ve Tutorial Event
@@ -149,9 +147,8 @@ namespace PixelFlow.Editor
 
             int bridgeCount = _data.bridgePositions.Count;
             bool limitOk = bridgeCount <= _data.viaductLimit;
-            Color statusColor = limitOk ? new Color(0.12f, 0.65f, 0.22f) : new Color(0.85f, 0.2f, 0.18f);
-            GUIStyle bridgeStyle = new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = statusColor } };
-            GUILayout.Label($"Bridges: {bridgeCount} / Viaduct Limit: {_data.viaductLimit}", bridgeStyle);
+            _bridgeCountStyle.normal.textColor = limitOk ? new Color(0.12f, 0.65f, 0.22f) : new Color(0.85f, 0.2f, 0.18f);
+            GUILayout.Label($"Bridges: {bridgeCount} / Viaduct Limit: {_data.viaductLimit}", _bridgeCountStyle);
             if (!limitOk)
             {
                 EditorGUILayout.HelpBox("Bridge count exceeds viaduct limit! Players won't have enough viaducts.", MessageType.Warning);
@@ -410,6 +407,31 @@ namespace PixelFlow.Editor
                 _statusWarnStyle.normal.textColor = new Color(0.8f, 0.4f, 0f);
                 _statusWarnStyle.fontStyle = FontStyle.Bold;
             }
+
+            // Cached tier badge — color is set per-frame via .normal.textColor
+            if (_tierBadgeStyle == null)
+            {
+                _tierBadgeStyle = new GUIStyle(EditorStyles.boldLabel)
+                {
+                    alignment = TextAnchor.MiddleCenter
+                };
+            }
+
+            // Cached bridge count style
+            if (_bridgeCountStyle == null)
+            {
+                _bridgeCountStyle = new GUIStyle(EditorStyles.boldLabel);
+            }
+
+            // Cached arrow style for OneWay cells
+            if (_arrowStyle == null)
+            {
+                _arrowStyle = new GUIStyle(EditorStyles.boldLabel)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    normal = { textColor = new Color(0.2f, 0.8f, 1f, 1f) }
+                };
+            }
         }
 
         private void SanitizeGridBounds()
@@ -536,13 +558,8 @@ namespace PixelFlow.Editor
                         else if (oneWayCell.allowedDirection == Vector2Int.up) arrowText = "↑";
                         else if (oneWayCell.allowedDirection == Vector2Int.down) arrowText = "↓";
                         
-                        GUIStyle arrowStyle = new GUIStyle(EditorStyles.boldLabel)
-                        {
-                            alignment = TextAnchor.MiddleCenter,
-                            fontSize = Mathf.RoundToInt(cellSize * 0.5f),
-                            normal = { textColor = new Color(0.2f, 0.8f, 1f, 1f) }
-                        };
-                        GUI.Label(new Rect(center.x - cellSize * 0.5f, center.y - cellSize * 0.5f, cellSize, cellSize), arrowText, arrowStyle);
+                        _arrowStyle.fontSize = Mathf.RoundToInt(cellSize * 0.5f);
+                        GUI.Label(new Rect(center.x - cellSize * 0.5f, center.y - cellSize * 0.5f, cellSize, cellSize), arrowText, _arrowStyle);
                         Handles.EndGUI();
                     }
 

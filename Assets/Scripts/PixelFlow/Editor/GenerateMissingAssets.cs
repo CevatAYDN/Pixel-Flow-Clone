@@ -10,43 +10,45 @@ namespace PixelFlow.Editor
     /// </summary>
     public static class GenerateMissingAssets
     {
-        private const string ResourcesPath = "Assets/Resources";
+        private const string ConfigsPath = "Assets/Resources/Configs";
 
         [MenuItem("Tools/PixelFlow/Generate Missing Assets")]
         public static void Generate()
         {
-            // Ensure Resources folder exists
-            if (!AssetDatabase.IsValidFolder(ResourcesPath))
+            // Ensure Configs folder exists
+            if (!AssetDatabase.IsValidFolder("Assets/Resources/Configs"))
             {
-                AssetDatabase.CreateFolder("Assets", "Resources");
+                if (!AssetDatabase.IsValidFolder("Assets/Resources"))
+                    AssetDatabase.CreateFolder("Assets", "Resources");
+                AssetDatabase.CreateFolder("Assets/Resources", "Configs");
             }
 
-            CreateAssetIfMissing<ColorBlindPaletteAsset>("ColorBlindPalette");
-            CreateAssetIfMissing<EconomyConfigAsset>("EconomyConfig");
-            CreateAssetIfMissing<ThemePaletteAsset>("ThemePalette");
-            CreateAssetIfMissing<VehicleMaterialConfigAsset>("VehicleMaterialConfig");
-            CreateAssetIfMissing<LevelCatalogAsset>("LevelCatalog");
+            CreateAssetIfMissing<ColorBlindPaletteAsset>("Configs/ColorBlindPalette");
+            CreateAssetIfMissing<EconomyConfigAsset>("Configs/EconomyConfig");
+            CreateAssetIfMissing<ThemePaletteAsset>("Configs/ThemePalette");
+            CreateAssetIfMissing<VehicleMaterialConfigAsset>("Configs/VehicleMaterialConfig");
+            CreateAssetIfMissing<LevelCatalogAsset>("Configs/LevelCatalog");
 
             AssetDatabase.SaveAssets();
-            Debug.Log("[PixelFlow] All missing ScriptableObject assets generated successfully.");
+            Debug.Log("[PixelFlow] All missing ScriptableObject assets generated in Configs/.");
         }
 
-        private static void CreateAssetIfMissing<T>(string assetName) where T : ScriptableObject
+        private static void CreateAssetIfMissing<T>(string assetPath) where T : ScriptableObject
         {
-            string path = $"{ResourcesPath}/{assetName}.asset";
+            string fullPath = $"{ConfigsPath}/{assetPath.Replace("Configs/", "")}.asset";
 
             // Check if already exists
-            var existing = AssetDatabase.LoadAssetAtPath<T>(path);
+            var existing = AssetDatabase.LoadAssetAtPath<T>(fullPath);
             if (existing != null)
             {
-                Debug.Log($"[PixelFlow] {assetName}.asset already exists at {path}. Skipping.");
+                Debug.Log($"[PixelFlow] {assetPath}.asset already exists at {fullPath}. Skipping.");
                 return;
             }
 
             var asset = ScriptableObject.CreateInstance<T>();
-            asset.name = assetName;
-            AssetDatabase.CreateAsset(asset, path);
-            Debug.Log($"[PixelFlow] Created {assetName}.asset at {path}");
+            asset.name = assetPath;
+            AssetDatabase.CreateAsset(asset, fullPath);
+            Debug.Log($"[PixelFlow] Created {assetPath}.asset at {fullPath}");
         }
     }
 }

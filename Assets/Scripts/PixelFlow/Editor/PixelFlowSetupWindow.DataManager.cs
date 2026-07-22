@@ -103,24 +103,38 @@ namespace PixelFlow.Editor
             GUILayout.Space(6);
         }
 
+        // ─── Cached GUIStyles for DrawStatBox — created once in InitStyles ───
+        private GUIStyle _statBoxStyle;
+        private GUIStyle _statValueStyle;
+        private GUIStyle _statLabelStyle;
+
         private void DrawStatBox(string label, string value, Color color)
         {
-            var style = new GUIStyle(EditorStyles.helpBox)
+            if (_statBoxStyle == null)
             {
-                normal = { textColor = color },
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = 11,
-                fontStyle = FontStyle.Bold
-            };
-            var valStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                normal = { textColor = color },
-                fontSize = 18,
-                alignment = TextAnchor.MiddleCenter
-            };
-            GUILayout.BeginVertical(style, GUILayout.Width(110), GUILayout.Height(50));
-            GUILayout.Label(value, valStyle);
-            GUILayout.Label(label, new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleCenter });
+                _statBoxStyle = new GUIStyle(EditorStyles.helpBox)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    fontSize = 11,
+                    fontStyle = FontStyle.Bold
+                };
+                _statValueStyle = new GUIStyle(EditorStyles.boldLabel)
+                {
+                    fontSize = 18,
+                    alignment = TextAnchor.MiddleCenter
+                };
+                _statLabelStyle = new GUIStyle(EditorStyles.miniLabel)
+                {
+                    alignment = TextAnchor.MiddleCenter
+                };
+            }
+
+            _statBoxStyle.normal.textColor = color;
+            _statValueStyle.normal.textColor = color;
+
+            GUILayout.BeginVertical(_statBoxStyle, GUILayout.Width(110), GUILayout.Height(50));
+            GUILayout.Label(value, _statValueStyle);
+            GUILayout.Label(label, _statLabelStyle);
             GUILayout.EndVertical();
         }
 

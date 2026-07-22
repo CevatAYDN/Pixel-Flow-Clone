@@ -22,6 +22,7 @@ namespace PixelFlow.Editor
         private void DrawLevelStudioTab()
         {
             DrawCustomLevelCreator();
+            DrawPhaseManagement();
             DrawProceduralGenerator();
             DrawLevelDatabase();
         }
@@ -33,6 +34,19 @@ namespace PixelFlow.Editor
             GUILayout.Space(5);
 
             _newLevelIndex = EditorGUILayout.IntField("Yeni Seviye İndeksi", _newLevelIndex);
+
+            // Phase assignment info
+            var levelPhase = PhaseAssetGenerator.GetPhaseForLevel(_newLevelIndex);
+            string phaseName = PhaseAssetGenerator.GetPhaseName(levelPhase);
+            Color phaseColor = PhaseAssetGenerator.GetPhaseColor(levelPhase);
+            GUIStyle phaseBadge = new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = phaseColor }, fontSize = 11 };
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("🧩 Faz Ataması:", GUILayout.Width(110));
+            GUILayout.Label(phaseName, phaseBadge);
+            GUILayout.Label($"│ Level {_newLevelIndex + 1}", EditorStyles.miniLabel);
+            GUILayout.EndHorizontal();
+
             _newWidth = EditorGUILayout.IntSlider("Izgara Genişliği", _newWidth, 3, 10);
             _newHeight = EditorGUILayout.IntSlider("Izgara Yüksekliği", _newHeight, 3, 10);
 
@@ -46,13 +60,94 @@ namespace PixelFlow.Editor
             GUILayout.Space(8);
         }
 
+        private void DrawPhaseManagement()
+        {
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label("🧩 GDD §3.6 — Faz Yönetimi", _sectionHeaderStyle);
+            GUILayout.Space(4);
+
+            // Phase overview grid
+            var phases = new[] { GamePhase.Phase1, GamePhase.Phase2, GamePhase.Phase3, GamePhase.Phase4 };
+            var phaseRanges = new[] { "Lv1-12", "Lv13-28", "Lv29-45", "Lv46-60+" };
+
+            GUILayout.BeginHorizontal();
+            for (int i = 0; i < phases.Length; i++)
+            {
+                Color c = PhaseAssetGenerator.GetPhaseColor(phases[i]);
+                var box = new GUIStyle(EditorStyles.helpBox) { normal = { textColor = c }, alignment = TextAnchor.MiddleCenter };
+                GUILayout.BeginVertical(box, GUILayout.Width(110), GUILayout.Height(40));
+                GUILayout.Label(PhaseAssetGenerator.GetPhaseName(phases[i]), new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = c }, fontSize = 9, alignment = TextAnchor.MiddleCenter });
+                GUILayout.Label(phaseRanges[i], new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleCenter });
+                GUILayout.EndVertical();
+                GUILayout.Space(4);
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(6);
+
+            // Check if PhaseConfig already exists
+            bool phaseConfigExists = AssetDatabase.LoadAssetAtPath<PhaseConfigAsset>(
+                "Assets/Resources/Configs/PhaseConfig.asset") != null;
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(phaseConfigExists
+                ? "✅ PhaseConfig Mevcut — Yeniden Oluştur"
+                : "⚠️ PhaseAsset'leri Oluştur (Configs/)", GUILayout.Height(28)))
+            {
+                PhaseAssetGenerator.GeneratePhaseAssets();
+                AssetDatabase.Refresh();
+                Debug.Log("[PixelFlow] Phase assets regenerated.");
+            }
+
+            if (phaseConfigExists)
+            {
+                var existingConfig = AssetDatabase.LoadAssetAtPath<PhaseConfigAsset>(
+                    "Assets/Resources/Configs/PhaseConfig.asset");
+                if (GUILayout.Button("🔍 Seç", GUILayout.Height(28), GUILayout.Width(50)))
+                {
+                    Selection.activeObject = existingConfig;
+                    EditorGUIUtility.PingObject(existingConfig);
+                }
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.EndVertical();
+            GUILayout.Space(8);
+        }
+
         private void DrawProceduralGenerator()
         {
             GUILayout.BeginVertical(_cardStyle);
-            GUILayout.Label("🎲 Prosedürel Seviye Üreteci", _sectionHeaderStyle);
+            GUILayout.Label("🎲 Prosedürel Seviye Üreteci (Faz Tabanlı)", _sectionHeaderStyle);
             GUILayout.Space(5);
 
-            _procSelectedDifficulty = GUILayout.SelectionGrid(_procSelectedDifficulty, _procDifficultyNames.Split('|'), 5, GUILayout.Height(22));
+            // Phase-based difficulty presets
+            GUILayout.Label("Hedef Faz:", EditorStyles.miniLabel);
+            int selectedPhaseIdx = GUILayout.Toolbar(_procSelectedDifficulty,
+                new[] { "Faz 1", "Faz 2", "Faz 3", "Faz 4", "Özel" },
+                GUILayout.Height(22));
+            _procSelectedDifficulty = selectedPhaseIdx;
+
+            // Show phase params
+            if (selectedPhaseIdx < 4)
+            {
+                GamePhase targetPhase = (GamePhase)(selectedPhaseIdx + 1);
+                var defaults = PhaseAssetGenerator.GetDefaultParamsForPhase(targetPhase);
+                GUILayout.Space(4);
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"🧩 {PhaseAssetGenerator.GetPhaseName(targetPhase)}",
+                    new GUIStyle(EditorStyles.boldLabel)
+                    {
+                        normal = { textColor = PhaseAssetGenerator.GetPhaseColor(targetPhase) },
+                        fontSize = 11
+                    });
+                GUILayout.Label($"Izgara: {defaults.gridWidth}x{defaults.gridHeight}", EditorStyles.miniLabel, GUILayout.Width(100));
+                GUILayout.Label($"Renk: {defaults.colorCount}", EditorStyles.miniLabel, GUILayout.Width(60));
+                GUILayout.Label($"Köprü: {defaults.bridgeCount}", EditorStyles.miniLabel, GUILayout.Width(60));
+                GUILayout.Label(defaults.requireFullGridCoverage ? "%100 Kapsama" : "Esnek", EditorStyles.miniLabel, GUILayout.Width(80));
+                GUILayout.EndHorizontal();
+            }
+
             _procUseSeed = EditorGUILayout.Toggle("Sabit Tohum Kullan", _procUseSeed);
             if (_procUseSeed) _procSeed = EditorGUILayout.IntField("Tohum Değeri", _procSeed);
 
@@ -85,6 +180,9 @@ namespace PixelFlow.Editor
             if (GUILayout.Button("Faz 1+2 El Yapımı Paket (12 seviye)", GUILayout.Height(25))) { CreatePhase1And2HandCraftedPack(); RefreshData(); }
             GUILayout.EndHorizontal();
 
+            GUILayout.Space(6);
+            DrawBatchDuplicationSection();
+
             GUILayout.Space(8);
             if (_cachedLevels.Count == 0)
                 GUILayout.Label("Bu projede hiç LevelData varlığı bulunamadı.", EditorStyles.miniLabel);
@@ -97,6 +195,37 @@ namespace PixelFlow.Editor
                         DrawLevelTableRow(_cachedLevels[i], false);
                 }
             }
+            GUILayout.EndVertical();
+        }
+
+        private void DrawBatchDuplicationSection()
+        {
+            GUILayout.BeginVertical(EditorStyles.helpBox);
+            GUILayout.Label("📋 Seviye Duplikasyon (Kopyala + Yeni Index)", EditorStyles.boldLabel);
+            GUILayout.Space(4);
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Kaynak Index:", GUILayout.Width(90));
+            _dupSourceIndex = EditorGUILayout.IntField(_dupSourceIndex, GUILayout.Width(50));
+            GUILayout.Label("→ Hedef Index:", GUILayout.Width(90));
+            _dupTargetIndex = EditorGUILayout.IntField(_dupTargetIndex, GUILayout.Width(50));
+            GUILayout.Label("Adet:", GUILayout.Width(35));
+            _dupBatchCount = EditorGUILayout.IntField(_dupBatchCount, GUILayout.Width(50));
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Tekil Kopyala", GUILayout.Height(24), GUILayout.Width(100)))
+            {
+                DuplicateLevel(_dupSourceIndex, _dupTargetIndex);
+                RefreshData();
+            }
+            if (GUILayout.Button($"Batch: Lv{_dupSourceIndex} → Lv{_dupTargetIndex}-{_dupTargetIndex + _dupBatchCount - 1}",
+                GUILayout.Height(24), GUILayout.Width(250)))
+            {
+                DuplicateLevelBatch(_dupSourceIndex, _dupTargetIndex, _dupBatchCount);
+                RefreshData();
+            }
+            GUILayout.EndHorizontal();
             GUILayout.EndVertical();
         }
 
@@ -192,13 +321,18 @@ namespace PixelFlow.Editor
                 GUILayout.Label("Kapsama Kuralı", EditorStyles.boldLabel);
                 GUILayout.EndHorizontal();
 
+                // Cached tier style for DifficultyHeatmap
+                GUIStyle tierStyle = null;
                 foreach (var lvl in _cachedLevels)
                 {
                     if (lvl == null) continue;
                     int score = CalculateComplexityScore(lvl);
                     string tierName = GetDifficultyTierName(score);
                     Color tierColor = GetDifficultyTierColor(score);
-                    GUIStyle tierStyle = new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = tierColor } };
+                    if (tierStyle == null)
+                        tierStyle = new GUIStyle(EditorStyles.boldLabel);
+                    tierStyle.normal.textColor = tierColor;
+
                     GUILayout.BeginHorizontal();
                     GUILayout.Label($"Svye {lvl.levelIndex}", GUILayout.Width(60));
                     GUILayout.Label($"{lvl.width}x{lvl.height} ({lvl.width * lvl.height})", GUILayout.Width(70));
@@ -336,10 +470,11 @@ namespace PixelFlow.Editor
                 foreach (var view in allViews)
                 {
                     bool active = view.gameObject.activeInHierarchy;
-                    Color c = active ? new Color(0.12f, 0.65f, 0.22f) : new Color(0.6f, 0.6f, 0.6f);
-                    GUIStyle vs = new GUIStyle(EditorStyles.label) { normal = { textColor = c } };
                     GUILayout.BeginHorizontal();
-                    GUILayout.Label(active ? "●" : "○", vs, GUILayout.Width(15));
+                    var origColor = GUI.color;
+                    GUI.color = active ? new Color(0.12f, 0.65f, 0.22f) : new Color(0.6f, 0.6f, 0.6f);
+                    GUILayout.Label(active ? "●" : "○", GUILayout.Width(15));
+                    GUI.color = origColor;
                     GUILayout.Label(view.GetType().Name, EditorStyles.boldLabel, GUILayout.Width(180));
                     GUILayout.Label($"({view.gameObject.name})", EditorStyles.miniLabel);
                     GUILayout.EndHorizontal();
@@ -351,6 +486,8 @@ namespace PixelFlow.Editor
         // ═══════════════════════════════════════════════════
         // SEKME 6: PERFORMANS & DENETİM
         // ═══════════════════════════════════════════════════
+
+        private GUIStyle _fpsStyle; // Cached FPS style — created once to avoid mutating shared badge styles
 
         private void DrawPerformanceTab()
         {
@@ -370,11 +507,13 @@ namespace PixelFlow.Editor
             if (isPlaying)
             {
                 float fps = 1.0f / Time.unscaledDeltaTime;
-                Color fpsColor = fps > 55 ? new Color(0.12f, 0.65f, 0.22f) : fps > 30 ? new Color(0.9f, 0.6f, 0.1f) : new Color(0.85f, 0.2f, 0.18f);
-                GUIStyle fpsStyle = new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = fpsColor }, fontSize = 16 };
+                if (_fpsStyle == null)
+                    _fpsStyle = new GUIStyle(EditorStyles.boldLabel) { fontSize = 16 };
+                _fpsStyle.normal.textColor = fps > 55 ? new Color(0.12f, 0.65f, 0.22f) : fps > 30 ? new Color(0.9f, 0.6f, 0.1f) : new Color(0.85f, 0.2f, 0.18f);
+
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("FPS:", GUILayout.Width(110));
-                GUILayout.Label($"{fps:F1}", fpsStyle);
+                GUILayout.Label($"{fps:F1}", _fpsStyle);
                 GUILayout.EndHorizontal();
 
                 DrawInfoRow("Toplam Ayrılan Bellek:", $"{UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong() / (1024f * 1024f):F1} MB");

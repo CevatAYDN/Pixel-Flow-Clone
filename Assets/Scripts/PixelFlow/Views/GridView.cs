@@ -35,11 +35,13 @@ namespace PixelFlow.Views
 
         private float _targetZoom;
 
-        // Glow pulse frame skipping: her 3 frame'de 1 güncelle, CPU tasarrufu (~66% azalma)
-        private int _glowFrameSkip;
-        private const int GlowUpdateInterval = 3;
         private float ConfigMinZoom => Config != null ? Config.MinZoom : 8f;
         private float ConfigMaxZoom => Config != null ? Config.MaxZoom : 12f;
+
+        // GPU glow pulse: CPU'daki sinüs hesaplaması kalktı, GlowPulse.shader _Time.y ile yönetiyor
+        // Eskiden: her 3 frame'de 1 sin(Time.time * 6.5f) + LineRenderer.width set
+        // Şimdi: 0 CPU, GPU _Time.y ile otomatik animasyon
+        private static Shader _glowPulseShader;
 
         private void Awake()
         {
@@ -49,25 +51,8 @@ namespace PixelFlow.Views
 
         protected override void OnTick(float deltaTime)
         {
-            // Cyberpunk neon pulse animation on the outer glows (skipevery N frames)
-            if (_glowLines != null && _glowLines.Count > 0)
-            {
-                _glowFrameSkip++;
-                if (_glowFrameSkip >= GlowUpdateInterval)
-                {
-                    _glowFrameSkip = 0;
-                    float glowPulse = 0.52f + Mathf.Sin(Time.time * 6.5f) * 0.05f;
-                    foreach (var kvp in _glowLines)
-                    {
-                        var glowRenderer = kvp.Value;
-                        if (glowRenderer != null && glowRenderer.gameObject.activeSelf)
-                        {
-                            glowRenderer.startWidth = glowPulse;
-                            glowRenderer.endWidth = glowPulse;
-                        }
-                    }
-                }
-            }
+            // NOT: Glow pulse animasyonu GlowPulse.shader tarafından GPU'da yapılır
+            // CPU: her 3 frame'de sin() hesaplaması + LineRenderer.width set → TAMAMEN KALDIRILDI
 
             if (_cells == null) return;
 
@@ -306,8 +291,12 @@ namespace PixelFlow.Views
                     glowRenderer.useWorldSpace = false;
                     glowRenderer.sortingOrder = 2;
                     
-                    Shader spriteShader = _cachedSpriteShader ?? (_cachedSpriteShader = Shader.Find("Sprites/Default"));
-                    Material mat = new Material(spriteShader != null ? spriteShader : Shader.Find("Unlit/Color"));
+                    // GPU glow pulse: GlowPulse.shader _Time.y ile alpha animasyonu yapar
+                    // Width sabit (0.55), alpha GPU'da pulse eder — CPU yükü 0
+                    // Vertex alpha 0.55 × shader pulse 0.65±0.10 = final alpha 0.30-0.41
+                    if (_glowPulseShader == null)
+                        _glowPulseShader = Shader.Find("Hidden/PixelFlow/GlowPulse") ?? _cachedSpriteShader ?? Shader.Find("Sprites/Default");
+                    Material mat = new Material(_glowPulseShader);
                     glowRenderer.material = mat;
                     
                     _glowLines[colorType] = glowRenderer;
@@ -320,7 +309,8 @@ namespace PixelFlow.Views
                 glowRenderer.positionCount = pathPositions.Count;
                 
                 Color pipeColor = CellView.GetColor(colorType);
-                Color glowColor = new Color(pipeColor.r, pipeColor.g, pipeColor.b, 0.35f);
+                // Glow alpha: 0.55 × GPU pulse (0.55-0.75) = final 0.30-0.41
+                Color glowColor = new Color(pipeColor.r, pipeColor.g, pipeColor.b, 0.55f);
 
                 bool isCrashColor = crashPos.x >= 0 && 
                     (colorType == crashColorA || colorType == crashColorB);

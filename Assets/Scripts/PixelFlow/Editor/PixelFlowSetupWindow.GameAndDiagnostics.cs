@@ -22,6 +22,8 @@ namespace PixelFlow.Editor
         {
             DrawGameStatusCard();
             DrawLiveGameControls();
+            DrawVehicleSimulatorControls();
+            DrawFrameStepControl();
             DrawSignalTriggerPanel();
             DrawVehicleStyleSelector();
             DrawQuickLevelLauncher();
@@ -36,10 +38,12 @@ namespace PixelFlow.Editor
 
             bool isPlaying = Application.isPlaying;
             string playStatus = isPlaying ? "▶ OYNANIYOR (Canlı)" : "⏸ DÜZENLEME MODU (Durmuş)";
-            Color statusColor = isPlaying ? new Color(0.2f, 0.8f, 0.3f) : new Color(0.9f, 0.6f, 0.1f);
-            GUIStyle statusStyle = new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = statusColor } };
+            // GUIStyle cached in _okBadgeStyle/_warnBadgeStyle — inline color overrides for status
 
-            DrawInfoRow("Motor Durumu:", playStatus, statusStyle);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Motor Durumu:", GUILayout.Width(110));
+            GUILayout.Label(playStatus, isPlaying ? _okBadgeStyle : _warnBadgeStyle);
+            GUILayout.EndHorizontal();
 
             var stateModel = GetModel<IGameStateModel>();
             var levelModel = GetModel<ILevelModel>();
@@ -123,6 +127,153 @@ namespace PixelFlow.Editor
             if (GUILayout.Button("🔒 İlerlemeyi Sıfırla", GUILayout.Height(28))) ResetProgress();
             if (GUILayout.Button("💾 Zorla Kaydet", GUILayout.Height(28))) ForceSaveGame();
             if (GUILayout.Button("🗑️ Tüm Kayıtları Sil", GUILayout.Height(28))) WipeSaveData();
+            GUILayout.EndHorizontal();
+
+            GUILayout.EndVertical();
+            GUILayout.Space(8);
+        }
+
+        private void DrawVehicleSimulatorControls()
+        {
+            bool isPlaying = Application.isPlaying;
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label("🚗 VehicleSimulator Canlı Kontrol", _sectionHeaderStyle);
+            GUILayout.Space(4);
+
+            if (!isPlaying)
+            {
+                EditorGUILayout.HelpBox("Araç simülasyonu kontrolleri yalnızca Play Mode'da kullanılabilir.", MessageType.Info);
+                GUILayout.EndVertical();
+                return;
+            }
+
+            // Resolve GameConfig from Nexus container
+            var root = Object.FindAnyObjectByType<Root>();
+            GameConfig config = null;
+            if (root?.IsInitialized == true && root.Context != null)
+            {
+                try { config = root.Context.Container.Resolve<GameConfig>(); }
+                catch { }
+            }
+
+            // Initialize cached config values as soon as config is resolved
+            if (config != null)
+            {
+                if (_cachedBaseSpeed < 0f) _cachedBaseSpeed = config.VehicleSpeed;
+                if (_cachedBaseSpawnInterval < 0f) _cachedBaseSpawnInterval = config.SpawnInterval;
+            }
+
+            // Speed Multiplier Slider
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("🚀 Hız Çarpanı:", GUILayout.Width(110));
+            _vehicleSpeedMultiplier = GUILayout.HorizontalSlider(_vehicleSpeedMultiplier, 0.1f, 5.0f, GUILayout.Width(120));
+            GUILayout.Label($"{_vehicleSpeedMultiplier:F1}x", EditorStyles.boldLabel, GUILayout.Width(40));
+
+            if (config != null)
+            {
+
+                float effectiveSpeed = _cachedBaseSpeed * _vehicleSpeedMultiplier;
+                GUILayout.Label($"({effectiveSpeed:F1} br/sn)", EditorStyles.miniLabel, GUILayout.Width(70));
+
+                // Apply speed to GameConfig for new spawns
+                float newSpeed = _cachedBaseSpeed * _vehicleSpeedMultiplier;
+                if (!Mathf.Approximately(config.VehicleSpeed, newSpeed))
+                {
+                    config.VehicleSpeed = newSpeed;
+                    config.SpawnInterval = Mathf.Max(0.3f, _cachedBaseSpawnInterval / Mathf.Max(_vehicleSpeedMultiplier, 0.1f));
+                    EditorUtility.SetDirty(config);
+                }
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(110);
+            GUILayout.Label("💡 Yeni spawn olan araçları etkiler, yoldakilere uygulanmaz.", EditorStyles.miniLabel);
+            GUILayout.EndHorizontal();
+
+            // Spawn Toggle
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("🐣 Araç Spawn'ı:", GUILayout.Width(110));
+            bool newSpawnState = GUILayout.Toggle(_vehicleSpawnEnabled, _vehicleSpawnEnabled ? "AÇIK" : "KAPALI", GUILayout.Width(80));
+            if (newSpawnState != _vehicleSpawnEnabled)
+            {
+                _vehicleSpawnEnabled = newSpawnState;
+                if (config != null)
+                {
+                    config.SpawnInterval = _vehicleSpawnEnabled ? Mathf.Max(0.3f, 1.2f / _vehicleSpeedMultiplier) : 9999f;
+                    EditorUtility.SetDirty(config);
+                    Debug.Log($"[PixelFlow] Vehicle spawn {( _vehicleSpawnEnabled ? "AÇILDI" : "KAPANDI" )}");
+                }
+            }
+            GUILayout.EndHorizontal();
+
+            // Clear Vehicles Button
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("🧹 Tüm Araçları Temizle", GUILayout.Height(24)))
+            {
+                var sim = GetService<IVehicleSimulator>();
+                sim?.ClearAllVehicles();
+                Debug.Log("[PixelFlow] All vehicles cleared.");
+            }
+            if (GUILayout.Button("🔄 Simülasyonu Sıfırla", GUILayout.Height(24)))
+            {
+                var sim = GetService<IVehicleSimulator>();
+                sim?.StopSimulationPhase();
+                sim?.ClearAllVehicles();
+                Debug.Log("[PixelFlow] Simulation reset.");
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.EndVertical();
+            GUILayout.Space(8);
+        }
+
+        private void DrawFrameStepControl()
+        {
+            bool isPlaying = Application.isPlaying;
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label("⏭️ Frame Step (Debug)", _sectionHeaderStyle);
+            GUILayout.Space(4);
+
+            if (!isPlaying)
+            {
+                EditorGUILayout.HelpBox("Frame Step yalnızca Play Mode'da kullanılabilir.", MessageType.Info);
+                GUILayout.EndVertical();
+                GUILayout.Space(8);
+                return;
+            }
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("⏸ Önce Durdur", GUILayout.Height(28)))
+            {
+                Time.timeScale = 0f;
+                _frameStepQueued = false;
+                Debug.Log("[PixelFlow] Time scale = 0x (Durduruldu)");
+            }
+            if (GUILayout.Button("⏭ Bir Frame İlerlet", GUILayout.Height(28)))
+            {
+                EditorApplication.Step();
+                Time.timeScale = 0f;
+                _frameStepQueued = true;
+                Debug.Log("[PixelFlow] Frame Step: 1 frame ilerletildi.");
+            }
+            if (GUILayout.Button("▶ 5 Frame İlerlet", GUILayout.Height(28)))
+            {
+                for (int i = 0; i < 5; i++)
+                    EditorApplication.Step();
+                Debug.Log("[PixelFlow] Frame Step: 5 frame ilerletildi.");
+            }
+            if (GUILayout.Button("▶ Devam Et (1x)", GUILayout.Height(28)))
+            {
+                Time.timeScale = 1f;
+                _frameStepQueued = false;
+                Debug.Log("[PixelFlow] Time scale = 1x (Devam)");
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"⏱ Zaman Ölçeği: {Time.timeScale:F2}x", EditorStyles.boldLabel);
+            GUILayout.Label(_frameStepQueued ? "🎯 Frame Step - Hazır" : "", _okBadgeStyle);
             GUILayout.EndHorizontal();
 
             GUILayout.EndVertical();

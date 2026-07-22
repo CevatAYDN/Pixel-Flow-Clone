@@ -204,8 +204,10 @@ namespace PixelFlow.Services
             if (state != GameState.Playing && state != GameState.Simulating)
                 return;
 
-            // Fire TimerTickSignal every frame so GameSessionModel.ElapsedTime stays accurate
-            SignalBus.Fire(new PixelFlow.Signals.TimerTickSignal());
+            // Direct call: TimerTickSignal yerine direkt UpdateTime çağrısı — SignalBus yükünü atla
+            // Sadece Playing state'de: simülasyon sırasında süre sayılmaz
+            if (state == GameState.Playing)
+                GameSessionModel?.UpdateTime(Time.deltaTime);
 
             if (ObstacleService != null)
             {
@@ -226,8 +228,22 @@ namespace PixelFlow.Services
             }
         }
 
+        // Frame skip counter: boş frame'lerde spawn kontrolünü atla
+        private int _spawnSkipCounter;
+        private const int SpawnCheckInterval = 10; // Her 10 frame'de 1 kontrol (%90 azalma)
+
         private void UpdateSpawning(float deltaTime)
         {
+            // Hiç aktif araç yoksa ve simülasyon çalışmıyorsa spawn kontrolünü seyrelt
+            bool isSimulating = GameStateModel.CurrentState == GameState.Simulating;
+            if (_activeVehicles.Count == 0 && !isSimulating)
+            {
+                _spawnSkipCounter++;
+                if (_spawnSkipCounter < SpawnCheckInterval)
+                    return;
+            }
+            _spawnSkipCounter = 0;
+
             for (int i = 0; i < AllColors.Length; i++)
             {
                 var color = AllColors[i];

@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: PhaseConfig
+  m_EditorClassIdentifier: PixelFlow:PixelFlow.Data:PhaseConfigAsset
+  Phase1: {fileID: 11400000, guid: 66a0b18589882904c97def87272957d6, type: 2}
+  Phase2: {fileID: 11400000, guid: 59f5a137ac6c64847b0337d498282df1, type: 2}
+  Phase3: {fileID: 11400000, guid: 847e40512c01c92459f9ea8db5c4dd16, type: 2}
+  Phase4: {fileID: 11400000, guid: 95fe5f9d1dd0f8d4da9a031b75e2678d, type: 2}

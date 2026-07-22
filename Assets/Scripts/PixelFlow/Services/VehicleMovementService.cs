@@ -99,6 +99,13 @@ namespace PixelFlow.Services
             bool isPlaying = _gameStateModel.CurrentState == GameState.Playing;
             float baseAlpha = isPlaying ? (0.45f + Mathf.Sin(Time.time * 6f) * 0.25f) : 1f;
 
+            // ── Ghost alpha: GPU tabanlı — 1 Shader.SetGlobalFloat, 0 SetPropertyBlock ──
+            // Eskiden: 160+ SetPropertyBlock/frame (60fps × 8 renderer × 20 araç)
+            // Şimdi: 1 Shader.SetGlobalFloat/frame
+            // VehicleGhost.shader, _PixelFlow_GhostAlpha global değerini okuyup alpha'ya uygular
+            // SRP Batcher ile tam uyumlu: per-instance _Color (spawn'da set edilir) değişmez
+            Shader.SetGlobalFloat("_PixelFlow_GhostAlpha", baseAlpha);
+
             for (int i = activeVehicles.Count - 1; i >= 0; i--)
             {
                 var v = activeVehicles[i];
@@ -111,16 +118,9 @@ namespace PixelFlow.Services
                 // Narrow pass enter/leave tracking
                 UpdateNarrowPassTracking(v);
 
-                // Ghost/partial mode alpha for Playing state
-                if (v.CachedRenderers != null)
-                {
-                    v.Mpb.SetColor("_Color", new Color(1f, 1f, 1f, baseAlpha));
-                    for (int ri = 0; ri < v.CachedRenderers.Length; ri++)
-                    {
-                        if (v.CachedRenderers[ri] == null) continue;
-                        v.CachedRenderers[ri].SetPropertyBlock(v.Mpb);
-                    }
-                }
+                // Ghost alpha GPU'da VehicleGhost.shader tarafından yönetilir
+                // Per-frame SetPropertyBlock tamamen kalktı — tüm araç renderer'ları
+                // SRP Batcher ile tek batch'te toplanabilir
 
                 // Distance progression
                 v.TotalDistance += Mathf.Min(v.Speed * deltaTime, ConfigMaxProgressPerFrame);

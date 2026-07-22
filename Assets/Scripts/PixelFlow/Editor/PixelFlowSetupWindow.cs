@@ -45,8 +45,7 @@ namespace PixelFlow.Editor
         private bool _procUseSeed = false;
         private int _procBatchCount = 5;
         private int _procStartIndex = 1;
-        private string _procDifficultyNames = "Kolay|Orta|Zor|Uzman|Usta";
-        private int _procSelectedDifficulty = 0;
+        private int _procSelectedDifficulty = 0; // 0=Faz1, 1=Faz2, 2=Faz3, 3=Faz4, 4=Özel
 
         // ─── Seviye Listesi ───
         private List<LevelData> _cachedLevels = new List<LevelData>();
@@ -81,6 +80,20 @@ namespace PixelFlow.Editor
         private readonly List<string> _signalLog = new List<string>();
         private const int MaxSignalLogEntries = 20;
 
+        // ─── VehicleSimulator Runtime Kontrolleri ───
+        private float _vehicleSpeedMultiplier = 1.0f;
+        private bool _vehicleSpawnEnabled = true;
+        private float _cachedBaseSpeed = -1f;
+        private float _cachedBaseSpawnInterval = -1f;
+
+        // ─── Frame Step ───
+        private bool _frameStepQueued = false;
+
+        // ─── Batch Level Duplication ───
+        private int _dupSourceIndex = 0;
+        private int _dupTargetIndex = 1;
+        private int _dupBatchCount = 1;
+
         [MenuItem("PixelFlow/Create GameConfig Asset")]
         private static void CreateGameConfigAsset()
         {
@@ -92,17 +105,45 @@ namespace PixelFlow.Editor
             }
             var config = ScriptableObject.CreateInstance<PixelFlow.Data.GameConfig>();
             string path = "Assets/Resources/Configs/GameConfig.asset";
-            System.IO.Directory.CreateDirectory("Assets/Resources");
+            System.IO.Directory.CreateDirectory("Assets/Resources/Configs");
             UnityEditor.AssetDatabase.CreateAsset(config, path);
             UnityEditor.AssetDatabase.SaveAssets();
             Debug.Log($"[PixelFlow] GameConfig.asset created at {path}");
         }
 
-        private void OnEnable() { RefreshData(); }
-        private void OnFocus() { RefreshData(); }
-        private void OnInspectorUpdate() { if (Application.isPlaying) Repaint(); }
+        // ─── Repaint Optimizasyonu ───
+        private float _lastDiagnosticTime = -10f;
+        private const float DiagnosticCooldown = 0.5f;
+        private bool _wasPlaying;
 
-        private void RefreshData() { RefreshLevelsCache(); RunDiagnostics(); }
+        private void OnEnable() { RefreshData(); _wasPlaying = Application.isPlaying; _cachedBaseSpeed = -1f; _cachedBaseSpawnInterval = -1f; }
+        private void OnFocus() { _dataCacheDirty = true; RefreshData(); }
+
+        private void OnInspectorUpdate()
+        {
+            bool isPlaying = Application.isPlaying;
+            // Sadece Play/Edit geçişinde veya oyun çalışırken saniyede 4 kez repaint
+            if (isPlaying != _wasPlaying)
+            {
+                _wasPlaying = isPlaying;
+                Repaint();
+            }
+            else if (isPlaying && Time.frameCount % 15 == 0) // ~saniyede 4 kez
+            {
+                Repaint();
+            }
+        }
+
+        private void RefreshData()
+        {
+            RefreshLevelsCache();
+            float now = (float)EditorApplication.timeSinceStartup;
+            if (now - _lastDiagnosticTime >= DiagnosticCooldown)
+            {
+                RunDiagnostics();
+                _lastDiagnosticTime = now;
+            }
+        }
 
         // ═══════════════════════════════════════════════════
         // TANILAMA SİSTEMİ
@@ -349,6 +390,13 @@ namespace PixelFlow.Editor
 
         // ─── Çözücü ───
 
+        /// <summary>Zorla tanılama yenile — RefreshData cooldown'una takılmaz</summary>
+        private void ForceDiagnostics()
+        {
+            _lastDiagnosticTime = -10f;
+            RunDiagnostics();
+        }
+
         private void RunBatchSolver()
         {
             var solver = new RuntimePathSolver();
@@ -439,22 +487,29 @@ namespace PixelFlow.Editor
         {
             GUILayout.BeginHorizontal();
             GUILayout.Label("Svye", EditorStyles.boldLabel, GUILayout.Width(35));
-            GUILayout.Label("İsim", EditorStyles.boldLabel, GUILayout.Width(130));
-            GUILayout.Label("Izgara", EditorStyles.boldLabel, GUILayout.Width(50));
-            GUILayout.Label("Düğüm", EditorStyles.boldLabel, GUILayout.Width(45));
-            GUILayout.Label("Köprü", EditorStyles.boldLabel, GUILayout.Width(50));
+            GUILayout.Label("Faz", EditorStyles.boldLabel, GUILayout.Width(55));
+            GUILayout.Label("İsim", EditorStyles.boldLabel, GUILayout.Width(110));
+            GUILayout.Label("Izgara", EditorStyles.boldLabel, GUILayout.Width(45));
+            GUILayout.Label("Düğüm", EditorStyles.boldLabel, GUILayout.Width(40));
+            GUILayout.Label("Köprü", EditorStyles.boldLabel, GUILayout.Width(40));
             GUILayout.Label("İşlemler", EditorStyles.boldLabel);
             GUILayout.EndHorizontal();
         }
 
         private void DrawLevelTableRow(LevelData lvl, bool showLaunch)
         {
+            Color phaseColor = PhaseAssetGenerator.GetPhaseColor(
+                PhaseAssetGenerator.GetPhaseForLevel(lvl.levelIndex));
+            string phaseShort = PhaseAssetGenerator.GetPhaseForLevel(lvl.levelIndex)
+                .ToString().Replace("Phase", "F");
+
             GUILayout.BeginHorizontal();
             GUILayout.Label((lvl.levelIndex + 1).ToString(), GUILayout.Width(35));
-            GUILayout.Label(lvl.name, GUILayout.Width(130));
-            GUILayout.Label($"{lvl.width}x{lvl.height}", GUILayout.Width(50));
-            GUILayout.Label(lvl.initialNodes?.Count.ToString() ?? "0", GUILayout.Width(45));
-            GUILayout.Label(lvl.bridgePositions?.Count.ToString() ?? "0", GUILayout.Width(50));
+            GUILayout.Label(phaseShort, new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = phaseColor }, fontSize = 10 }, GUILayout.Width(55));
+            GUILayout.Label(lvl.name, GUILayout.Width(110));
+            GUILayout.Label($"{lvl.width}x{lvl.height}", GUILayout.Width(45));
+            GUILayout.Label(lvl.initialNodes?.Count.ToString() ?? "0", GUILayout.Width(40));
+            GUILayout.Label(lvl.bridgePositions?.Count.ToString() ?? "0", GUILayout.Width(40));
             if (showLaunch)
             {
                 GUI.backgroundColor = new Color(0.2f, 0.7f, 1f);

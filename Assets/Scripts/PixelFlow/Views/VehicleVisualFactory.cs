@@ -30,6 +30,9 @@ namespace PixelFlow.Views
             _sharedHeadlightMat = null;
             _sharedWhiteMat = null;
             _sharedTailMat = null;
+
+            // Ghost alpha global'ini full opak olarak başlat — ilk frame'de 0 görünmezlik olmasın
+            Shader.SetGlobalFloat("_PixelFlow_GhostAlpha", 1f);
         }
 
         // Shared materials for vehicle visuals — prevents new Material per-primitive (saved ~20+ allocs/vehicle)
@@ -44,7 +47,7 @@ namespace PixelFlow.Views
         {
             if (_sharedSpriteMat != null) return;
             var cfg = _config;
-            var shader = Shader.Find("Sprites/Default") ?? Shader.Find("Standard");
+            var shader = Shader.Find("Hidden/PixelFlow/VehicleGhost") ?? Shader.Find("Sprites/Default");
             _sharedSpriteMat = CreateSharedMat(shader, cfg != null ? cfg.SpriteColor : Color.white);
             _sharedMetalMat = CreateSharedMat(shader, cfg != null ? cfg.MetalColor : new Color(0.15f, 0.15f, 0.18f, 1f));
             _sharedWindowMat = CreateSharedMat(shader, cfg != null ? cfg.WindowColor : new Color(0.2f, 0.9f, 1f, 0.9f));
