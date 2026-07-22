@@ -103,6 +103,7 @@ namespace PixelFlow.Editor.Tests
             var grid = _ctx.GetModel<IGridModel>();
             var session = _ctx.GetModel<IGameSessionModel>();
             var level = _ctx.GetModel<ILevelModel>();
+            var prefs = _ctx.Context.Container.Resolve<IPlayerPrefsService>();
 
             var lvl = ScriptableObject.CreateInstance<LevelData>();
             lvl.levelIndex = 7;
@@ -122,12 +123,12 @@ namespace PixelFlow.Editor.Tests
             session.AddScore(500);
             session.SetStars(2);
 
-            GridStateSerializer.Save(grid, session, level);
-            Assert.IsTrue(GridStateSerializer.HasSavedGame());
+            GridStateSerializer.Save(grid, session, level, prefs);
+            Assert.IsTrue(GridStateSerializer.HasSavedGame(prefs));
 
             var freshGrid = new GridModel();
             freshGrid.Initialize(3, 3);
-            var loaded = GridStateSerializer.Load();
+            var loaded = GridStateSerializer.Load(prefs);
             Assert.IsNotNull(loaded);
             Assert.AreEqual(5, loaded.width);
             Assert.AreEqual(5, loaded.height);
@@ -142,7 +143,7 @@ namespace PixelFlow.Editor.Tests
             Assert.AreEqual(ColorType.Red, freshGrid.ActiveColor.Value);
             Assert.AreEqual(2, freshGrid.Paths[ColorType.Red].Count);
 
-            GridStateSerializer.ClearSave();
+            GridStateSerializer.ClearSave(prefs);
         }
 
         [Test]
@@ -225,7 +226,7 @@ namespace PixelFlow.Editor.Tests
             throttler.ForceSave(() => GridStateSerializer.Save(grid, session, level, prefs));
             Assert.IsTrue(GridStateSerializer.HasSavedGame(_ctx.Context.Container.Resolve<IPlayerPrefsService>()));
 
-            GridStateSerializer.ClearSave();
+            GridStateSerializer.ClearSave(prefs);
         }
 
         [Test]

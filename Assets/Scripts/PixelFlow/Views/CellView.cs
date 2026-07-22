@@ -161,7 +161,8 @@ namespace PixelFlow.Views
             {
                 for (int x = 0; x < size; x++)
                 {
-                    float dist = Vector2.Distance(new Vector2(x, y), center);
+                    float sqrDist = (new Vector2(x, y) - center).sqrMagnitude;
+                    float dist = Mathf.Sqrt(sqrDist);
                     float alpha = Mathf.Clamp01(radius - dist);
                     colorsCirc[y * size + x] = new Color(1f, 1f, 1f, alpha);
                 }

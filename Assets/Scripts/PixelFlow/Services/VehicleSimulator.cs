@@ -60,6 +60,8 @@ namespace PixelFlow.Services
         private SimulationUpdater _updater;
         private Transform _vehicleContainer;
         private GridView _cachedGridView;
+        private CameraController _cachedCameraController;
+        private VehicleMovementService _movementService;
 
         // Grid-based spatial partitioning collision detection — List pool for GC alloc reduction
         private readonly Dictionary<Vector2Int, List<VehicleInstance>> _cellOccupancy = new Dictionary<Vector2Int, List<VehicleInstance>>();
@@ -68,7 +70,6 @@ namespace PixelFlow.Services
         private float _simulationPhaseTimer = 0f;
         private float ConfigVehicleSpeed => Config != null ? Config.VehicleSpeed : 3f;
         private float ConfigSpawnInterval => Config != null ? Config.SpawnInterval : 1.2f;
-        private float ConfigMaxProgressPerFrame => Config != null ? Config.MaxProgressPerFrame : 0.25f;
         private ISignalSubscription _undoSubscription;
         private ISignalSubscription _redoSubscription;
         private ISignalSubscription _levelFailedSubscription;
@@ -86,11 +87,19 @@ namespace PixelFlow.Services
                 _vehicleContainer.gameObject.hideFlags = HideFlags.DontSave;
 
                 // Parenting sırasını düzelt: GridView objesini bulup onun transform'u altında topla
-                var gridView = UnityEngine.Object.FindAnyObjectByType<GridView>();
-                if (gridView != null)
+                _cachedGridView = UnityEngine.Object.FindAnyObjectByType<GridView>();
+                if (_cachedGridView != null)
                 {
-                    _vehicleContainer.SetParent(gridView.transform, false);
+                    _vehicleContainer.SetParent(_cachedGridView.transform, false);
                 }
+
+                // CameraController'ı önbellekle (TriggerCrash'te GetComponent çağırmamak için)
+                _cachedCameraController = CamProvider?.MainCamera?.GetComponent<CameraController>();
+
+                // Hareket servisini oluştur (VehicleSimulator'da kalmak yerine ayrı bir servis)
+                _movementService = new VehicleMovementService(
+                    GridModel, GameStateModel, GameSessionModel,
+                    SignalBus, AudioService, ObstacleService, Config);
             }
 
             if (GameStateModel != null)
@@ -209,7 +218,7 @@ namespace PixelFlow.Services
             }
 
             UpdateSpawning(deltaTime);
-            UpdateMovement(deltaTime);
+            _movementService?.UpdateMovement(_activeVehicles, deltaTime);
             
             // Collision detection runs in BOTH Playing and Simulating states per GDD §2.4
             if (state == GameState.Playing || state == GameState.Simulating)
@@ -295,22 +304,17 @@ namespace PixelFlow.Services
                     return;
             }
 
-            if (_vehicleContainer != null && _vehicleContainer.parent == null)
-            {
-                if (_cachedGridView == null)
-                    _cachedGridView = UnityEngine.Object.FindAnyObjectByType<GridView>();
-                if (_cachedGridView != null)
-                    _vehicleContainer.SetParent(_cachedGridView.transform, false);
-            }
-
             if (_cachedGridView == null)
                 _cachedGridView = UnityEngine.Object.FindAnyObjectByType<GridView>();
+
+            if (_vehicleContainer != null && _vehicleContainer.parent == null && _cachedGridView != null)
+                _vehicleContainer.SetParent(_cachedGridView.transform, false);
             Transform parentTransform = _cachedGridView != null ? _cachedGridView.transform : _vehicleContainer;
 
             GameObject visual = new GameObject($"V_{color}");
             visual.transform.SetParent(parentTransform);
 
-            VehicleStyle vehicleStyle = SettingsModel != null ? SettingsModel.CurrentVehicleStyle : (VehicleStyle)PlayerPrefs.GetInt("VehicleStyle", 0);
+            VehicleStyle vehicleStyle = SettingsModel.CurrentVehicleStyle;
             
             Transform loco = null, wagon1 = null, wagon2 = null, coupler1 = null, coupler2 = null;
             List<Renderer> renderers = vehicleStyle == VehicleStyle.Train 
@@ -343,256 +347,7 @@ namespace PixelFlow.Services
             _activeVehicles.Add(inst);
         }
 
-        private void UpdateMovement(float deltaTime)
-        {
-            bool isPlaying = GameStateModel.CurrentState == GameState.Playing;
-            float baseAlpha = isPlaying ? (0.45f + Mathf.Sin(Time.time * 6f) * 0.25f) : 1f;
 
-            for (int i = _activeVehicles.Count - 1; i >= 0; i--)
-            {
-                var v = _activeVehicles[i];
-                if (v.Visual == null)
-                {
-                    _activeVehicles.RemoveAt(i);
-                    continue;
-                }
-
-                if (v.SegmentIndex > 0 && v.SegmentIndex - 1 < v.Path.Count && ObstacleService != null)
-                {
-                    Vector2Int prevCell = v.Path[v.SegmentIndex - 1];
-                    if (ObstacleService.IsNarrowPass(prevCell))
-                    {
-                        ObstacleService.OnVehicleLeftNarrowPass(prevCell, v.Color);
-                    }
-                }
-                if (v.SegmentIndex < v.Path.Count && ObstacleService != null)
-                {
-                    Vector2Int curCell = v.Path[v.SegmentIndex];
-                    if (ObstacleService.IsNarrowPass(curCell) && v.Progress < 0.1f)
-                    {
-                        ObstacleService.OnVehicleEnteredNarrowPass(curCell, v.Color);
-                    }
-                }
-
-                if (v.CachedRenderers != null)
-                {
-                    v.Mpb.SetColor("_Color", new Color(1f, 1f, 1f, baseAlpha));
-                    for (int ri = 0; ri < v.CachedRenderers.Length; ri++)
-                    {
-                        if (v.CachedRenderers[ri] == null) continue;
-                        v.CachedRenderers[ri].SetPropertyBlock(v.Mpb);
-                    }
-                }
-
-                v.TotalDistance += Mathf.Min(v.Speed * deltaTime, ConfigMaxProgressPerFrame);
-                float maxAllowedDist = (v.Style == VehicleStyle.Train) ? (v.Path.Count - 1) + 0.85f : (v.Path.Count - 1);
-
-                if (v.TotalDistance >= maxAllowedDist)
-                {
-                    if (ObstacleService != null && v.Path.Count > 0)
-                    {
-                        Vector2Int endCell = v.Path[v.Path.Count - 1];
-                        if (ObstacleService.IsNarrowPass(endCell))
-                        {
-                            ObstacleService.OnVehicleLeftNarrowPass(endCell, v.Color);
-                        }
-                    }
-
-                    // GDD §2.8: Simülasyon fazında başarılı ulaşım tespiti ve Flow Score güncelleme
-                    if (GameStateModel.CurrentState == GameState.Simulating && GameSessionModel != null)
-                    {
-                        GameSessionModel.IncrementFlowScore();
-                        SignalBus?.Fire(new FlowScoreUpdatedSignal
-                        {
-                            CurrentScore = GameSessionModel.CurrentFlowScore,
-                            TargetScore = GameSessionModel.TargetFlowScore
-                        });
-                        AudioService?.PlaySfx(SfxType.UIClick); // Hafif bir doğrulama sesi
-                    }
-
-                    SafeDestroy(v.Visual);
-                    _activeVehicles.RemoveAt(i);
-                    continue;
-                }
-
-                float locoDist = Mathf.Min(v.TotalDistance, v.Path.Count - 1);
-                float zOffset = GetZOffset(v.Path[Mathf.Clamp(Mathf.FloorToInt(locoDist), 0, v.Path.Count - 1)], v.Color);
-
-                Vector3 basePos = EvaluatePathPosition(v.Path, locoDist, v.Color, zOffset);
-                Vector3 tangent = EvaluatePathTangent(v.Path, locoDist, v.Color);
-                v.CurrentPosition = basePos;
-
-                if (v.Style == VehicleStyle.Train)
-                {
-                    v.Visual.transform.localPosition = Vector3.zero;
-                    float bobbing = Mathf.Sin(Time.time * 8f + v.GetHashCode()) * 0.01f;
-
-                    // 1. Update Locomotive Engine
-                    Vector3 locoPos = basePos;
-                    locoPos.z = zOffset + bobbing;
-                    if (v.LocoTransform != null)
-                    {
-                        v.LocoTransform.localPosition = locoPos;
-                        if (tangent.sqrMagnitude > 0.001f)
-                        {
-                            float targetAngle = Mathf.Atan2(tangent.y, tangent.x) * Mathf.Rad2Deg;
-                            v.LocoTransform.localRotation = Quaternion.Slerp(
-                                v.LocoTransform.localRotation,
-                                Quaternion.Euler(0f, 0f, targetAngle),
-                                deltaTime * 25f);
-                        }
-                    }
-
-                    // 2. Wagon 1 (0.42f behind)
-                    Vector3 w1Pos;
-                    bool w1Active = UpdateCarriageTransform(v.Wagon1Transform, v.Path, v.TotalDistance - 0.42f, v.Color, zOffset, deltaTime, out w1Pos);
-
-                    // 3. Coupler 1
-                    if (v.Coupler1Transform != null)
-                    {
-                        if (v.LocoTransform != null && w1Active)
-                        {
-                            v.Coupler1Transform.gameObject.SetActive(true);
-                            Vector3 c1Pos = (locoPos + w1Pos) * 0.5f;
-                            v.Coupler1Transform.localPosition = c1Pos;
-                            Vector3 dir1 = locoPos - w1Pos;
-                            if (dir1.sqrMagnitude > 0.001f)
-                            {
-                                float c1Angle = Mathf.Atan2(dir1.y, dir1.x) * Mathf.Rad2Deg;
-                                v.Coupler1Transform.localRotation = Quaternion.Euler(0f, 0f, c1Angle);
-                            }
-                        }
-                        else
-                        {
-                            v.Coupler1Transform.gameObject.SetActive(false);
-                        }
-                    }
-
-                    // 4. Wagon 2 (0.84f behind)
-                    Vector3 w2Pos;
-                    bool w2Active = UpdateCarriageTransform(v.Wagon2Transform, v.Path, v.TotalDistance - 0.84f, v.Color, zOffset, deltaTime, out w2Pos);
-
-                    // 5. Coupler 2
-                    if (v.Coupler2Transform != null)
-                    {
-                        if (w1Active && w2Active)
-                        {
-                            v.Coupler2Transform.gameObject.SetActive(true);
-                            Vector3 c2Pos = (w1Pos + w2Pos) * 0.5f;
-                            v.Coupler2Transform.localPosition = c2Pos;
-                            Vector3 dir2 = w1Pos - w2Pos;
-                            if (dir2.sqrMagnitude > 0.001f)
-                            {
-                                float c2Angle = Mathf.Atan2(dir2.y, dir2.x) * Mathf.Rad2Deg;
-                                v.Coupler2Transform.localRotation = Quaternion.Euler(0f, 0f, c2Angle);
-                            }
-                        }
-                        else
-                        {
-                            v.Coupler2Transform.gameObject.SetActive(false);
-                        }
-                    }
-                }
-                else
-                {
-                    // Regular Car movement
-                    Vector3 nextTangent = EvaluatePathTangent(v.Path, Mathf.Min(locoDist + 0.1f, v.Path.Count - 1), v.Color);
-                    float baseAngle = tangent.sqrMagnitude > 0.001f ? Mathf.Atan2(tangent.y, tangent.x) * Mathf.Rad2Deg : 0f;
-                    float nextAngle = nextTangent.sqrMagnitude > 0.001f ? Mathf.Atan2(nextTangent.y, nextTangent.x) * Mathf.Rad2Deg : baseAngle;
-                    float deltaAngle = Mathf.DeltaAngle(baseAngle, nextAngle);
-
-                    float bobbing = Mathf.Sin(Time.time * 12f + v.GetHashCode()) * 0.02f;
-                    Vector3 finalPos = v.CurrentPosition;
-                    finalPos.z += bobbing;
-                    v.Visual.transform.localPosition = finalPos;
-
-                    if (tangent.sqrMagnitude > 0.001f)
-                    {
-                        float angle = Mathf.Atan2(tangent.y, tangent.x) * Mathf.Rad2Deg;
-                        float rollBank = Mathf.Clamp(-deltaAngle * 0.3f, -15f, 15f);
-                        v.Visual.transform.rotation = Quaternion.Slerp(
-                            v.Visual.transform.rotation,
-                            Quaternion.Euler(0f, 0f, angle + rollBank),
-                            deltaTime * 25f);
-                    }
-                }
-            }
-        }
-
-        private bool UpdateCarriageTransform(Transform tForm, List<Vector2Int> path, float targetDist, ColorType color, float zOffset, float deltaTime, out Vector3 worldPos)
-        {
-            worldPos = Vector3.zero;
-            if (tForm == null) return false;
-
-            if (targetDist < 0f)
-            {
-                tForm.gameObject.SetActive(false);
-                return false;
-            }
-
-            tForm.gameObject.SetActive(true);
-            float clampedDist = Mathf.Min(targetDist, path.Count - 1);
-            Vector3 pos = EvaluatePathPosition(path, clampedDist, color, zOffset);
-            Vector3 tangent = EvaluatePathTangent(path, clampedDist, color);
-            worldPos = pos;
-
-            tForm.localPosition = pos;
-            if (tangent.sqrMagnitude > 0.001f)
-            {
-                float targetAngle = Mathf.Atan2(tangent.y, tangent.x) * Mathf.Rad2Deg;
-                tForm.localRotation = Quaternion.Slerp(
-                    tForm.localRotation,
-                    Quaternion.Euler(0f, 0f, targetAngle),
-                    deltaTime * 25f);
-            }
-
-            return true;
-        }
-
-        private Vector3 EvaluatePathPosition(List<Vector2Int> path, float pathDistance, ColorType color, float zOffset)
-        {
-            if (path == null || path.Count == 0) return Vector3.zero;
-            if (path.Count == 1) return new Vector3(path[0].x, path[0].y, zOffset);
-
-            float clampedDist = Mathf.Clamp(pathDistance, 0f, path.Count - 1);
-            int seg = Mathf.FloorToInt(clampedDist);
-            if (seg >= path.Count - 1)
-            {
-                seg = path.Count - 2;
-                clampedDist = path.Count - 1;
-            }
-            float t = clampedDist - seg;
-
-            Vector3 p0 = GetSplineControlPoint(path, seg - 1, color);
-            Vector3 p1 = GetSplineControlPoint(path, seg, color);
-            Vector3 p2 = GetSplineControlPoint(path, seg + 1, color);
-            Vector3 p3 = GetSplineControlPoint(path, seg + 2, color);
-
-            Vector3 pos = CatmullRom(p0, p1, p2, p3, t);
-            pos.z = zOffset;
-            return pos;
-        }
-
-        private Vector3 EvaluatePathTangent(List<Vector2Int> path, float pathDistance, ColorType color)
-        {
-            if (path == null || path.Count < 2) return Vector3.right;
-
-            float clampedDist = Mathf.Clamp(pathDistance, 0f, path.Count - 1);
-            int seg = Mathf.FloorToInt(clampedDist);
-            if (seg >= path.Count - 1)
-            {
-                seg = path.Count - 2;
-                clampedDist = path.Count - 1;
-            }
-            float t = clampedDist - seg;
-
-            Vector3 p0 = GetSplineControlPoint(path, seg - 1, color);
-            Vector3 p1 = GetSplineControlPoint(path, seg, color);
-            Vector3 p2 = GetSplineControlPoint(path, seg + 1, color);
-            Vector3 p3 = GetSplineControlPoint(path, seg + 2, color);
-
-            return CatmullRomTangent(p0, p1, p2, p3, t);
-        }
 
         private float GetZOffset(Vector2Int gridPos, ColorType color)
         {
@@ -670,8 +425,8 @@ namespace PixelFlow.Services
                         var v2 = vehicles[j];
                         if (v1.Color == v2.Color) continue;
 
-                        float dist = Vector3.Distance(v1.CurrentPosition, v2.CurrentPosition);
-                        if (dist < 0.45f)
+                        float sqrDist = (v1.CurrentPosition - v2.CurrentPosition).sqrMagnitude;
+                        if (sqrDist < 0.2025f) // 0.45²
                         {
                             Vector2Int cellPos = kvp.Key;
                             var cell = GridModel.Grid[cellPos.x, cellPos.y];
@@ -704,7 +459,7 @@ namespace PixelFlow.Services
             GridModel.CrashColorA.Value = colorA;
             GridModel.CrashColorB.Value = colorB;
 
-            var camCtrl = CamProvider?.MainCamera?.GetComponent<CameraController>();
+            var camCtrl = _cachedCameraController;
             if (camCtrl != null)
             {
                 camCtrl.FocusOnCrash(crashPos);
@@ -760,52 +515,6 @@ namespace PixelFlow.Services
             ClearAllVehicles();
         }
 
-        private Vector3 GetSplineControlPoint(List<Vector2Int> path, int index, ColorType color)
-        {
-            if (path == null || path.Count == 0) return Vector3.zero;
-            if (path.Count == 1)
-            {
-                Vector2Int p = path[0];
-                return new Vector3(p.x, p.y, GetZOffset(p, color));
-            }
 
-            if (index < 0)
-            {
-                Vector2Int pos0 = path[0];
-                Vector2Int pos1 = path[1];
-                Vector3 v0 = new Vector3(pos0.x, pos0.y, GetZOffset(pos0, color));
-                Vector3 v1 = new Vector3(pos1.x, pos1.y, GetZOffset(pos1, color));
-                return v0 + (v0 - v1) * Mathf.Abs(index);
-            }
-            if (index >= path.Count)
-            {
-                Vector2Int posEnd = path[path.Count - 1];
-                Vector2Int posPrev = path[path.Count - 2];
-                Vector3 vEnd = new Vector3(posEnd.x, posEnd.y, GetZOffset(posEnd, color));
-                Vector3 vPrev = new Vector3(posPrev.x, posPrev.y, GetZOffset(posPrev, color));
-                return vEnd + (vEnd - vPrev) * (index - path.Count + 1);
-            }
-
-            Vector2Int gridPos = path[index];
-            return new Vector3(gridPos.x, gridPos.y, GetZOffset(gridPos, color));
-        }
-
-        private static Vector3 CatmullRom(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
-        {
-            float t2 = t * t;
-            float t3 = t2 * t;
-            return 0.5f * ((2f * p1) +
-                           (-p0 + p2) * t +
-                           (2f * p0 - 5f * p1 + 4f * p2 - p3) * t2 +
-                           (-p0 + 3f * p1 - 3f * p2 + p3) * t3);
-        }
-
-        private static Vector3 CatmullRomTangent(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
-        {
-            float t2 = t * t;
-            return 0.5f * ((-p0 + p2) +
-                           2f * (2f * p0 - 5f * p1 + 4f * p2 - p3) * t +
-                           3f * (-p0 + 3f * p1 - 3f * p2 + p3) * t2);
-        }
     }
 }

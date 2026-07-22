@@ -569,12 +569,12 @@ namespace PixelFlow.Views
             Vector2 prevPos0 = t0.screenPosition - t0.delta;
             Vector2 prevPos1 = t1.screenPosition - t1.delta;
 
-            float prevDist = Vector2.Distance(prevPos0, prevPos1);
-            float currDist = Vector2.Distance(t0.screenPosition, t1.screenPosition);
+            float prevSqr = (prevPos0 - prevPos1).sqrMagnitude;
+            float currSqr = (t0.screenPosition - t1.screenPosition).sqrMagnitude;
 
-            if (prevDist < 0.001f) return;
+            if (prevSqr < 0.000001f) return; // 0.001²
 
-            float zoomFactor = prevDist / currDist;
+            float zoomFactor = Mathf.Sqrt(prevSqr / currSqr);
             _targetZoom = Mathf.Clamp(_targetZoom * zoomFactor, ConfigMinZoom, ConfigMaxZoom);
             _cam.orthographicSize = Mathf.Lerp(_cam.orthographicSize, _targetZoom, 0.3f);
         }

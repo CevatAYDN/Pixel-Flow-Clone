@@ -1537,6 +1537,7 @@ namespace PixelFlow.Editor.Tests
             var grid = _ctx.GetModel<IGridModel>();
             var session = _ctx.GetModel<IGameSessionModel>();
             var level = _ctx.GetModel<ILevelModel>();
+            var prefs = _ctx.Context.Container.Resolve<IPlayerPrefsService>();
             var levelData = ScriptableObject.CreateInstance<LevelData>();
             levelData.levelIndex = 0;
             levelData.width = 3; levelData.height = 3;
@@ -1546,8 +1547,8 @@ namespace PixelFlow.Editor.Tests
             session.IncrementRetryCount();
             session.IncrementRetryCount();
 
-            GridStateSerializer.Save(grid, session, level);
-            var loaded = GridStateSerializer.Load();
+            GridStateSerializer.Save(grid, session, level, prefs);
+            var loaded = GridStateSerializer.Load(prefs);
             Assert.IsNotNull(loaded);
             session.ApplySave(loaded.availableViaducts, loaded.maxViaducts, loaded.elapsedTime, loaded.score, loaded.stars, 0);
             Assert.AreEqual(0, session.RetryCount, "RetryCount should reset on new level load");

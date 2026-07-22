@@ -52,7 +52,7 @@ namespace PixelFlow.Services
 
         private static ILoggerService Logger => NexusRuntime.Logger;
 
-        public static void Save(IGridModel grid, IGameSessionModel session, ILevelModel level, IPlayerPrefsService prefs = null)
+        public static void Save(IGridModel grid, IGameSessionModel session, ILevelModel level, IPlayerPrefsService prefs)
         {
             if (grid == null) return;
 
@@ -108,16 +108,8 @@ namespace PixelFlow.Services
             }
 
             string json = JsonUtility.ToJson(data);
-            if (prefs != null)
-            {
-                prefs.SetString(PrefKey, json);
-                prefs.Save();
-            }
-            else
-            {
-                PlayerPrefs.SetString(PrefKey, json);
-                PlayerPrefs.Save();
-            }
+            prefs.SetString(PrefKey, json);
+            prefs.Save();
             Logger?.Log($"[PixelFlow.GridStateSerializer] 💾 Game state saved: Level {data.levelIndex + 1} ({data.width}x{data.height}, Cells: {data.cells.Count}, Active Paths: {data.paths.Count}, Score: {data.score})");
         }
 
@@ -125,11 +117,10 @@ namespace PixelFlow.Services
         /// Kayıtlı oyun state'ini yükler. Kayıt yoksa null döner.
         /// Çağıran, GridModel/GameSessionModel'a uygulamakla yükümlüdür.
         /// </summary>
-        public static GridSaveData Load(IPlayerPrefsService prefs = null)
+        public static GridSaveData Load(IPlayerPrefsService prefs)
         {
-            bool hasKey = prefs != null ? prefs.HasKey(PrefKey) : PlayerPrefs.HasKey(PrefKey);
-            if (!hasKey) return null;
-            string json = prefs != null ? prefs.GetString(PrefKey, "") : PlayerPrefs.GetString(PrefKey, "");
+            if (!prefs.HasKey(PrefKey)) return null;
+            string json = prefs.GetString(PrefKey, "");
             if (string.IsNullOrEmpty(json)) return null;
             try
             {
@@ -266,23 +257,15 @@ namespace PixelFlow.Services
             }
         }
 
-        public static bool HasSavedGame(IPlayerPrefsService prefs = null)
+        public static bool HasSavedGame(IPlayerPrefsService prefs)
         {
-            return prefs != null ? prefs.HasKey(PrefKey) : PlayerPrefs.HasKey(PrefKey);
+            return prefs.HasKey(PrefKey);
         }
 
-        public static void ClearSave(IPlayerPrefsService prefs = null)
+        public static void ClearSave(IPlayerPrefsService prefs)
         {
-            if (prefs != null)
-            {
-                prefs.DeleteKey(PrefKey);
-                prefs.Save();
-            }
-            else
-            {
-                PlayerPrefs.DeleteKey(PrefKey);
-                PlayerPrefs.Save();
-            }
+            prefs.DeleteKey(PrefKey);
+            prefs.Save();
         }
     }
 }
