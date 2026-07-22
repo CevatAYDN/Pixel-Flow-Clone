@@ -22,10 +22,15 @@ namespace PixelFlow.Services
     }
 
     /// <summary>
+    /// Araç simülasyonu. ITickable implement eder — TickService'e kaydolur.
+    /// Artık SimulationUpdater kullanmaz, doğrudan ITickService üzerinden tick alır.
+    /// </summary>
+
+    /// <summary>
     /// Araç simülasyonunun çekirdek mantığı: spawn, movement, collision detection, timer.
     /// Görsel üretim VehicleVisualFactory'e, veri modeli VehicleInstance'e ayrıldı.
     /// </summary>
-    public class VehicleSimulator : IVehicleSimulator, INexusService
+    public class VehicleSimulator : IVehicleSimulator, ITickable, INexusService
     {
         [Inject] public IGridModel GridModel { get; set; }
         [Inject] public ILevelModel LevelModel { get; set; }
@@ -41,6 +46,7 @@ namespace PixelFlow.Services
         [Inject] public ICameraProvider CamProvider { get; set; }
         [Inject] public ICrisisAdService CrisisAdService { get; set; }
         [Inject] public Data.GameConfig Config { get; set; }
+        [Inject] public ITickService TickService { get; set; }
 
         private ICrisisAdService _crisisAdService => CrisisAdService;
 
@@ -57,7 +63,6 @@ namespace PixelFlow.Services
         private readonly List<VehicleInstance> _activeVehicles = new List<VehicleInstance>();
         private readonly Dictionary<ColorType, float> _spawnTimers = new Dictionary<ColorType, float>();
         private readonly Dictionary<ColorType, (Vector2Int, Vector2Int)> _cachedEndpoints = new Dictionary<ColorType, (Vector2Int, Vector2Int)>();
-        private SimulationUpdater _updater;
         private Transform _vehicleContainer;
         private GridView _cachedGridView;
         private CameraController _cachedCameraController;
@@ -78,10 +83,7 @@ namespace PixelFlow.Services
         {
             if (Application.isPlaying)
             {
-                GameObject updaterObj = new GameObject("[VehicleSimulatorUpdater]");
-                updaterObj.hideFlags = HideFlags.DontSave;
-                _updater = updaterObj.AddComponent<SimulationUpdater>();
-                _updater.OnUpdate = Update;
+                TickService?.RegisterTickable(this);
 
                 _vehicleContainer = new GameObject("[Vehicles]").transform;
                 _vehicleContainer.gameObject.hideFlags = HideFlags.DontSave;
@@ -129,10 +131,7 @@ namespace PixelFlow.Services
 
         public void OnDispose()
         {
-            if (_updater != null)
-            {
-                SafeDestroy(_updater.gameObject);
-            }
+            TickService?.UnregisterTickable(this);
             if (_vehicleContainer != null)
             {
                 SafeDestroy(_vehicleContainer.gameObject);
@@ -195,12 +194,6 @@ namespace PixelFlow.Services
             _spawnTimers.Clear();
             _cellOccupancy.Clear();
             _occupancyListPool.Clear();
-        }
-
-        private void Update()
-        {
-            if (GameStateModel == null) return;
-            Tick(Time.deltaTime);
         }
 
         public void Tick(float deltaTime)

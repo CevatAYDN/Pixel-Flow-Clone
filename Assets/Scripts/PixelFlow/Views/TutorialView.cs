@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using PixelFlow.Core;
 using PixelFlow.Models;
 using PixelFlow.Services;
 using PixelFlow.Signals;
@@ -8,7 +9,7 @@ using Nexus.Core;
 namespace PixelFlow.Views
 {
     [Mediator(typeof(TutorialMediator))]
-    public class TutorialView : View
+    public class TutorialView : TickableView
     {
         [SerializeField] private GameObject _bubble;
         [SerializeField] private Text _bubbleText;
@@ -74,17 +75,17 @@ namespace PixelFlow.Views
             }
         }
 
-        private void Update()
+        protected override void OnTick(float deltaTime)
         {
             if (_currentStep == TutorialStep.None) return;
             if (_showTime > 0f)
             {
-                _showTime -= Time.deltaTime;
+                _showTime -= deltaTime;
                 if (_showTime <= 0f) Hide();
             }
             if (_fingerIndicator != null && _fingerIndicator.activeSelf)
             {
-                _fingerTime += Time.deltaTime;
+                _fingerTime += deltaTime;
                 float cycle = Mathf.PingPong(_fingerTime * 1.5f, 1f);
                 Vector2 pos = Vector2.Lerp(_fingerOrigin, _fingerTapTarget, cycle);
                 if (_fingerTarget != null)

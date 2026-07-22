@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 566aba1cdbebb2a48b2b4daa3d90e037, type: 3}
+  m_Name: ColorBlindPalette
+  m_EditorClassIdentifier: PixelFlow::PixelFlow.Data.ColorBlindPaletteAsset
+  Red:
+    Standard: {r: 1, g: 0.239, b: 0.498, a: 1}
+    Protanopia: {r: 0.95, g: 0.9, b: 0.25, a: 1}
+    Deuteranopia: {r: 0.85, g: 0.6, b: 0.1, a: 1}
+    Tritanopia: {r: 0.85, g: 0.3, b: 0.1, a: 1}
+  Green:
+    Standard: {r: 0.42, g: 0.796, b: 0.467, a: 1}
+    Protanopia: {r: 0, g: 0.65, b: 0.75, a: 1}
+    Deuteranopia: {r: 0.1, g: 0.5, b: 0.95, a: 1}
+    Tritanopia: {r: 0.2, g: 0.65, b: 0.4, a: 1}
+  Blue:
+    Standard: {r: 0, g: 0.831, b: 1, a: 1}
+    Protanopia: {r: 0, g: 0.45, b: 0.85, a: 1}
+    Deuteranopia: {r: 0.1, g: 0.5, b: 0.95, a: 1}
+    Tritanopia: {r: 0.55, g: 0.3, b: 0.85, a: 1}
+  Yellow:
+    Standard: {r: 1, g: 0.851, b: 0.239, a: 1}
+    Protanopia: {r: 0.95, g: 0.85, b: 0.2, a: 1}
+    Deuteranopia: {r: 0.95, g: 0.9, b: 0.3, a: 1}
+    Tritanopia: {r: 0.95, g: 0.5, b: 0.2, a: 1}
+  Purple:
+    Standard: {r: 0.702, g: 0.42, b: 1, a: 1}
+    Protanopia: {r: 0.55, g: 0.3, b: 0.85, a: 1}
+    Deuteranopia: {r: 0.65, g: 0.3, b: 0.9, a: 1}
+    Tritanopia: {r: 0.75, g: 0.2, b: 0.65, a: 1}

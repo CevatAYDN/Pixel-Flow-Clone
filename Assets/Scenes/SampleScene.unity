@@ -719,6 +719,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: PixelFlow::PixelFlow.GameBootstrapper
   initialLevel: {fileID: 11400000, guid: 689214afa7b54b84db204ac91f72ed7f, type: 2}
   nexusRoot: {fileID: 376124128}
+  _rootSearchRetries: 10
+  _rootSearchInterval: 0.1
 --- !u!1 &622557625
 GameObject:
   m_ObjectHideFlags: 0
@@ -1220,6 +1222,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: PixelFlow::PixelFlow.Views.ConfettiView
   _particleCount: 80
+  _confettiPrefab: {fileID: 0}
 --- !u!1 &1089689112
 GameObject:
   m_ObjectHideFlags: 0

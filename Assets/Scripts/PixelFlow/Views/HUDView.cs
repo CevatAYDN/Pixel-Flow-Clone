@@ -3,11 +3,12 @@ using UnityEngine.UI;
 using System;
 using Nexus.Core;
 using Nexus.Core.Services;
+using PixelFlow.Core;
 
 namespace PixelFlow.Views
 {
     [Mediator(typeof(HUDMediator))]
-    public class HUDView : View
+    public class HUDView : TickableView
     {
         [SerializeField] private Button _hintButton;
         [SerializeField] private Text _hintCountText;
@@ -484,12 +485,11 @@ namespace PixelFlow.Views
                 : new Color(0.15f, 0.15f, 0.18f, 1f);  // pasif: koyu gri
         }
 
-        private void Update()
+        protected override void OnTick(float deltaTime)
         {
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
             if (keyboard != null)
             {
-                // S tuşu ile simülasyonu manuel başlat/durdur (Test amaçlı debug)
                 if (keyboard.sKey.wasPressedThisFrame)
                 {
                     if (Debug.isDebugBuild)

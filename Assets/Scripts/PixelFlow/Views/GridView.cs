@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using Nexus.Core;
 using Nexus.Core.Services;
+using PixelFlow.Core;
 using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Services;
@@ -9,7 +10,7 @@ using PixelFlow.Services;
 namespace PixelFlow.Views
 {
     [Mediator(typeof(GridMediator))]
-    public class GridView : View
+    public class GridView : TickableView
     {
         public event System.Action<Vector2Int> OnGlobalPointerDown;
         public event System.Action<Vector2Int> OnGlobalPointerDrag;
@@ -28,10 +29,9 @@ namespace PixelFlow.Views
         private Queue<CellView> _cellPool = new Queue<CellView>();
         public bool IsInitialized => _cells != null;
 
-        private bool _isPointerDown;
-        private bool _clickedOutside;
-        private Vector2Int _lastGridPos = new Vector2Int(-1, -1);
-        private int _activePointerId = -1;
+        // Input state machine — GridInputService'te yönetilir
+        private IGridInputService _inputService;
+        private Vector2Int _lastDragPos = new Vector2Int(-1, -1);
 
         private float _targetZoom;
         private float ConfigMinZoom => Config != null ? Config.MinZoom : 8f;
@@ -40,9 +40,10 @@ namespace PixelFlow.Views
         private void Awake()
         {
             UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Enable();
+            _inputService = new GridInputService();
         }
 
-        private void Update()
+        protected override void OnTick(float deltaTime)
         {
             // Cyberpunk neon pulse animation on the outer glows
             if (_glowLines != null && _glowLines.Count > 0)
@@ -63,182 +64,42 @@ namespace PixelFlow.Views
 
             HandlePinchZoom();
 
-            bool isPressed = false;
-            int pointerId = -1;
-            Vector2 screenPos = Vector2.zero;
-            bool hasInput = false;
+            // Input state machine GridInputService'te yönetilir
+            if (_cam == null) _cam = CameraProvider?.MainCamera;
+            var result = _inputService?.ProcessInput(_cam, _cells.GetLength(0), _cells.GetLength(1));
 
-            var mouse = UnityEngine.InputSystem.Mouse.current;
-            var touchscreen = UnityEngine.InputSystem.Touchscreen.current;
+            if (result == null || !result.Value.HasEvent) return;
 
-            // If currently dragging, stick to the active device
-            if (_isPointerDown)
+            var r = result.Value;
+            if (r.IsDown)
             {
-                if (mouse != null && _activePointerId == mouse.deviceId)
-                {
-                    isPressed = mouse.leftButton.isPressed;
-                    pointerId = mouse.deviceId;
-                    screenPos = mouse.position.ReadValue();
-                    hasInput = true;
-                }
-                else if (touchscreen != null && _activePointerId == touchscreen.deviceId)
-                {
-                    if (touchscreen.touches.Count > 0)
-                    {
-                        var touch = touchscreen.touches[0];
-                        isPressed = touch.press.isPressed;
-                        screenPos = touch.position.ReadValue();
-                    }
-                    else
-                    {
-                        isPressed = false;
-                    }
-                    pointerId = touchscreen.deviceId;
-                    hasInput = true;
-                }
-                else if (_activePointerId == 9999)
-                {
-                    bool legacyMousePressed = false;
-                    Vector3 legacyMousePos = Vector3.zero;
-                    try
-                    {
-                        legacyMousePressed = UnityEngine.Input.GetMouseButton(0);
-                        legacyMousePos = UnityEngine.Input.mousePosition;
-                    }
-                    catch (System.InvalidOperationException) { }
-
-                    isPressed = legacyMousePressed;
-                    pointerId = 9999;
-                    screenPos = legacyMousePos;
-                    hasInput = true;
-                }
+                _lastDragPos = r.GridPosition;
+                OnGlobalPointerDown?.Invoke(r.GridPosition);
             }
-
-            // If not currently dragging or active device lost, detect which device is pressed
-            if (!hasInput)
+            else if (r.IsDrag)
             {
-                if (touchscreen != null && touchscreen.touches.Count > 0 && touchscreen.touches[0].press.isPressed)
+                // Interpolate through intermediate cells for smooth line drawing
+                var currentPos = r.GridPosition;
+                var tempPos = _lastDragPos;
+                if (tempPos.x >= 0)
                 {
-                    var touch = touchscreen.touches[0];
-                    isPressed = true;
-                    pointerId = touchscreen.deviceId;
-                    screenPos = touch.position.ReadValue();
-                    hasInput = true;
-                }
-                else if (mouse != null && mouse.leftButton.isPressed)
-                {
-                    isPressed = true;
-                    pointerId = mouse.deviceId;
-                    screenPos = mouse.position.ReadValue();
-                    hasInput = true;
-                }
-                else
-                {
-                    bool legacyMousePressed = false;
-                    Vector3 legacyMousePos = Vector3.zero;
-                    try
+                    while (tempPos != currentPos)
                     {
-                        legacyMousePressed = UnityEngine.Input.GetMouseButton(0);
-                        legacyMousePos = UnityEngine.Input.mousePosition;
-                    }
-                    catch (System.InvalidOperationException) { }
-
-                    if (legacyMousePressed)
-                    {
-                        isPressed = true;
-                        pointerId = 9999;
-                        screenPos = legacyMousePos;
-                        hasInput = true;
-                    }
-                    else
-                    {
-                        var pointer = UnityEngine.InputSystem.Pointer.current;
-                        if (pointer != null)
-                        {
-                            isPressed = pointer.press.isPressed;
-                            pointerId = pointer.deviceId;
-                            screenPos = pointer.position.ReadValue();
-                            hasInput = true;
-                        }
+                        int dx = currentPos.x - tempPos.x;
+                        int dy = currentPos.y - tempPos.y;
+                        if (Mathf.Abs(dx) >= Mathf.Abs(dy))
+                            tempPos.x += System.Math.Sign(dx);
+                        else
+                            tempPos.y += System.Math.Sign(dy);
+                        OnGlobalPointerDrag?.Invoke(tempPos);
                     }
                 }
+                _lastDragPos = currentPos;
             }
-
-            if (!hasInput) return;
-
-            if (isPressed)
+            else if (r.IsUp)
             {
-                if (_isPointerDown && pointerId != _activePointerId) return;
-
-                if (_cam == null) _cam = CameraProvider?.MainCamera;
-                var cam = _cam;
-                if (cam != null)
-                {
-                    Vector3 worldPos = cam.ScreenToWorldPoint(screenPos);
-                    int gx = Mathf.RoundToInt(worldPos.x);
-                    int gy = Mathf.RoundToInt(worldPos.y);
-
-                    int width = _cells.GetLength(0);
-                    int height = _cells.GetLength(1);
-
-                    if (gx >= 0 && gx < width && gy >= 0 && gy < height)
-                    {
-                        Vector2Int currentGridPos = new Vector2Int(gx, gy);
-
-                        if (!_isPointerDown)
-                        {
-                            _isPointerDown = true;
-                            _activePointerId = pointerId;
-                            _clickedOutside = false;
-                            _lastGridPos = currentGridPos;
-                            OnGlobalPointerDown?.Invoke(currentGridPos);
-                        }
-                        else if (!_clickedOutside && currentGridPos != _lastGridPos)
-                        {
-                            Vector2Int tempPos = _lastGridPos;
-                            while (tempPos != currentGridPos)
-                            {
-                                int dx = currentGridPos.x - tempPos.x;
-                                int dy = currentGridPos.y - tempPos.y;
-
-                                if (Mathf.Abs(dx) >= Mathf.Abs(dy))
-                                {
-                                    tempPos.x += System.Math.Sign(dx);
-                                }
-                                else
-                                {
-                                    tempPos.y += System.Math.Sign(dy);
-                                }
-
-                                OnGlobalPointerDrag?.Invoke(tempPos);
-                            }
-                            _lastGridPos = currentGridPos;
-                        }
-                    }
-                    else
-                    {
-                        if (!_isPointerDown)
-                        {
-                            _isPointerDown = true;
-                            _activePointerId = pointerId;
-                            _clickedOutside = true;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                if (_isPointerDown && pointerId == _activePointerId)
-                {
-                    _isPointerDown = false;
-                    _activePointerId = -1;
-                    if (!_clickedOutside)
-                    {
-                        OnGlobalPointerUp?.Invoke(_lastGridPos);
-                    }
-                    _clickedOutside = false;
-                    _lastGridPos = new Vector2Int(-1, -1);
-                }
+                _lastDragPos = new Vector2Int(-1, -1);
+                OnGlobalPointerUp?.Invoke(r.GridPosition);
             }
         }
 

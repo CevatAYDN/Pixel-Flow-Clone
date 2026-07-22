@@ -17,16 +17,16 @@ namespace PixelFlow.Services
         bool CanGraceSkip { get; }
     }
 
-    public class GameplayTimerService : IGameplayTimerService, INexusService
+    public class GameplayTimerService : IGameplayTimerService, ITickable, INexusService
     {
         [Inject] public IGameStateModel GameStateModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public Data.GameConfig Config { get; set; }
+        [Inject] public ITickService TickService { get; set; }
 
         private float _idleTimer;
         private int _graceSkipCount;
-        private SimulationUpdater _updater;
 
         private float ConfigIdleReminderSeconds => Config != null ? Config.IdleReminderSeconds : 300f;
         private int ConfigMaxGraceSkips => Config != null ? Config.MaxGraceSkips : 3;
@@ -37,18 +37,14 @@ namespace PixelFlow.Services
         {
             if (Application.isPlaying)
             {
-                GameObject updaterObj = new GameObject("[GameplayTimerUpdater]");
-                updaterObj.hideFlags = HideFlags.DontSave;
-                _updater = updaterObj.AddComponent<SimulationUpdater>();
-                _updater.OnUpdate = Update;
+                TickService?.RegisterTickable(this);
             }
             return default;
         }
 
         public void OnDispose()
         {
-            if (_updater != null)
-                Object.Destroy(_updater.gameObject);
+            TickService?.UnregisterTickable(this);
         }
 
         public void ResetIdleTimer()
@@ -68,11 +64,11 @@ namespace PixelFlow.Services
             SignalBus.Fire(new LevelCompletedSignal());
         }
 
-        public void Update()
+        public void Tick(float deltaTime)
         {
             if (GameStateModel.CurrentState != GameState.Playing) return;
 
-            _idleTimer += Time.deltaTime;
+            _idleTimer += deltaTime;
             if (_idleTimer >= ConfigIdleReminderSeconds)
             {
                 _idleTimer = 0f;

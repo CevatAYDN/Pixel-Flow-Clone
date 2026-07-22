@@ -1,12 +1,13 @@
 using UnityEngine;
 using System;
+using PixelFlow.Core;
 using PixelFlow.Data;
 using PixelFlow.Models;
 using Nexus.Core;
 
 namespace PixelFlow.Views
 {
-    public class CellView : View
+    public class CellView : TickableView
     {
         [Inject] public ThemePaletteAsset ThemePalette { get; set; }
         [Header("Sprite Renderers")]
@@ -459,11 +460,11 @@ namespace PixelFlow.Views
         private Color _rejectionColor = new Color(0.937f, 0.267f, 0.267f, 1f); // Default fallback; overridden by ThemePaletteAsset
         private const float _rejectionPulseFrequency = 15f;
 
-        private void Update()
+        protected override void OnTick(float deltaTime)
         {
             if (_isBouncing)
             {
-                _bounceTimer += Time.deltaTime;
+                _bounceTimer += deltaTime;
                 if (_bounceTimer >= _bounceDuration)
                 {
                     _isBouncing = false;
@@ -472,8 +473,8 @@ namespace PixelFlow.Views
                 else
                 {
                     float t = _bounceTimer / _bounceDuration;
-                    float freq = 2.5f; // Oscillations frequency
-                    float decay = 4.0f; // Damping decay rate
+                    float freq = 2.5f;
+                    float decay = 4.0f;
                     float amplitude = Mathf.Sin(t * freq * Mathf.PI) * Mathf.Exp(-decay * t);
                     float scaleFactor = 1f + (_bounceScale - 1f) * amplitude;
                     transform.localScale = _baseLocalScale * scaleFactor;
@@ -482,7 +483,7 @@ namespace PixelFlow.Views
 
             if (_isRejecting)
             {
-                _rejectionTimer += Time.deltaTime;
+                _rejectionTimer += deltaTime;
                 if (_rejectionTimer >= _rejectionDuration)
                 {
                     _isRejecting = false;
