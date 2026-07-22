@@ -546,23 +546,71 @@ namespace PixelFlow.Editor
             GUILayout.Space(8);
         }
 
-        private void DrawSceneStats()
+        // ─── Caching fields for performance ───
+        private double _lastStatsUpdateTime = -999f;
+        private const double StatsUpdateInterval = 1.0; // Update once per second
+
+        private int _cachedTotalGOs;
+        private int _cachedActiveGOs;
+        private int _cachedRendererCount;
+        private int _cachedCollider2DCount;
+        private int _cachedCanvasCount;
+        private int _cachedAudioSourceCount;
+        private int _cachedNexusViewCount;
+        private int _cachedActiveNexusViewCount;
+
+        private int _cachedPrefabFilesCount;
+        private int _cachedScriptFilesCount;
+        private int _cachedMaterialFilesCount;
+        private bool _assetsCached;
+
+        private void UpdatePerformanceStatsIfNeeded()
         {
-            GUILayout.BeginVertical(_cardStyle);
-            GUILayout.Label("📊 Sahne İstatistikleri", _sectionHeaderStyle);
-            GUILayout.Space(5);
+            double now = EditorApplication.timeSinceStartup;
+            if (now - _lastStatsUpdateTime < StatsUpdateInterval) return;
+            _lastStatsUpdateTime = now;
 
             var allGOs = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Exclude);
-            DrawInfoRow("Toplam GameObject:", $"{allGOs.Length} (Aktif: {allGOs.Count(go => go.activeInHierarchy)})");
-            DrawInfoRow("Renderer:", $"{Object.FindObjectsByType<Renderer>(FindObjectsInactive.Exclude).Length}");
-            DrawInfoRow("Collider2D:", $"{Object.FindObjectsByType<Collider2D>(FindObjectsInactive.Exclude).Length}");
-            DrawInfoRow("Canvas:", $"{Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude).Length}");
-            DrawInfoRow("AudioSource:", $"{Object.FindObjectsByType<AudioSource>(FindObjectsInactive.Exclude).Length}");
+            _cachedTotalGOs = allGOs.Length;
+            _cachedActiveGOs = allGOs.Count(go => go.activeInHierarchy);
+            _cachedRendererCount = Object.FindObjectsByType<Renderer>(FindObjectsInactive.Exclude).Length;
+            _cachedCollider2DCount = Object.FindObjectsByType<Collider2D>(FindObjectsInactive.Exclude).Length;
+            _cachedCanvasCount = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude).Length;
+            _cachedAudioSourceCount = Object.FindObjectsByType<AudioSource>(FindObjectsInactive.Exclude).Length;
 
             if (Application.isPlaying)
             {
                 var views = Object.FindObjectsByType<View>(FindObjectsInactive.Exclude);
-                DrawInfoRow("Nexus View:", $"{views.Length} (Aktif: {views.Count(v => v.gameObject.activeInHierarchy)})");
+                _cachedNexusViewCount = views.Length;
+                _cachedActiveNexusViewCount = views.Count(v => v.gameObject.activeInHierarchy);
+            }
+
+            if (!_assetsCached)
+            {
+                _assetsCached = true;
+                _cachedPrefabFilesCount = AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefabs" }).Length;
+                _cachedScriptFilesCount = AssetDatabase.FindAssets("t:Script", new[] { "Assets/Scripts" }).Length;
+                _cachedMaterialFilesCount = AssetDatabase.FindAssets("t:Material", new[] { "Assets" }).Length;
+            }
+        }
+
+        private void DrawSceneStats()
+        {
+            UpdatePerformanceStatsIfNeeded();
+
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label("📊 Sahne İstatistikleri", _sectionHeaderStyle);
+            GUILayout.Space(5);
+
+            DrawInfoRow("Toplam GameObject:", $"{_cachedTotalGOs} (Aktif: {_cachedActiveGOs})");
+            DrawInfoRow("Renderer:", $"{_cachedRendererCount}");
+            DrawInfoRow("Collider2D:", $"{_cachedCollider2DCount}");
+            DrawInfoRow("Canvas:", $"{_cachedCanvasCount}");
+            DrawInfoRow("AudioSource:", $"{_cachedAudioSourceCount}");
+
+            if (Application.isPlaying)
+            {
+                DrawInfoRow("Nexus View:", $"{_cachedNexusViewCount} (Aktif: {_cachedActiveNexusViewCount})");
             }
             GUILayout.EndVertical();
             GUILayout.Space(8);
@@ -570,14 +618,25 @@ namespace PixelFlow.Editor
 
         private void DrawAssetSummary()
         {
+            UpdatePerformanceStatsIfNeeded();
+
             GUILayout.BeginVertical(_cardStyle);
+            GUILayout.BeginHorizontal();
             GUILayout.Label("📁 Proje Varlık Özeti", _sectionHeaderStyle);
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("🔄 Yenile", GUILayout.Width(70), GUILayout.Height(18)))
+            {
+                _assetsCached = false;
+                _lastStatsUpdateTime = -999f;
+                UpdatePerformanceStatsIfNeeded();
+            }
+            GUILayout.EndHorizontal();
             GUILayout.Space(5);
 
             DrawInfoRow("LevelData Varlıkları:", $"{_cachedLevels.Count}");
-            DrawInfoRow("Prefab Dosyaları:", AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefabs" }).Length.ToString());
-            DrawInfoRow("Script Dosyaları:", AssetDatabase.FindAssets("t:Script", new[] { "Assets/Scripts" }).Length.ToString());
-            DrawInfoRow("Material Dosyaları:", AssetDatabase.FindAssets("t:Material", new[] { "Assets" }).Length.ToString());
+            DrawInfoRow("Prefab Dosyaları:", _cachedPrefabFilesCount.ToString());
+            DrawInfoRow("Script Dosyaları:", _cachedScriptFilesCount.ToString());
+            DrawInfoRow("Material Dosyaları:", _cachedMaterialFilesCount.ToString());
             GUILayout.EndVertical();
         }
     }

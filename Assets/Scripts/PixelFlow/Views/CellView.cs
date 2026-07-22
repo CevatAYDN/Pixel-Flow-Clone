@@ -7,7 +7,7 @@ using Nexus.Core;
 
 namespace PixelFlow.Views
 {
-    public class CellView : TickableView
+    public class CellView : View
     {
         [Inject] public ThemePaletteAsset ThemePalette { get; set; }
         [Header("Sprite Renderers")]
@@ -460,7 +460,7 @@ namespace PixelFlow.Views
         private Color _rejectionColor = new Color(0.937f, 0.267f, 0.267f, 1f); // Default fallback; overridden by ThemePaletteAsset
         private const float _rejectionPulseFrequency = 15f;
 
-        protected override void OnTick(float deltaTime)
+        public void TickAnimation(float deltaTime)
         {
             // Early-out: çoğu hücre çoğu frame'de animasyonsuzdur
             // 400 hücre × 60 fps = 24.000 kontrol/sn — iki bool check ihmal edilebilir
@@ -511,6 +511,7 @@ namespace PixelFlow.Views
 
         public void TriggerBounceAnimation(float pressScale = 0.95f, float duration = 0.12f)
         {
+            Nexus.Core.Services.NexusLog.Info("CellView", "TriggerBounceAnimation", "?", "Cell " + GridPosition + " triggered bounce");
             if (!_isBouncing)
             {
                 _baseLocalScale = Vector3.one;
@@ -528,6 +529,7 @@ namespace PixelFlow.Views
         public void TriggerThirdColorRejectionPulse(float duration = 0.6f)
         {
             if (_bgRenderer == null) return;
+            Nexus.Core.Services.NexusLog.Warn("CellView", "TriggerThirdColorRejectionPulse", "?", "Cell " + GridPosition + " triggered third-color rejection pulse");
             if (!_isRejecting)
             {
                 _rejectionOriginalColor = _bgRenderer.color;

@@ -45,8 +45,8 @@ namespace PixelFlow.Services
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public ICameraProvider CamProvider { get; set; }
         [Inject] public ICrisisAdService CrisisAdService { get; set; }
-        [Inject] public Data.GameConfig Config { get; set; }
-        [Inject] public ITickService TickService { get; set; }
+        [Inject, OptionalInject] public Data.GameConfig Config { get; set; }
+        [Inject, OptionalInject] public ITickService TickService { get; set; }
 
         private ICrisisAdService _crisisAdService => CrisisAdService;
 

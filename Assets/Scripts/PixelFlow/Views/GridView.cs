@@ -21,7 +21,7 @@ namespace PixelFlow.Views
 
         [Inject] public ICameraProvider CameraProvider { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
-        [Inject] public PixelFlow.Data.GameConfig Config { get; set; }
+        [Inject, OptionalInject] public PixelFlow.Data.GameConfig Config { get; set; }
 
         private Camera _cam;
         private CellView[,] _cells;
@@ -55,6 +55,17 @@ namespace PixelFlow.Views
             // CPU: her 3 frame'de sin() hesaplaması + LineRenderer.width set → TAMAMEN KALDIRILDI
 
             if (_cells == null) return;
+
+            // Tick cell animations on all cells in a fast 2D loop
+            int cellW = _cells.GetLength(0);
+            int cellH = _cells.GetLength(1);
+            for (int x = 0; x < cellW; x++)
+            {
+                for (int y = 0; y < cellH; y++)
+                {
+                    _cells[x, y]?.TickAnimation(deltaTime);
+                }
+            }
 
             HandlePinchZoom();
 
@@ -116,13 +127,13 @@ namespace PixelFlow.Views
                     _cellPool.Enqueue(cell);
                     _instantiatedCells.Add(cell);
                 }
-                LoggerService?.Log($"[GridView] Instantiated {toCreate} new cells. Total cell pool size: {_instantiatedCells.Count}");
+                NexusLog.Info("GridView", "EnsurePool", "?", "Instantiated " + toCreate + " new cells. Total cell pool size: " + _instantiatedCells.Count);
             }
         }
 
         public void InitializeGrid(int width, int height)
         {
-            LoggerService?.Log($"[GridView] InitializeGrid called with {width}x{height}");
+            NexusLog.Info("GridView", "InitializeGrid", "?", "InitializeGrid called with " + width + "x" + height);
 
             if (_cells != null)
             {

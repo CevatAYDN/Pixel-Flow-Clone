@@ -33,7 +33,7 @@ namespace PixelFlow.Services
     {
         [Inject] public IGridModel GridModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
-        [Inject] public Data.GameConfig Config { get; set; }
+        [Inject, OptionalInject] public Data.GameConfig Config { get; set; }
 
         private readonly Dictionary<Vector2Int, ObstacleType> _obstacles = new Dictionary<Vector2Int, ObstacleType>();
         private readonly Dictionary<Vector2Int, Vector2Int> _oneWayDirs = new Dictionary<Vector2Int, Vector2Int>();

@@ -120,21 +120,17 @@ namespace PixelFlow.Editor.Tests
             var simulatorType = _simulator.GetType();
             var activeVehiclesField = simulatorType.GetField("_activeVehicles", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             var updateCollisionMethod = simulatorType.GetMethod("UpdateCollisionDetection", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var vehicleInstanceType = simulatorType.GetNestedType("VehicleInstance", System.Reflection.BindingFlags.NonPublic);
-
             // Create two vehicle instances at collision point
-            var vehicle1 = System.Activator.CreateInstance(vehicleInstanceType);
-            var vehicle2 = System.Activator.CreateInstance(vehicleInstanceType);
-
-            // Set vehicle properties using reflection
-            var colorField = vehicleInstanceType.GetField("Color");
-            var currentPosField = vehicleInstanceType.GetField("CurrentPosition");
-            
-            colorField.SetValue(vehicle1, ColorType.Red);
-            colorField.SetValue(vehicle2, ColorType.Blue);
-            
-            currentPosField.SetValue(vehicle1, new Vector3(2, 1, -0.2f));
-            currentPosField.SetValue(vehicle2, new Vector3(2, 1, -0.2f));
+            var vehicle1 = new PixelFlow.Models.VehicleInstance
+            {
+                Color = ColorType.Red,
+                CurrentPosition = new Vector3(2, 1, -0.2f)
+            };
+            var vehicle2 = new PixelFlow.Models.VehicleInstance
+            {
+                Color = ColorType.Blue,
+                CurrentPosition = new Vector3(2, 1, -0.2f)
+            };
 
             // Add vehicles to active list
             var activeVehiclesList = (System.Collections.IList)activeVehiclesField.GetValue(_simulator);

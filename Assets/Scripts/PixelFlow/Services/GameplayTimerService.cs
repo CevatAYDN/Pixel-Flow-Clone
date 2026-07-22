@@ -22,8 +22,8 @@ namespace PixelFlow.Services
         [Inject] public IGameStateModel GameStateModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
-        [Inject] public Data.GameConfig Config { get; set; }
-        [Inject] public ITickService TickService { get; set; }
+        [Inject, OptionalInject] public Data.GameConfig Config { get; set; }
+        [Inject, OptionalInject] public ITickService TickService { get; set; }
 
         private float _idleTimer;
         private int _graceSkipCount;

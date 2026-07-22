@@ -364,6 +364,10 @@ namespace PixelFlow.Services
                     {
                         foundMove = true;
 
+                        // Update current frame in stack with its new DirectionIndex before pushing next
+                        _pathStack.Pop();
+                        _pathStack.Push(frame);
+
                         if (isBridge)
                         {
                             var exit = next + dir;
@@ -427,12 +431,6 @@ namespace PixelFlow.Services
                         _pathSet.Remove(_currentPath[_currentPath.Count - 1]);
                         _currentPath.RemoveAt(_currentPath.Count - 1);
                     }
-                }
-                else
-                {
-                    // Geçerli frame'in DirectionIndex'ini güncelle (struct olduğu için peek ile referans alınamaz — stack'i güncelle)
-                    _pathStack.Pop();
-                    _pathStack.Push(frame);
                 }
             }
 

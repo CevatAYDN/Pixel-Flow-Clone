@@ -30,7 +30,7 @@ namespace PixelFlow.Services
         [Inject] public IGameSessionModel GameSessionModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public ILevelModel LevelModel { get; set; }
-        [Inject] public Data.GameConfig Config { get; set; }
+        [Inject, OptionalInject] public Data.GameConfig Config { get; set; }
 
         private int ConfigMaxRetries => Config != null ? Config.MaxRetriesBeforeInterstitial : 3;
         private int ConfigMinLevel => Config != null ? Config.MinLevelForInterstitial : 5;

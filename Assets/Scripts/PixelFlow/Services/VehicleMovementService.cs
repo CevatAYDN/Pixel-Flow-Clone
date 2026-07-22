@@ -49,6 +49,7 @@ namespace PixelFlow.Services
         /// </summary>
         public void InvalidateSplineCache()
         {
+            Nexus.Core.Services.NexusLog.Info("VehicleMovementService", "InvalidateSplineCache", "?", "Spline cache fully invalidated.");
             _splineCache.Clear();
         }
 
@@ -72,6 +73,7 @@ namespace PixelFlow.Services
             for (int i = 0; i < _keysToRemove.Count; i++)
                 _splineCache.Remove(_keysToRemove[i]);
             _keysToRemove.Clear();
+            Nexus.Core.Services.NexusLog.Info("VehicleMovementService", "InvalidateSplineCache", "?", "Spline cache invalidated for color: " + color);
         }
 
         public VehicleMovementService(
@@ -159,13 +161,19 @@ namespace PixelFlow.Services
             {
                 Vector2Int prevCell = v.Path[v.SegmentIndex - 1];
                 if (_obstacleService.IsNarrowPass(prevCell))
+                {
                     _obstacleService.OnVehicleLeftNarrowPass(prevCell, v.Color);
+                    Nexus.Core.Services.NexusLog.Info("VehicleMovementService", "UpdateNarrowPassTracking", "?", "Vehicle of color " + v.Color + " left narrow pass at " + prevCell);
+                }
             }
             if (v.SegmentIndex < v.Path.Count && v.Progress < 0.1f)
             {
                 Vector2Int curCell = v.Path[v.SegmentIndex];
                 if (_obstacleService.IsNarrowPass(curCell))
+                {
                     _obstacleService.OnVehicleEnteredNarrowPass(curCell, v.Color);
+                    Nexus.Core.Services.NexusLog.Info("VehicleMovementService", "UpdateNarrowPassTracking", "?", "Vehicle of color " + v.Color + " entered narrow pass at " + curCell);
+                }
             }
         }
 
@@ -194,6 +202,7 @@ namespace PixelFlow.Services
             // ÖNCE parçaları pool'a geri ver, SONRA root'u destroy et
             // SafeDestroy sadece Destroy çağırır, pool'a geri vermez → pool depletion → GC spike
             VehicleVisualFactory.RecycleVehicle(v.Visual);
+            Nexus.Core.Services.NexusLog.Info("VehicleMovementService", "CompleteVehicleMovement", "?", "Vehicle of color " + v.Color + " completed its path. Recycled visual.");
             activeVehicles.RemoveAt(index);
         }
 
@@ -227,7 +236,8 @@ namespace PixelFlow.Services
             {
                 if (v.LocoTransform != null && w1Active)
                 {
-                    v.Coupler1Transform.gameObject.SetActive(true);
+                    if (!v.Coupler1Transform.gameObject.activeSelf)
+                        v.Coupler1Transform.gameObject.SetActive(true);
                     Vector3 c1Pos = (locoPos + w1Pos) * 0.5f;
                     v.Coupler1Transform.localPosition = c1Pos;
                     Vector3 dir1 = locoPos - w1Pos;
@@ -238,7 +248,10 @@ namespace PixelFlow.Services
                     }
                 }
                 else
-                    v.Coupler1Transform.gameObject.SetActive(false);
+                {
+                    if (v.Coupler1Transform.gameObject.activeSelf)
+                        v.Coupler1Transform.gameObject.SetActive(false);
+                }
             }
 
             // 4. Wagon 2
@@ -250,7 +263,8 @@ namespace PixelFlow.Services
             {
                 if (w1Active && w2Active)
                 {
-                    v.Coupler2Transform.gameObject.SetActive(true);
+                    if (!v.Coupler2Transform.gameObject.activeSelf)
+                        v.Coupler2Transform.gameObject.SetActive(true);
                     Vector3 c2Pos = (w1Pos + w2Pos) * 0.5f;
                     v.Coupler2Transform.localPosition = c2Pos;
                     Vector3 dir2 = w1Pos - w2Pos;
@@ -261,7 +275,10 @@ namespace PixelFlow.Services
                     }
                 }
                 else
-                    v.Coupler2Transform.gameObject.SetActive(false);
+                {
+                    if (v.Coupler2Transform.gameObject.activeSelf)
+                        v.Coupler2Transform.gameObject.SetActive(false);
+                }
             }
         }
 
@@ -295,11 +312,13 @@ namespace PixelFlow.Services
 
             if (targetDist < 0f)
             {
-                tForm.gameObject.SetActive(false);
+                if (tForm.gameObject.activeSelf)
+                    tForm.gameObject.SetActive(false);
                 return false;
             }
 
-            tForm.gameObject.SetActive(true);
+            if (!tForm.gameObject.activeSelf)
+                tForm.gameObject.SetActive(true);
             float clampedDist = Mathf.Min(targetDist, path.Count - 1);
             Vector3 pos = EvaluatePathPosition(path, clampedDist, color, zOffset);
             Vector3 tangent = EvaluatePathTangent(path, clampedDist, color);

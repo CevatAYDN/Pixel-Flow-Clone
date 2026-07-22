@@ -97,12 +97,10 @@ namespace Nexus.Generated
             NexusDI.RegisterInjector<PixelFlow.Views.CellView>((instance, di) =>
             {
                 instance.ThemePalette = di.Resolve<PixelFlow.Data.ThemePaletteAsset>();
-                instance.TickService = di.Resolve<Nexus.Core.Services.ITickService>();
             });
             NexusDI.RegisterClearer<PixelFlow.Views.CellView>(instance =>
             {
                 instance.ThemePalette = null;
-                instance.TickService = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Views.DailyCrisisMediator>((instance, di) =>
             {
@@ -672,8 +670,6 @@ namespace Nexus.Generated
                 _ = _p_WindowManager_AssetProvider; // Suppress CS0219 warning
                 var _p_CellView_ThemePalette = default(PixelFlow.Views.CellView).ThemePalette;
                 _ = _p_CellView_ThemePalette; // Suppress CS0219 warning
-                var _p_CellView_TickService = default(PixelFlow.Views.CellView).TickService;
-                _ = _p_CellView_TickService; // Suppress CS0219 warning
                 var _p_DailyCrisisMediator_DailyCrisisModel = default(PixelFlow.Views.DailyCrisisMediator).DailyCrisisModel;
                 _ = _p_DailyCrisisMediator_DailyCrisisModel; // Suppress CS0219 warning
                 var _p_DailyCrisisMediator_DailyCrisisService = default(PixelFlow.Views.DailyCrisisMediator).DailyCrisisService;

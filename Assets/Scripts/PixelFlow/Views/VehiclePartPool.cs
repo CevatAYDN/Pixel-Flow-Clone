@@ -33,6 +33,7 @@ namespace PixelFlow.Views
         private static readonly Stack<GameObject> _cylinders = new Stack<GameObject>(256);
         private static Transform _poolRoot;
         private static bool _initialized;
+        private static readonly List<GameObject> _recycleList = new List<GameObject>(128);
 
         private const int PreAllocCubes = 512;
         private const int PreAllocCylinders = 256;
@@ -55,6 +56,8 @@ namespace PixelFlow.Views
 
             for (int i = 0; i < PreAllocCylinders; i++)
                 _cylinders.Push(CreatePart(PrimitiveType.Cylinder));
+
+            Nexus.Core.Services.NexusLog.Info("VehiclePartPool", "Initialize", "?", "Initialized pool with " + PreAllocCubes + " cubes and " + PreAllocCylinders + " cylinders.");
         }
 
         private static GameObject CreatePart(PrimitiveType type)
@@ -119,12 +122,13 @@ namespace PixelFlow.Views
             if (!_initialized) Initialize();
             if (_poolRoot == null) return;
 
-            // Collect all VehiclePart children (iterating in reverse to handle reparenting safely)
-            var parts = new List<GameObject>(32);
-            CollectParts(root, parts);
+            _recycleList.Clear();
+            CollectParts(root, _recycleList);
 
-            foreach (var part in parts)
+            int recycledCount = _recycleList.Count;
+            for (int i = 0; i < recycledCount; i++)
             {
+                var part = _recycleList[i];
                 if (part == null) continue;
 
                 part.transform.SetParent(_poolRoot, false);
@@ -136,6 +140,8 @@ namespace PixelFlow.Views
                 else
                     _cubes.Push(part);
             }
+            Nexus.Core.Services.NexusLog.Info("VehiclePartPool", "RecycleVehicle", "?", "Recycled vehicle root " + root.name + " containing " + recycledCount + " parts.");
+            _recycleList.Clear();
         }
 
         private static void CollectParts(Transform t, List<GameObject> results)

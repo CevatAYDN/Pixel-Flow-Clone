@@ -226,6 +226,12 @@ namespace PixelFlow.Commands
                         PathService.BacktrackPath(firstColor, signal.GridPosition);
                     }
 
+                    if (currentCell.PathColorCount >= BridgeValidationUtility.MaxPathsPerBridge)
+                    {
+                        Nexus.Core.Services.NexusLog.Warn("ProcessInputCommand", "HandleDrag", "?", "Cell already occupied by max paths. Drawing blocked.");
+                        return;
+                    }
+
                     EnsureHistoryRecorded();
                     if (currentCell.PathColorCount == 0)
                     {
