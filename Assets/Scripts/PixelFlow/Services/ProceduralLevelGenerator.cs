@@ -171,7 +171,7 @@ namespace PixelFlow.Services
                     bridges.Add(cross);
                 }
             }
-            level.bridgePositions = bridges.ToList();
+            level.bridgePositions = new List<Vector2Int>(bridges);
 
             if (param.obstaclesEnabled || param.ferryEnabled || param.narrowPassEnabled)
             {
@@ -182,11 +182,16 @@ namespace PixelFlow.Services
                 level.obstacles = new List<ObstacleData>();
             }
 
-            level.solutions = solutions.Select(kvp => new PathSolution
+            var solutionList = new List<PathSolution>(solutions.Count);
+            foreach (var kvp in solutions)
             {
-                color = kvp.Key,
-                pathPositions = new List<Vector2Int>(kvp.Value)
-            }).ToList();
+                solutionList.Add(new PathSolution
+                {
+                    color = kvp.Key,
+                    pathPositions = new List<Vector2Int>(kvp.Value)
+                });
+            }
+            level.solutions = solutionList;
 
             // GDD §9.5: Difficulty formula — (Colors×10)+(Intersections×5)+(Obstacles×3)-(ViaductLimit×4)
             int solutionColorCount = selectedColors.Count;

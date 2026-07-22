@@ -34,7 +34,13 @@ namespace PixelFlow.Services
 
             _solver.SolvePartial(level, color, steps + 1, out var result);
             if (result != null && result.Count > 1)
-                return result.Skip(1).Take(steps).ToList();
+            {
+                int count = Mathf.Min(steps, result.Count - 1);
+                var hint = new List<Vector2Int>(count);
+                for (int i = 0; i < count; i++)
+                    hint.Add(result[i + 1]);
+                return hint;
+            }
 
             return null;
         }

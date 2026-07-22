@@ -248,7 +248,19 @@ namespace PixelFlow.Editor
         {
             int maxCount = Mathf.Max(1, _cachedLevels.Count);
             GetModel<IProgressModel>()?.UnlockLevel(maxCount);
-            PlayerPrefs.SetInt("UnlockedLevels", maxCount); PlayerPrefs.SetInt("NT_UnlockedLevels", maxCount); PlayerPrefs.Save();
+            var prefs = GetPrefsService();
+            if (prefs != null)
+            {
+                prefs.SetInt("UnlockedLevels", maxCount);
+                prefs.SetInt("NT_UnlockedLevels", maxCount);
+                prefs.Save();
+            }
+            else
+            {
+                PlayerPrefs.SetInt("UnlockedLevels", maxCount);
+                PlayerPrefs.SetInt("NT_UnlockedLevels", maxCount);
+                PlayerPrefs.Save();
+            }
             Debug.Log($"[PixelFlow] Tüm {maxCount} seviye açıldı.");
         }
 
@@ -468,8 +480,18 @@ namespace PixelFlow.Editor
         private void SetVehicleStyle(VehicleStyle style)
         {
             var settingsModel = GetModel<ISettingsModel>();
-            if (settingsModel != null) settingsModel.SetVehicleStyle(style);
-            else PlayerPrefs.SetInt("VehicleStyle", (int)style);
+            if (settingsModel != null)
+            {
+                settingsModel.SetVehicleStyle(style);
+            }
+            else
+            {
+                var prefs = GetPrefsService();
+                if (prefs != null)
+                    prefs.SetInt("VehicleStyle", (int)style);
+                else
+                    PlayerPrefs.SetInt("VehicleStyle", (int)style);
+            }
             Debug.Log($"[PixelFlow] Araç stili değiştirildi: {style}");
         }
 

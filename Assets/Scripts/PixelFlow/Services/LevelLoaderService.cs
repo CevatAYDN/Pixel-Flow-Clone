@@ -36,6 +36,7 @@ namespace PixelFlow.Services
         [Inject] public ISaveThrottler SaveThrottler { get; set; }
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject] public EconomyConfigAsset EconomyConfig { get; set; }
 
         public ValueTask InitializeAsync(CancellationToken ct) => default;
         public void OnDispose() { }
@@ -125,8 +126,10 @@ namespace PixelFlow.Services
             // Clear history for fresh level
             HistoryService.Clear();
 
-            // Session setup with viaduct bonus
-            int viaductBonus = ld.levelIndex / 10;
+            // Session setup with viaduct bonus (GDD §9 — EconomyConfigAsset)
+            int viaductBonus = EconomyConfig != null
+                ? EconomyConfig.CalculateViaductBonus(ld.levelIndex)
+                : ld.levelIndex / 10;
             int totalViaducts = ld.viaductLimit + viaductBonus;
             GameSessionModel.StartSession(ld.levelIndex, totalViaducts, ld.flowScoreThreshold, true);
 

@@ -410,6 +410,9 @@ namespace PixelFlow.Views
         private void HandleSimulateDebugPressed()
         {
             // Debug-only: bypasses command flow for rapid testing
+            // Bu direkt SetState çağrısı sadece Editor/PlayMode debug için kullanılır.
+            // MVCS kuralı: normal oynanışta Signal → Command → SetState akışı kullanılır.
+#if UNITY_EDITOR
             var state = GameStateModel.CurrentState;
             if (state == GameState.Playing)
             {
@@ -421,6 +424,7 @@ namespace PixelFlow.Views
                 LoggerService?.Log("[HUDMediator] Debug: Manually stopping simulation phase (Playing).");
                 GameStateModel.SetState(GameState.Playing);
             }
+#endif
         }
     }
 }

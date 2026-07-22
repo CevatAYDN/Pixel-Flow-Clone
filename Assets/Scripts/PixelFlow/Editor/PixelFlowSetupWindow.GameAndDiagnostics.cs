@@ -53,7 +53,7 @@ namespace PixelFlow.Editor
                 ? $"Seviye {levelModel.CurrentLevel.levelIndex + 1} ({levelModel.CurrentLevel.name})"
                 : bootName != null ? $"Başlangıç: {bootName}" : "Yok";
 
-            int unlockedLvl = progressModel != null ? progressModel.UnlockedLevels : PlayerPrefs.GetInt("NT_UnlockedLevels", 1);
+            int unlockedLvl = progressModel != null ? progressModel.UnlockedLevels : (GetPrefsService()?.GetInt("NT_UnlockedLevels", 1) ?? PlayerPrefs.GetInt("NT_UnlockedLevels", 1));
             int hints = hintModel != null ? hintModel.HintsRemaining : -1;
             float elapsed = sessionModel != null ? sessionModel.ElapsedTime : 0f;
 
@@ -110,8 +110,7 @@ namespace PixelFlow.Editor
             if (GUILayout.Button("🧹 Temiz Seviye Yükle (Save Temizle)", GUILayout.Height(28)))
             {
                 var prefs = GetPrefsService();
-                prefs.DeleteKey("NT_PuzzleSave_");
-                prefs.Save();
+                if (prefs != null) { prefs.DeleteKey("NT_PuzzleSave_"); prefs.Save(); }
                 var lvl1 = ResolveLevelByIndex(0);
                 if (lvl1 != null) PlayLevel(lvl1);
                 Debug.Log("[PixelFlow] Save file cleared! Clean LevelData reloaded.");
@@ -180,7 +179,7 @@ namespace PixelFlow.Editor
             var settingsModel = GetModel<ISettingsModel>();
             int currentStyleInt = settingsModel != null
                 ? (int)settingsModel.CurrentVehicleStyle
-                : PlayerPrefs.GetInt("VehicleStyle", 0);
+                : (GetPrefsService()?.GetInt("VehicleStyle", 0) ?? PlayerPrefs.GetInt("VehicleStyle", 0));
 
             GUILayout.BeginHorizontal();
             GUILayout.Label("Aktif Araç Modeli:", GUILayout.Width(140));

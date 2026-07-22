@@ -111,6 +111,48 @@ namespace PixelFlow
                 NexusRuntime.Logger?.LogWarning("[PixelFlow] ThemePalette.asset not found in Resources. Using runtime defaults.");
             }
             builder.BindInstance(palette);
+
+            // ColorBlindPaletteAsset — GDD §11.1: Renk körlüğü paleti
+            var colorBlindPalette = UnityEngine.Resources.Load<ColorBlindPaletteAsset>("ColorBlindPalette");
+            if (colorBlindPalette == null)
+            {
+                colorBlindPalette = UnityEngine.ScriptableObject.CreateInstance<ColorBlindPaletteAsset>();
+                colorBlindPalette.name = "ColorBlindPalette (Runtime Default)";
+                NexusRuntime.Logger?.LogWarning("[PixelFlow] ColorBlindPalette.asset not found in Resources. Using runtime defaults.");
+            }
+            builder.BindInstance(colorBlindPalette);
+            Models.ColorBlindPalette.Initialize(colorBlindPalette);
+
+            // VehicleMaterialConfigAsset — araç görsel malzeme renkleri
+            var vehicleMatConfig = UnityEngine.Resources.Load<VehicleMaterialConfigAsset>("VehicleMaterialConfig");
+            if (vehicleMatConfig == null)
+            {
+                vehicleMatConfig = UnityEngine.ScriptableObject.CreateInstance<VehicleMaterialConfigAsset>();
+                vehicleMatConfig.name = "VehicleMaterialConfig (Runtime Default)";
+                NexusRuntime.Logger?.LogWarning("[PixelFlow] VehicleMaterialConfig.asset not found in Resources. Using runtime defaults.");
+            }
+            builder.BindInstance(vehicleMatConfig);
+            Views.VehicleVisualFactory.Initialize(vehicleMatConfig);
+
+            // EconomyConfigAsset — GDD §9: Ekonomi/balance konfigürasyonu
+            var economyConfig = UnityEngine.Resources.Load<EconomyConfigAsset>("EconomyConfig");
+            if (economyConfig == null)
+            {
+                economyConfig = UnityEngine.ScriptableObject.CreateInstance<EconomyConfigAsset>();
+                economyConfig.name = "EconomyConfig (Runtime Default)";
+                NexusRuntime.Logger?.LogWarning("[PixelFlow] EconomyConfig.asset not found in Resources. Using runtime defaults.");
+            }
+            builder.BindInstance(economyConfig);
+
+            // LevelCatalogAsset — GDD §3.6: Merkezi level kataloğu
+            var levelCatalog = UnityEngine.Resources.Load<LevelCatalogAsset>("LevelCatalog");
+            if (levelCatalog == null)
+            {
+                levelCatalog = UnityEngine.ScriptableObject.CreateInstance<LevelCatalogAsset>();
+                levelCatalog.name = "LevelCatalog (Runtime Default)";
+                NexusRuntime.Logger?.LogWarning("[PixelFlow] LevelCatalog.asset not found in Resources. Using runtime defaults (fallback to Resources.Load chain).");
+            }
+            builder.BindInstance(levelCatalog);
         }
 
         public ValueTask OnInitializeAsync(CancellationToken ct) => default;

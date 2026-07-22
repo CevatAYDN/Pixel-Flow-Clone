@@ -298,6 +298,7 @@ namespace Nexus.Generated
                 instance.SaveThrottler = di.Resolve<Nexus.Core.Services.ISaveThrottler>();
                 instance.PlayerPrefsService = di.Resolve<Nexus.Core.Services.IPlayerPrefsService>();
                 instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
+                instance.EconomyConfig = di.Resolve<PixelFlow.Data.EconomyConfigAsset>();
             });
             NexusDI.RegisterClearer<PixelFlow.Services.LevelLoaderService>(instance =>
             {
@@ -313,6 +314,7 @@ namespace Nexus.Generated
                 instance.SaveThrottler = null;
                 instance.PlayerPrefsService = null;
                 instance.LoggerService = null;
+                instance.EconomyConfig = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Services.ObstacleService>((instance, di) =>
             {
@@ -762,6 +764,8 @@ namespace Nexus.Generated
                 _ = _p_LevelLoaderService_PlayerPrefsService; // Suppress CS0219 warning
                 var _p_LevelLoaderService_LoggerService = default(PixelFlow.Services.LevelLoaderService).LoggerService;
                 _ = _p_LevelLoaderService_LoggerService; // Suppress CS0219 warning
+                var _p_LevelLoaderService_EconomyConfig = default(PixelFlow.Services.LevelLoaderService).EconomyConfig;
+                _ = _p_LevelLoaderService_EconomyConfig; // Suppress CS0219 warning
                 var _p_ObstacleService_GridModel = default(PixelFlow.Services.ObstacleService).GridModel;
                 _ = _p_ObstacleService_GridModel; // Suppress CS0219 warning
                 var _p_ObstacleService_SignalBus = default(PixelFlow.Services.ObstacleService).SignalBus;

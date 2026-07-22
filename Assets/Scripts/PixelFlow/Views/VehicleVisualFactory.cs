@@ -9,9 +9,29 @@ namespace PixelFlow.Views
     /// Procedural araç/tren görsel üretiminden sorumlu static fabrika.
     /// VehiclePartPool ile runtime CreatePrimitive/Destroy GC alloc'ları önlenir.
     /// VehicleSimulator'dan ayrıştırıldı (1247 satır → ~450 satır).
+    ///
+    /// Tüm material renkleri VehicleMaterialConfigAsset ScriptableObject'inden gelir.
+    /// Initialize() ile bootstrap'ta atanır; atanmazsa hardcoded fallback kullanılır.
     /// </summary>
     public static class VehicleVisualFactory
     {
+        private static VehicleMaterialConfigAsset _config;
+
+        /// <summary>
+        /// Bootstrap'ta GameContextLifecycle tarafından çağrılır.
+        /// </summary>
+        public static void Initialize(VehicleMaterialConfigAsset config)
+        {
+            _config = config;
+            // Force re-creation with new config colors
+            _sharedSpriteMat = null;
+            _sharedMetalMat = null;
+            _sharedWindowMat = null;
+            _sharedHeadlightMat = null;
+            _sharedWhiteMat = null;
+            _sharedTailMat = null;
+        }
+
         // Shared materials for vehicle visuals — prevents new Material per-primitive (saved ~20+ allocs/vehicle)
         private static Material _sharedSpriteMat;
         private static Material _sharedMetalMat;
@@ -23,13 +43,14 @@ namespace PixelFlow.Views
         private static void EnsureAllSharedMaterialsCreated()
         {
             if (_sharedSpriteMat != null) return;
+            var cfg = _config;
             var shader = Shader.Find("Sprites/Default") ?? Shader.Find("Standard");
-            _sharedSpriteMat = CreateSharedMat(shader, Color.white);
-            _sharedMetalMat = CreateSharedMat(shader, new Color(0.15f, 0.15f, 0.18f, 1f));
-            _sharedWindowMat = CreateSharedMat(shader, new Color(0.2f, 0.9f, 1f, 0.9f));
-            _sharedHeadlightMat = CreateSharedMat(shader, new Color(1f, 0.95f, 0.5f, 1f));
-            _sharedWhiteMat = CreateSharedMat(shader, Color.white);
-            _sharedTailMat = CreateSharedMat(shader, new Color(1f, 0.15f, 0.15f, 1f));
+            _sharedSpriteMat = CreateSharedMat(shader, cfg != null ? cfg.SpriteColor : Color.white);
+            _sharedMetalMat = CreateSharedMat(shader, cfg != null ? cfg.MetalColor : new Color(0.15f, 0.15f, 0.18f, 1f));
+            _sharedWindowMat = CreateSharedMat(shader, cfg != null ? cfg.WindowColor : new Color(0.2f, 0.9f, 1f, 0.9f));
+            _sharedHeadlightMat = CreateSharedMat(shader, cfg != null ? cfg.HeadlightColor : new Color(1f, 0.95f, 0.5f, 1f));
+            _sharedWhiteMat = CreateSharedMat(shader, cfg != null ? cfg.WhiteAccentColor : Color.white);
+            _sharedTailMat = CreateSharedMat(shader, cfg != null ? cfg.TaillightColor : new Color(1f, 0.15f, 0.15f, 1f));
         }
 
         private static Material CreateSharedMat(Shader shader, Color color)

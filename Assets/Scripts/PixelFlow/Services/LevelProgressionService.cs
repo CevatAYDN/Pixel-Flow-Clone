@@ -20,12 +20,16 @@ namespace PixelFlow.Services
     /// 
     /// GDD §3.6: Phase konfigürasyonu PhaseDefinitionAsset ScriptableObject'ten
     /// okunur — editör tarafından data-driven yönetilir.
+    /// 
+    /// Level çözümleme: Önce LevelCatalogAsset'e bakar, bulamazsa eski Resources.Load
+    /// zincirine düşer (geriye uyumluluk).
     /// </summary>
     public sealed class LevelProgressionService : ILevelProgressionService, INexusService
     {
         private readonly ProceduralLevelGenerator _generator;
         private readonly Dictionary<int, LevelData> _generatedCache;
         private PhaseConfigAsset _phaseConfig;
+        private LevelCatalogAsset _levelCatalog;
         private readonly ILoggerService _logger;
 
         public int LevelsPerDifficulty => 5;
@@ -35,6 +39,7 @@ namespace PixelFlow.Services
         {
             // GDD §3.6: Resources'tan PhaseConfigAsset yükle (editörde oluşturulmuş olmalı)
             _phaseConfig = UnityEngine.Resources.Load<PhaseConfigAsset>("PhaseConfig");
+            _levelCatalog = UnityEngine.Resources.Load<LevelCatalogAsset>("LevelCatalog");
         }
 
         // Eski overload — geriye uyumluluk (testler için)
@@ -89,7 +94,19 @@ namespace PixelFlow.Services
             if (_generatedCache.TryGetValue(levelIndex, out var cached))
                 return cached;
 
-            LevelData level = UnityEngine.Resources.Load<LevelData>($"Levels/Level{levelIndex + 1}");
+            LevelData level = null;
+
+            // GDD §3.6: Önce LevelCatalogAsset'e bak
+            if (_levelCatalog != null)
+            {
+                level = _levelCatalog.GetAuthoredLevel(levelIndex);
+            }
+
+            // Fallback: eski Resources.Load zinciri (katalogda yok veya asset null)
+            if (level == null)
+            {
+                level = UnityEngine.Resources.Load<LevelData>($"Levels/Level{levelIndex + 1}");
+            }
             if (level == null)
             {
                 level = UnityEngine.Resources.Load<LevelData>($"Levels/Level{levelIndex}");
@@ -97,12 +114,15 @@ namespace PixelFlow.Services
             if (level == null)
             {
                 var allLevels = UnityEngine.Resources.LoadAll<LevelData>("Levels");
-                foreach (var l in allLevels)
+                if (allLevels != null)
                 {
-                    if (l != null && l.levelIndex == levelIndex)
+                    foreach (var l in allLevels)
                     {
-                        level = l;
-                        break;
+                        if (l != null && l.levelIndex == levelIndex)
+                        {
+                            level = l;
+                            break;
+                        }
                     }
                 }
             }
@@ -136,8 +156,18 @@ namespace PixelFlow.Services
 
             if (level == null)
             {
+                // Önce katalogda procedural parametre var mı kontrol et
+                DifficultyParams param;
+                if (_levelCatalog != null && _levelCatalog.TryGetProceduralParams(levelIndex, out param))
+                {
+                    _logger?.Log($"[PixelFlow.LevelProgressionService] Generating level {levelIndex} with catalog-defined procedural params.");
+                }
+                else
+                {
+                    param = GetDifficultyForLevel(levelIndex);
+                }
+
                 _logger?.Log($"[PixelFlow.LevelProgressionService] No handcrafted LevelData asset found for index {levelIndex}. Generating procedurally...");
-                var param = GetDifficultyForLevel(levelIndex);
                 level = _generator.Generate(param);
                 if (level != null)
                 {

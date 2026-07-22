@@ -37,7 +37,7 @@ namespace PixelFlow.Services
                 }
             }
 
-            var colors = colorNodes.Keys.ToList();
+            var colors = new List<ColorType>(colorNodes.Keys);
             var result = new Dictionary<ColorType, List<Vector2Int>>();
             foreach (var c in colors) result[c] = new List<Vector2Int>();
             int iterationCount = 0;
@@ -61,7 +61,7 @@ namespace PixelFlow.Services
 
             if (steps <= 0) return false;
 
-            var bridges = new HashSet<Vector2Int>(level.bridgePositions ?? Enumerable.Empty<Vector2Int>());
+            var bridges = level.bridgePositions != null ? new HashSet<Vector2Int>(level.bridgePositions) : new HashSet<Vector2Int>();
             var grid = new ColorType[level.width, level.height];
 
             foreach (var node in level.initialNodes)
