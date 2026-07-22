@@ -2,6 +2,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using Nexus.Core;
+using Nexus.Core.Services;
+using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Services;
@@ -19,14 +21,17 @@ namespace PixelFlow.Services
     {
         [Inject] public IGameStateModel GameStateModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
+        [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject] public Data.GameConfig Config { get; set; }
 
         private float _idleTimer;
         private int _graceSkipCount;
-        private const float IdleReminderSeconds = 300f;
-        private const int MaxGraceSkips = 3;
         private SimulationUpdater _updater;
 
-        public bool CanGraceSkip => _graceSkipCount < MaxGraceSkips;
+        private float ConfigIdleReminderSeconds => Config != null ? Config.IdleReminderSeconds : 300f;
+        private int ConfigMaxGraceSkips => Config != null ? Config.MaxGraceSkips : 3;
+
+        public bool CanGraceSkip => _graceSkipCount < ConfigMaxGraceSkips;
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
@@ -68,10 +73,10 @@ namespace PixelFlow.Services
             if (GameStateModel.CurrentState != GameState.Playing) return;
 
             _idleTimer += Time.deltaTime;
-            if (_idleTimer >= IdleReminderSeconds)
+            if (_idleTimer >= ConfigIdleReminderSeconds)
             {
                 _idleTimer = 0f;
-                Debug.Log("[GameplayTimer] Mola vermek ister misiniz?");
+                LoggerService?.Log("[GameplayTimer] Mola vermek ister misiniz?");
             }
         }
     }

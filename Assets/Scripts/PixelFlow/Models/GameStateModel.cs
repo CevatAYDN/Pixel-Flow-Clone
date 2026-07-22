@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Nexus.Core;
-using UnityEngine;
+using Nexus.Core.Services;
 
 namespace PixelFlow.Models
 {
@@ -22,6 +22,9 @@ namespace PixelFlow.Models
         public GameState CurrentState { get; private set; }
         public GameState PreviousState { get; private set; }
         public event Action<GameState> OnStateChanged;
+
+        // Statik logger — NexusRuntime üzerinden erişir. DI constructor gerektirmez.
+        private static ILoggerService Logger => NexusRuntime.Logger;
 
         private static readonly HashSet<(GameState from, GameState to)> AllowedTransitions = new HashSet<(GameState, GameState)>
         {
@@ -76,7 +79,7 @@ namespace PixelFlow.Models
 
             if (!AllowedTransitions.Contains((CurrentState, state)))
             {
-                Debug.LogError($"[GameStateModel] Illegal transition: {CurrentState} → {state}. Blocked.");
+                Logger?.LogError($"[GameStateModel] Illegal transition: {CurrentState} → {state}. Blocked.");
                 return;
             }
 

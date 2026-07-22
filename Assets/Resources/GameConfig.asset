@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0b41627fafb3084083de13c04176f33, type: 3}
+  m_Name: GameConfig
+  m_EditorClassIdentifier: PixelFlow::PixelFlow.Data.GameConfig
+  RootSearchRetries: 10
+  RootSearchInterval: 0.1
+  VehicleSpeed: 3
+  SpawnInterval: 1.2
+  MaxProgressPerFrame: 0.25
+  MaxSimulationSafetyDuration: 45
+  FerryPeriod: 10
+  HistoryMaxDepth: 200
+  HubCameraSize: 7
+  MinZoom: 8
+  MaxZoom: 12
+  DefaultHintCount: 3
+  MaxRetriesBeforeInterstitial: 3
+  MinLevelForInterstitial: 5
+  IdleReminderSeconds: 300
+  MaxGraceSkips: 3
+  PathSolverMaxIterations: 200000
+  AudioSampleRate: 44100
+  DefaultUnlockedLevels: 1

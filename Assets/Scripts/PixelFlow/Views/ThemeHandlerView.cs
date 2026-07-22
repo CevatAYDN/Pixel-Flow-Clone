@@ -1,4 +1,5 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Services;
@@ -15,6 +16,7 @@ namespace PixelFlow.Views
     {
         [Inject] public ISettingsModel SettingsModel { get; set; }
         [Inject] public ICameraProvider CameraProvider { get; set; }
+        [Inject] public ILoggerService LoggerService { get; set; }
 
         protected override void OnBind()
         {
@@ -37,17 +39,17 @@ namespace PixelFlow.Views
                 case AppTheme.Dark:
                     cam.backgroundColor = new Color(0.043f, 0.059f, 0.098f);
                     RenderSettings.ambientLight = new Color(0.3f, 0.3f, 0.4f);
-                    Debug.Log("[ThemeHandler] Applied Dark theme");
+                    LoggerService?.Log("[ThemeHandler] Applied Dark theme");
                     break;
                 case AppTheme.Light:
                     cam.backgroundColor = new Color(0.92f, 0.92f, 0.94f);
                     RenderSettings.ambientLight = new Color(0.8f, 0.8f, 0.85f);
-                    Debug.Log("[ThemeHandler] Applied Light theme");
+                    LoggerService?.Log("[ThemeHandler] Applied Light theme");
                     break;
                 case AppTheme.Neon:
                     cam.backgroundColor = new Color(0.03f, 0.01f, 0.06f);
                     RenderSettings.ambientLight = new Color(0.6f, 0.2f, 0.8f);
-                    Debug.Log("[ThemeHandler] Applied Neon theme");
+                    LoggerService?.Log("[ThemeHandler] Applied Neon theme");
                     break;
             }
         }

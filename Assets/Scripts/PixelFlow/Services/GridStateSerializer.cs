@@ -50,6 +50,8 @@ namespace PixelFlow.Services
             public List<Vector2Int> positions = new List<Vector2Int>();
         }
 
+        private static ILoggerService Logger => NexusRuntime.Logger;
+
         public static void Save(IGridModel grid, IGameSessionModel session, ILevelModel level, IPlayerPrefsService prefs = null)
         {
             if (grid == null) return;
@@ -116,7 +118,7 @@ namespace PixelFlow.Services
                 PlayerPrefs.SetString(PrefKey, json);
                 PlayerPrefs.Save();
             }
-            Debug.Log($"[PixelFlow.GridStateSerializer] 💾 Game state saved: Level {data.levelIndex + 1} ({data.width}x{data.height}, Cells: {data.cells.Count}, Active Paths: {data.paths.Count}, Score: {data.score})");
+            Logger?.Log($"[PixelFlow.GridStateSerializer] 💾 Game state saved: Level {data.levelIndex + 1} ({data.width}x{data.height}, Cells: {data.cells.Count}, Active Paths: {data.paths.Count}, Score: {data.score})");
         }
 
         /// <summary>
@@ -134,13 +136,13 @@ namespace PixelFlow.Services
                 var loaded = JsonUtility.FromJson<GridSaveData>(json);
                 if (loaded != null)
                 {
-                    Debug.Log($"[PixelFlow.GridStateSerializer] 📖 Save file loaded successfully: Level {loaded.levelIndex + 1} ({loaded.width}x{loaded.height}, Cells: {loaded.cells.Count}, Paths: {loaded.paths.Count})");
+                    Logger?.Log($"[PixelFlow.GridStateSerializer] 📖 Save file loaded successfully: Level {loaded.levelIndex + 1} ({loaded.width}x{loaded.height}, Cells: {loaded.cells.Count}, Paths: {loaded.paths.Count})");
                 }
                 return loaded;
             }
             catch (System.Exception ex)
             {
-                Debug.LogWarning($"[PixelFlow.GridStateSerializer] Failed to parse save JSON: {ex.Message}");
+                Logger?.LogWarning($"[PixelFlow.GridStateSerializer] Failed to parse save JSON: {ex.Message}");
                 return null;
             }
         }
@@ -183,6 +185,23 @@ namespace PixelFlow.Services
 
             grid.ActiveColor.Value = (ColorType)data.activeColor;
             grid.LastPosition.Value = new Vector2Int(data.lastPosX, data.lastPosY);
+
+            // ---- Rebuild PathColorsMask from grid.Paths ----
+            // Eski save formatlarında pathColors listesi boş olabilir; ayrıca
+            // cell-level ve path-level veri arasında tutarlılık sağlar.
+            for (int x = 0; x < grid.Width; x++)
+                for (int y = 0; y < grid.Height; y++)
+                    grid.Grid[x, y].ClearPathColors();
+
+            foreach (var kvp in grid.Paths)
+            {
+                byte bit = (byte)(1 << (int)kvp.Key);
+                foreach (var pos in kvp.Value)
+                {
+                    if (pos.x >= 0 && pos.x < grid.Width && pos.y >= 0 && pos.y < grid.Height)
+                        grid.Grid[pos.x, pos.y].PathColorsMask |= bit;
+                }
+            }
         }
 
         public static bool IsSaveDataValidForLevel(GridSaveData save, LevelData level)

@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.Services;
+using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Services;
 
@@ -89,6 +90,13 @@ namespace PixelFlow
             builder.BindSignal<PixelFlow.Signals.LoadedInitialLevelSignal>();
             builder.BindSignal<PixelFlow.Signals.FlowScoreUpdatedSignal>();
             builder.BindSignal<PixelFlow.Signals.ProgressUpdatedSignal>();
+
+            // GameConfig ScriptableObject — Resources'tan yüklenir, tüm servislere enjekte edilebilir.
+            var config = UnityEngine.Resources.Load<GameConfig>("GameConfig");
+            if (config != null)
+            {
+                builder.BindInstance(config);
+            }
         }
 
         public ValueTask OnInitializeAsync(CancellationToken ct) => default;

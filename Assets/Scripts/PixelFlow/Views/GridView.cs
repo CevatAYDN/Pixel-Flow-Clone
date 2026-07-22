@@ -1,8 +1,9 @@
 using UnityEngine;
 using System.Collections.Generic;
 using Nexus.Core;
-using PixelFlow.Models;
+using Nexus.Core.Services;
 using PixelFlow.Data;
+using PixelFlow.Models;
 using PixelFlow.Services;
 
 namespace PixelFlow.Views
@@ -18,6 +19,8 @@ namespace PixelFlow.Views
         [SerializeField] private Transform _gridContainer;
 
         [Inject] public ICameraProvider CameraProvider { get; set; }
+        [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject] public PixelFlow.Data.GameConfig Config { get; set; }
 
         private Camera _cam;
         private CellView[,] _cells;
@@ -31,8 +34,8 @@ namespace PixelFlow.Views
         private int _activePointerId = -1;
 
         private float _targetZoom;
-        private const float MinZoom = 8f;
-        private const float MaxZoom = 12f;
+        private float ConfigMinZoom => Config != null ? Config.MinZoom : 8f;
+        private float ConfigMaxZoom => Config != null ? Config.MaxZoom : 12f;
 
         private void Awake()
         {
@@ -252,13 +255,13 @@ namespace PixelFlow.Views
                     _cellPool.Enqueue(cell);
                     _instantiatedCells.Add(cell);
                 }
-                UnityEngine.Debug.Log($"[GridView] Instantiated {toCreate} new cells. Total cell pool size: {_instantiatedCells.Count}");
+                LoggerService?.Log($"[GridView] Instantiated {toCreate} new cells. Total cell pool size: {_instantiatedCells.Count}");
             }
         }
 
         public void InitializeGrid(int width, int height)
         {
-            UnityEngine.Debug.Log($"[GridView] InitializeGrid called with {width}x{height}");
+            LoggerService?.Log($"[GridView] InitializeGrid called with {width}x{height}");
 
             if (_cells != null)
             {
@@ -572,7 +575,7 @@ namespace PixelFlow.Views
             if (prevDist < 0.001f) return;
 
             float zoomFactor = prevDist / currDist;
-            _targetZoom = Mathf.Clamp(_targetZoom * zoomFactor, MinZoom, MaxZoom);
+            _targetZoom = Mathf.Clamp(_targetZoom * zoomFactor, ConfigMinZoom, ConfigMaxZoom);
             _cam.orthographicSize = Mathf.Lerp(_cam.orthographicSize, _targetZoom, 0.3f);
         }
     }

@@ -2,16 +2,18 @@ using System.Collections.Generic;
 using System.Linq;
 using PixelFlow.Data;
 using PixelFlow.Models;
-using UnityEngine;
 using Nexus.Core;
+using Nexus.Core.Services;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace PixelFlow.Services
 {
     public sealed class HintService : IHintService, INexusService
     {
         private readonly IPathSolver _solver;
+        [Inject] public ILoggerService LoggerService { get; set; }
 
         public HintService(IPathSolver solver)
         {
@@ -50,14 +52,14 @@ namespace PixelFlow.Services
                 if (group.Key == ColorType.None) continue;
                 if (!grid.Paths.ContainsKey(group.Key) || grid.Paths[group.Key].Count < 2)
                 {
-                    Debug.Log($"[HintService] Unsolved color '{group.Key}' found. Requesting hint (steps={steps})...");
+                    LoggerService?.Log($"[HintService] Unsolved color '{group.Key}' found. Requesting hint (steps={steps})...");
                     var result = GetHint(level, group.Key, steps);
-                    Debug.Log($"[HintService] GetHint for '{group.Key}' returned {(result != null ? result.Count + " positions" : "null")}");
+                    LoggerService?.Log($"[HintService] GetHint for '{group.Key}' returned {(result != null ? result.Count + " positions" : "null")}");
                     if (result != null) return result;
                 }
             }
 
-            Debug.LogWarning($"[HintService] GetNextUnsolvedHint: no unsolved colors found. Grid has {grid.Paths.Count} paths.");
+            LoggerService?.LogWarning($"[HintService] GetNextUnsolvedHint: no unsolved colors found. Grid has {grid.Paths.Count} paths.");
             return null;
         }
 

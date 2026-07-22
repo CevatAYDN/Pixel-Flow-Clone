@@ -33,13 +33,14 @@ namespace PixelFlow.Services
     {
         [Inject] public IGridModel GridModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
+        [Inject] public Data.GameConfig Config { get; set; }
 
         private readonly Dictionary<Vector2Int, ObstacleType> _obstacles = new Dictionary<Vector2Int, ObstacleType>();
         private readonly Dictionary<Vector2Int, Vector2Int> _oneWayDirs = new Dictionary<Vector2Int, Vector2Int>();
         private readonly Dictionary<Vector2Int, bool> _ferryBlocked = new Dictionary<Vector2Int, bool>();
         private readonly Dictionary<Vector2Int, ColorType> _narrowPassOccupants = new Dictionary<Vector2Int, ColorType>();
         private float _ferryTimer;
-        private const float FerryPeriod = 10f;
+        private float ConfigFerryPeriod => Config != null ? Config.FerryPeriod : 10f;
 
         public ValueTask InitializeAsync(CancellationToken ct) => default;
         public void OnDispose()
@@ -96,7 +97,7 @@ namespace PixelFlow.Services
         {
             if (_ferryBlocked.Count == 0) return;
             _ferryTimer += deltaTime;
-            if (_ferryTimer < FerryPeriod) return;
+            if (_ferryTimer < ConfigFerryPeriod) return;
             _ferryTimer = 0f;
             // Tüm ferilerin blok durumunu ters çevir.
             var keys = new List<Vector2Int>(_ferryBlocked.Keys);
@@ -105,7 +106,7 @@ namespace PixelFlow.Services
                 _ferryBlocked[keys[i]] = !_ferryBlocked[keys[i]];
                 if (GridModel != null && _ferryBlocked[keys[i]])
                 {
-                    // Bloklandığında hücreyi Obstacle yap, yoksa Empty.
+                    // Bloklandığında hücreyi Obstacle yap.
                     if (keys[i].x >= 0 && keys[i].x < GridModel.Width && keys[i].y >= 0 && keys[i].y < GridModel.Height)
                     {
                         GridModel.Grid[keys[i].x, keys[i].y].State = CellState.Obstacle;
@@ -113,6 +114,7 @@ namespace PixelFlow.Services
                 }
                 else
                 {
+                    // Blok kalktığında hücreyi eski haline döndür.
                     if (GridModel != null && keys[i].x >= 0 && keys[i].x < GridModel.Width && keys[i].y >= 0 && keys[i].y < GridModel.Height)
                     {
                         var cell = GridModel.Grid[keys[i].x, keys[i].y];
@@ -121,12 +123,12 @@ namespace PixelFlow.Services
                             cell.State = CellState.Empty;
                             cell.Color = ColorType.None;
                             cell.ClearPathColors();
+                        }
+                    }
                 }
             }
 
             SignalBus?.Fire(new GridUpdatedSignal());
-        }
-            }
         }
 
         public bool IsOneWay(Vector2Int cell, Vector2Int moveDir)

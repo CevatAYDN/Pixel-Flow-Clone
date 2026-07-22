@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using PixelFlow.Data;
+using Nexus.Core;
+using Nexus.Core.Services;
 using UnityEngine;
 
 namespace PixelFlow.Services
@@ -15,16 +17,24 @@ namespace PixelFlow.Services
     {
         private readonly IPathSolver _solver;
         private readonly System.Random _rng;
+        private readonly ILoggerService _logger;
 
-        public ProceduralLevelGenerator(IPathSolver solver) : this(solver, new System.Random()) { }
+        public ProceduralLevelGenerator(IPathSolver solver) : this(solver, new System.Random(), null) { }
 
         public ProceduralLevelGenerator(IPathSolver solver, int seed)
-            : this(solver, new System.Random(seed)) { }
+            : this(solver, new System.Random(seed), null) { }
 
-        private ProceduralLevelGenerator(IPathSolver solver, System.Random rng)
+        public ProceduralLevelGenerator(IPathSolver solver, ILoggerService logger)
+            : this(solver, new System.Random(), logger) { }
+
+        public ProceduralLevelGenerator(IPathSolver solver, int seed, ILoggerService logger)
+            : this(solver, new System.Random(seed), logger) { }
+
+        private ProceduralLevelGenerator(IPathSolver solver, System.Random rng, ILoggerService logger)
         {
             _solver = solver ?? new RuntimePathSolver();
             _rng = rng;
+            _logger = logger;
         }
 
         /// <summary>
@@ -44,7 +54,7 @@ namespace PixelFlow.Services
                     return level;
                 }
             }
-            Debug.LogWarning($"[ProceduralLevelGenerator] Failed to generate solvable level after {maxAttempts} attempts.");
+            (_logger ?? NexusRuntime.Logger)?.LogWarning($"[ProceduralLevelGenerator] Failed to generate solvable level after {maxAttempts} attempts.");
             return null;
         }
 

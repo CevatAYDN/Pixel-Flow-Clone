@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System;
 using Nexus.Core;
+using Nexus.Core.Services;
 
 namespace PixelFlow.Views
 {
@@ -60,6 +61,8 @@ namespace PixelFlow.Views
 
         private Button _crisisViaductButton;
         private Button _crisisUndoButton;
+
+        [Inject] public ILoggerService LoggerService { get; set; }
 
         private void Awake()
         {
@@ -256,7 +259,7 @@ namespace PixelFlow.Views
             }
             else
             {
-                Debug.LogWarning("[HUDView] _completionPanel is null in Inspector! Cannot show level completed panel.");
+                LoggerService?.LogWarning("[HUDView] _completionPanel is null in Inspector! Cannot show level completed panel.");
             }
 
             if (_bloomFlashOverlay != null)
@@ -307,7 +310,7 @@ namespace PixelFlow.Views
             if (_nextLevelButton != null)
                 _nextLevelButton.gameObject.SetActive(true);
             else
-                Debug.LogWarning("[HUDView] _nextLevelButton is null in Inspector!");
+                LoggerService?.LogWarning("[HUDView] _nextLevelButton is null in Inspector!");
         }
 
         public void HideCompletion()
@@ -499,7 +502,7 @@ namespace PixelFlow.Views
                 {
                     if (keyboard.spaceKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame || keyboard.nKey.wasPressedThisFrame)
                     {
-                        Debug.Log("[HUDView] Next level keyboard shortcut triggered (Space/Enter/N).");
+                        LoggerService?.Log("[HUDView] Next level keyboard shortcut triggered (Space/Enter/N).");
                         OnNextLevelClicked?.Invoke();
                     }
                 }

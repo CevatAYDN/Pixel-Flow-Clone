@@ -1,3 +1,4 @@
+using PixelFlow.Data;
 using System;
 using PixelFlow.Services;
 using System.Threading;
@@ -37,10 +38,14 @@ namespace PixelFlow.Models
         public int TotalHintsUsed => _totalHintsUsed;
         public event Action<int> OnHintCountChanged;
 
-        public HintModel(IPlayerPrefsService prefs)
+        [Inject]
+        public HintModel(IPlayerPrefsService prefs) : this(prefs, null) { }
+
+        public HintModel(IPlayerPrefsService prefs, GameConfig config)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
-            _hintsRemaining = _prefs.GetInt(Key, DefaultHints);
+            int defaultHints = config != null ? config.DefaultHintCount : DefaultHints;
+            _hintsRemaining = _prefs.GetInt(Key, defaultHints);
         }
 
         public ValueTask OnBind(CancellationToken ct) => default;

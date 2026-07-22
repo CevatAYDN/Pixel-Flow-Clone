@@ -54,6 +54,24 @@ namespace PixelFlow.Editor
         private List<LevelData> _cachedLevels = new List<LevelData>();
         private Vector2 _scrollPos;
 
+        [MenuItem("PixelFlow/Create GameConfig Asset")]
+        private static void CreateGameConfigAsset()
+        {
+            var existing = UnityEngine.Resources.Load<PixelFlow.Data.GameConfig>("GameConfig");
+            if (existing != null)
+            {
+                Debug.Log("[PixelFlow] GameConfig.asset already exists at Resources/GameConfig.asset");
+                return;
+            }
+
+            var config = ScriptableObject.CreateInstance<PixelFlow.Data.GameConfig>();
+            string path = "Assets/Resources/GameConfig.asset";
+            System.IO.Directory.CreateDirectory("Assets/Resources");
+            UnityEditor.AssetDatabase.CreateAsset(config, path);
+            UnityEditor.AssetDatabase.SaveAssets();
+            Debug.Log($"[PixelFlow] GameConfig.asset created at {path}");
+        }
+
         // ─── Stiller ───
         private GUIStyle _headerStyle;
         private GUIStyle _cardStyle;

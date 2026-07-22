@@ -16,8 +16,8 @@ namespace PixelFlow.Services
     public class CameraController : View
     {
         [Inject] public ICameraProvider CameraProvider { get; set; }
-        public IGameStateModel GameStateModel { get; set; }
-        public ISignalBus SignalBus { get; set; }
+        [Inject] public IGameStateModel GameStateModel { get; set; }
+        [Inject] public ISignalBus SignalBus { get; set; }
 
         private Camera _cam;
         private Coroutine _transition;

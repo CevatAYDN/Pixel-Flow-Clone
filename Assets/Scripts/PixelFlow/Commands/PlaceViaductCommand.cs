@@ -82,7 +82,7 @@ namespace PixelFlow.Commands
                     cell.OverColor = colors[1];
                 }
 
-                Debug.Log($"[PlaceViaductCommand] Placed viaduct at {pos}. Under: {cell.UnderColor}, Over: {cell.OverColor}. Remaining viaducts: {GameSessionModel.AvailableViaducts}");
+                LoggerService?.Log($"[PlaceViaductCommand] Placed viaduct at {pos}. Under: {cell.UnderColor}, Over: {cell.OverColor}. Remaining viaducts: {GameSessionModel.AvailableViaducts}");
                 
                 // Eğer kriz durumunda duraklatılmışsak, kazadan önceki orijinal oyun durumuna geri dön!
                 if (GameStateModel.CurrentState == GameState.Paused)
@@ -99,7 +99,7 @@ namespace PixelFlow.Commands
             }
             else
             {
-                Debug.LogWarning("[PlaceViaductCommand] Out of viaducts!");
+                LoggerService?.LogWarning("[PlaceViaductCommand] Out of viaducts!");
                 SignalBus.Fire(new ViaductExhaustedSignal());
             }
         }

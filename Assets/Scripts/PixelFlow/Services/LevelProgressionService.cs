@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Data;
 using System.Threading;
 using System.Threading.Tasks;
-using UnityEngine;
 
 namespace PixelFlow.Services
 {
@@ -26,20 +26,25 @@ namespace PixelFlow.Services
         private readonly ProceduralLevelGenerator _generator;
         private readonly Dictionary<int, LevelData> _generatedCache;
         private PhaseConfigAsset _phaseConfig;
+        private readonly ILoggerService _logger;
 
         public int LevelsPerDifficulty => 5;
 
         [Inject]
-        public LevelProgressionService() : this(new ProceduralLevelGenerator(new RuntimePathSolver()))
+        public LevelProgressionService() : this(new ProceduralLevelGenerator(new RuntimePathSolver()), null)
         {
             // GDD §3.6: Resources'tan PhaseConfigAsset yükle (editörde oluşturulmuş olmalı)
-            _phaseConfig = Resources.Load<PhaseConfigAsset>("PhaseConfig");
+            _phaseConfig = UnityEngine.Resources.Load<PhaseConfigAsset>("PhaseConfig");
         }
 
-        internal LevelProgressionService(ProceduralLevelGenerator generator)
+        // Eski overload — geriye uyumluluk (testler için)
+        internal LevelProgressionService(ProceduralLevelGenerator generator) : this(generator, null) { }
+
+        internal LevelProgressionService(ProceduralLevelGenerator generator, ILoggerService logger)
         {
             _generator = generator;
             _generatedCache = new Dictionary<int, LevelData>();
+            _logger = logger ?? NexusRuntime.Logger;
         }
 
         public DifficultyParams GetDifficultyForLevel(int levelIndex)
@@ -67,9 +72,9 @@ namespace PixelFlow.Services
             int span = phase.EndLevelIndex - phase.StartLevelIndex + 1;
             float progress = span > 0 ? (float)(levelIndex - phase.StartLevelIndex) / span : 0f;
 
-            int gridSize = Mathf.RoundToInt(Mathf.Lerp(phase.GridSizeMin, phase.GridSizeMax, progress));
-            int colorCount = Mathf.RoundToInt(Mathf.Lerp(phase.ColorCountMin, phase.ColorCountMax, progress));
-            int bridgeCount = Mathf.RoundToInt(Mathf.Lerp(phase.BridgeCountMin, phase.BridgeCountMax, progress));
+            int gridSize = UnityEngine.Mathf.RoundToInt(UnityEngine.Mathf.Lerp(phase.GridSizeMin, phase.GridSizeMax, progress));
+            int colorCount = UnityEngine.Mathf.RoundToInt(UnityEngine.Mathf.Lerp(phase.ColorCountMin, phase.ColorCountMax, progress));
+            int bridgeCount = UnityEngine.Mathf.RoundToInt(UnityEngine.Mathf.Lerp(phase.BridgeCountMin, phase.BridgeCountMax, progress));
 
             return new DifficultyParams(
                 gridSize, gridSize, colorCount, bridgeCount,
@@ -84,14 +89,14 @@ namespace PixelFlow.Services
             if (_generatedCache.TryGetValue(levelIndex, out var cached))
                 return cached;
 
-            LevelData level = Resources.Load<LevelData>($"Levels/Level{levelIndex + 1}");
+            LevelData level = UnityEngine.Resources.Load<LevelData>($"Levels/Level{levelIndex + 1}");
             if (level == null)
             {
-                level = Resources.Load<LevelData>($"Levels/Level{levelIndex}");
+                level = UnityEngine.Resources.Load<LevelData>($"Levels/Level{levelIndex}");
             }
             if (level == null)
             {
-                var allLevels = Resources.LoadAll<LevelData>("Levels");
+                var allLevels = UnityEngine.Resources.LoadAll<LevelData>("Levels");
                 foreach (var l in allLevels)
                 {
                     if (l != null && l.levelIndex == levelIndex)
@@ -103,7 +108,7 @@ namespace PixelFlow.Services
             }
             if (level == null)
             {
-                var packs = Resources.LoadAll<LevelPack>("Levels");
+                var packs = UnityEngine.Resources.LoadAll<LevelPack>("Levels");
                 if (packs != null)
                 {
                     foreach (var pack in packs)
@@ -126,22 +131,22 @@ namespace PixelFlow.Services
 
             if (level != null)
             {
-                Debug.Log($"[PixelFlow.LevelProgressionService] Loaded handcrafted LevelData asset for index {levelIndex}: '{level.name}' ({level.width}x{level.height})");
+                _logger?.Log($"[PixelFlow.LevelProgressionService] Loaded handcrafted LevelData asset for index {levelIndex}: '{level.name}' ({level.width}x{level.height})");
             }
 
             if (level == null)
             {
-                Debug.Log($"[PixelFlow.LevelProgressionService] No handcrafted LevelData asset found for index {levelIndex}. Generating procedurally...");
+                _logger?.Log($"[PixelFlow.LevelProgressionService] No handcrafted LevelData asset found for index {levelIndex}. Generating procedurally...");
                 var param = GetDifficultyForLevel(levelIndex);
                 level = _generator.Generate(param);
                 if (level != null)
                 {
                     level.levelIndex = levelIndex;
-                    Debug.Log($"[PixelFlow.LevelProgressionService] Procedurally generated Level {levelIndex + 1} ({param.gridWidth}x{param.gridHeight}, {param.colorCount} colors).");
+                    _logger?.Log($"[PixelFlow.LevelProgressionService] Procedurally generated Level {levelIndex + 1} ({param.gridWidth}x{param.gridHeight}, {param.colorCount} colors).");
                 }
                 else
                 {
-                    Debug.LogError($"[PixelFlow.LevelProgressionService] ERROR: Procedural generator failed to generate level for index {levelIndex}.");
+                    _logger?.LogError($"[PixelFlow.LevelProgressionService] ERROR: Procedural generator failed to generate level for index {levelIndex}.");
                 }
             }
 

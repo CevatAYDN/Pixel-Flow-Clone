@@ -36,6 +36,7 @@ namespace PixelFlow.Services
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public ICameraProvider CamProvider { get; set; }
         [Inject] public ICrisisAdService CrisisAdService { get; set; }
+        [Inject] public Data.GameConfig Config { get; set; }
 
         private ICrisisAdService _crisisAdService => CrisisAdService;
 
@@ -82,10 +83,9 @@ namespace PixelFlow.Services
         private readonly Dictionary<Vector2Int, List<VehicleInstance>> _cellOccupancy = new Dictionary<Vector2Int, List<VehicleInstance>>();
 
         private float _simulationPhaseTimer = 0f;
-        private const float SimulationPhaseDuration = 10f;
-        private const float VehicleSpeed = 3f;
-        private const float SpawnInterval = 1.2f;
-        private const float MaxProgressPerFrame = 0.25f;
+        private float ConfigVehicleSpeed => Config != null ? Config.VehicleSpeed : 3f;
+        private float ConfigSpawnInterval => Config != null ? Config.SpawnInterval : 1.2f;
+        private float ConfigMaxProgressPerFrame => Config != null ? Config.MaxProgressPerFrame : 0.25f;
         private ISignalSubscription _undoSubscription;
         private ISignalSubscription _redoSubscription;
         private ISignalSubscription _levelFailedSubscription;
@@ -172,7 +172,7 @@ namespace PixelFlow.Services
                 _simulationPhaseTimer = 0f;
                 _cachedEndpoints.Clear();
                 // ClearAllVehicles() kaldırıldı - araçlar yok edilmeden pürüzsüzce hayaletten katı moda geçecek
-                Debug.Log("[VehicleSimulator] Simulation Phase started. All vehicles now transition to solid.");
+                LoggerService?.Log("[VehicleSimulator] Simulation Phase started. All vehicles now transition to solid.");
             }
             else if (state == GameState.MainMenu || state == GameState.LevelCompleted || state == GameState.LevelFailed)
             {
@@ -247,13 +247,14 @@ namespace PixelFlow.Services
 
                 if (IsColorConnected(color))
                 {
+                    float spawnInterval = ConfigSpawnInterval;
                     if (!_spawnTimers.ContainsKey(color))
                     {
-                        _spawnTimers[color] = SpawnInterval; // Spawn first vehicle immediately
+                        _spawnTimers[color] = spawnInterval; // Spawn first vehicle immediately
                     }
 
                     _spawnTimers[color] += deltaTime;
-                    if (_spawnTimers[color] >= SpawnInterval)
+                    if (_spawnTimers[color] >= spawnInterval)
                     {
                         _spawnTimers[color] = 0f;
                         SpawnVehicle(color);
@@ -341,7 +342,7 @@ namespace PixelFlow.Services
                 Progress = 0f,
                 Visual = visual,
                 CurrentPosition = new Vector3(path[0].x, path[0].y, GetZOffset(path[0], color)),
-                Speed = VehicleSpeed + UnityEngine.Random.Range(-0.3f, 0.3f),
+                Speed = ConfigVehicleSpeed + UnityEngine.Random.Range(-0.3f, 0.3f),
                 CachedRenderers = renderers.ToArray(),
                 LocoTransform = loco,
                 Wagon1Transform = wagon1,
@@ -696,7 +697,7 @@ namespace PixelFlow.Services
                     }
                 }
 
-                v.TotalDistance += Mathf.Min(v.Speed * deltaTime, MaxProgressPerFrame);
+                v.TotalDistance += Mathf.Min(v.Speed * deltaTime, ConfigMaxProgressPerFrame);
                 float maxAllowedDist = (v.Style == VehicleStyle.Train) ? (v.Path.Count - 1) + 0.85f : (v.Path.Count - 1);
 
                 if (v.TotalDistance >= maxAllowedDist)
@@ -1027,8 +1028,8 @@ namespace PixelFlow.Services
             _simulationPhaseTimer += deltaTime;
             
             // Maksimum 45 saniye güvenlik limiti (darboğaz durumlarında kilitlenmeyi önlemek için)
-            const float maxSimulationSafetyDuration = 45f;
-            float remaining = Mathf.Max(0f, maxSimulationSafetyDuration - _simulationPhaseTimer);
+            float maxDuration = Config != null ? Config.MaxSimulationSafetyDuration : 45f;
+            float remaining = Mathf.Max(0f, maxDuration - _simulationPhaseTimer);
             GameSessionModel.SetSimulationTimer(remaining);
 
             // Flow Score kazanma kontrolü
@@ -1036,7 +1037,7 @@ namespace PixelFlow.Services
             {
                 CompleteLevel();
             }
-            else if (_simulationPhaseTimer >= maxSimulationSafetyDuration)
+            else if (_simulationPhaseTimer >= maxDuration)
             {
                 // Güvenlik zaman aşımı durumunda (kazasız ama akış yetersiz)
                 LoggerService?.LogWarning("[VehicleSimulator] Simulation safety timeout reached. Returning to playing state due to grid congestion.");

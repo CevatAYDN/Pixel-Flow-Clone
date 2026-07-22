@@ -30,9 +30,10 @@ namespace PixelFlow.Services
         [Inject] public IGameSessionModel GameSessionModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public ILevelModel LevelModel { get; set; }
+        [Inject] public Data.GameConfig Config { get; set; }
 
-        private const int MaxRetriesBeforeInterstitial = 3;
-        private const int MinLevelForInterstitial = 5; // 1-indexed: ilk 5 seviyede yok
+        private int ConfigMaxRetries => Config != null ? Config.MaxRetriesBeforeInterstitial : 3;
+        private int ConfigMinLevel => Config != null ? Config.MinLevelForInterstitial : 5;
 
         public int RetryCount => GameSessionModel?.RetryCount ?? 0;
         public bool IsViaductExhausted => GameSessionModel != null && GameSessionModel.AvailableViaducts <= 0;
@@ -53,8 +54,8 @@ namespace PixelFlow.Services
             GameSessionModel.IncrementRetryCount();
 
             int level = LevelModel?.CurrentLevel?.levelIndex ?? 0;
-            if (level + 1 < MinLevelForInterstitial) return;
-            if (RetryCount > 0 && RetryCount % MaxRetriesBeforeInterstitial == 0)
+            if (level + 1 < ConfigMinLevel) return;
+            if (RetryCount > 0 && RetryCount % ConfigMaxRetries == 0)
             {
                 SignalBus?.Fire(new RequestInterstitialAdSignal());
                 SignalBus?.Fire(new CrisisRetryExhaustedSignal { RetryCount = RetryCount });

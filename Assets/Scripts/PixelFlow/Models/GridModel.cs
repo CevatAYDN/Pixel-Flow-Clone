@@ -15,7 +15,8 @@ namespace PixelFlow.Models
         public ColorType Color;
         /// <summary>
         /// Bitmask of path colors traversing this cell.
-        /// Bit 0=Blue, 1=Red, 2=Yellow, 3=Green, 4=Purple.
+        /// Bit 0=unused (None), 1=Red, 2=Green, 3=Blue, 4=Yellow, 5=Purple.
+        /// ColorType enum values map 1:1 to bit positions: (byte)(1 &lt;&lt; (int)color).
         /// Replaces HashSet{ColorType} PathColors to eliminate per-cell GC allocations.
         /// </summary>
         public byte PathColorsMask;
@@ -56,10 +57,12 @@ namespace PixelFlow.Models
 
         /// <summary>
         /// Enumerate all path colors set in the bitmask.
+        /// Skips bit 0 (ColorType.None). Covers bits 1-5 (Red through Purple).
         /// </summary>
         public IEnumerable<ColorType> GetPathColors()
         {
-            for (int i = 0; i < 5; i++)
+            // Bit 0 = None (skip), bits 1-5 = Red, Green, Blue, Yellow, Purple
+            for (int i = 1; i <= 5; i++)
             {
                 if ((PathColorsMask & (1 << i)) != 0)
                     yield return (ColorType)i;

@@ -12,6 +12,7 @@ namespace PixelFlow.Views
 {
     public class HUDMediator : Mediator<HUDView>
     {
+        [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public IHintModel HintModel { get; set; }
         [Inject] public ILevelModel LevelModel { get; set; }
         [Inject] public ISettingsModel SettingsModel { get; set; }
@@ -126,7 +127,7 @@ namespace PixelFlow.Views
         {
             if (GameStateModel.CurrentState != GameState.Playing)
             {
-                Debug.Log("[HUDMediator] Hint ignored: game is not in Playing state.");
+                LoggerService?.Log("[HUDMediator] Hint ignored: game is not in Playing state.");
                 return;
             }
             SignalBus.Fire(new RequestHintSignal());
@@ -171,7 +172,7 @@ namespace PixelFlow.Views
 
         private void HandleIntersectionWarning(PathIntersectionWarningSignal signal)
         {
-            Debug.Log($"[HUDMediator] Intersection warning at {signal.Position} — viaduct may be needed.");
+            LoggerService?.Log($"[HUDMediator] Intersection warning at {signal.Position} — viaduct may be needed.");
         }
 
         private void HandleSimulationTimerChanged(float remaining)
@@ -191,13 +192,13 @@ namespace PixelFlow.Views
 
         private void HandleCrisisViaductClicked()
         {
-            Debug.Log($"[HUDMediator] Crisis Viaduct Clicked. Placing viaduct at {_lastCrashPosition}");
+            LoggerService?.Log($"[HUDMediator] Crisis Viaduct Clicked. Placing viaduct at {_lastCrashPosition}");
             SignalBus.Fire(new PlaceViaductSignal { Position = _lastCrashPosition });
         }
 
         private void HandleCrisisUndoClicked()
         {
-            Debug.Log("[HUDMediator] Crisis Undo Clicked. Reverting path.");
+            LoggerService?.Log("[HUDMediator] Crisis Undo Clicked. Reverting path.");
             GameSessionModel?.MarkCrisisUndoUsed();
             SignalBus.Fire(new UndoSignal());
             View?.HideCrisis();
@@ -224,34 +225,34 @@ namespace PixelFlow.Views
 
         private void HandleNextLevelClicked()
         {
-            Debug.Log($"[HUDMediator] HandleNextLevelClicked() called. Current State: {GameStateModel.CurrentState}");
+            LoggerService?.Log($"[HUDMediator] HandleNextLevelClicked() called. Current State: {GameStateModel.CurrentState}");
             if (GameStateModel.CurrentState != GameState.LevelCompleted)
             {
-                Debug.LogWarning($"[HUDMediator] Next level ignored: state={GameStateModel.CurrentState}");
+                LoggerService?.LogWarning($"[HUDMediator] Next level ignored: state={GameStateModel.CurrentState}");
                 return;
             }
 
             var current = LevelModel.CurrentLevel;
             if (current == null)
             {
-                Debug.LogWarning("[HUDMediator] No current level loaded; cannot determine next.");
+                LoggerService?.LogWarning("[HUDMediator] No current level loaded; cannot determine next.");
                 return;
             }
 
             int nextLevelIndex = current.levelIndex + 1;
-            Debug.Log($"[HUDMediator] Current Level Index: {current.levelIndex}, Next Target Index: {nextLevelIndex}");
+            LoggerService?.Log($"[HUDMediator] Current Level Index: {current.levelIndex}, Next Target Index: {nextLevelIndex}");
 
             LevelData nextLevel = ProgressionService.GetOrGenerateLevel(nextLevelIndex);
 
             if (nextLevel != null)
             {
-                Debug.Log($"[HUDMediator] Firing LoadLevelSignal for level index: {nextLevel.levelIndex} ({nextLevel.name})");
+                LoggerService?.Log($"[HUDMediator] Firing LoadLevelSignal for level index: {nextLevel.levelIndex} ({nextLevel.name})");
                 View.HideCompletion();
                 SignalBus.Fire(new LoadLevelSignal { LevelToLoad = nextLevel });
             }
             else
             {
-                Debug.LogError("[HUDMediator] Failed to load or generate next level! nextLevel is null.");
+                LoggerService?.LogError("[HUDMediator] Failed to load or generate next level! nextLevel is null.");
             }
         }
 
@@ -327,13 +328,13 @@ namespace PixelFlow.Views
 
         private void HandleViaductExhausted(ViaductExhaustedSignal signal)
         {
-            Debug.Log("[HUDMediator] Viaducts exhausted! Showing crisis prompt.");
+            LoggerService?.Log("[HUDMediator] Viaducts exhausted! Showing crisis prompt.");
             View.ShowViaductLimitReached($"Viaducts exhausted! ({GameSessionModel.AvailableViaducts} remaining)");
         }
 
         private void HandleCrisisRetryExhausted(CrisisRetryExhaustedSignal signal)
         {
-            Debug.Log($"[HUDMediator] Crisis retries exhausted ({signal.RetryCount}). Requesting ad/skip.");
+            LoggerService?.Log($"[HUDMediator] Crisis retries exhausted ({signal.RetryCount}). Requesting ad/skip.");
             View.ShowCrisisRetryExhausted(signal.RetryCount);
         }
 
@@ -414,12 +415,12 @@ namespace PixelFlow.Views
             var state = GameStateModel.CurrentState;
             if (state == GameState.Playing)
             {
-                Debug.Log("[HUDMediator] Debug: Manually starting simulation phase (Simulating).");
+                LoggerService?.Log("[HUDMediator] Debug: Manually starting simulation phase (Simulating).");
                 GameStateModel.SetState(GameState.Simulating);
             }
             else if (state == GameState.Simulating)
             {
-                Debug.Log("[HUDMediator] Debug: Manually stopping simulation phase (Playing).");
+                LoggerService?.Log("[HUDMediator] Debug: Manually stopping simulation phase (Playing).");
                 GameStateModel.SetState(GameState.Playing);
             }
         }

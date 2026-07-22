@@ -1,3 +1,4 @@
+using PixelFlow.Data;
 using PixelFlow.Services;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,10 +26,14 @@ namespace PixelFlow.Models
 
         public int UnlockedLevels { get; private set; }
 
-        public ProgressModel(IPlayerPrefsService prefs)
+        [Inject]
+        public ProgressModel(IPlayerPrefsService prefs) : this(prefs, null) { }
+
+        public ProgressModel(IPlayerPrefsService prefs, GameConfig config)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
-            UnlockedLevels = _prefs.GetInt(Key, DefaultUnlocked);
+            int defaultUnlocked = config != null ? config.DefaultUnlockedLevels : DefaultUnlocked;
+            UnlockedLevels = _prefs.GetInt(Key, defaultUnlocked);
         }
 
         public void UnlockLevel(int levelIndex)

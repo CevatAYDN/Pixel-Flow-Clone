@@ -20,6 +20,8 @@ namespace PixelFlow
 
         private const int RootSearchRetries = 10;
         private const float RootSearchInterval = 0.1f;
+
+        private ILoggerService FallbackLogger => NexusRuntime.Logger;
         private Root _cachedRoot;
 
         private ISignalBus _signalBus;
@@ -67,7 +69,7 @@ namespace PixelFlow
                 if (_loggerService != null)
                     _loggerService.LogError($"[PixelFlow] ERROR: DI resolve failed: {ex.Message}");
                 else
-                    Debug.LogError($"[PixelFlow] ERROR: DI resolve failed: {ex.Message}");
+                    (_loggerService ?? FallbackLogger)?.LogError($"[PixelFlow] ERROR: DI resolve failed: {ex.Message}");
                 yield break;
             }
 
@@ -128,9 +130,41 @@ namespace PixelFlow
                                     var tutorialDriver = nexusRoot.Context.Container.Resolve<ITutorialDriver>();
                                     tutorialDriver?.OnLevelLoaded(level.levelIndex);
 
-                                    _signalBus.Fire(new GridUpdatedSignal());
-                                    _stateModel.SetState(GameState.Playing);
-                                    _loggerService?.Log($"[PixelFlow] Game state transitioned to Playing. Level {level.levelIndex + 1} restored.");
+                                    // Kayıtlı oyunda viyadüksüz kesişimler varsa kriz panelini göster (anında çökmeyi önle)
+                                    var crashCell = FindFirstCrashCell(_gridModel);
+                                    if (crashCell.HasValue)
+                                    {
+                                        _loggerService?.Log($"[PixelFlow] Restored game has unresolved intersection at {crashCell.Value}. Showing crisis panel.");
+                                        var cell = _gridModel.GetCell(crashCell.Value);
+                                        var colors = new System.Collections.Generic.List<ColorType>();
+                                        foreach (var pc in cell.GetPathColors())
+                                            colors.Add(pc);
+
+                                        _gridModel.LastCrashPosition.Value = crashCell.Value;
+                                        if (colors.Count >= 2)
+                                        {
+                                            _gridModel.CrashColorA.Value = colors[0];
+                                            _gridModel.CrashColorB.Value = colors[1];
+                                        }
+
+                                        _signalBus.Fire(new CrashDetectedSignal
+                                        {
+                                            Position = crashCell.Value,
+                                            ColorA = colors.Count >= 1 ? colors[0] : ColorType.None,
+                                            ColorB = colors.Count >= 2 ? colors[1] : ColorType.None
+                                        });
+                                        // Önce Playing'e geç (Boot→Playing izinli), ardından Paused'a (Playing→Paused izinli)
+                                        _signalBus.Fire(new GridUpdatedSignal());
+                                        _stateModel.SetState(GameState.Playing);
+                                        _stateModel.SetState(GameState.Paused);
+                                        _loggerService?.Log($"[PixelFlow] Game state transitioned to Paused for crisis resolution at {crashCell.Value}.");
+                                    }
+                                    else
+                                    {
+                                        _signalBus.Fire(new GridUpdatedSignal());
+                                        _stateModel.SetState(GameState.Playing);
+                                        _loggerService?.Log($"[PixelFlow] Game state transitioned to Playing. Level {level.levelIndex + 1} restored.");
+                                    }
                                     yield break;
                                 }
                                 else
@@ -187,7 +221,7 @@ namespace PixelFlow
             }
             catch (System.Exception ex)
             {
-                Debug.LogWarning($"[GameBootstrapper] Failed to save game state: {ex.Message}");
+                (_loggerService ?? FallbackLogger)?.LogWarning($"[GameBootstrapper] Failed to save game state: {ex.Message}");
             }
         }
 
@@ -272,6 +306,26 @@ namespace PixelFlow
             return ResolveInitialLevel();
         }
 
+        /// <summary>
+        /// Grid'de viyadüksüz kesişim olan ilk hücreyi bulur.
+        /// Kayıtlı oyun yüklenirken anında kazayı önlemek için kullanılır.
+        /// </summary>
+        private Vector2Int? FindFirstCrashCell(IGridModel grid)
+        {
+            for (int x = 0; x < grid.Width; x++)
+            {
+                for (int y = 0; y < grid.Height; y++)
+                {
+                    var cell = grid.GetCell(x, y);
+                    if (cell.PathColorCount >= 2 && !cell.HasViaduct)
+                    {
+                        return new Vector2Int(x, y);
+                    }
+                }
+            }
+            return null;
+        }
+
         private LevelData ResolveInitialLevel()
         {
             if (initialLevel != null) return initialLevel;
@@ -283,7 +337,7 @@ namespace PixelFlow
             if (any != null && any.Length > 0)
             {
                 System.Array.Sort(any, (a, b) => a.levelIndex.CompareTo(b.levelIndex));
-                Debug.LogWarning($"[PixelFlow] Levels/Level1 not found; using lowest levelIndex asset: {any[0].name} (Index: {any[0].levelIndex})");
+                (_loggerService ?? FallbackLogger)?.LogWarning($"[PixelFlow] Levels/Level1 not found; using lowest levelIndex asset: {any[0].name} (Index: {any[0].levelIndex})");
                 return any[0];
             }
 

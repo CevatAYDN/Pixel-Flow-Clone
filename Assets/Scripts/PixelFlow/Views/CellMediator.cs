@@ -1,13 +1,21 @@
-// CellMediator removed -- CellView uses no custom mediator logic.
-// This file retained as a stub to prevent Unity "missing script" warnings
-// on scene/prefab references that were set before the mediator was removed.
-// Can be fully deleted once all scene/prefab references are cleaned up.
+// NOT: CellMediator kaldırıldı. CellView özel mediator mantığı gerektirmiyor.
+// Bu dosya, eski sahne/prefab referanslarındaki "missing script" uyarılarını
+// engellemek için tutuluyordu. Tüm referanslar temizlendikten sonra
+// güvenle silinebilir.
+//
+// Silme komutu: rm Assets/Scripts/PixelFlow/Views/CellMediator.cs
+//               rm Assets/Scripts/PixelFlow/Views/CellMediator.cs.meta
 using Nexus.Core;
 
 namespace PixelFlow.Views
 {
+    /// <summary>
+    /// Boş stub — sadece Unity uyarılarını engellemek için.
+    /// Tüm referanslar temizlenince bu dosyayı silin.
+    /// </summary>
     public class CellMediator : Mediator<CellView>
     {
         protected override void OnBind() { }
+        protected override void OnUnbind() { }
     }
 }

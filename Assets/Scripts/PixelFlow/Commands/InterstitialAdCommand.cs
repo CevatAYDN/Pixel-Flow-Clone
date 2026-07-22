@@ -1,7 +1,7 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Models;
 using PixelFlow.Signals;
-using UnityEngine;
 
 namespace PixelFlow.Commands
 {
@@ -11,9 +11,11 @@ namespace PixelFlow.Commands
     /// </summary>
     public class InterstitialAdCommand : ICommand<RequestInterstitialAdSignal>, IResettable
     {
+        [Inject] public ILoggerService LoggerService { get; set; }
+
         public void Execute(RequestInterstitialAdSignal signal)
         {
-            Debug.Log("[InterstitialAdCommand] Interstitial ad requested (placeholder).");
+            LoggerService?.Log("[InterstitialAdCommand] Interstitial ad requested (placeholder).");
         }
 
         public void Reset() { }
