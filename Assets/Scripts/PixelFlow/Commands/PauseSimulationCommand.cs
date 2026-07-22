@@ -15,13 +15,17 @@ namespace PixelFlow.Commands
 
         public void Execute(PixelFlow.Signals.PauseSimulationSignal signal)
         {
-            if (GameStateModel.CurrentState == GameState.Simulating)
+            switch (GameStateModel.CurrentState)
             {
-                VehicleSimulator.StopSimulationPhase();
-            }
-            else if (GameStateModel.CurrentState == GameState.Playing)
-            {
-                GameStateModel.SetState(GameState.Paused);
+                case GameState.Simulating:
+                    VehicleSimulator.StopSimulationPhase();
+                    break;
+                case GameState.Playing:
+                    GameStateModel.SetState(GameState.Paused);
+                    break;
+                case GameState.Paused:
+                    GameStateModel.SetState(GameState.Playing);
+                    break;
             }
         }
 

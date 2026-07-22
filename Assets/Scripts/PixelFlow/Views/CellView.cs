@@ -111,6 +111,10 @@ namespace PixelFlow.Views
         {
             if (_fallbackSquare != null) return;
 
+#if UNITY_EDITOR
+            Debug.LogWarning("[CellView] Using runtime fallback sprites — assign shape sprites in the prefab for production quality.");
+#endif
+
             int size = 128;
             Vector2 center = new Vector2(size * 0.5f, size * 0.5f);
 

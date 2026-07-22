@@ -15,13 +15,6 @@ namespace PixelFlow.Data
         menuName = "PixelFlow/Game Configuration")]
     public class GameConfig : ScriptableObject
     {
-        [Header("=== Boot ===")]
-        [Tooltip("Nexus Root aranırken maksimum deneme sayısı")]
-        public int RootSearchRetries = 10;
-
-        [Tooltip("Root arama denemeleri arasındaki saniye cinsinden bekleme")]
-        public float RootSearchInterval = 0.1f;
-
         [Header("=== Vehicle Simulation ===")]
         [Tooltip("Araç hızı (grid birimi/saniye)")]
         public float VehicleSpeed = 3f;

@@ -18,8 +18,11 @@ namespace PixelFlow
         public LevelData initialLevel;
         public Root nexusRoot;
 
-        private const int RootSearchRetries = 10;
-        private const float RootSearchInterval = 0.1f;
+        [Header("Root Search (Boot)")]
+        [SerializeField] [Tooltip("Nexus Root aranırken maksimum deneme sayısı")]
+        private int _rootSearchRetries = 10;
+        [SerializeField] [Tooltip("Root arama denemeleri arasındaki saniye cinsinden bekleme")]
+        private float _rootSearchInterval = 0.1f;
 
         private ILoggerService FallbackLogger => NexusRuntime.Logger;
         private Root _cachedRoot;
@@ -276,14 +279,14 @@ namespace PixelFlow
 
         private IEnumerator WaitForRoot()
         {
-            int retries = RootSearchRetries;
+            int retries = _rootSearchRetries;
             while (_cachedRoot == null && retries > 0)
             {
                 _cachedRoot = FindAnyObjectByType<Root>();
                 if (_cachedRoot == null)
                 {
                     retries--;
-                    yield return new WaitForSeconds(RootSearchInterval);
+                    yield return new WaitForSeconds(_rootSearchInterval);
                 }
             }
         }

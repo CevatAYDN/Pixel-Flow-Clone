@@ -202,6 +202,9 @@ namespace PixelFlow.Views
             GameSessionModel?.MarkCrisisUndoUsed();
             SignalBus.Fire(new UndoSignal());
             View?.HideCrisis();
+            // UndoCommand may have already restored state to Playing (UndoCommand.cs:37).
+            // If still Paused, resume directly — PauseSimulationSignal is a toggle
+            // and would re-pause if Undo already set Playing.
             if (GameStateModel != null && GameStateModel.CurrentState == GameState.Paused)
             {
                 GameStateModel.SetState(GameState.Playing);
@@ -340,14 +343,8 @@ namespace PixelFlow.Views
 
         private void HandlePauseClicked()
         {
-            if (GameStateModel.CurrentState == GameState.Playing || GameStateModel.CurrentState == GameState.Simulating)
-            {
-                SignalBus.Fire(new PauseSimulationSignal());
-            }
-            else if (GameStateModel.CurrentState == GameState.Paused)
-            {
-                GameStateModel.SetState(GameState.Playing);
-            }
+            // PauseSimulationCommand handles toggle logic for all states
+            SignalBus.Fire(new PauseSimulationSignal());
         }
 
         private void HandleRetryClicked()
@@ -412,6 +409,7 @@ namespace PixelFlow.Views
 
         private void HandleSimulateDebugPressed()
         {
+            // Debug-only: bypasses command flow for rapid testing
             var state = GameStateModel.CurrentState;
             if (state == GameState.Playing)
             {
