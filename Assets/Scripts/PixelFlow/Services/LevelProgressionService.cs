@@ -38,8 +38,8 @@ namespace PixelFlow.Services
         public LevelProgressionService() : this(new ProceduralLevelGenerator(new RuntimePathSolver()), null)
         {
             // GDD §3.6: Resources'tan PhaseConfigAsset yükle (editörde oluşturulmuş olmalı)
-            _phaseConfig = UnityEngine.Resources.Load<PhaseConfigAsset>("PhaseConfig");
-            _levelCatalog = UnityEngine.Resources.Load<LevelCatalogAsset>("LevelCatalog");
+            _phaseConfig = UnityEngine.Resources.Load<PhaseConfigAsset>("Configs/PhaseConfig");
+            _levelCatalog = UnityEngine.Resources.Load<LevelCatalogAsset>("Configs/LevelCatalog");
         }
 
         // Eski overload — geriye uyumluluk (testler için)

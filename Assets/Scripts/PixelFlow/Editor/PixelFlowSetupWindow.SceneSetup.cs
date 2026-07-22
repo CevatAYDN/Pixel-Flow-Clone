@@ -64,7 +64,7 @@ namespace PixelFlow.Editor
 
             // Root + Context
             var root = rootObj.AddComponent<Root>();
-            var rootData = AssetDatabase.LoadAssetAtPath<PixelFlow.Data.GameConfig>("Assets/Resources/GameConfig.asset");
+            var rootData = AssetDatabase.LoadAssetAtPath<PixelFlow.Data.GameConfig>("Assets/Resources/Configs/GameConfig.asset");
             if (rootData != null)
             {
                 var rootSo = new SerializedObject(root);

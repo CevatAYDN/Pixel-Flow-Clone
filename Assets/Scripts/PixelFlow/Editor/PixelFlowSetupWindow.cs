@@ -66,7 +66,8 @@ namespace PixelFlow.Editor
         private int _selectedTab = 0;
         private readonly string[] _tabNames = {
             "🕹️ Oyun Kontrol", "🔍 Sahne Tanılama", "🎮 Seviye Stüdyosu",
-            "🧩 Toplu Çözücü", "💰 Ekonomi & Isı Haritası", "🔬 Nexus İzleyici", "⚡ Performans"
+            "🧩 Toplu Çözücü", "📦 Data Yöneticisi", "💰 Ekonomi & Isı Haritası",
+            "🔬 Nexus İzleyici", "⚡ Performans"
         };
 
         // ─── Çözücü Önbelleği ───
@@ -83,14 +84,14 @@ namespace PixelFlow.Editor
         [MenuItem("PixelFlow/Create GameConfig Asset")]
         private static void CreateGameConfigAsset()
         {
-            var existing = UnityEngine.Resources.Load<PixelFlow.Data.GameConfig>("GameConfig");
+            var existing = UnityEngine.Resources.Load<PixelFlow.Data.GameConfig>("Configs/GameConfig");
             if (existing != null)
             {
-                Debug.Log("[PixelFlow] GameConfig.asset already exists at Resources/GameConfig.asset");
+                Debug.Log("[PixelFlow] GameConfig.asset already exists at Resources/Configs/GameConfig.asset");
                 return;
             }
             var config = ScriptableObject.CreateInstance<PixelFlow.Data.GameConfig>();
-            string path = "Assets/Resources/GameConfig.asset";
+            string path = "Assets/Resources/Configs/GameConfig.asset";
             System.IO.Directory.CreateDirectory("Assets/Resources");
             UnityEditor.AssetDatabase.CreateAsset(config, path);
             UnityEditor.AssetDatabase.SaveAssets();
@@ -199,10 +200,11 @@ namespace PixelFlow.Editor
                 case 0: DrawGameControllerTab(); break;
                 case 1: DrawDiagnosticsTab(); break;
                 case 2: DrawLevelStudioTab(); break;
-                case 3: DrawBatchSolverTab(); break;
-                case 4: DrawEconomyAnalyticsTab(); break;
-                case 5: DrawNexusInspectorTab(); break;
-                case 6: DrawPerformanceTab(); break;
+            case 3: DrawBatchSolverTab(); break;
+            case 4: DrawDataManagerTab(); break;
+            case 5: DrawEconomyAnalyticsTab(); break;
+            case 6: DrawNexusInspectorTab(); break;
+            case 7: DrawPerformanceTab(); break;
             }
 
             GUILayout.EndScrollView();

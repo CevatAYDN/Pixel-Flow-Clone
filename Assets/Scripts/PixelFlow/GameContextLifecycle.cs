@@ -93,7 +93,7 @@ namespace PixelFlow
 
             // GameConfig ScriptableObject — Resources'tan yüklenir, tüm servislere enjekte edilebilir.
             // Eğer asset bulunamazsa (ilk kurulum veya bozuk Resource), default fallback oluştur.
-            var config = UnityEngine.Resources.Load<GameConfig>("GameConfig");
+            var config = UnityEngine.Resources.Load<GameConfig>("Configs/GameConfig");
             if (config == null)
             {
                 config = UnityEngine.ScriptableObject.CreateInstance<GameConfig>();
@@ -103,7 +103,7 @@ namespace PixelFlow
             builder.BindInstance(config);
 
             // ThemePaletteAsset — GameConfig ile aynı pattern'de yüklenir.
-            var palette = UnityEngine.Resources.Load<ThemePaletteAsset>("ThemePalette");
+            var palette = UnityEngine.Resources.Load<ThemePaletteAsset>("Configs/ThemePalette");
             if (palette == null)
             {
                 palette = UnityEngine.ScriptableObject.CreateInstance<ThemePaletteAsset>();
@@ -113,7 +113,7 @@ namespace PixelFlow
             builder.BindInstance(palette);
 
             // ColorBlindPaletteAsset — GDD §11.1: Renk körlüğü paleti
-            var colorBlindPalette = UnityEngine.Resources.Load<ColorBlindPaletteAsset>("ColorBlindPalette");
+            var colorBlindPalette = UnityEngine.Resources.Load<ColorBlindPaletteAsset>("Configs/ColorBlindPalette");
             if (colorBlindPalette == null)
             {
                 colorBlindPalette = UnityEngine.ScriptableObject.CreateInstance<ColorBlindPaletteAsset>();
@@ -124,7 +124,7 @@ namespace PixelFlow
             Models.ColorBlindPalette.Initialize(colorBlindPalette);
 
             // VehicleMaterialConfigAsset — araç görsel malzeme renkleri
-            var vehicleMatConfig = UnityEngine.Resources.Load<VehicleMaterialConfigAsset>("VehicleMaterialConfig");
+            var vehicleMatConfig = UnityEngine.Resources.Load<VehicleMaterialConfigAsset>("Configs/VehicleMaterialConfig");
             if (vehicleMatConfig == null)
             {
                 vehicleMatConfig = UnityEngine.ScriptableObject.CreateInstance<VehicleMaterialConfigAsset>();
@@ -135,7 +135,7 @@ namespace PixelFlow
             Views.VehicleVisualFactory.Initialize(vehicleMatConfig);
 
             // EconomyConfigAsset — GDD §9: Ekonomi/balance konfigürasyonu
-            var economyConfig = UnityEngine.Resources.Load<EconomyConfigAsset>("EconomyConfig");
+            var economyConfig = UnityEngine.Resources.Load<EconomyConfigAsset>("Configs/EconomyConfig");
             if (economyConfig == null)
             {
                 economyConfig = UnityEngine.ScriptableObject.CreateInstance<EconomyConfigAsset>();
@@ -145,12 +145,12 @@ namespace PixelFlow
             builder.BindInstance(economyConfig);
 
             // LevelCatalogAsset — GDD §3.6: Merkezi level kataloğu
-            var levelCatalog = UnityEngine.Resources.Load<LevelCatalogAsset>("LevelCatalog");
+            var levelCatalog = UnityEngine.Resources.Load<LevelCatalogAsset>("Configs/LevelCatalog");
             if (levelCatalog == null)
             {
                 levelCatalog = UnityEngine.ScriptableObject.CreateInstance<LevelCatalogAsset>();
                 levelCatalog.name = "LevelCatalog (Runtime Default)";
-                NexusRuntime.Logger?.LogWarning("[PixelFlow] LevelCatalog.asset not found in Resources. Using runtime defaults (fallback to Resources.Load chain).");
+                NexusRuntime.Logger?.LogWarning("[PixelFlow] Configs/LevelCatalog.asset not found in Resources. Using runtime defaults (fallback to Resources.Load chain).");
             }
             builder.BindInstance(levelCatalog);
         }
