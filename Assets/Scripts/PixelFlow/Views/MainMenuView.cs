@@ -88,7 +88,7 @@ namespace PixelFlow.Views
         public void UpdateCoinBalance(int coins)
         {
             if (_coinText != null)
-                _coinText.text = $"💰 {coins:N0}";
+                _coinText.text = $"{coins:N0} GOLD";
         }
 
         public void UpdatePlayButtonText(int levelNumber)

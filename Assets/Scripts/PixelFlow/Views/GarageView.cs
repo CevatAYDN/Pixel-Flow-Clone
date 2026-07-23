@@ -38,8 +38,14 @@ namespace PixelFlow.Views
 
         public void SetActive(bool active)
         {
-            if (_panel != null)
-                _panel.SetActive(active);
+            var cg = GetComponent<CanvasGroup>();
+            if (cg == null) cg = gameObject.AddComponent<CanvasGroup>();
+            cg.alpha = active ? 1f : 0f;
+            cg.blocksRaycasts = active;
+            cg.interactable = active;
+
+            var canvas = GetComponent<Canvas>();
+            if (canvas != null) canvas.enabled = active;
         }
 
         public void UpdateCoins(int coins)

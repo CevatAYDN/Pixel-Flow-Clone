@@ -46,26 +46,29 @@ namespace PixelFlow.Views
 
         private void Awake() { } // UI init only; bindings moved to OnBind
 
-        public void Show()
+        public void SetVisible(bool visible)
         {
-            if (_panelContainer != null) _panelContainer.SetActive(true);
-            else gameObject.SetActive(true);
+            var cg = GetComponent<CanvasGroup>();
+            if (cg == null) cg = gameObject.AddComponent<CanvasGroup>();
+            cg.alpha = visible ? 1f : 0f;
+            cg.blocksRaycasts = visible;
+            cg.interactable = visible;
+
+            var canvas = GetComponent<Canvas>();
+            if (canvas != null) canvas.enabled = visible;
         }
 
-        public void Hide()
-        {
-            if (_panelContainer != null) _panelContainer.SetActive(false);
-            else gameObject.SetActive(false);
-        }
+        public void Show() => SetVisible(true);
+        public void Hide() => SetVisible(false);
 
         public void UpdateInfo(int streak, int badges, bool easyCompleted, bool mediumCompleted, bool hardCompleted)
         {
-            if (_streakText != null) _streakText.text = $"Streak: {streak} Days 🔥";
-            if (_badgesText != null) _badgesText.text = $"Badges: {badges} 🎖";
+            if (_streakText != null) _streakText.text = $"Galibiyet Serisi: {streak} Gün";
+            if (_badgesText != null) _badgesText.text = $"Rozetler: {badges}";
 
-            if (_easyStatusText != null) _easyStatusText.text = easyCompleted ? "✔ Completed" : "Start (Easy)";
-            if (_mediumStatusText != null) _mediumStatusText.text = mediumCompleted ? "✔ Completed" : "Start (Medium)";
-            if (_hardStatusText != null) _hardStatusText.text = hardCompleted ? "✔ Completed" : "Start (Hard)";
+            if (_easyStatusText != null) _easyStatusText.text = easyCompleted ? "Tamamlandı" : "Başla (Kolay)";
+            if (_mediumStatusText != null) _mediumStatusText.text = mediumCompleted ? "Tamamlandı" : "Başla (Orta)";
+            if (_hardStatusText != null) _hardStatusText.text = hardCompleted ? "Tamamlandı" : "Başla (Zor)";
 
             if (_easyButton != null) _easyButton.interactable = !easyCompleted;
             if (_mediumButton != null) _mediumButton.interactable = !mediumCompleted;

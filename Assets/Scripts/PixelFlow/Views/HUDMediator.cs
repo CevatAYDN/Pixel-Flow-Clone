@@ -287,7 +287,7 @@ namespace PixelFlow.Views
             string format = LocalizationService?.GetString("hud_score_format");
             if (string.IsNullOrEmpty(format) || !format.Contains("{0}") || format == "hud_score_format")
             {
-                format = "💰 {0:N0}";
+                format = "SKOR: {0:N0}";
             }
             View.UpdateScore(score, format);
         }
