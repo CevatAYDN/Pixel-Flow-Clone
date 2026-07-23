@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Jam 3D - Master Studio & Engine Control (v6.0.0)</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        body { background: #0F172A; color: #F8FAFC; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* Top Navigation Header */
+        header { background: #1E293B; border-bottom: 1px solid #334155; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
+        .brand { display: flex; align-items: center; gap: 12px; }
+        .logo-badge { background: linear-gradient(135deg, #6366F1, #3B82F6); width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; }
+        .title-group h1 { font-size: 1.1rem; font-weight: 800; color: #F8FAFC; }
+        .title-group p { font-size: 0.75rem; color: #94A3B8; }
+        .header-actions { display: flex; gap: 12px; align-items: center; }
+        .badge-status { background: rgba(16,185,129,0.15); border: 1px solid #10B981; color: #34D399; font-size: 0.75rem; font-weight: 700; padding: 4px 12px; border-radius: 100px; }
+
+        /* Workspace Split View */
+        .workspace { display: flex; flex: 1; height: calc(100vh - 63px); }
+
+        /* Left Sidebar Navigation */
+        .sidebar { width: 250px; background: #1E293B; border-right: 1px solid #334155; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
+        .nav-section-label { font-size: 0.65rem; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.08em; padding-left: 8px; margin-top: 12px; margin-bottom: 4px; }
+        .nav-btn { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; color: #94A3B8; font-size: 0.82rem; font-weight: 600; border: none; background: transparent; cursor: pointer; transition: all 0.15s ease; text-align: left; width: 100%; }
+        .nav-btn:hover { background: #334155; color: #F8FAFC; }
+        .nav-btn.active { background: #3B82F6; color: #FFFFFF; font-weight: 700; box-shadow: 0 4px 12px rgba(59,130,246,0.35); }
+
+        /* Content Panel Container */
+        .content-panel { flex: 1; padding: 24px; overflow-y: auto; background: #0F172A; }
+        .tab-view { display: none; }
+        .tab-view.active { display: flex; flex-direction: column; gap: 20px; animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Cards */
+        .card { background: #1E293B; border: 1px solid #334155; border-radius: 16px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #334155; padding-bottom: 12px; }
+        .card-title { font-size: 1rem; font-weight: 800; color: #F8FAFC; display: flex; align-items: center; gap: 8px; }
+
+        /* Tool Palette & Grid */
+        .tool-palette { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+        .color-btn { width: 40px; height: 40px; border-radius: 10px; border: 2px solid transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: transform 0.15s ease; }
+        .color-btn:hover { transform: scale(1.1); }
+        .color-btn.active { border-color: #FFFFFF; transform: scale(1.15); box-shadow: 0 0 14px currentColor; }
+        
+        .btn-red { background: #EF4444; color: #FFF; }
+        .btn-green { background: #10B981; color: #FFF; }
+        .btn-blue { background: #3B82F6; color: #FFF; }
+        .btn-yellow { background: #F59E0B; color: #FFF; }
+        .btn-purple { background: #8B5CF6; color: #FFF; }
+        .btn-obstacle { background: #64748B; color: #FFF; }
+        .btn-eraser { background: #475569; color: #FFF; }
+
+        .grid-container { background: #0F172A; border: 2px solid #334155; border-radius: 16px; padding: 16px; display: inline-grid; gap: 4px; justify-content: center; margin: 0 auto; }
+        .grid-cell { width: 46px; height: 46px; background: #1E293B; border: 1px solid #334155; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; user-select: none; transition: all 0.15s ease; }
+        .grid-cell:hover { border-color: #3B82F6; background: #334155; }
+        .grid-cell.cell-red { background: rgba(239,68,68,0.25); border-color: #EF4444; }
+        .grid-cell.cell-green { background: rgba(16,185,129,0.25); border-color: #10B981; }
+        .grid-cell.cell-blue { background: rgba(59,130,246,0.25); border-color: #3B82F6; }
+        .grid-cell.cell-yellow { background: rgba(245,158,11,0.25); border-color: #F59E0B; }
+        .grid-cell.cell-purple { background: rgba(139,92,246,0.25); border-color: #8B5CF6; }
+        .grid-cell.cell-bridge { background: rgba(148,163,184,0.25); border-color: #94A3B8; }
+
+        /* Badges & Buttons */
+        .solvability-badge { font-size: 0.85rem; font-weight: 800; padding: 6px 14px; border-radius: 100px; }
+        .solvability-badge.ok { background: rgba(16,185,129,0.15); border: 1px solid #10B981; color: #34D399; }
+        .solvability-badge.fail { background: rgba(239,68,68,0.15); border: 1px solid #EF4444; color: #FCA5A5; }
+
+        .btn-action { background: #3B82F6; color: #FFF; border: none; padding: 10px 18px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
+        .btn-action:hover { background: #2563EB; }
+        .btn-secondary { background: #334155; color: #F8FAFC; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+        .btn-danger { background: #EF4444; color: #FFF; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+
+        /* Form Inputs */
+        input[type="text"], input[type="number"], select { background: #0F172A; border: 1px solid #334155; color: #F8FAFC; padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; width: 100%; }
+
+        /* Tables & Forms */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #334155; }
+        th { color: #94A3B8; font-weight: 700; }
+        .toggle-switch { width: 44px; height: 24px; background: #334155; border-radius: 100px; position: relative; cursor: pointer; transition: background 0.2s ease; }
+        .toggle-switch.on { background: #10B981; }
+        .toggle-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: #FFF; border-radius: 50%; transition: transform 0.2s ease; }
+        .toggle-switch.on::after { transform: translateX(20px); }
+    </style>
+</head>
+<body>
+    <!-- Top Header -->
+    <header>
+        <div class="brand">
+            <div class="logo-badge">🏎️</div>
+            <div class="title-group">
+                <h1>COLOR JAM 3D MASTER STUDIO & ENGINE CONTROL</h1>
+                <p>11 Tam Ekran Modülü ve Canlı Sinyal Yayınlama Paneli (v6.0.0)</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <span class="badge-status">● Live Unity Signal Bus Active</span>
+            <button class="btn-action" onclick="exportJSON()">📋 Level JSON Kopyala</button>
+        </div>
+    </header>
+
+    <!-- Workspace Split View -->
+    <div class="workspace">
+        <!-- Sidebar Navigation (All 11 Tabs) -->
+        <div class="sidebar">
+            <div class="nav-section-label">OYUN & İÇERİK</div>
+            <button class="nav-btn active" onclick="switchTab('tab-controller', this)">🕹️ Oyun Kontrol</button>
+            <button class="nav-btn" onclick="switchTab('tab-level', this)">🎮 Seviye Stüdyosu</button>
+            <button class="nav-btn" onclick="switchTab('tab-garage', this)">🎨 Garaj Stüdyosu</button>
+            
+            <div class="nav-section-label">DATA & EKONOMİ</div>
+            <button class="nav-btn" onclick="switchTab('tab-data', this)">📦 Data Yöneticisi</button>
+            <button class="nav-btn" onclick="switchTab('tab-economy', this)">💰 Ekonomi & Isı Haritası</button>
+            <button class="nav-btn" onclick="switchTab('tab-ads', this)">📺 Reklam Ayarları</button>
+
+            <div class="nav-section-label">MÜHENDİSLİK & TEST</div>
+            <button class="nav-btn" onclick="switchTab('tab-solver', this)">🧩 Toplu Çözücü</button>
+            <button class="nav-btn" onclick="switchTab('tab-diagnostics', this)">🔍 Sahne Tanılama</button>
+            <button class="nav-btn" onclick="switchTab('tab-nexus', this)">🔬 Nexus İzleyici</button>
+            <button class="nav-btn" onclick="switchTab('tab-performance', this)">⚡ Performans</button>
+            <button class="nav-btn" onclick="switchTab('tab-validator', this)">🛡️ Pre-Build Validator</button>
+        </div>
+
+        <!-- Content Panel Container -->
+        <div class="content-panel">
+            
+            <!-- TAB 0: OYUN KONTROL (GAME CONTROLLER & SIGNAL BROADCASTER) -->
+            <div id="tab-controller" class="tab-view active">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🕹️ Oyun Kontrol & Canlı Signal Bus Broadcaster</div>
+                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px;">
+                        <button class="btn-action" onclick="fireSignal('CompleteCurrentLevelSignal')">🏆 Seviyeyi Tamamla</button>
+                        <button class="btn-secondary" onclick="fireSignal('RestartCurrentLevelSignal')">🔄 Seviyeyi Yeniden Başlat</button>
+                        <button class="btn-secondary" onclick="fireSignal('UnlockAllLevelsSignal')">🔓 Tüm Seviyeleri Aç</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 1: SEVİYE STÜDYOSU (INTERACTIVE GRID & OBSTACLE PAINTER) -->
+            <div id="tab-level" class="tab-view">
+                <div style="display: flex; gap: 20px;">
+                    <div style="flex: 1.2;">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title">🖌️ Canlı İnteraktif Seviye Çizici (Node & Obstacle Painter)</div>
+                                <div id="solveBadge" class="solvability-badge ok">✔ ÇÖZÜLEBİLİR (SOLVABLE)</div>
+                            </div>
+
+                            <!-- Palette Bar with Color Nodes & Obstacles -->
+                            <div class="tool-palette">
+                                <button class="color-btn btn-red active" onclick="selectTool('Red', this)">🔴</button>
+                                <button class="color-btn btn-green" onclick="selectTool('Green', this)">🟢</button>
+                                <button class="color-btn btn-blue" onclick="selectTool('Blue', this)">🔵</button>
+                                <button class="color-btn btn-yellow" onclick="selectTool('Yellow', this)">🟡</button>
+                                <button class="color-btn btn-purple" onclick="selectTool('Purple', this)">🟣</button>
+                                <button class="color-btn btn-obstacle" onclick="selectTool('Bridge', this)">🌉</button>
+                                <button class="color-btn btn-obstacle" onclick="selectTool('OneWay', this)">➡️</button>
+                                <button class="color-btn btn-obstacle" onclick="selectTool('Ferry', this)">🚢</button>
+                                <button class="color-btn btn-eraser" onclick="selectTool('Eraser', this)">🧹</button>
+                            </div>
+
+                            <!-- Grid Canvas -->
+                            <div id="gridMatrix" class="grid-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: GARAJ STÜDYOSU -->
+            <div id="tab-garage" class="tab-view">
+                <div class="card"><div class="card-title">🎨 Araç & Durak Garaj Stüdyosu</div></div>
+            </div>
+
+            <!-- TAB 3: DATA YÖNETİCİSİ -->
+            <div id="tab-data" class="tab-view">
+                <div class="card"><div class="card-title">📦 ScriptableObject Data Yöneticisi</div></div>
+            </div>
+
+            <!-- TAB 4: EKONOMİ & ISI HARİTASI -->
+            <div id="tab-economy" class="tab-view">
+                <div class="card"><div class="card-title">💰 Ekonomi & Isı Haritası</div></div>
+            </div>
+
+            <!-- TAB 5: REKLAM AYARLARI -->
+            <div id="tab-ads" class="tab-view">
+                <div class="card"><div class="card-title">📺 Monetization & Reklam Ayarları</div></div>
+            </div>
+
+            <!-- TAB 6: TOPLU ÇÖZÜCÜ -->
+            <div id="tab-solver" class="tab-view">
+                <div class="card"><div class="card-title">🧩 Toplu Çözücü Bot (Batch Solver)</div></div>
+            </div>
+
+            <!-- TAB 7: SAHNE TANILAMA -->
+            <div id="tab-diagnostics" class="tab-view">
+                <div class="card"><div class="card-title">🔍 Sahne Tanılama & Audit</div></div>
+            </div>
+
+            <!-- TAB 8: NEXUS İZLEYİCİ -->
+            <div id="tab-nexus" class="tab-view">
+                <div class="card"><div class="card-title">🔬 Nexus İzleyici & DI Container</div></div>
+            </div>
+
+            <!-- TAB 9: PERFORMANS -->
+            <div id="tab-performance" class="tab-view">
+                <div class="card"><div class="card-title">⚡ Performans & GC İzleyici</div></div>
+            </div>
+
+            <!-- TAB 10: PRE-BUILD VALIDATOR -->
+            <div id="tab-validator" class="tab-view">
+                <div class="card"><div class="card-title">🛡️ Pre-Build Data Validator</div></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- JavaScript Interactive Engine -->
+    <script>
+        let currentGridSize = 5;
+        let selectedTool = 'Red';
+        let gridData = {
+            '0,0': 'Red', '4,4': 'Red',
+            '0,4': 'Green', '4,0': 'Green'
+        };
+
+        const toolSymbols = { Red: '🔴', Green: '🟢', Blue: '🔵', Yellow: '🟡', Purple: '🟣', Bridge: '🌉', OneWay: '➡️', Ferry: '🚢' };
+        const toolClasses = { Red: 'cell-red', Green: 'cell-green', Blue: 'cell-blue', Yellow: 'cell-yellow', Purple: 'cell-purple', Bridge: 'cell-bridge' };
+
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-view').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        function renderGrid() {
+            const container = document.getElementById('gridMatrix');
+            container.style.gridTemplateColumns = `repeat(${currentGridSize}, 1fr)`;
+            container.innerHTML = '';
+
+            for (let y = currentGridSize - 1; y >= 0; y--) {
+                for (let x = 0; x < currentGridSize; x++) {
+                    const key = `${x},${y}`;
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+
+                    if (gridData[key]) {
+                        if (toolClasses[gridData[key]]) cell.classList.add(toolClasses[gridData[key]]);
+                        cell.innerText = toolSymbols[gridData[key]] || '·';
+                    } else {
+                        cell.innerText = '·';
+                    }
+
+                    cell.onclick = () => handleCellClick(x, y);
+                    container.appendChild(cell);
+                }
+            }
+        }
+
+        function handleCellClick(x, y) {
+            const key = `${x},${y}`;
+            if (selectedTool === 'Eraser') {
+                delete gridData[key];
+            } else {
+                gridData[key] = selectedTool;
+            }
+            renderGrid();
+        }
+
+        function selectTool(tool, btn) {
+            selectedTool = tool;
+            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        function fireSignal(signalName) {
+            alert(`⚡ SignalBus Event Fired: ${signalName}`);
+        }
+
+        function exportJSON() {
+            const jsonStr = JSON.stringify(gridData, null, 2);
+            navigator.clipboard.writeText(jsonStr);
+            alert("📋 LevelData JSON yapısı panoya kopyalandı:\n\n" + jsonStr);
+        }
+
+        renderGrid();
+    </script>
+</body>
+</html>

@@ -1,6 +1,8 @@
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
+using UnityEditor.UIElements;
 using Nexus.Core;
 using Nexus.Core.Services;
 using PixelFlow.Data;
@@ -16,12 +18,223 @@ namespace PixelFlow.Editor
     partial class PixelFlowSetupWindow
     {
         // ═══════════════════════════════════════════════════
-        // SEKME 2: SEVİYE STÜDYOSU
+        // UI TOOLKIT NATIVE VISUAL ELEMENT BUILDERS
+        // ═══════════════════════════════════════════════════
+
+        private VisualElement BuildCard(string title)
+        {
+            var card = new VisualElement();
+            card.style.backgroundColor = new StyleColor(new Color(0.12f, 0.16f, 0.23f));
+            SetStyleBorder(card, new Color(0.2f, 0.25f, 0.33f), 1f);
+            card.style.borderTopLeftRadius = 12;
+            card.style.borderTopRightRadius = 12;
+            card.style.borderBottomLeftRadius = 12;
+            card.style.borderBottomRightRadius = 12;
+            card.style.paddingTop = 14;
+            card.style.paddingBottom = 14;
+            card.style.paddingLeft = 16;
+            card.style.paddingRight = 16;
+            card.style.marginBottom = 12;
+
+            if (!string.IsNullOrEmpty(title))
+            {
+                var titleLbl = new Label(title);
+                titleLbl.style.fontSize = 13;
+                titleLbl.style.color = new StyleColor(new Color(0.97f, 0.98f, 0.99f));
+                titleLbl.style.marginBottom = 10;
+                card.Add(titleLbl);
+            }
+            return card;
+        }
+
+        private VisualElement BuildLevelStudioUIToolkitView()
+        {
+            var root = new VisualElement();
+
+            // 1. Grid Painter Card
+            var painterCard = BuildCard("🖌️ CANLI İNTERAKTİF SEVİYE ÇİZİCİ (LIVE GRID PAINTER)");
+
+            // Palette Bar
+            var paletteRow = new VisualElement();
+            paletteRow.style.flexDirection = FlexDirection.Row;
+            paletteRow.style.marginBottom = 10;
+
+            AddPaletteBtn(paletteRow, "🔴", ColorType.Red, false);
+            AddPaletteBtn(paletteRow, "🟢", ColorType.Green, false);
+            AddPaletteBtn(paletteRow, "🔵", ColorType.Blue, false);
+            AddPaletteBtn(paletteRow, "🟡", ColorType.Yellow, false);
+            AddPaletteBtn(paletteRow, "🟣", ColorType.Purple, false);
+            AddPaletteBtn(paletteRow, "🧹", ColorType.None, true);
+
+            painterCard.Add(paletteRow);
+
+            // Interactive Grid Container
+            if (_cachedLevels != null && _cachedLevels.Count > 0)
+            {
+                _painterSelectedLevelIdx = Mathf.Clamp(_painterSelectedLevelIdx, 0, _cachedLevels.Count - 1);
+                var selectedLvl = _cachedLevels[_painterSelectedLevelIdx];
+                if (selectedLvl != null)
+                {
+                    var gridContainer = new VisualElement();
+                    gridContainer.style.backgroundColor = new StyleColor(new Color(0.06f, 0.09f, 0.16f));
+                    SetStyleBorder(gridContainer, new Color(0.2f, 0.25f, 0.33f), 2f);
+                    gridContainer.style.borderTopLeftRadius = 12;
+                    gridContainer.style.borderTopRightRadius = 12;
+                    gridContainer.style.borderBottomLeftRadius = 12;
+                    gridContainer.style.borderBottomRightRadius = 12;
+                    gridContainer.style.paddingTop = 10;
+                    gridContainer.style.paddingBottom = 10;
+                    gridContainer.style.paddingLeft = 10;
+                    gridContainer.style.paddingRight = 10;
+                    gridContainer.style.alignSelf = Align.Center;
+
+                    int w = selectedLvl.width;
+                    int h = selectedLvl.height;
+
+                    for (int y = h - 1; y >= 0; y--)
+                    {
+                        var row = new VisualElement();
+                        row.style.flexDirection = FlexDirection.Row;
+                        for (int x = 0; x < w; x++)
+                        {
+                            Vector2Int pos = new Vector2Int(x, y);
+                            bool hasNode = selectedLvl.initialNodes != null && selectedLvl.initialNodes.Any(n => n.position == pos);
+                            GridNode existingNode = hasNode ? selectedLvl.initialNodes.First(n => n.position == pos) : default;
+
+                            var cellBtn = new Button();
+                            cellBtn.text = hasNode ? GetColorSymbol(existingNode.color) : "·";
+                            cellBtn.style.width = 42;
+                            cellBtn.style.height = 42;
+                            cellBtn.style.backgroundColor = hasNode ? GetColorStyleColor(existingNode.color) : new StyleColor(new Color(0.12f, 0.16f, 0.23f));
+                            SetStyleBorder(cellBtn, new Color(0.2f, 0.25f, 0.33f), 1f);
+                            cellBtn.style.borderTopLeftRadius = 6;
+                            cellBtn.style.borderTopRightRadius = 6;
+                            cellBtn.style.borderBottomLeftRadius = 6;
+                            cellBtn.style.borderBottomRightRadius = 6;
+
+                            cellBtn.clicked += () =>
+                            {
+                                Undo.RecordObject(selectedLvl, "Paint Cell");
+                                if (selectedLvl.initialNodes == null) selectedLvl.initialNodes = new List<GridNode>();
+                                selectedLvl.initialNodes.RemoveAll(n => n.position == pos);
+
+                                if (!_painterIsEraser)
+                                {
+                                    selectedLvl.initialNodes.Add(new GridNode
+                                    {
+                                        position = pos,
+                                        color = _painterSelectedColor,
+                                        shape = GetDefaultShapeForColor(_painterSelectedColor),
+                                        type = NodeType.Home
+                                    });
+                                }
+
+                                EditorUtility.SetDirty(selectedLvl);
+                                AssetDatabase.SaveAssets();
+                                RebuildContentPanel();
+                            };
+
+                            row.Add(cellBtn);
+                        }
+                        gridContainer.Add(row);
+                    }
+                    painterCard.Add(gridContainer);
+                }
+            }
+
+            root.Add(painterCard);
+
+            // 2. Procedural & Database Card
+            var dbCard = BuildCard("📁 PROJE SEVİYE LİSTESİ");
+            var imguiHost = new IMGUIContainer(DrawLevelStudioTab);
+            dbCard.Add(imguiHost);
+            root.Add(dbCard);
+
+            return root;
+        }
+
+        private void AddPaletteBtn(VisualElement parent, string text, ColorType color, bool isEraser)
+        {
+            var btn = new Button(() =>
+            {
+                _painterSelectedColor = color;
+                _painterIsEraser = isEraser;
+                RebuildContentPanel();
+            }) { text = text };
+            btn.style.width = 38;
+            btn.style.height = 38;
+            btn.style.fontSize = 16;
+            btn.style.borderTopLeftRadius = 8;
+            btn.style.borderTopRightRadius = 8;
+            btn.style.borderBottomLeftRadius = 8;
+            btn.style.borderBottomRightRadius = 8;
+            btn.style.marginRight = 6;
+            btn.style.backgroundColor = isEraser ? new StyleColor(new Color(0.28f, 0.33f, 0.41f)) : GetColorStyleColor(color);
+            parent.Add(btn);
+        }
+
+        private StyleColor GetColorStyleColor(ColorType color)
+        {
+            switch (color)
+            {
+                case ColorType.Red: return new StyleColor(new Color(0.94f, 0.27f, 0.27f));
+                case ColorType.Green: return new StyleColor(new Color(0.06f, 0.73f, 0.51f));
+                case ColorType.Blue: return new StyleColor(new Color(0.23f, 0.51f, 0.96f));
+                case ColorType.Yellow: return new StyleColor(new Color(0.96f, 0.62f, 0.04f));
+                case ColorType.Purple: return new StyleColor(new Color(0.55f, 0.36f, 0.96f));
+                default: return new StyleColor(new Color(0.28f, 0.33f, 0.41f));
+            }
+        }
+
+        private VisualElement BuildGameControllerUIToolkitView()
+        {
+            var card = BuildCard("🕹️ OYUN KONTROL & CANLI BROADCASTER");
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+
+            var btn1 = new Button(() => CompleteCurrentLevel()) { text = "🏆 Seviyeyi Tamamla" };
+            btn1.style.backgroundColor = new StyleColor(new Color(0.23f, 0.51f, 0.96f));
+            btn1.style.color = new StyleColor(Color.white);
+            btn1.style.paddingTop = 8; btn1.style.paddingBottom = 8; btn1.style.paddingLeft = 12; btn1.style.paddingRight = 12;
+            btn1.style.borderTopLeftRadius = 8; btn1.style.borderTopRightRadius = 8; btn1.style.borderBottomLeftRadius = 8; btn1.style.borderBottomRightRadius = 8;
+            row.Add(btn1);
+
+            var btn2 = new Button(() => RestartCurrentLevel()) { text = "🔄 Yeniden Başlat" };
+            btn2.style.backgroundColor = new StyleColor(new Color(0.2f, 0.25f, 0.33f));
+            btn2.style.color = new StyleColor(Color.white);
+            btn2.style.paddingTop = 8; btn2.style.paddingBottom = 8; btn2.style.paddingLeft = 12; btn2.style.paddingRight = 12;
+            btn2.style.borderTopLeftRadius = 8; btn2.style.borderTopRightRadius = 8; btn2.style.borderBottomLeftRadius = 8; btn2.style.borderBottomRightRadius = 8;
+            btn2.style.marginLeft = 8;
+            row.Add(btn2);
+
+            card.Add(row);
+            return card;
+        }
+
+        private VisualElement BuildDiagnosticsUIToolkitView() { return BuildHostCard("🔍 SAHNE TANILAMA & AUDIT", DrawDiagnosticsTab); }
+        private VisualElement BuildBatchSolverUIToolkitView() { return BuildHostCard("🧩 TOPLU ÇÖZÜCÜ BOT", DrawBatchSolverTab); }
+        private VisualElement BuildDataManagerUIToolkitView() { return BuildHostCard("📦 SCRIPTABLEOBJECT DATA YÖNETİCİSİ", DrawDataManagerTab); }
+        private VisualElement BuildEconomyUIToolkitView() { return BuildHostCard("💰 EKONOMİ & ISI HARİTASI", DrawEconomyAnalyticsTab); }
+        private VisualElement BuildNexusUIToolkitView() { return BuildHostCard("🔬 NEXUS İZLEYİCİ", DrawNexusInspectorTab); }
+        private VisualElement BuildPerformanceUIToolkitView() { return BuildHostCard("⚡ PERFORMANS İZLEYİCİ", DrawPerformanceTab); }
+        private VisualElement BuildGarageUIToolkitView() { return BuildHostCard("🎨 GARAJ STÜDYOSU", DrawGarageSkinStudioTab); }
+        private VisualElement BuildAdsUIToolkitView() { return BuildHostCard("📺 REKLAM AYARLARI", DrawAdMonetizationTab); }
+        private VisualElement BuildValidatorUIToolkitView() { return BuildHostCard("🛡️ PRE-BUILD VALIDATOR", DrawPreBuildValidatorTab); }
+
+        private VisualElement BuildHostCard(string title, System.Action drawMethod)
+        {
+            var card = BuildCard(title);
+            var host = new IMGUIContainer(drawMethod);
+            card.Add(host);
+            return card;
+        }
+
+        // ═══════════════════════════════════════════════════
+        // SEKMELER 1-7
         // ═══════════════════════════════════════════════════
 
         private void DrawLevelStudioTab()
         {
-            DrawInteractiveGridPainterCard();
             DrawCustomLevelCreator();
             DrawPhaseManagement();
             DrawProceduralGenerator();

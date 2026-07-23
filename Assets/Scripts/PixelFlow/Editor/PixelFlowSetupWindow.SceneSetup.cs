@@ -59,123 +59,235 @@ namespace PixelFlow.Editor
 
         private void SetupScene()
         {
-            var rootObj = new GameObject("[PixelFlow]");
-            Undo.RegisterCreatedObjectUndo(rootObj, "Setup PixelFlow Scene");
-
-            // Root + Context
-            var root = rootObj.AddComponent<Root>();
-            var rootData = AssetDatabase.LoadAssetAtPath<PixelFlow.Data.GameConfig>("Assets/Resources/Configs/GameConfig.asset");
-            if (rootData != null)
+            var config = LoadOrCreateConfig();
+            var rootObj = FindOrCreateRootObject();
+            var root = rootObj.GetComponent<Root>();
+            if (root == null)
             {
-                var rootSo = new SerializedObject(root);
-                rootSo.FindProperty("contextData").objectReferenceValue = rootData;
-                rootSo.ApplyModifiedProperties();
+                root = rootObj.AddComponent<Root>();
             }
+            AssignContextData(root, config);
 
-            // Canvas
-            var canvasObj = new GameObject("Canvas"); canvasObj.transform.SetParent(rootObj.transform);
-            canvasObj.AddComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
-            canvasObj.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            canvasObj.AddComponent<GraphicRaycaster>();
+            var canvasObj = FindOrCreateChild(rootObj.transform, "Canvas");
+            var canvas = canvasObj.GetComponent<Canvas>();
+            if (canvas == null)
+            {
+                canvas = canvasObj.AddComponent<Canvas>();
+            }
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 100;
+            EnsureComponent<CanvasScaler>(canvasObj, scaler => scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize);
+            EnsureComponent<GraphicRaycaster>(canvasObj);
 
-            // EventSystem
-            var esObj = new GameObject("EventSystem"); esObj.transform.SetParent(rootObj.transform);
-            var es = esObj.AddComponent<EventSystem>();
-            esObj.AddComponent<InputSystemUIInputModule>();
+            EnsureEventSystem(rootObj.transform);
 
-            // GridView
-            var gridObj = new GameObject("Grid"); gridObj.transform.SetParent(rootObj.transform);
-            var gridView = gridObj.AddComponent<GridView>();
-            var gridContainer = new GameObject("GridContainer").transform;
-            gridContainer.SetParent(gridObj.transform);
-            var cellPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/CellView.prefab");
-            var gridSo = new SerializedObject(gridView);
-            gridSo.FindProperty("_gridContainer").objectReferenceValue = gridContainer;
-            gridSo.FindProperty("_cellPrefab").objectReferenceValue = cellPrefab?.GetComponent<CellView>();
-            gridSo.ApplyModifiedProperties();
+            var gridObj = FindOrCreateChild(rootObj.transform, "Grid");
+            var gridView = gridObj.GetComponent<GridView>();
+            if (gridView == null)
+            {
+                gridView = gridObj.AddComponent<GridView>();
+            }
+            EnsureGridBindings(gridView);
 
-            // Camera
-            var camObj = new GameObject("Main Camera"); camObj.transform.SetParent(rootObj.transform);
-            var cam = camObj.AddComponent<Camera>();
+            var camObj = FindOrCreateChild(rootObj.transform, "Main Camera");
+            camObj.tag = "MainCamera";
+            var cam = camObj.GetComponent<Camera>();
+            if (cam == null)
+            {
+                cam = camObj.AddComponent<Camera>();
+            }
             cam.orthographic = true;
             cam.orthographicSize = 5f;
             cam.clearFlags = CameraClearFlags.SolidColor;
-            camObj.tag = "MainCamera";
-            camObj.AddComponent<CameraController>();
+            EnsureComponent<CameraController>(camObj);
 
-            // HUD
-            var hudObj = new GameObject("HUD"); hudObj.transform.SetParent(canvasObj.transform);
-            hudObj.AddComponent<HUDView>();
-            hudObj.AddComponent<CanvasGroup>();
-            var hudRect = hudObj.AddComponent<RectTransform>();
-            hudRect.anchorMin = Vector2.zero; hudRect.anchorMax = Vector2.one;
+            var hudObj = FindOrCreateChild(canvasObj.transform, "HUD");
+            EnsureComponent<HUDView>(hudObj);
+            EnsureComponent<CanvasGroup>(hudObj);
+            var hudRect = hudObj.GetComponent<RectTransform>();
+            if (hudRect == null)
+            {
+                hudRect = hudObj.AddComponent<RectTransform>();
+            }
+            hudRect.anchorMin = Vector2.zero;
+            hudRect.anchorMax = Vector2.one;
             hudRect.sizeDelta = Vector2.zero;
 
-            // Sound & Theme
-            var soundObj = new GameObject("SoundHandler"); soundObj.transform.SetParent(rootObj.transform);
-            soundObj.AddComponent<SoundHandlerView>();
-            var themeObj = new GameObject("ThemeHandler"); themeObj.transform.SetParent(rootObj.transform);
-            themeObj.AddComponent<ThemeHandlerView>();
+            var soundObj = FindOrCreateChild(rootObj.transform, "SoundHandler");
+            EnsureComponent<SoundHandlerView>(soundObj);
 
-            // GameBootstrapper
-            var bootObj = new GameObject("GameBootstrapper"); bootObj.transform.SetParent(rootObj.transform);
-            var boot = bootObj.AddComponent<GameBootstrapper>();
+            var themeObj = FindOrCreateChild(rootObj.transform, "ThemeHandler");
+            EnsureComponent<ThemeHandlerView>(themeObj);
+
+            var bootObj = FindOrCreateChild(rootObj.transform, "GameBootstrapper");
+            var boot = bootObj.GetComponent<GameBootstrapper>();
+            if (boot == null)
+            {
+                boot = bootObj.AddComponent<GameBootstrapper>();
+            }
             boot.nexusRoot = root;
 
-            // Gerekli View'lar
-            var splashObj = new GameObject("SplashView"); splashObj.transform.SetParent(canvasObj.transform);
-            splashObj.AddComponent<SplashView>();
+            EnsureExtendedViews(canvasObj.transform);
 
-            // Bloom flash
-            var bloomObj = new GameObject("BloomFlashOverlay"); bloomObj.transform.SetParent(canvasObj.transform);
-            bloomObj.AddComponent<BloomFlashView>();
-            var bloomImg = bloomObj.AddComponent<Image>();
-            bloomImg.color = new Color(0, 0, 0, 0);
-
-            // Confetti
-            var confettiObj = new GameObject("ConfettiView"); confettiObj.transform.SetParent(canvasObj.transform);
-            confettiObj.AddComponent<ConfettiView>();
-
-            // Settings
-            var settingsObj = new GameObject("SettingsView"); settingsObj.transform.SetParent(canvasObj.transform);
-            settingsObj.AddComponent<SettingsView>();
-
-            // DailyCrisis
-            var crisisObj = new GameObject("DailyCrisisView"); crisisObj.transform.SetParent(canvasObj.transform);
-            crisisObj.AddComponent<DailyCrisisView>();
-
-            // Tutorial
-            var tutorialObj = new GameObject("TutorialView"); tutorialObj.transform.SetParent(canvasObj.transform);
-            tutorialObj.AddComponent<TutorialView>();
-
-            Undo.RegisterFullObjectHierarchyUndo(rootObj, "Setup Scene Objects");
-            AssetDatabase.SaveAssets();
+            Selection.activeGameObject = rootObj;
+            EditorGUIUtility.PingObject(rootObj);
             Debug.Log("[PixelFlow] Scene setup complete.");
         }
 
-        private void SetupExtendedViews()
+        private GameConfig LoadOrCreateConfig()
         {
-            var canvas = Object.FindAnyObjectByType<Canvas>();
-            if (canvas == null) { SetupScene(); return; }
+            var config = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/Resources/Configs/GameConfig.asset");
+            if (config != null) return config;
 
-            if (Object.FindAnyObjectByType<DailyCrisisView>(FindObjectsInactive.Include) == null)
-                new GameObject("DailyCrisisView").AddComponent<DailyCrisisView>().transform.SetParent(canvas.transform);
-            if (Object.FindAnyObjectByType<ConfettiView>(FindObjectsInactive.Include) == null)
-                new GameObject("ConfettiView").AddComponent<ConfettiView>().transform.SetParent(canvas.transform);
-            if (Object.FindAnyObjectByType<BloomFlashView>(FindObjectsInactive.Include) == null)
-                new GameObject("BloomFlashOverlay").AddComponent<BloomFlashView>().transform.SetParent(canvas.transform);
-            if (Object.FindAnyObjectByType<TutorialView>(FindObjectsInactive.Include) == null)
-                new GameObject("TutorialView").AddComponent<TutorialView>().transform.SetParent(canvas.transform);
-            if (Object.FindAnyObjectByType<SettingsView>(FindObjectsInactive.Include) == null)
-                new GameObject("SettingsView").AddComponent<SettingsView>().transform.SetParent(canvas.transform);
+            if (!Directory.Exists("Assets/Resources/Configs"))
+            {
+                Directory.CreateDirectory("Assets/Resources/Configs");
+            }
 
-            Debug.Log("[PixelFlow] Extended views setup complete.");
+            config = ScriptableObject.CreateInstance<GameConfig>();
+            AssetDatabase.CreateAsset(config, "Assets/Resources/Configs/GameConfig.asset");
+            AssetDatabase.SaveAssets();
+            return config;
+        }
+
+        private GameObject FindOrCreateRootObject()
+        {
+            var existing = Object.FindAnyObjectByType<Root>(FindObjectsInactive.Include);
+            if (existing != null)
+            {
+                return existing.gameObject;
+            }
+
+            var byName = GameObject.Find("[PixelFlow]");
+            if (byName != null)
+            {
+                return byName;
+            }
+
+            var rootObj = new GameObject("[PixelFlow]");
+            Undo.RegisterCreatedObjectUndo(rootObj, "Setup PixelFlow Scene");
+            return rootObj;
+        }
+
+        private GameObject FindOrCreateChild(Transform parent, string name)
+        {
+            // Rekürsif arama: tüm alt nesnelerde isim kontrolü
+            var allChildren = parent.GetComponentsInChildren<Transform>(true);
+            foreach (var child in allChildren)
+            {
+                if (child != parent && child.name == name)
+                {
+                    return child.gameObject;
+                }
+            }
+
+            var obj = new GameObject(name);
+            obj.transform.SetParent(parent, false);
+            Undo.RegisterCreatedObjectUndo(obj, "Setup PixelFlow Scene Child");
+            return obj;
+        }
+
+        private void EnsureComponent<T>(GameObject obj) where T : Component
+        {
+            if (obj.GetComponent<T>() == null)
+            {
+                obj.AddComponent<T>();
+            }
+        }
+
+        private void EnsureComponent<T>(GameObject obj, System.Action<T> configure) where T : Component
+        {
+            var component = obj.GetComponent<T>();
+            if (component == null)
+            {
+                component = obj.AddComponent<T>();
+            }
+            configure?.Invoke(component);
+        }
+
+        private void AssignContextData(Root root, GameConfig config)
+        {
+            if (root == null || config == null) return;
+            var serialized = new SerializedObject(root);
+            var property = serialized.FindProperty("contextData");
+            if (property != null)
+            {
+                property.objectReferenceValue = config;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+            }
+        }
+
+        private void EnsureEventSystem(Transform parent)
+        {
+            var eventSystem = Object.FindAnyObjectByType<EventSystem>(FindObjectsInactive.Include);
+            if (eventSystem != null)
+            {
+                if (eventSystem.transform.parent == null && parent != null)
+                {
+                    eventSystem.transform.SetParent(parent, false);
+                }
+                return;
+            }
+
+            var esObj = FindOrCreateChild(parent, "EventSystem");
+            EnsureComponent<EventSystem>(esObj);
+            EnsureComponent<InputSystemUIInputModule>(esObj);
+        }
+
+        private void EnsureGridBindings(GridView gridView)
+        {
+            if (gridView == null) return;
+            var gridContainer = gridView.transform.Find("GridContainer") ?? new GameObject("GridContainer").transform;
+            gridContainer.SetParent(gridView.transform, false);
+            var cellPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/CellView.prefab");
+            var serialized = new SerializedObject(gridView);
+            var containerProp = serialized.FindProperty("_gridContainer");
+            if (containerProp != null)
+            {
+                containerProp.objectReferenceValue = gridContainer;
+            }
+            var prefabProp = serialized.FindProperty("_cellPrefab");
+            if (prefabProp != null)
+            {
+                prefabProp.objectReferenceValue = cellPrefab != null ? cellPrefab.GetComponent<CellView>() : null;
+            }
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private void EnsureExtendedViews(Transform canvas)
+        {
+            EnsureViewUnderCanvas<SplashView>(canvas, "SplashView");
+            EnsureViewUnderCanvas<BloomFlashView>(canvas, "BloomFlashOverlay", addImage: true);
+            EnsureViewUnderCanvas<ConfettiView>(canvas, "ConfettiView");
+            EnsureViewUnderCanvas<SettingsView>(canvas, "SettingsView");
+            EnsureViewUnderCanvas<DailyCrisisView>(canvas, "DailyCrisisView");
+            EnsureViewUnderCanvas<TutorialView>(canvas, "TutorialView");
+        }
+
+        private void EnsureViewUnderCanvas<T>(Transform canvas, string name, bool addImage = false) where T : Component
+        {
+            var existing = Object.FindAnyObjectByType<T>(FindObjectsInactive.Include);
+            if (existing != null)
+            {
+                if (existing.transform.parent != canvas)
+                {
+                    existing.transform.SetParent(canvas, false);
+                }
+                return;
+            }
+
+            var obj = FindOrCreateChild(canvas, name);
+            EnsureComponent<T>(obj);
+            if (addImage && obj.GetComponent<Image>() == null)
+            {
+                var image = obj.AddComponent<Image>();
+                image.color = new Color(0, 0, 0, 0);
+            }
         }
 
         private void SetupGlobalVolume()
         {
-            // Check by name whether a Global Volume object already exists
-            bool hasVolume = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include)
+            var hasVolume = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include)
                 .Any(go => go.name.Contains("Volume"));
             if (hasVolume) return;
 
@@ -185,11 +297,16 @@ namespace PixelFlow.Editor
 
         private void SetupCameraController()
         {
-            var cam = Camera.main ?? Object.FindAnyObjectByType<Camera>();
-            if (cam == null) return;
-            if (cam.GetComponent<CameraController>() != null) return;
-            cam.gameObject.AddComponent<CameraController>();
-            Debug.Log("[PixelFlow] CameraController added.");
+            var camera = Object.FindAnyObjectByType<Camera>(FindObjectsInactive.Include);
+            if (camera == null)
+            {
+                SetupScene();
+                camera = Object.FindAnyObjectByType<Camera>(FindObjectsInactive.Include);
+            }
+
+            if (camera == null) return;
+            if (camera.GetComponent<CameraController>() != null) return;
+            camera.gameObject.AddComponent<CameraController>();
         }
 
         // ═══════════════════════════════════════════════════

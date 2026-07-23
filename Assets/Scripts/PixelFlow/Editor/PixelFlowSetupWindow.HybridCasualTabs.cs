@@ -9,7 +9,7 @@ namespace PixelFlow.Editor
     partial class PixelFlowSetupWindow
     {
         // ═══════════════════════════════════════════════════
-        // SEKME 9: GARAJ & SKIN STÜDYOSU (No-Code Skin Manager)
+        // SEKMELER 8-10
         // ═══════════════════════════════════════════════════
         private void DrawGarageSkinStudioTab()
         {

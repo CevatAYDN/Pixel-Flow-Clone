@@ -32,7 +32,7 @@ namespace PixelFlow.Editor
         }
 
         // ═══════════════════════════════════════════════════
-        // SEKME 4: DATA YÖNETİCİSİ
+        // SEKME 3
         // ═══════════════════════════════════════════════════
 
         private void DrawDataManagerTab()

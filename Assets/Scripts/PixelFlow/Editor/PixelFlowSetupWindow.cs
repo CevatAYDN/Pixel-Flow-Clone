@@ -1,7 +1,9 @@
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.UI;
+using UnityEngine.UIElements;
+using UnityEditor.UIElements;
+using Button = UnityEngine.UIElements.Button;
 using Nexus.Core;
 using Nexus.Core.Services;
 using PixelFlow.Views;
@@ -12,7 +14,6 @@ using PixelFlow.Signals;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine.Rendering;
 
 namespace PixelFlow.Editor
 {
@@ -22,7 +23,7 @@ namespace PixelFlow.Editor
         public static void ShowWindow()
         {
             var window = GetWindow<PixelFlowSetupWindow>("Pixel Flow Kontrol Merkezi");
-            window.minSize = new Vector2(780, 680);
+            window.minSize = new Vector2(850, 720);
             window.RefreshData();
         }
 
@@ -47,8 +48,10 @@ namespace PixelFlow.Editor
         private int _procStartIndex = 1;
         private int _procSelectedDifficulty = 0;
 
-        // ─── Seviye Listesi ───
+        // ─── Seviye Listesi & Çözücü Önbelleği ───
         private List<LevelData> _cachedLevels = new List<LevelData>();
+        private Dictionary<LevelData, bool> _solvabilityCache = new Dictionary<LevelData, bool>();
+        private string _batchSolveStatusMessage = "";
         private Vector2 _scrollPos;
         private Vector2 _sidebarScrollPos;
 
@@ -66,11 +69,18 @@ namespace PixelFlow.Editor
         private GUIStyle _sidebarActiveBtnStyle;
 
         // ─── Sekme Seçimi ───
-        private int _selectedTab = 0;
+        private int _selectedTab = 1; // Default to Level Studio
 
-        // ─── Çözücü Önbelleği ───
-        private Dictionary<LevelData, bool> _solvabilityCache = new Dictionary<LevelData, bool>();
-        private string _batchSolveStatusMessage = "";
+        // ─── Painter State ───
+        internal int _painterSelectedLevelIdx = 0;
+        internal ColorType _painterSelectedColor = ColorType.Red;
+        internal bool _painterIsEraser = false;
+        internal ObstacleType _painterSelectedObstacle = ObstacleType.None;
+
+        // ─── Batch Level Duplication ───
+        private int _dupSourceIndex = 0;
+        private int _dupTargetIndex = 1;
+        private int _dupBatchCount = 1;
 
         // ─── Sinyal Paneli Durumu ───
         private bool _signalPanelOpen = false;
@@ -84,19 +94,11 @@ namespace PixelFlow.Editor
         private bool _vehicleSpawnEnabled = true;
         private float _cachedBaseSpeed = -1f;
         private float _cachedBaseSpawnInterval = -1f;
-
-        // ─── Frame Step ───
         private bool _frameStepQueued = false;
 
-        // ─── Interactive Grid Painter State ───
-        internal int _painterSelectedLevelIdx = 0;
-        internal ColorType _painterSelectedColor = ColorType.Red;
-        internal bool _painterIsEraser = false;
-
-        // ─── Batch Level Duplication ───
-        private int _dupSourceIndex = 0;
-        private int _dupTargetIndex = 1;
-        private int _dupBatchCount = 1;
+        // ─── UI Toolkit Containers ───
+        private VisualElement _contentContainer;
+        private List<Button> _sidebarButtons = new List<Button>();
 
         [MenuItem("PixelFlow/Create GameConfig Asset")]
         private static void CreateGameConfigAsset()
@@ -115,7 +117,6 @@ namespace PixelFlow.Editor
             Debug.Log($"[PixelFlow] GameConfig.asset oluşturuldu: {path}");
         }
 
-        // ─── Repaint Optimizasyonu ───
         private float _lastDiagnosticTime = -10f;
         private const float DiagnosticCooldown = 0.5f;
         private bool _wasPlaying;
@@ -135,6 +136,228 @@ namespace PixelFlow.Editor
             {
                 Repaint();
             }
+        }
+
+        private void CreateGUI()
+        {
+            RefreshData();
+
+            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>("Assets/Scripts/PixelFlow/Editor/PixelFlowSetupWindow.uss");
+            if (styleSheet != null) rootVisualElement.styleSheets.Add(styleSheet);
+
+            rootVisualElement.style.backgroundColor = new StyleColor(new Color(0.06f, 0.09f, 0.16f)); // #0F172A
+            rootVisualElement.style.flexDirection = FlexDirection.Column;
+            rootVisualElement.style.paddingTop = 8;
+            rootVisualElement.style.paddingBottom = 8;
+            rootVisualElement.style.paddingLeft = 8;
+            rootVisualElement.style.paddingRight = 8;
+            rootVisualElement.style.minWidth = 0;
+            rootVisualElement.style.minHeight = 0;
+
+            rootVisualElement.Add(BuildHeader());
+
+            var workspace = new VisualElement();
+            workspace.style.flexDirection = FlexDirection.Row;
+            workspace.style.flexGrow = 1;
+            workspace.style.flexShrink = 1;
+            workspace.style.minWidth = 0;
+            workspace.style.minHeight = 0;
+
+            workspace.Add(BuildSidebar());
+
+            _contentContainer = new ScrollView();
+            _contentContainer.style.flexGrow = 1;
+            _contentContainer.style.flexShrink = 1;
+            _contentContainer.style.minWidth = 0;
+            _contentContainer.style.paddingLeft = 12;
+            _contentContainer.style.paddingRight = 12;
+            workspace.Add(_contentContainer);
+
+            rootVisualElement.Add(workspace);
+            SelectTab(_selectedTab);
+        }
+
+        private VisualElement BuildHeader()
+        {
+            var header = new VisualElement();
+            header.style.backgroundColor = new StyleColor(new Color(0.12f, 0.16f, 0.23f));
+            SetStyleBorder(header, new Color(0.2f, 0.25f, 0.33f), 1f);
+            header.style.borderTopLeftRadius = 12;
+            header.style.borderTopRightRadius = 12;
+            header.style.borderBottomLeftRadius = 12;
+            header.style.borderBottomRightRadius = 12;
+            header.style.paddingTop = 12;
+            header.style.paddingBottom = 12;
+            header.style.paddingLeft = 16;
+            header.style.paddingRight = 16;
+            header.style.marginBottom = 10;
+            header.style.flexDirection = FlexDirection.Row;
+            header.style.justifyContent = Justify.SpaceBetween;
+            header.style.alignItems = Align.Center;
+
+            var left = new VisualElement();
+            left.style.flexDirection = FlexDirection.Row;
+            left.style.alignItems = Align.Center;
+
+            var logo = new Label("🏎️");
+            logo.style.fontSize = 24;
+            logo.style.marginRight = 10;
+            left.Add(logo);
+
+            var titleGroup = new VisualElement();
+            var title = new Label("COLOR JAM 3D MASTER STUDIO");
+            title.style.fontSize = 15;
+            title.style.color = new StyleColor(new Color(0.97f, 0.98f, 0.99f));
+            titleGroup.Add(title);
+
+            var subtitle = new Label("Canlı UI Toolkit No-Code Tasarımcı ve Mühendislik Paneli (v6.0.0)");
+            subtitle.style.fontSize = 11;
+            subtitle.style.color = new StyleColor(new Color(0.58f, 0.64f, 0.72f));
+            titleGroup.Add(subtitle);
+
+            left.Add(titleGroup);
+            header.Add(left);
+
+            var badge = new Label("● Live Sync");
+            badge.style.backgroundColor = new StyleColor(new Color(0.06f, 0.73f, 0.51f, 0.15f));
+            badge.style.color = new StyleColor(new Color(0.2f, 0.83f, 0.6f));
+            badge.style.paddingTop = 4;
+            badge.style.paddingBottom = 4;
+            badge.style.paddingLeft = 10;
+            badge.style.paddingRight = 10;
+            badge.style.borderTopLeftRadius = 100;
+            badge.style.borderTopRightRadius = 100;
+            badge.style.borderBottomLeftRadius = 100;
+            badge.style.borderBottomRightRadius = 100;
+            header.Add(badge);
+
+            return header;
+        }
+
+        private VisualElement BuildSidebar()
+        {
+            var sidebar = new VisualElement();
+            sidebar.style.width = 220;
+            sidebar.style.flexShrink = 0;
+            sidebar.style.backgroundColor = new StyleColor(new Color(0.12f, 0.16f, 0.23f));
+            SetStyleBorder(sidebar, new Color(0.2f, 0.25f, 0.33f), 1f);
+            sidebar.style.borderTopLeftRadius = 12;
+            sidebar.style.borderTopRightRadius = 12;
+            sidebar.style.borderBottomLeftRadius = 12;
+            sidebar.style.borderBottomRightRadius = 12;
+            sidebar.style.paddingTop = 12;
+            sidebar.style.paddingBottom = 12;
+            sidebar.style.paddingLeft = 8;
+            sidebar.style.paddingRight = 8;
+            sidebar.style.marginRight = 10;
+
+            _sidebarButtons.Clear();
+
+            AddSidebarSection(sidebar, "OYUN & İÇERİK");
+            AddSidebarNavButton(sidebar, 0, "🕹️ Oyun Kontrol");
+            AddSidebarNavButton(sidebar, 1, "🎮 Seviye Stüdyosu");
+            AddSidebarNavButton(sidebar, 2, "🎨 Garaj Stüdyosu");
+
+            AddSidebarSection(sidebar, "DATA & EKONOMİ");
+            AddSidebarNavButton(sidebar, 3, "📦 Data Yöneticisi");
+            AddSidebarNavButton(sidebar, 4, "💰 Ekonomi & Isı Haritası");
+            AddSidebarNavButton(sidebar, 5, "📺 Reklam Ayarları");
+
+            AddSidebarSection(sidebar, "MÜHENDİSLİK & TEST");
+            AddSidebarNavButton(sidebar, 6, "🧩 Toplu Çözücü");
+            AddSidebarNavButton(sidebar, 7, "🔍 Sahne Tanılama");
+            AddSidebarNavButton(sidebar, 8, "🔬 Nexus İzleyici");
+            AddSidebarNavButton(sidebar, 9, "⚡ Performans");
+            AddSidebarNavButton(sidebar, 10, "🛡️ Pre-Build Validator");
+
+            return sidebar;
+        }
+
+        private void AddSidebarSection(VisualElement sidebar, string title)
+        {
+            var label = new Label(title);
+            label.style.fontSize = 10;
+            label.style.color = new StyleColor(new Color(0.39f, 0.45f, 0.55f));
+            label.style.marginTop = 10;
+            label.style.marginBottom = 4;
+            label.style.paddingLeft = 6;
+            sidebar.Add(label);
+        }
+
+        private void AddSidebarNavButton(VisualElement sidebar, int tabIdx, string text)
+        {
+            var btn = new Button(() => SelectTab(tabIdx)) { text = text };
+            btn.style.backgroundColor = new StyleColor(Color.clear);
+            btn.style.color = new StyleColor(new Color(0.58f, 0.64f, 0.72f));
+            btn.style.fontSize = 11;
+            btn.style.paddingTop = 8;
+            btn.style.paddingBottom = 8;
+            btn.style.paddingLeft = 10;
+            btn.style.paddingRight = 10;
+            btn.style.marginBottom = 2;
+            SetStyleBorder(btn, Color.clear, 0f);
+            btn.style.borderTopLeftRadius = 8;
+            btn.style.borderTopRightRadius = 8;
+            btn.style.borderBottomLeftRadius = 8;
+            btn.style.borderBottomRightRadius = 8;
+
+            _sidebarButtons.Add(btn);
+            sidebar.Add(btn);
+        }
+
+        private static void SetStyleBorder(VisualElement elem, Color color, float width = 1f)
+        {
+            elem.style.borderTopColor = new StyleColor(color);
+            elem.style.borderBottomColor = new StyleColor(color);
+            elem.style.borderLeftColor = new StyleColor(color);
+            elem.style.borderRightColor = new StyleColor(color);
+
+            elem.style.borderTopWidth = width;
+            elem.style.borderBottomWidth = width;
+            elem.style.borderLeftWidth = width;
+            elem.style.borderRightWidth = width;
+        }
+
+        private void SelectTab(int tabIdx)
+        {
+            _selectedTab = tabIdx;
+            for (int i = 0; i < _sidebarButtons.Count; i++)
+            {
+                bool isActive = (i == tabIdx);
+                _sidebarButtons[i].style.backgroundColor = isActive ? new StyleColor(new Color(0.23f, 0.51f, 0.96f)) : new StyleColor(Color.clear);
+                _sidebarButtons[i].style.color = isActive ? new StyleColor(Color.white) : new StyleColor(new Color(0.58f, 0.64f, 0.72f));
+            }
+
+            RebuildContentPanel();
+        }
+
+        private void RebuildContentPanel()
+        {
+            if (_contentContainer == null) return;
+            _contentContainer.Clear();
+
+            switch (_selectedTab)
+            {
+                case 0: _contentContainer.Add(BuildGameControllerUIToolkitView()); break;
+                case 1: _contentContainer.Add(BuildDiagnosticsUIToolkitView()); break;
+                case 2: _contentContainer.Add(BuildLevelStudioUIToolkitView()); break;
+                case 3: _contentContainer.Add(BuildBatchSolverUIToolkitView()); break;
+                case 4: _contentContainer.Add(BuildDataManagerUIToolkitView()); break;
+                case 5: _contentContainer.Add(BuildEconomyUIToolkitView()); break;
+                case 6: _contentContainer.Add(BuildNexusUIToolkitView()); break;
+                case 7: _contentContainer.Add(BuildPerformanceUIToolkitView()); break;
+                case 8: _contentContainer.Add(BuildGarageUIToolkitView()); break;
+                case 9: _contentContainer.Add(BuildAdsUIToolkitView()); break;
+                case 10: _contentContainer.Add(BuildValidatorUIToolkitView()); break;
+            }
+        }
+
+        private void SetBorderColor(VisualElement element, Color color)
+        {
+            element.style.borderTopColor = new StyleColor(color);
+            element.style.borderBottomColor = new StyleColor(color);
+            element.style.borderLeftColor = new StyleColor(color);
+            element.style.borderRightColor = new StyleColor(color);
         }
 
         private void RefreshData()
@@ -210,76 +433,61 @@ namespace PixelFlow.Editor
             _cachedLevels = _cachedLevels.OrderBy(l => l.levelIndex).ToList();
         }
 
-        // ═══════════════════════════════════════════════════
-        // ANA GUI - MODERN PRO-SKIN KATEGORİZE SIDEBAR DÜZENİ
-        // ═══════════════════════════════════════════════════
+        private static Texture2D _cardBgTex;
+
+        private void InitStyles()
+        {
+            if (_cardBgTex == null) _cardBgTex = MakeColorTexture(new Color(0.12f, 0.16f, 0.23f));
+
+            _headerStyle = new GUIStyle(EditorStyles.boldLabel) { fontSize = 16, alignment = TextAnchor.MiddleCenter };
+            _headerStyle.normal.textColor = new Color(0.97f, 0.98f, 0.99f);
+
+            _sectionHeaderStyle = new GUIStyle(EditorStyles.boldLabel) { fontSize = 13 };
+            _sectionHeaderStyle.normal.textColor = new Color(0.23f, 0.51f, 0.96f);
+
+            _cardStyle = new GUIStyle(EditorStyles.helpBox) { padding = new RectOffset(14, 14, 12, 12) };
+            _cardStyle.normal.background = _cardBgTex;
+
+            _okBadgeStyle = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(0.2f, 0.83f, 0.6f) }, fontStyle = FontStyle.Bold };
+            _warnBadgeStyle = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(0.96f, 0.62f, 0.04f) }, fontStyle = FontStyle.Bold };
+            _errorBadgeStyle = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(0.94f, 0.27f, 0.27f) }, fontStyle = FontStyle.Bold };
+
+            _titleBannerStyle = new GUIStyle(EditorStyles.helpBox) { padding = new RectOffset(14, 14, 12, 12) };
+            _titleBannerStyle.normal.background = _cardBgTex;
+
+            _miniInfoStyle = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleCenter };
+            _miniInfoStyle.normal.textColor = new Color(0.58f, 0.64f, 0.72f);
+
+            _sidebarHeaderStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 10,
+                alignment = TextAnchor.MiddleLeft,
+                margin = new RectOffset(6, 0, 8, 4)
+            };
+            _sidebarHeaderStyle.normal.textColor = new Color(0.39f, 0.45f, 0.55f);
+
+            _sidebarBtnStyle = new GUIStyle(EditorStyles.miniButton)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                padding = new RectOffset(12, 6, 6, 6),
+                fontSize = 11
+            };
+
+            _sidebarActiveBtnStyle = new GUIStyle(EditorStyles.miniButton)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                padding = new RectOffset(12, 6, 6, 6),
+                fontSize = 11,
+                fontStyle = FontStyle.Bold
+            };
+            _sidebarActiveBtnStyle.normal.textColor = Color.white;
+            if (_activeBtnTex == null) _activeBtnTex = MakeColorTexture(new Color(0.23f, 0.51f, 0.96f));
+            _sidebarActiveBtnStyle.normal.background = _activeBtnTex;
+        }
 
         private void OnGUI()
         {
             InitStyles();
-
-            // Top Header Banner
-            GUILayout.BeginVertical(_titleBannerStyle ?? EditorStyles.helpBox);
-            GUILayout.Label("COLOR JAM 3D — KONTROL MERKEZİ", _headerStyle ?? EditorStyles.boldLabel);
-            GUILayout.Label("Master Studio Kontrol Paneli • Clean Architecture & No-Code Designer Suite", _miniInfoStyle ?? EditorStyles.miniLabel);
-            GUILayout.EndVertical();
-
-            GUILayout.Space(6);
-
-            // Split View: Left Sidebar + Right Content Panel
-            GUILayout.BeginHorizontal();
-
-            // ─── LEFT SIDEBAR (Categorized Navigation) ───
-            GUILayout.BeginVertical(EditorStyles.helpBox, GUILayout.Width(200), GUILayout.ExpandHeight(true));
-            _sidebarScrollPos = GUILayout.BeginScrollView(_sidebarScrollPos, GUILayout.Width(195));
-
-            DrawSidebarCategory("🎮 OYUN & İÇERİK");
-            DrawSidebarButton(0, "🕹️ Oyun Kontrol");
-            DrawSidebarButton(2, "🎮 Seviye Stüdyosu");
-            DrawSidebarButton(8, "🎨 Garaj Stüdyosu");
-
-            GUILayout.Space(10);
-            DrawSidebarCategory("📦 DATA & EKONOMİ");
-            DrawSidebarButton(4, "📦 Data Yöneticisi");
-            DrawSidebarButton(5, "💰 Ekonomi & Isı Haritası");
-            DrawSidebarButton(9, "📺 Reklam Ayarları");
-
-            GUILayout.Space(10);
-            DrawSidebarCategory("🔬 MÜHENDİSLİK & TEST");
-            DrawSidebarButton(3, "🧩 Toplu Çözücü");
-            DrawSidebarButton(1, "🔍 Sahne Tanılama");
-            DrawSidebarButton(6, "🔬 Nexus İzleyici");
-            DrawSidebarButton(7, "⚡ Performans");
-            DrawSidebarButton(10, "🛡️ Pre-Build Validator");
-
-            GUILayout.EndScrollView();
-            GUILayout.EndVertical();
-
-            GUILayout.Space(6);
-
-            // ─── RIGHT CONTENT PANEL ───
-            GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
-            _scrollPos = GUILayout.BeginScrollView(_scrollPos, GUILayout.ExpandWidth(true));
-
-            switch (_selectedTab)
-            {
-                case 0: DrawGameControllerTab(); break;
-                case 1: DrawDiagnosticsTab(); break;
-                case 2: DrawLevelStudioTab(); break;
-                case 3: DrawBatchSolverTab(); break;
-                case 4: DrawDataManagerTab(); break;
-                case 5: DrawEconomyAnalyticsTab(); break;
-                case 6: DrawNexusInspectorTab(); break;
-                case 7: DrawPerformanceTab(); break;
-                case 8: DrawGarageSkinStudioTab(); break;
-                case 9: DrawAdMonetizationTab(); break;
-                case 10: DrawPreBuildValidatorTab(); break;
-            }
-
-            GUILayout.EndScrollView();
-            GUILayout.EndVertical();
-
-            GUILayout.EndHorizontal();
         }
 
         private void DrawSidebarCategory(string categoryTitle)
@@ -339,50 +547,6 @@ namespace PixelFlow.Editor
                 bus.Fire(signal);
             else
                 Debug.LogWarning($"[PixelFlow] SignalBus bulunamadı: {typeof(TSignal).Name}");
-        }
-
-        private void InitStyles()
-        {
-            if (_headerStyle != null && _sidebarHeaderStyle != null && _sidebarBtnStyle != null) return;
-
-            _headerStyle = new GUIStyle(EditorStyles.boldLabel) { fontSize = 15, alignment = TextAnchor.MiddleCenter };
-            _headerStyle.normal.textColor = EditorGUIUtility.isProSkin ? new Color(0.4f, 0.75f, 1f) : new Color(0.05f, 0.25f, 0.5f);
-
-            _sectionHeaderStyle = new GUIStyle(EditorStyles.boldLabel) { fontSize = 12 };
-            _sectionHeaderStyle.normal.textColor = EditorGUIUtility.isProSkin ? new Color(0.65f, 0.85f, 1f) : new Color(0.1f, 0.35f, 0.6f);
-
-            _cardStyle = new GUIStyle(EditorStyles.helpBox) { padding = new RectOffset(12, 12, 10, 10) };
-            _okBadgeStyle = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(0.12f, 0.65f, 0.22f) }, fontStyle = FontStyle.Bold };
-            _warnBadgeStyle = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(0.9f, 0.6f, 0.1f) }, fontStyle = FontStyle.Bold };
-            _errorBadgeStyle = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(0.85f, 0.2f, 0.18f) }, fontStyle = FontStyle.Bold };
-            _titleBannerStyle = new GUIStyle(EditorStyles.helpBox) { padding = new RectOffset(12, 12, 10, 10) };
-            _miniInfoStyle = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleCenter };
-
-            _sidebarHeaderStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 10,
-                alignment = TextAnchor.MiddleLeft,
-                margin = new RectOffset(4, 0, 6, 2)
-            };
-            _sidebarHeaderStyle.normal.textColor = EditorGUIUtility.isProSkin ? new Color(0.6f, 0.7f, 0.8f) : new Color(0.3f, 0.4f, 0.5f);
-
-            _sidebarBtnStyle = new GUIStyle(EditorStyles.miniButton)
-            {
-                alignment = TextAnchor.MiddleLeft,
-                padding = new RectOffset(10, 6, 4, 4),
-                fontSize = 11
-            };
-
-            _sidebarActiveBtnStyle = new GUIStyle(EditorStyles.miniButton)
-            {
-                alignment = TextAnchor.MiddleLeft,
-                padding = new RectOffset(10, 6, 4, 4),
-                fontSize = 11,
-                fontStyle = FontStyle.Bold
-            };
-            _sidebarActiveBtnStyle.normal.textColor = Color.white;
-            if (_activeBtnTex == null) _activeBtnTex = MakeColorTexture(new Color(0.22f, 0.45f, 0.88f));
-            _sidebarActiveBtnStyle.normal.background = _activeBtnTex;
         }
 
         private static Texture2D _activeBtnTex;

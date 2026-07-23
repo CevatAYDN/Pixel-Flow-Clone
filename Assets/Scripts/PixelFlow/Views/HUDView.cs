@@ -149,6 +149,8 @@ namespace PixelFlow.Views
             // GDD §2.4: LevelFailed paneli
             if (_retryButton != null)
                 _retryButton.onClick.AddListener(() => OnRetryClicked?.Invoke());
+            if (_levelFailedContinueButton != null)
+                _levelFailedContinueButton.onClick.AddListener(() => OnLevelFailedContinueClicked?.Invoke());
             // Color Jam 3D - Gold Coins & Power-Up UI Listeners
             if (_garageButton != null)
                 _garageButton.onClick.AddListener(() => OnGarageClicked?.Invoke());

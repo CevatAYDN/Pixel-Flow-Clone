@@ -15,7 +15,7 @@ namespace PixelFlow.Editor
     partial class PixelFlowSetupWindow
     {
         // ═══════════════════════════════════════════════════
-        // SEKME 0: OYUN KONTROL MERKEZİ
+        // SEKME 0-1
         // ═══════════════════════════════════════════════════
 
         private void DrawGameControllerTab()
@@ -452,11 +452,11 @@ namespace PixelFlow.Editor
             GUILayout.Label("🖼️ Genişletilmiş View Bileşenleri", _sectionHeaderStyle);
             GUILayout.Space(5);
 
-            DrawDiagnosticRow("DailyCrisisView (Günlük Kriz)", _dailyCrisisOk, SetupExtendedViews);
-            DrawDiagnosticRow("ConfettiView (Kutlama Efekti)", _confettiOk, SetupExtendedViews);
-            DrawDiagnosticRow("BloomFlashView (Işık Patlaması)", _bloomFlashOk, SetupExtendedViews);
-            DrawDiagnosticRow("TutorialView (Eğitim Sistemi)", _tutorialOk, SetupExtendedViews);
-            DrawDiagnosticRow("SettingsView (Ayarlar Paneli)", _settingsViewOk, SetupExtendedViews);
+            DrawDiagnosticRow("DailyCrisisView (Günlük Kriz)", _dailyCrisisOk, SetupScene);
+            DrawDiagnosticRow("ConfettiView (Kutlama Efekti)", _confettiOk, SetupScene);
+            DrawDiagnosticRow("BloomFlashView (Işık Patlaması)", _bloomFlashOk, SetupScene);
+            DrawDiagnosticRow("TutorialView (Eğitim Sistemi)", _tutorialOk, SetupScene);
+            DrawDiagnosticRow("SettingsView (Ayarlar Paneli)", _settingsViewOk, SetupScene);
 
             GUILayout.EndVertical();
             GUILayout.Space(8);
@@ -520,7 +520,7 @@ namespace PixelFlow.Editor
             GUI.backgroundColor = new Color(0.2f, 0.6f, 1f);
             if (GUILayout.Button("🚀 Tek Tıkla Tam Sahne Kurulumu", GUILayout.Height(35)))
             {
-                GeneratePrefabs(); SetupScene(); SetupExtendedViews(); SetupGlobalVolume(); SetupCameraController();
+                GeneratePrefabs(); SetupScene(); SetupGlobalVolume(); SetupCameraController();
                 RefreshData();
             }
             GUI.backgroundColor = Color.white;
@@ -528,7 +528,7 @@ namespace PixelFlow.Editor
             GUILayout.Space(4);
             GUILayout.BeginHorizontal();
             if (!allCoreOk && GUILayout.Button("Temel Bileşenleri Kur", GUILayout.Height(28))) { GeneratePrefabs(); SetupScene(); RefreshData(); }
-            if (!allExtOk && GUILayout.Button("Genişletilmiş View'leri Kur", GUILayout.Height(28))) { SetupExtendedViews(); RefreshData(); }
+            if (!allExtOk && GUILayout.Button("Genişletilmiş View'leri Kur", GUILayout.Height(28))) { SetupScene(); RefreshData(); }
             if (!allEnvOk && GUILayout.Button("Ortam Bileşenlerini Kur", GUILayout.Height(28))) { SetupGlobalVolume(); SetupCameraController(); RefreshData(); }
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();

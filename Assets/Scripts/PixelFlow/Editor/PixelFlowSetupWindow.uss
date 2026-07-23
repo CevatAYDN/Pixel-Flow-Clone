@@ -1,0 +1,130 @@
+/* COLOR JAM 3D MASTER STUDIO - VALID UNITY UI TOOLKIT USS STYLESHEET */
+
+.studio-root {
+    background-color: #0F172A;
+    color: #F8FAFC;
+    flex-grow: 1;
+    padding: 8px;
+}
+
+/* Header Banner */
+.studio-header {
+    background-color: #1E293B;
+    border-color: #334155;
+    border-width: 1px;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.studio-header-title {
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: #F8FAFC;
+}
+
+.studio-header-subtitle {
+    font-size: 11px;
+    color: #94A3B8;
+}
+
+/* Workspace Split Container */
+.studio-workspace {
+    flex-direction: row;
+    flex-grow: 1;
+}
+
+/* Left Sidebar Navigation */
+.studio-sidebar {
+    width: 210px;
+    background-color: #1E293B;
+    border-color: #334155;
+    border-width: 1px;
+    border-radius: 12px;
+    padding: 12px 8px;
+    margin-right: 8px;
+}
+
+.studio-nav-section-label {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: #64748B;
+    margin-top: 10px;
+    margin-bottom: 4px;
+    padding-left: 6px;
+}
+
+.studio-nav-button {
+    background-color: transparent;
+    border-width: 0;
+    border-radius: 8px;
+    color: #94A3B8;
+    font-size: 11px;
+    padding: 8px 10px;
+    margin-bottom: 2px;
+    -unity-text-align: middle-left;
+}
+
+.studio-nav-button:hover {
+    background-color: #334155;
+    color: #F8FAFC;
+}
+
+.studio-nav-button-active {
+    background-color: #3B82F6;
+    color: #FFFFFF;
+    -unity-font-style: bold;
+    border-radius: 8px;
+}
+
+/* Content Cards */
+.studio-card {
+    background-color: #1E293B;
+    border-color: #334155;
+    border-width: 1px;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.studio-card-title {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: #F8FAFC;
+    margin-bottom: 8px;
+}
+
+/* Tool Palette Buttons */
+.studio-color-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: #334155;
+    margin-right: 6px;
+    margin-bottom: 6px;
+    font-size: 16px;
+}
+
+.studio-btn-red { background-color: #EF4444; color: #FFFFFF; }
+.studio-btn-green { background-color: #10B981; color: #FFFFFF; }
+.studio-btn-blue { background-color: #3B82F6; color: #FFFFFF; }
+.studio-btn-yellow { background-color: #F59E0B; color: #FFFFFF; }
+.studio-btn-purple { background-color: #8B5CF6; color: #FFFFFF; }
+.studio-btn-obstacle { background-color: #64748B; color: #FFFFFF; }
+.studio-btn-eraser { background-color: #475569; color: #FFFFFF; }
+
+/* Grid Cells */
+.studio-grid-cell {
+    width: 42px;
+    height: 42px;
+    background-color: #0F172A;
+    border-color: #334155;
+    border-width: 1px;
+    border-radius: 6px;
+    margin: 2px;
+    font-size: 18px;
+}
