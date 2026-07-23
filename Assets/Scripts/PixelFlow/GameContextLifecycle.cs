@@ -60,6 +60,12 @@ namespace PixelFlow
             builder.Bind<ILevelProgressionService, LevelProgressionService>();
             builder.BindService<ILevelLoaderService, LevelLoaderService>(); // GDD §8: DI injection for level loading
 
+            // Global Release Production Services (game_plan.md §3)
+            builder.BindService<PixelFlow.Services.GlobalRelease.PrivacyComplianceService>();
+            builder.BindService<PixelFlow.Services.GlobalRelease.SilentCrashDiagnosticsService>();
+            builder.BindService<PixelFlow.Services.GlobalRelease.InAppReviewService>();
+            builder.BindService<PixelFlow.Services.GlobalRelease.LocalNotificationService>();
+
             // Default recovery: 3 retry → skip on failure
             builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));
 
@@ -73,6 +79,7 @@ namespace PixelFlow
             builder.BindReactiveModel<ISoundModel, SoundModel>();
             builder.BindReactiveModel<ITutorialModel, TutorialModel>();
             builder.BindReactiveModel<IDailyCrisisModel, DailyCrisisModel>();
+            builder.BindReactiveModel<IInventoryModel, InventoryModel>();
 
             builder.BindSignal<PixelFlow.Signals.InputInteractionSignal>().To<PixelFlow.Commands.ProcessInputCommand>();
             builder.BindSignal<PixelFlow.Signals.CheckWinConditionSignal>().To<PixelFlow.Commands.CheckWinConditionCommand>();
@@ -91,14 +98,17 @@ namespace PixelFlow
             builder.BindSignal<PixelFlow.Signals.FlowScoreUpdatedSignal>();
             builder.BindSignal<PixelFlow.Signals.ProgressUpdatedSignal>();
 
-            // GameConfig ScriptableObject — Resources'tan yüklenir, tüm servislere enjekte edilebilir.
-            // Eğer asset bulunamazsa (ilk kurulum veya bozuk Resource), default fallback oluştur.
+            // GameConfig ScriptableObject — Resources'tan yüklenir (game_plan.md §2.2: Zero Silent Fallback Policy)
             var config = UnityEngine.Resources.Load<GameConfig>("Configs/GameConfig");
             if (config == null)
             {
+#if !UNITY_EDITOR
+                throw new DataValidationException("Resources/Configs/GameConfig.asset bulunamadı!");
+#else
                 config = UnityEngine.ScriptableObject.CreateInstance<GameConfig>();
                 config.name = "GameConfig (Runtime Default)";
                 NexusRuntime.Logger?.LogWarning("[PixelFlow.GameContextLifecycle] GameConfig.asset not found in Resources. Using runtime defaults.");
+#endif
             }
             else
             {
@@ -106,7 +116,7 @@ namespace PixelFlow
             }
             builder.BindInstance(config);
 
-            // ThemePaletteAsset — GameConfig ile aynı pattern'de yüklenir.
+            // ThemePaletteAsset
             var palette = UnityEngine.Resources.Load<ThemePaletteAsset>("Configs/ThemePalette");
             if (palette == null)
             {

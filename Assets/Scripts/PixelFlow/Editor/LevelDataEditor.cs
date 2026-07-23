@@ -100,6 +100,17 @@ namespace PixelFlow.Editor
             int newFlowThreshold = EditorGUILayout.IntSlider("Flow Score Target", _data.flowScoreThreshold, 1, 50);
             bool newCoverage = EditorGUILayout.Toggle("Require Full Grid Coverage", _data.requireFullGridCoverage);
 
+            // game_plan.md §2.1.A: 3D Toy Teması & Zıplayan Araç (Bouncy Physics) Ayarları
+            GUILayout.Space(5);
+            GUILayout.Label("3D Toy Theme & Bouncy Physics (game_plan.md §2.1.A)", EditorStyles.boldLabel);
+            EditorGUI.indentLevel++;
+            ToyThemeType newToyTheme = (ToyThemeType)EditorGUILayout.EnumPopup("3D Toy Theme", _data.toyTheme);
+
+            float newBounceForce = EditorGUILayout.Slider("Bounce Force (g-force)", _data.bouncyPhysics.BounceForce, 1f, 10f);
+            float newBounceDamping = EditorGUILayout.Slider("Bounce Damping", _data.bouncyPhysics.BounceDamping, 0.1f, 1.0f);
+            float newSquishFactor = EditorGUILayout.Slider("Squish Factor", _data.bouncyPhysics.SquishFactor, 0.05f, 0.8f);
+            EditorGUI.indentLevel--;
+
             // GDD §3.6: PhaseDefinition ScriptableObject Assignment
             GUILayout.Space(5);
             GUILayout.Label("Phase Configuration (GDD §3.6)", EditorStyles.boldLabel);
@@ -138,6 +149,13 @@ namespace PixelFlow.Editor
                 _data.viaductLimit = newViaductLimit;
                 _data.flowScoreThreshold = newFlowThreshold;
                 _data.requireFullGridCoverage = newCoverage;
+                _data.toyTheme = newToyTheme;
+                _data.bouncyPhysics = new BouncyPhysicsConfig
+                {
+                    BounceForce = newBounceForce,
+                    BounceDamping = newBounceDamping,
+                    SquishFactor = newSquishFactor
+                };
                 _data.stars = new StarCriteria { OneStar = new1Star, TwoStars = new2Star, ThreeStars = new3Star };
                 _data.tutorialEvent = newTutorial;
                 _requireFullGridCoverage = newCoverage;

@@ -61,9 +61,10 @@ namespace PixelFlow.Views
             View.UpdateTimer(GameSessionModel.ElapsedTime);
             View.UpdateStars(GameSessionModel.StarsEarned);
             View.HighlightActiveTheme(SettingsModel.CurrentTheme);
+            UpdateLevelTitleText();
 
             Subscribe<LevelCompletedSignal>(HandleLevelCompleted);
-            Subscribe<LoadLevelSignal>(HandleLoadLevel);
+            Subscribe<LoadLevelSignal>(OnLoadLevelSignalReceived);
             Subscribe<ThemeChangedSignal>(HandleThemeChanged);
             Subscribe<GridUpdatedSignal>(HandleGridUpdated);
             Subscribe<CrashDetectedSignal>(HandleCrashDetected);
@@ -135,6 +136,7 @@ namespace PixelFlow.Views
 
         private void HandleUndoClicked()
         {
+            LoggerService?.Log("[PixelFlow.HUDMediator] 'Undo' button clicked.");
             var state = GameStateModel.CurrentState;
             if (state != GameState.Playing && state != GameState.Paused) return;
             SignalBus.Fire(new UndoSignal());
@@ -142,6 +144,7 @@ namespace PixelFlow.Views
 
         private void HandleRedoClicked()
         {
+            LoggerService?.Log("[PixelFlow.HUDMediator] 'Redo' button clicked.");
             var state = GameStateModel.CurrentState;
             if (state != GameState.Playing && state != GameState.Paused) return;
             SignalBus.Fire(new RedoSignal());
@@ -271,13 +274,21 @@ namespace PixelFlow.Views
 
         private void UpdateHintCountText(int count)
         {
-            string format = LocalizationService?.GetString("hud_hint_count_format") ?? "İPUCU ({0})";
+            string format = LocalizationService?.GetString("hud_hint_count_format");
+            if (string.IsNullOrEmpty(format) || !format.Contains("{0}") || format == "hud_hint_count_format")
+            {
+                format = "TEMİZLE ({0})";
+            }
             View.UpdateHintCount(count, format);
         }
 
         private void UpdateScoreText(int score)
         {
-            string format = LocalizationService?.GetString("hud_score_format") ?? "SKOR: {0}";
+            string format = LocalizationService?.GetString("hud_score_format");
+            if (string.IsNullOrEmpty(format) || !format.Contains("{0}") || format == "hud_score_format")
+            {
+                format = "💰 {0:N0}";
+            }
             View.UpdateScore(score, format);
         }
 
@@ -324,6 +335,26 @@ namespace PixelFlow.Views
             HandleNextLevelClicked();
         }
 
+        private void OnLoadLevelSignalReceived(LoadLevelSignal signal)
+        {
+            View?.HideCompletion();
+            View?.HideLevelFailed();
+            View?.HideCrisis();
+            UpdateLevelTitleText();
+        }
+
+        private void UpdateLevelTitleText()
+        {
+            var currentLevel = LevelModel?.CurrentLevel;
+            int levelNumber = currentLevel != null ? currentLevel.levelIndex + 1 : 1;
+            string format = LocalizationService?.GetString("hud_level_title_format");
+            if (string.IsNullOrEmpty(format) || !format.Contains("{0}") || format == "hud_level_title_format")
+            {
+                format = "SEVİYE {0}";
+            }
+            View?.UpdateLevelTitle(levelNumber, format);
+        }
+
         private void HandleThemeChanged(ThemeChangedSignal signal)
         {
             View.HighlightActiveTheme(SettingsModel.CurrentTheme);
@@ -343,12 +374,13 @@ namespace PixelFlow.Views
 
         private void HandlePauseClicked()
         {
-            // PauseSimulationCommand handles toggle logic for all states
+            LoggerService?.Log("[PixelFlow.HUDMediator] 'Pause' button clicked.");
             SignalBus.Fire(new PauseSimulationSignal());
         }
 
         private void HandleRetryClicked()
         {
+            LoggerService?.Log("[PixelFlow.HUDMediator] 'Retry' button clicked.");
             if (GameStateModel.CurrentState != GameState.LevelFailed) return;
             var currentLevel = LevelModel.CurrentLevel;
             if (currentLevel != null)
@@ -363,6 +395,8 @@ namespace PixelFlow.Views
             if (!Application.isPlaying) return;
             if (View == null) return;
 
+            LoggerService?.Log($"[PixelFlow.HUDMediator] Level failed popup displayed! Reason: {signal.Reason}");
+
             string title = LocalizationService?.GetString("level_failed_title") ?? "Seviye Başarısız!";
             string retryLabel = LocalizationService?.GetString("level_failed_retry") ?? "Tekrar Dene";
             string hubLabel = LocalizationService?.GetString("level_failed_hub") ?? "Hub'a Dön";
@@ -373,12 +407,14 @@ namespace PixelFlow.Views
 
         private void HandleLevelFailedContinueClicked()
         {
+            LoggerService?.Log("[PixelFlow.HUDMediator] 'Level Failed Continue' clicked.");
             if (GameStateModel.CurrentState != GameState.LevelFailed) return;
             View.HideLevelFailed();
         }
 
         private void HandleStateChanged(GameState state)
         {
+            LoggerService?.Log($"[PixelFlow.HUDMediator] HandleStateChanged: State -> {state}");
             UpdateVisibility();
         }
 

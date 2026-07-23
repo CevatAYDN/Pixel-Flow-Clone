@@ -35,7 +35,7 @@ namespace PixelFlow.Models
 
     /// <summary>
     /// Tema tercihini IPlayerPrefsService üzerinden kalıcı saklar.
-    /// Geçersiz kayıtlı değer gelirse varsayılan (Dark) kullanılır.
+    /// Geçersiz kayıtlı değer gelirse varsayılan (Light) kullanılır.
     /// </summary>
     public class SettingsModel : ISettingsModel, IReactiveModel
     {
@@ -46,7 +46,7 @@ namespace PixelFlow.Models
         private const string KeySfxVol = "SfxVolume";
         private const string KeyMusicVol = "MusicVolume";
         private const string KeyHaptics = "HapticsDisabled";
-        private const AppTheme DefaultTheme = AppTheme.Dark;
+        private const AppTheme DefaultTheme = AppTheme.Light;
 
         private readonly IPlayerPrefsService _prefs;
 

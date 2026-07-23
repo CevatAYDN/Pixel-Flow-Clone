@@ -77,12 +77,31 @@ namespace PixelFlow.Services
             }
         }
 
-        /// <summary>Sessiz 0.01s clip — null reference hatası vermemek için</summary>
+        /// <summary>Eksik WAV dosyaları için prosedürel synth ses dalgası üretir.</summary>
         private static AudioClip CreateSilentClip(string name)
         {
-            int sampleCount = 441; // 0.01s × 44100
-            var clip = AudioClip.Create(name, sampleCount, 1, 44100, false);
+            int sampleRate = 44100;
+            float duration = 0.15f;
+            float freq = 440f; // Default A4 note
+
+            if (name.Contains("UIClick")) { duration = 0.05f; freq = 800f; }
+            else if (name.Contains("CoinCollect")) { duration = 0.2f; freq = 1200f; }
+            else if (name.Contains("LevelComplete")) { duration = 0.4f; freq = 600f; }
+            else if (name.Contains("Horn")) { duration = 0.25f; freq = 350f; }
+            else if (name.Contains("Crash")) { duration = 0.2f; freq = 180f; }
+            else if (name.Contains("VehicleEngine")) { duration = 0.3f; freq = 220f; }
+
+            int sampleCount = Mathf.RoundToInt(sampleRate * duration);
+            var clip = AudioClip.Create(name, sampleCount, 1, sampleRate, false);
             var data = new float[sampleCount];
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float t = (float)i / sampleRate;
+                float env = 1f - (t / duration); // Decay envelope
+                data[i] = Mathf.Sin(2f * Mathf.PI * freq * t) * env * 0.15f;
+            }
+
             clip.SetData(data, 0);
             return clip;
         }

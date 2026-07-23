@@ -121,7 +121,13 @@ namespace PixelFlow.Editor
             }
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 100;
-            EnsureComponent<CanvasScaler>(canvasObj, scaler => scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize);
+            EnsureComponent<CanvasScaler>(canvasObj, scaler =>
+            {
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1080, 1920); // Portrait 9:16 per GDD
+                scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+                scaler.matchWidthOrHeight = 0.5f;
+            });
             EnsureComponent<GraphicRaycaster>(canvasObj);
 
             EnsureEventSystem(rootObj.transform);
@@ -147,8 +153,10 @@ namespace PixelFlow.Editor
             EnsureComponent<CameraController>(camObj);
 
             var hudObj = FindOrCreateChild(canvasObj.transform, "HUD");
-            EnsureComponent<HUDView>(hudObj);
+            var hudView = hudObj.GetComponent<HUDView>();
+            if (hudView == null) hudView = hudObj.AddComponent<HUDView>();
             EnsureComponent<CanvasGroup>(hudObj);
+            EnsureComponent<SafeArea>(hudObj);
             var hudRect = hudObj.GetComponent<RectTransform>();
             if (hudRect == null)
             {
@@ -157,6 +165,14 @@ namespace PixelFlow.Editor
             hudRect.anchorMin = Vector2.zero;
             hudRect.anchorMax = Vector2.one;
             hudRect.sizeDelta = Vector2.zero;
+            EnsureHUDBindings(hudView);
+
+            var menuObj = FindOrCreateChild(canvasObj.transform, "MainMenuView");
+            var menuView = menuObj.GetComponent<MainMenuView>();
+            if (menuView == null) menuView = menuObj.AddComponent<MainMenuView>();
+            EnsureComponent<CanvasGroup>(menuObj);
+            EnsureComponent<SafeArea>(menuObj);
+            EnsureMainMenuBindings(menuView);
 
             var soundObj = FindOrCreateChild(rootObj.transform, "SoundHandler");
             EnsureComponent<SoundHandlerView>(soundObj);
@@ -171,12 +187,630 @@ namespace PixelFlow.Editor
                 boot = bootObj.AddComponent<GameBootstrapper>();
             }
             boot.nexusRoot = root;
+            if (boot.initialLevel == null)
+            {
+                RefreshLevelsCache();
+                if (_cachedLevels.Count == 0)
+                {
+                    CreatePhase1And2HandCraftedPack();
+                    RefreshLevelsCache();
+                }
+                if (_cachedLevels.Count > 0)
+                {
+                    Undo.RecordObject(boot, "Başlangıç Seviyesi Ata");
+                    boot.initialLevel = _cachedLevels[0];
+                    EditorUtility.SetDirty(boot);
+                }
+            }
 
             EnsureExtendedViews(canvasObj.transform);
 
             Selection.activeGameObject = rootObj;
             EditorGUIUtility.PingObject(rootObj);
             Debug.Log("[PixelFlow] Scene setup complete.");
+        }
+
+        private void EnsureHUDBindings(HUDView hudView)
+        {
+            if (hudView == null) return;
+            var hudObj = hudView.gameObject;
+
+            var hudRect = hudObj.GetComponent<RectTransform>();
+            if (hudRect != null)
+            {
+                hudRect.anchorMin = Vector2.zero;
+                hudRect.anchorMax = Vector2.one;
+                hudRect.sizeDelta = Vector2.zero;
+            }
+
+            // ═══════════════════════════════════════════════════
+            // 1. TOP HUD BAR (Level Badge, Coin Counter, Pause Button)
+            // ═══════════════════════════════════════════════════
+            var topBarObj = FindOrCreateChild(hudObj.transform, "TopHUDBar");
+            var topBgImg = topBarObj.GetComponent<UnityEngine.UI.Image>();
+            if (topBgImg == null) topBgImg = topBarObj.AddComponent<UnityEngine.UI.Image>();
+            topBgImg.color = new Color(0.08f, 0.10f, 0.16f, 0.85f); // Header background bar
+
+            var topRect = topBarObj.GetComponent<RectTransform>();
+            if (topRect != null)
+            {
+                topRect.anchorMin = new Vector2(0.04f, 0.88f);
+                topRect.anchorMax = new Vector2(0.96f, 0.97f);
+                topRect.sizeDelta = Vector2.zero;
+            }
+
+            // Level Title Badge
+            var levelBadgeObj = FindOrCreateChild(topBarObj.transform, "LevelBadge");
+            var levelBgImg = levelBadgeObj.GetComponent<UnityEngine.UI.Image>();
+            if (levelBgImg == null) levelBgImg = levelBadgeObj.AddComponent<UnityEngine.UI.Image>();
+            levelBgImg.color = new Color(0.24f, 0.28f, 0.42f, 0.95f);
+            var levelBadgeRect = levelBadgeObj.GetComponent<RectTransform>();
+            if (levelBadgeRect != null)
+            {
+                levelBadgeRect.anchorMin = new Vector2(0.03f, 0.15f);
+                levelBadgeRect.anchorMax = new Vector2(0.38f, 0.85f);
+                levelBadgeRect.sizeDelta = Vector2.zero;
+            }
+
+            var levelTitleText = EnsureTMPText(levelBadgeObj, "LevelTitleText");
+            levelTitleText.text = "SEVİYE 1";
+            levelTitleText.fontSize = 24;
+            levelTitleText.fontStyle = TMPro.FontStyles.Bold;
+            levelTitleText.color = Color.white;
+            levelTitleText.alignment = TMPro.TextAlignmentOptions.Center;
+            var lTextRect = levelTitleText.GetComponent<RectTransform>();
+            if (lTextRect != null)
+            {
+                lTextRect.anchorMin = Vector2.zero;
+                lTextRect.anchorMax = Vector2.one;
+                lTextRect.sizeDelta = Vector2.zero;
+            }
+
+            // Coin / Score Counter
+            var coinCounterObj = FindOrCreateChild(topBarObj.transform, "CoinCounter");
+            var coinBgImg = coinCounterObj.GetComponent<UnityEngine.UI.Image>();
+            if (coinBgImg == null) coinBgImg = coinCounterObj.AddComponent<UnityEngine.UI.Image>();
+            coinBgImg.color = new Color(0.24f, 0.28f, 0.42f, 0.95f);
+            var coinCounterRect = coinCounterObj.GetComponent<RectTransform>();
+            if (coinCounterRect != null)
+            {
+                coinCounterRect.anchorMin = new Vector2(0.42f, 0.15f);
+                coinCounterRect.anchorMax = new Vector2(0.78f, 0.85f);
+                coinCounterRect.sizeDelta = Vector2.zero;
+            }
+
+            var scoreText = EnsureTMPText(coinCounterObj, "ScoreText");
+            scoreText.text = "SKOR: 1,450";
+            scoreText.fontSize = 22;
+            scoreText.fontStyle = TMPro.FontStyles.Bold;
+            scoreText.color = new Color(1f, 0.85f, 0.2f);
+            scoreText.alignment = TMPro.TextAlignmentOptions.Center;
+            var sTextRect = scoreText.GetComponent<RectTransform>();
+            if (sTextRect != null)
+            {
+                sTextRect.anchorMin = Vector2.zero;
+                sTextRect.anchorMax = Vector2.one;
+                sTextRect.sizeDelta = Vector2.zero;
+            }
+
+            // Pause Button
+            var pauseBtn = EnsureButton(topBarObj, "PauseButton");
+            var pauseImg = pauseBtn.GetComponent<UnityEngine.UI.Image>();
+            if (pauseImg != null) pauseImg.color = new Color(0.35f, 0.40f, 0.55f, 0.95f);
+            var pauseRect = pauseBtn.GetComponent<RectTransform>();
+            if (pauseRect != null)
+            {
+                pauseRect.anchorMin = new Vector2(0.82f, 0.15f);
+                pauseRect.anchorMax = new Vector2(0.97f, 0.85f);
+                pauseRect.sizeDelta = Vector2.zero;
+            }
+
+            var pauseText = EnsureTMPText(pauseBtn.gameObject, "Text");
+            pauseText.text = "II";
+            pauseText.fontSize = 22;
+            pauseText.fontStyle = TMPro.FontStyles.Bold;
+            pauseText.color = Color.white;
+            pauseText.alignment = TMPro.TextAlignmentOptions.Center;
+            var pTextRect = pauseText.GetComponent<RectTransform>();
+            if (pTextRect != null)
+            {
+                pTextRect.anchorMin = Vector2.zero;
+                pTextRect.anchorMax = Vector2.one;
+                pTextRect.sizeDelta = Vector2.zero;
+            }
+
+            var timerText = EnsureTMPText(topBarObj, "TimerText");
+            timerText.gameObject.SetActive(false);
+
+            // ═══════════════════════════════════════════════════
+            // 2. BOTTOM POWER-UP DOCK BAR (Viaduct, Clear/Hint, Rainbow)
+            // ═══════════════════════════════════════════════════
+            var bottomDockObj = FindOrCreateChild(hudObj.transform, "PowerUpBar");
+            var dockImg = bottomDockObj.GetComponent<UnityEngine.UI.Image>();
+            if (dockImg == null) dockImg = bottomDockObj.AddComponent<UnityEngine.UI.Image>();
+            dockImg.color = new Color(0.08f, 0.10f, 0.16f, 0.92f); // Floating Dark Dock
+            var dockRect = bottomDockObj.GetComponent<RectTransform>();
+            if (dockRect != null)
+            {
+                dockRect.anchorMin = new Vector2(0.04f, 0.02f);
+                dockRect.anchorMax = new Vector2(0.96f, 0.10f);
+                dockRect.sizeDelta = Vector2.zero;
+            }
+
+            // Undo / Viaduct Button
+            var undoBtn = EnsureButton(bottomDockObj, "UndoButton");
+            var uImg = undoBtn.GetComponent<UnityEngine.UI.Image>();
+            if (uImg != null) uImg.color = new Color(0.54f, 0.36f, 0.96f); // Purple Viaduct
+            var uRect = undoBtn.GetComponent<RectTransform>();
+            if (uRect != null)
+            {
+                uRect.anchorMin = new Vector2(0.05f, 0.10f);
+                uRect.anchorMax = new Vector2(0.32f, 0.90f);
+                uRect.sizeDelta = Vector2.zero;
+            }
+            var uText = EnsureTMPText(undoBtn.gameObject, "Text");
+            uText.text = "VİYADÜK";
+            uText.fontSize = 18;
+            uText.fontStyle = TMPro.FontStyles.Bold;
+            uText.color = Color.white;
+            uText.alignment = TMPro.TextAlignmentOptions.Center;
+            var uTextRect = uText.GetComponent<RectTransform>();
+            if (uTextRect != null)
+            {
+                uTextRect.anchorMin = Vector2.zero;
+                uTextRect.anchorMax = Vector2.one;
+                uTextRect.sizeDelta = Vector2.zero;
+            }
+
+            // Hint / Clear Button
+            var hintBtn = EnsureButton(bottomDockObj, "HintButton");
+            var hImg = hintBtn.GetComponent<UnityEngine.UI.Image>();
+            if (hImg != null) hImg.color = new Color(0.22f, 0.74f, 0.97f); // Sky Blue
+            var hRect = hintBtn.GetComponent<RectTransform>();
+            if (hRect != null)
+            {
+                hRect.anchorMin = new Vector2(0.36f, 0.10f);
+                hRect.anchorMax = new Vector2(0.64f, 0.90f);
+                hRect.sizeDelta = Vector2.zero;
+            }
+            var hintCountText = EnsureTMPText(hintBtn.gameObject, "HintCountText");
+            hintCountText.text = "TEMİZLE";
+            hintCountText.fontSize = 18;
+            hintCountText.fontStyle = TMPro.FontStyles.Bold;
+            hintCountText.color = Color.white;
+            hintCountText.alignment = TMPro.TextAlignmentOptions.Center;
+            var hTextRect = hintCountText.GetComponent<RectTransform>();
+            if (hTextRect != null)
+            {
+                hTextRect.anchorMin = Vector2.zero;
+                hTextRect.anchorMax = Vector2.one;
+                hTextRect.sizeDelta = Vector2.zero;
+            }
+
+            // Redo / Rainbow Button
+            var redoBtn = EnsureButton(bottomDockObj, "RedoButton");
+            var rImg = redoBtn.GetComponent<UnityEngine.UI.Image>();
+            if (rImg != null) rImg.color = new Color(0.98f, 0.35f, 0.45f); // Coral Red
+            var rRect = redoBtn.GetComponent<RectTransform>();
+            if (rRect != null)
+            {
+                rRect.anchorMin = new Vector2(0.68f, 0.10f);
+                rRect.anchorMax = new Vector2(0.95f, 0.90f);
+                rRect.sizeDelta = Vector2.zero;
+            }
+            var rText = EnsureTMPText(redoBtn.gameObject, "Text");
+            rText.text = "GÖKKUŞAĞI";
+            rText.fontSize = 18;
+            rText.fontStyle = TMPro.FontStyles.Bold;
+            rText.color = Color.white;
+            rText.alignment = TMPro.TextAlignmentOptions.Center;
+            var rTextRect = rText.GetComponent<RectTransform>();
+            if (rTextRect != null)
+            {
+                rTextRect.anchorMin = Vector2.zero;
+                rTextRect.anchorMax = Vector2.one;
+                rTextRect.sizeDelta = Vector2.zero;
+            }
+
+            // ═══════════════════════════════════════════════════
+            // 3. COMPLETION PANEL (Level Victory Modal)
+            // ═══════════════════════════════════════════════════
+            var compPanelObj = FindOrCreateChild(hudObj.transform, "CompletionPanel");
+            var compImg = compPanelObj.GetComponent<UnityEngine.UI.Image>();
+            if (compImg == null) compImg = compPanelObj.AddComponent<UnityEngine.UI.Image>();
+            compImg.color = new Color(0.08f, 0.10f, 0.16f, 0.96f); // Sleek Dark Glass Overlay
+            var compRect = compPanelObj.GetComponent<RectTransform>();
+            if (compRect != null)
+            {
+                compRect.anchorMin = Vector2.zero;
+                compRect.anchorMax = Vector2.one;
+                compRect.sizeDelta = Vector2.zero;
+            }
+
+            var compText = EnsureTMPText(compPanelObj, "CompletionTitleText");
+            compText.text = "SEVİYE TAMAMLANDI! 🎉";
+            compText.fontSize = 40;
+            compText.fontStyle = TMPro.FontStyles.Bold;
+            compText.color = new Color(1f, 0.85f, 0.2f);
+            compText.alignment = TMPro.TextAlignmentOptions.Center;
+            var cTitleRect = compText.GetComponent<RectTransform>();
+            if (cTitleRect != null)
+            {
+                cTitleRect.anchorMin = new Vector2(0.1f, 0.75f);
+                cTitleRect.anchorMax = new Vector2(0.9f, 0.88f);
+                cTitleRect.sizeDelta = Vector2.zero;
+            }
+
+            var starsContainer = FindOrCreateChild(compPanelObj.transform, "StarsContainer");
+            var starsRect = starsContainer.GetComponent<RectTransform>();
+            if (starsRect != null)
+            {
+                starsRect.anchorMin = new Vector2(0.2f, 0.60f);
+                starsRect.anchorMax = new Vector2(0.8f, 0.72f);
+                starsRect.sizeDelta = Vector2.zero;
+            }
+            var star1 = FindOrCreateChild(starsContainer.transform, "Star1");
+            var star2 = FindOrCreateChild(starsContainer.transform, "Star2");
+            var star3 = FindOrCreateChild(starsContainer.transform, "Star3");
+
+            var compScoreText = EnsureTMPText(compPanelObj, "CompletionScoreText");
+            compScoreText.text = "Skor: 1,500";
+            compScoreText.fontSize = 28;
+            compScoreText.color = Color.white;
+            compScoreText.alignment = TMPro.TextAlignmentOptions.Center;
+            var cScoreRect = compScoreText.GetComponent<RectTransform>();
+            if (cScoreRect != null)
+            {
+                cScoreRect.anchorMin = new Vector2(0.1f, 0.48f);
+                cScoreRect.anchorMax = new Vector2(0.9f, 0.58f);
+                cScoreRect.sizeDelta = Vector2.zero;
+            }
+
+            var compStarsText = EnsureTMPText(compPanelObj, "CompletionStarsText");
+            compStarsText.gameObject.SetActive(false);
+
+            var nextBtn = EnsureButton(compPanelObj, "NextLevelButton");
+            var nextImg = nextBtn.GetComponent<UnityEngine.UI.Image>();
+            if (nextImg != null) nextImg.color = new Color(0.12f, 0.82f, 0.38f); // Emerald Green
+            var nextRect = nextBtn.GetComponent<RectTransform>();
+            if (nextRect != null)
+            {
+                nextRect.anchorMin = new Vector2(0.12f, 0.20f);
+                nextRect.anchorMax = new Vector2(0.88f, 0.34f);
+                nextRect.sizeDelta = Vector2.zero;
+            }
+            var nextText = EnsureTMPText(nextBtn.gameObject, "Text");
+            nextText.text = "SONRAKİ SEVİYE ➔";
+            nextText.fontSize = 32;
+            nextText.fontStyle = TMPro.FontStyles.Bold;
+            nextText.color = Color.white;
+            nextText.alignment = TMPro.TextAlignmentOptions.Center;
+            var nTextRect = nextText.GetComponent<RectTransform>();
+            if (nTextRect != null)
+            {
+                nTextRect.anchorMin = Vector2.zero;
+                nTextRect.anchorMax = Vector2.one;
+                nTextRect.sizeDelta = Vector2.zero;
+            }
+
+            var continueBtn = EnsureButton(compPanelObj, "ContinueButton");
+            continueBtn.gameObject.SetActive(false);
+
+            // ═══════════════════════════════════════════════════
+            // 4. LEVEL FAILED PANEL
+            // ═══════════════════════════════════════════════════
+            var failPanelObj = FindOrCreateChild(hudObj.transform, "LevelFailedPanel");
+            var failImg = failPanelObj.GetComponent<UnityEngine.UI.Image>();
+            if (failImg == null) failImg = failPanelObj.AddComponent<UnityEngine.UI.Image>();
+            failImg.color = new Color(0.18f, 0.06f, 0.08f, 0.96f);
+            var failRect = failPanelObj.GetComponent<RectTransform>();
+            if (failRect != null)
+            {
+                failRect.anchorMin = Vector2.zero;
+                failRect.anchorMax = Vector2.one;
+                failRect.sizeDelta = Vector2.zero;
+            }
+
+            var failText = EnsureTMPText(failPanelObj, "LevelFailedText");
+            failText.text = "SEVİYE BAŞARISIZ! 🚨";
+            failText.fontSize = 38;
+            failText.fontStyle = TMPro.FontStyles.Bold;
+            failText.color = new Color(1f, 0.3f, 0.35f);
+            failText.alignment = TMPro.TextAlignmentOptions.Center;
+            var fTextRect = failText.GetComponent<RectTransform>();
+            if (fTextRect != null)
+            {
+                fTextRect.anchorMin = new Vector2(0.1f, 0.65f);
+                fTextRect.anchorMax = new Vector2(0.9f, 0.80f);
+                fTextRect.sizeDelta = Vector2.zero;
+            }
+
+            var retryBtn = EnsureButton(failPanelObj, "RetryButton");
+            var rtryImg = retryBtn.GetComponent<UnityEngine.UI.Image>();
+            if (rtryImg != null) rtryImg.color = new Color(0.92f, 0.25f, 0.3f);
+            var retryRect = retryBtn.GetComponent<RectTransform>();
+            if (retryRect != null)
+            {
+                retryRect.anchorMin = new Vector2(0.12f, 0.25f);
+                retryRect.anchorMax = new Vector2(0.88f, 0.38f);
+                retryRect.sizeDelta = Vector2.zero;
+            }
+            var retryText = EnsureTMPText(retryBtn.gameObject, "Text");
+            retryText.text = "TEKRAR DENE 🔄";
+            retryText.fontSize = 30;
+            retryText.fontStyle = TMPro.FontStyles.Bold;
+            retryText.color = Color.white;
+            retryText.alignment = TMPro.TextAlignmentOptions.Center;
+            var rtryTextRect = retryText.GetComponent<RectTransform>();
+            if (rtryTextRect != null)
+            {
+                rtryTextRect.anchorMin = Vector2.zero;
+                rtryTextRect.anchorMax = Vector2.one;
+                rtryTextRect.sizeDelta = Vector2.zero;
+            }
+
+            var failContBtn = EnsureButton(failPanelObj, "LevelFailedContinueButton");
+            failContBtn.gameObject.SetActive(false);
+
+            compPanelObj.SetActive(false);
+            failPanelObj.SetActive(false);
+
+            // Assign serialized properties via SerializedObject
+            var so = new SerializedObject(hudView);
+            SetProp(so, "_scoreText", scoreText);
+            SetProp(so, "_timerText", timerText);
+            SetProp(so, "_hintCountText", hintCountText);
+            SetProp(so, "_levelTitleText", levelTitleText);
+            SetProp(so, "_hintButton", hintBtn);
+            SetProp(so, "_undoButton", undoBtn);
+            SetProp(so, "_redoButton", redoBtn);
+            SetProp(so, "_pauseButton", pauseBtn);
+
+            SetProp(so, "_completionPanel", compPanelObj);
+            SetProp(so, "_completionText", compText);
+            SetProp(so, "_completionScoreText", compScoreText);
+            SetProp(so, "_completionStarsText", compStarsText);
+            SetProp(so, "_nextLevelButton", nextBtn);
+            SetProp(so, "_continueButton", continueBtn);
+            SetProp(so, "_starsContainer", starsContainer);
+            SetProp(so, "_star1", star1);
+            SetProp(so, "_star2", star2);
+            SetProp(so, "_star3", star3);
+
+            SetProp(so, "_levelFailedPanel", failPanelObj);
+            SetProp(so, "_levelFailedText", failText);
+            SetProp(so, "_retryButton", retryBtn);
+            SetProp(so, "_levelFailedContinueButton", failContBtn);
+
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(hudView);
+        }
+
+        private TMPro.TMP_Text EnsureTMPText(GameObject parent, string name)
+        {
+            var obj = FindOrCreateChild(parent.transform, name);
+            var tmp = obj.GetComponent<TMPro.TMP_Text>();
+            if (tmp == null) tmp = obj.AddComponent<TMPro.TextMeshProUGUI>();
+            tmp.enableWordWrapping = false;
+            tmp.overflowMode = TMPro.TextOverflowModes.Overflow;
+            return tmp;
+        }
+
+        private UnityEngine.UI.Button EnsureButton(GameObject parent, string name)
+        {
+            var obj = FindOrCreateChild(parent.transform, name);
+            EnsureComponent<UnityEngine.UI.Image>(obj);
+            var btn = obj.GetComponent<UnityEngine.UI.Button>();
+            if (btn == null) btn = obj.AddComponent<UnityEngine.UI.Button>();
+            return btn;
+        }
+
+        private void SetProp(SerializedObject so, string propName, Object val)
+        {
+            var prop = so.FindProperty(propName);
+            if (prop != null) prop.objectReferenceValue = val;
+        }
+
+        private void EnsureMainMenuBindings(MainMenuView menuView)
+        {
+            if (menuView == null) return;
+            var menuObj = menuView.gameObject;
+
+            // Background canvas & styling
+            var bgImg = menuObj.GetComponent<UnityEngine.UI.Image>();
+            if (bgImg == null) bgImg = menuObj.AddComponent<UnityEngine.UI.Image>();
+            bgImg.color = new Color(0.08f, 0.09f, 0.14f, 0.98f); // Sleek Dark Glass UI Background
+
+            var menuRect = menuObj.GetComponent<RectTransform>();
+            if (menuRect != null)
+            {
+                menuRect.anchorMin = Vector2.zero;
+                menuRect.anchorMax = Vector2.one;
+                menuRect.sizeDelta = Vector2.zero;
+            }
+
+            // 1. TitleText & CoinText
+            var titleTextObj = FindOrCreateChild(menuObj.transform, "TitleText");
+            var titleText = titleTextObj.GetComponent<TMPro.TMP_Text>();
+            if (titleText == null) titleText = titleTextObj.AddComponent<TMPro.TextMeshProUGUI>();
+            titleText.text = "COLOR JAM 3D";
+            titleText.fontSize = 48;
+            titleText.fontStyle = TMPro.FontStyles.Bold;
+            titleText.color = new Color(1f, 0.85f, 0.2f); // Gold Title
+            titleText.alignment = TMPro.TextAlignmentOptions.Center;
+            var titleRect = titleTextObj.GetComponent<RectTransform>();
+            if (titleRect != null)
+            {
+                titleRect.anchorMin = new Vector2(0.1f, 0.82f);
+                titleRect.anchorMax = new Vector2(0.9f, 0.94f);
+                titleRect.sizeDelta = Vector2.zero;
+            }
+
+            var coinTextObj = FindOrCreateChild(menuObj.transform, "CoinText");
+            var coinText = coinTextObj.GetComponent<TMPro.TMP_Text>();
+            if (coinText == null) coinText = coinTextObj.AddComponent<TMPro.TextMeshProUGUI>();
+            coinText.text = "💰 1,450";
+            coinText.fontSize = 28;
+            coinText.fontStyle = TMPro.FontStyles.Bold;
+            coinText.color = Color.white;
+            coinText.alignment = TMPro.TextAlignmentOptions.Right;
+            var coinRect = coinTextObj.GetComponent<RectTransform>();
+            if (coinRect != null)
+            {
+                coinRect.anchorMin = new Vector2(0.6f, 0.92f);
+                coinRect.anchorMax = new Vector2(0.95f, 0.98f);
+                coinRect.sizeDelta = Vector2.zero;
+            }
+
+            // 2. GarageCard + VehicleNameText + VehicleTypeText + OpenGarageButton
+            var garageCardObj = FindOrCreateChild(menuObj.transform, "GarageCard");
+            var cardImg = garageCardObj.GetComponent<UnityEngine.UI.Image>();
+            if (cardImg == null) cardImg = garageCardObj.AddComponent<UnityEngine.UI.Image>();
+            cardImg.color = new Color(0.14f, 0.17f, 0.25f, 0.92f);
+            var cardRect = garageCardObj.GetComponent<RectTransform>();
+            if (cardRect != null)
+            {
+                cardRect.anchorMin = new Vector2(0.08f, 0.30f);
+                cardRect.anchorMax = new Vector2(0.92f, 0.78f);
+                cardRect.sizeDelta = Vector2.zero;
+            }
+
+            var vehicleNameObj = FindOrCreateChild(garageCardObj.transform, "VehicleNameText");
+            var vehicleNameText = vehicleNameObj.GetComponent<TMPro.TMP_Text>();
+            if (vehicleNameText == null) vehicleNameText = vehicleNameObj.AddComponent<TMPro.TextMeshProUGUI>();
+            vehicleNameText.text = "Dondurma Arabası";
+            vehicleNameText.fontSize = 32;
+            vehicleNameText.fontStyle = TMPro.FontStyles.Bold;
+            vehicleNameText.color = Color.white;
+            vehicleNameText.alignment = TMPro.TextAlignmentOptions.Center;
+            var vehNameRect = vehicleNameObj.GetComponent<RectTransform>();
+            if (vehNameRect != null)
+            {
+                vehNameRect.anchorMin = new Vector2(0.1f, 0.72f);
+                vehNameRect.anchorMax = new Vector2(0.9f, 0.90f);
+                vehNameRect.sizeDelta = Vector2.zero;
+            }
+
+            var vehicleTypeObj = FindOrCreateChild(garageCardObj.transform, "VehicleTypeText");
+            var vehicleTypeText = vehicleTypeObj.GetComponent<TMPro.TMP_Text>();
+            if (vehicleTypeText == null) vehicleTypeText = vehicleTypeObj.AddComponent<TMPro.TextMeshProUGUI>();
+            vehicleTypeText.text = "Kuşanılan Sarı Araç";
+            vehicleTypeText.fontSize = 22;
+            vehicleTypeText.color = new Color(0.4f, 0.8f, 1f);
+            vehicleTypeText.alignment = TMPro.TextAlignmentOptions.Center;
+            var vehTypeRect = vehicleTypeObj.GetComponent<RectTransform>();
+            if (vehTypeRect != null)
+            {
+                vehTypeRect.anchorMin = new Vector2(0.1f, 0.55f);
+                vehTypeRect.anchorMax = new Vector2(0.9f, 0.70f);
+                vehTypeRect.sizeDelta = Vector2.zero;
+            }
+
+            var garageBtnObj = FindOrCreateChild(garageCardObj.transform, "GarageButton");
+            var gImg = garageBtnObj.GetComponent<UnityEngine.UI.Image>();
+            if (gImg == null) gImg = garageBtnObj.AddComponent<UnityEngine.UI.Image>();
+            gImg.color = new Color(0.2f, 0.45f, 0.95f);
+            var garageBtn = garageBtnObj.GetComponent<UnityEngine.UI.Button>();
+            if (garageBtn == null) garageBtn = garageBtnObj.AddComponent<UnityEngine.UI.Button>();
+            var gBtnRect = garageBtnObj.GetComponent<RectTransform>();
+            if (gBtnRect != null)
+            {
+                gBtnRect.anchorMin = new Vector2(0.2f, 0.10f);
+                gBtnRect.anchorMax = new Vector2(0.8f, 0.35f);
+                gBtnRect.sizeDelta = Vector2.zero;
+            }
+
+            var gTextObj = FindOrCreateChild(garageBtnObj.transform, "Text");
+            var gText = gTextObj.GetComponent<TMPro.TMP_Text>();
+            if (gText == null) gText = gTextObj.AddComponent<TMPro.TextMeshProUGUI>();
+            gText.text = "GARAJI AÇ 🚗";
+            gText.fontSize = 26;
+            gText.fontStyle = TMPro.FontStyles.Bold;
+            gText.color = Color.white;
+            gText.alignment = TMPro.TextAlignmentOptions.Center;
+            var gTextRect = gTextObj.GetComponent<RectTransform>();
+            if (gTextRect != null)
+            {
+                gTextRect.anchorMin = Vector2.zero;
+                gTextRect.anchorMax = Vector2.one;
+                gTextRect.sizeDelta = Vector2.zero;
+            }
+
+            // 3. PlayButton + PlayButtonText
+            var playBtnObj = FindOrCreateChild(menuObj.transform, "PlayButton");
+            var pImg = playBtnObj.GetComponent<UnityEngine.UI.Image>();
+            if (pImg == null) pImg = playBtnObj.AddComponent<UnityEngine.UI.Image>();
+            pImg.color = new Color(0.12f, 0.82f, 0.38f); // Vibrant Emerald Green Play Button
+            var playBtn = playBtnObj.GetComponent<UnityEngine.UI.Button>();
+            if (playBtn == null) playBtn = playBtnObj.AddComponent<UnityEngine.UI.Button>();
+            var playRect = playBtnObj.GetComponent<RectTransform>();
+            if (playRect != null)
+            {
+                playRect.anchorMin = new Vector2(0.08f, 0.08f);
+                playRect.anchorMax = new Vector2(0.92f, 0.22f);
+                playRect.sizeDelta = Vector2.zero;
+            }
+
+            var playTextObj = FindOrCreateChild(playBtnObj.transform, "PlayButtonText");
+            var playButtonText = playTextObj.GetComponent<TMPro.TMP_Text>();
+            if (playButtonText == null) playButtonText = playTextObj.AddComponent<TMPro.TextMeshProUGUI>();
+            playButtonText.text = "OYUNA BAŞLA (SEVİYE 1)";
+            playButtonText.fontSize = 34;
+            playButtonText.fontStyle = TMPro.FontStyles.Bold;
+            playButtonText.color = Color.white;
+            playButtonText.alignment = TMPro.TextAlignmentOptions.Center;
+            var pTextRect = playTextObj.GetComponent<RectTransform>();
+            if (pTextRect != null)
+            {
+                pTextRect.anchorMin = Vector2.zero;
+                pTextRect.anchorMax = Vector2.one;
+                pTextRect.sizeDelta = Vector2.zero;
+            }
+
+            // 4. SettingsButton
+            var settingsBtnObj = FindOrCreateChild(menuObj.transform, "SettingsButton");
+            var sImg = settingsBtnObj.GetComponent<UnityEngine.UI.Image>();
+            if (sImg == null) sImg = settingsBtnObj.AddComponent<UnityEngine.UI.Image>();
+            sImg.color = new Color(0.3f, 0.35f, 0.45f);
+            var settingsBtn = settingsBtnObj.GetComponent<UnityEngine.UI.Button>();
+            if (settingsBtn == null) settingsBtn = settingsBtnObj.AddComponent<UnityEngine.UI.Button>();
+            var sRect = settingsBtnObj.GetComponent<RectTransform>();
+            if (sRect != null)
+            {
+                sRect.anchorMin = new Vector2(0.05f, 0.92f);
+                sRect.anchorMax = new Vector2(0.22f, 0.98f);
+                sRect.sizeDelta = Vector2.zero;
+            }
+
+            var sTextObj = FindOrCreateChild(settingsBtnObj.transform, "Text");
+            var sText = sTextObj.GetComponent<TMPro.TMP_Text>();
+            if (sText == null) sText = sTextObj.AddComponent<TMPro.TextMeshProUGUI>();
+            sText.text = "⚙️ AYARLAR";
+            sText.fontSize = 20;
+            sText.color = Color.white;
+            sText.alignment = TMPro.TextAlignmentOptions.Center;
+            var sTextRect = sTextObj.GetComponent<RectTransform>();
+            if (sTextRect != null)
+            {
+                sTextRect.anchorMin = Vector2.zero;
+                sTextRect.anchorMax = Vector2.one;
+                sTextRect.sizeDelta = Vector2.zero;
+            }
+
+            // Assign serialized properties
+            var so = new SerializedObject(menuView);
+            if (so.FindProperty("_titleText") != null) so.FindProperty("_titleText").objectReferenceValue = titleText;
+            if (so.FindProperty("_coinText") != null) so.FindProperty("_coinText").objectReferenceValue = coinText;
+            if (so.FindProperty("_garageCard") != null) so.FindProperty("_garageCard").objectReferenceValue = garageCardObj;
+            if (so.FindProperty("_equippedVehicleNameText") != null) so.FindProperty("_equippedVehicleNameText").objectReferenceValue = vehicleNameText;
+            if (so.FindProperty("_equippedVehicleTypeText") != null) so.FindProperty("_equippedVehicleTypeText").objectReferenceValue = vehicleTypeText;
+            if (so.FindProperty("_openGarageButton") != null) so.FindProperty("_openGarageButton").objectReferenceValue = garageBtn;
+            if (so.FindProperty("_playButton") != null) so.FindProperty("_playButton").objectReferenceValue = playBtn;
+            if (so.FindProperty("_playButtonText") != null) so.FindProperty("_playButtonText").objectReferenceValue = playButtonText;
+            if (so.FindProperty("_settingsButton") != null) so.FindProperty("_settingsButton").objectReferenceValue = settingsBtn;
+
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(menuView);
         }
 
         private GameConfig LoadOrCreateConfig()
@@ -252,13 +886,26 @@ namespace PixelFlow.Editor
 
         private void AssignContextData(Root root, GameConfig config)
         {
-            if (root == null || config == null) return;
+            if (root == null) return;
             var serialized = new SerializedObject(root);
             var property = serialized.FindProperty("contextData");
             if (property != null)
             {
-                property.objectReferenceValue = config;
+                var contextDataAsset = AssetDatabase.LoadAssetAtPath<ContextData>("Assets/Settings/PixelFlowContextData.asset");
+                if (contextDataAsset == null)
+                {
+                    contextDataAsset = AssetDatabase.LoadAssetAtPath<ContextData>("Assets/NewContextData.asset");
+                }
+                if (contextDataAsset == null)
+                {
+                    if (!Directory.Exists("Assets/Settings")) Directory.CreateDirectory("Assets/Settings");
+                    contextDataAsset = ScriptableObject.CreateInstance<ContextData>();
+                    AssetDatabase.CreateAsset(contextDataAsset, "Assets/Settings/PixelFlowContextData.asset");
+                    AssetDatabase.SaveAssets();
+                }
+                property.objectReferenceValue = contextDataAsset;
                 serialized.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(root);
             }
         }
 
@@ -305,8 +952,101 @@ namespace PixelFlow.Editor
             EnsureViewUnderCanvas<BloomFlashView>(canvas, "BloomFlashOverlay", addImage: true);
             EnsureViewUnderCanvas<ConfettiView>(canvas, "ConfettiView");
             EnsureViewUnderCanvas<SettingsView>(canvas, "SettingsView");
+            var settingsView = Object.FindAnyObjectByType<SettingsView>(FindObjectsInactive.Include);
+            if (settingsView != null)
+            {
+                EnsureSettingsBindings(settingsView);
+            }
             EnsureViewUnderCanvas<DailyCrisisView>(canvas, "DailyCrisisView");
             EnsureViewUnderCanvas<TutorialView>(canvas, "TutorialView");
+        }
+
+        private void EnsureSettingsBindings(SettingsView settingsView)
+        {
+            if (settingsView == null) return;
+            var settingsObj = settingsView.gameObject;
+
+            var cg = settingsObj.GetComponent<CanvasGroup>();
+            if (cg == null) cg = settingsObj.AddComponent<CanvasGroup>();
+
+            var settingsRect = settingsObj.GetComponent<RectTransform>();
+            if (settingsRect != null)
+            {
+                settingsRect.anchorMin = Vector2.zero;
+                settingsRect.anchorMax = Vector2.one;
+                settingsRect.sizeDelta = Vector2.zero;
+            }
+
+            // Dim Overlay Background
+            var bgImg = settingsObj.GetComponent<UnityEngine.UI.Image>();
+            if (bgImg == null) bgImg = settingsObj.AddComponent<UnityEngine.UI.Image>();
+            bgImg.color = new Color(0.05f, 0.07f, 0.12f, 0.90f);
+
+            // Modal Card Container
+            var cardObj = FindOrCreateChild(settingsObj.transform, "SettingsCard");
+            var cardImg = cardObj.GetComponent<UnityEngine.UI.Image>();
+            if (cardImg == null) cardImg = cardObj.AddComponent<UnityEngine.UI.Image>();
+            cardImg.color = new Color(0.12f, 0.15f, 0.22f, 0.98f);
+            var cardRect = cardObj.GetComponent<RectTransform>();
+            if (cardRect != null)
+            {
+                cardRect.anchorMin = new Vector2(0.10f, 0.25f);
+                cardRect.anchorMax = new Vector2(0.90f, 0.75f);
+                cardRect.sizeDelta = Vector2.zero;
+            }
+
+            // Title Text
+            var titleObj = FindOrCreateChild(cardObj.transform, "TitleText");
+            var titleText = EnsureTMPText(titleObj, "Text");
+            titleText.text = "AYARLAR / PAUSE";
+            titleText.fontSize = 36;
+            titleText.fontStyle = TMPro.FontStyles.Bold;
+            titleText.color = new Color(1f, 0.85f, 0.2f);
+            titleText.alignment = TMPro.TextAlignmentOptions.Center;
+            var titleRect = titleObj.GetComponent<RectTransform>();
+            if (titleRect != null)
+            {
+                titleRect.anchorMin = new Vector2(0.1f, 0.80f);
+                titleRect.anchorMax = new Vector2(0.9f, 0.95f);
+                titleRect.sizeDelta = Vector2.zero;
+            }
+
+            // Close / Continue Button
+            var closeBtnObj = FindOrCreateChild(cardObj.transform, "CloseButton");
+            var closeImg = closeBtnObj.GetComponent<UnityEngine.UI.Image>();
+            if (closeImg == null) closeImg = closeBtnObj.AddComponent<UnityEngine.UI.Image>();
+            closeImg.color = new Color(0.12f, 0.82f, 0.38f); // Emerald Green Continue Button
+            var closeBtn = closeBtnObj.GetComponent<UnityEngine.UI.Button>();
+            if (closeBtn == null) closeBtn = closeBtnObj.AddComponent<UnityEngine.UI.Button>();
+            var closeRect = closeBtnObj.GetComponent<RectTransform>();
+            if (closeRect != null)
+            {
+                closeRect.anchorMin = new Vector2(0.15f, 0.10f);
+                closeRect.anchorMax = new Vector2(0.85f, 0.28f);
+                closeRect.sizeDelta = Vector2.zero;
+            }
+
+            var closeText = EnsureTMPText(closeBtnObj, "Text");
+            closeText.text = "DEVAM ET ➔";
+            closeText.fontSize = 30;
+            closeText.fontStyle = TMPro.FontStyles.Bold;
+            closeText.color = Color.white;
+            closeText.alignment = TMPro.TextAlignmentOptions.Center;
+            var cTextRect = closeText.GetComponent<RectTransform>();
+            if (cTextRect != null)
+            {
+                cTextRect.anchorMin = Vector2.zero;
+                cTextRect.anchorMax = Vector2.one;
+                cTextRect.sizeDelta = Vector2.zero;
+            }
+
+            var so = new SerializedObject(settingsView);
+            SetProp(so, "_settingsCanvas", settingsObj);
+            SetProp(so, "_closeButton", closeBtn);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(settingsView);
+
+            settingsView.SetVisible(false);
         }
 
         private void EnsureViewUnderCanvas<T>(Transform canvas, string name, bool addImage = false) where T : Component

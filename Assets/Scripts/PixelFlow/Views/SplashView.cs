@@ -47,7 +47,18 @@ namespace PixelFlow.Views
 
             IsComplete = true;
             OnSplashComplete?.Invoke();
-            gameObject.SetActive(false);
+            SetVisible(false);
+        }
+
+        public void SetVisible(bool visible)
+        {
+            if (_canvasGroup == null) _canvasGroup = GetComponent<CanvasGroup>();
+            if (_canvasGroup != null)
+            {
+                _canvasGroup.alpha = visible ? 1f : 0f;
+                _canvasGroup.blocksRaycasts = visible;
+                _canvasGroup.interactable = visible;
+            }
         }
     }
 }

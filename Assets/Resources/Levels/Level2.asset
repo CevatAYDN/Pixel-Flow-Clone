@@ -15,6 +15,11 @@ MonoBehaviour:
   levelIndex: 1
   width: 5
   height: 5
+  toyTheme: 1
+  bouncyPhysics:
+    BounceForce: 4.5
+    BounceDamping: 0.75
+    SquishFactor: 0.35
   initialNodes:
   - position: {x: 0, y: 0}
     color: 1

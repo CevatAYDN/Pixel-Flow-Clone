@@ -32,9 +32,40 @@ namespace PixelFlow.Views
         public event Action<ColorBlindMode> OnColorBlindChanged;
         public event Action<bool> OnHapticsToggled;
 
+        public void AutoWireUIReferences()
+        {
+            if (_settingsCanvas == null) _settingsCanvas = gameObject;
+            var sliders = GetComponentsInChildren<Slider>(true);
+            foreach (var s in sliders)
+            {
+                string name = s.gameObject.name.ToLower();
+                if (_masterVolumeSlider == null && name.Contains("master")) _masterVolumeSlider = s;
+                if (_sfxVolumeSlider == null && name.Contains("sfx")) _sfxVolumeSlider = s;
+                if (_musicVolumeSlider == null && name.Contains("music")) _musicVolumeSlider = s;
+            }
+            var buttons = GetComponentsInChildren<Button>(true);
+            foreach (var b in buttons)
+            {
+                string name = b.gameObject.name.ToLower();
+                if (_closeButton == null && (name.Contains("close") || name.Contains("back"))) _closeButton = b;
+                if (_colorBlindNoneButton == null && name.Contains("none")) _colorBlindNoneButton = b;
+                if (_colorBlindProtanButton == null && name.Contains("protan")) _colorBlindProtanButton = b;
+                if (_colorBlindDeutanButton == null && name.Contains("deutan")) _colorBlindDeutanButton = b;
+                if (_colorBlindTritanButton == null && name.Contains("tritan")) _colorBlindTritanButton = b;
+            }
+            if (_hapticsToggle == null) _hapticsToggle = GetComponentInChildren<Toggle>(true);
+        }
+
         public void SetVisible(bool visible)
         {
-            if (_settingsCanvas != null) _settingsCanvas.SetActive(visible);
+            var cg = GetComponent<CanvasGroup>();
+            if (cg == null) cg = gameObject.AddComponent<CanvasGroup>();
+            cg.alpha = visible ? 1f : 0f;
+            cg.blocksRaycasts = visible;
+            cg.interactable = visible;
+
+            var canvas = GetComponent<Canvas>();
+            if (canvas != null) canvas.enabled = visible;
         }
 
         public void PopulateSettings(float master, float sfx, float music, ColorBlindMode cb, bool haptics)
@@ -64,6 +95,7 @@ namespace PixelFlow.Views
         protected override void OnBind(IContext context)
         {
             base.OnBind(context);
+            AutoWireUIReferences();
 
             if (_masterVolumeSlider != null) _masterVolumeSlider.onValueChanged.AddListener(v => OnMasterVolumeChanged?.Invoke(v));
             if (_sfxVolumeSlider != null) _sfxVolumeSlider.onValueChanged.AddListener(v => OnSfxVolumeChanged?.Invoke(v));

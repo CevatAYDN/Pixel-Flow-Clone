@@ -339,15 +339,15 @@ namespace PixelFlow.Editor
             switch (_selectedTab)
             {
                 case 0: _contentContainer.Add(BuildGameControllerUIToolkitView()); break;
-                case 1: _contentContainer.Add(BuildDiagnosticsUIToolkitView()); break;
-                case 2: _contentContainer.Add(BuildLevelStudioUIToolkitView()); break;
-                case 3: _contentContainer.Add(BuildBatchSolverUIToolkitView()); break;
-                case 4: _contentContainer.Add(BuildDataManagerUIToolkitView()); break;
-                case 5: _contentContainer.Add(BuildEconomyUIToolkitView()); break;
-                case 6: _contentContainer.Add(BuildNexusUIToolkitView()); break;
-                case 7: _contentContainer.Add(BuildPerformanceUIToolkitView()); break;
-                case 8: _contentContainer.Add(BuildGarageUIToolkitView()); break;
-                case 9: _contentContainer.Add(BuildAdsUIToolkitView()); break;
+                case 1: _contentContainer.Add(BuildLevelStudioUIToolkitView()); break;
+                case 2: _contentContainer.Add(BuildGarageUIToolkitView()); break;
+                case 3: _contentContainer.Add(BuildDataManagerUIToolkitView()); break;
+                case 4: _contentContainer.Add(BuildEconomyUIToolkitView()); break;
+                case 5: _contentContainer.Add(BuildAdsUIToolkitView()); break;
+                case 6: _contentContainer.Add(BuildBatchSolverUIToolkitView()); break;
+                case 7: _contentContainer.Add(BuildDiagnosticsUIToolkitView()); break;
+                case 8: _contentContainer.Add(BuildNexusUIToolkitView()); break;
+                case 9: _contentContainer.Add(BuildPerformanceUIToolkitView()); break;
                 case 10: _contentContainer.Add(BuildValidatorUIToolkitView()); break;
             }
         }
@@ -384,7 +384,16 @@ namespace PixelFlow.Editor
 
             var root = Object.FindAnyObjectByType<Root>(FindObjectsInactive.Include);
             _rootOk = root != null;
-            _contextDataOk = root?.Context != null;
+            if (root != null)
+            {
+                var rootSo = new SerializedObject(root);
+                var contextDataProp = rootSo.FindProperty("contextData");
+                _contextDataOk = root.Context != null || (contextDataProp != null && contextDataProp.objectReferenceValue != null);
+            }
+            else
+            {
+                _contextDataOk = false;
+            }
 
             var grid = Object.FindAnyObjectByType<GridView>(FindObjectsInactive.Include);
             _gridViewOk = grid != null;

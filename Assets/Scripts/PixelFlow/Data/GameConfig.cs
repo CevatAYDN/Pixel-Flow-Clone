@@ -54,12 +54,33 @@ namespace PixelFlow.Data
         [Tooltip("Level başına varsayılan ipucu sayısı")]
         public int DefaultHintCount = 3;
 
-        [Header("=== Crisis / Ad Service ===")]
+        [Header("=== Crisis / Ad Service (game_plan.md §2.1.B2) ===")]
         [Tooltip("Interstitial reklam öncesi maksimum kriz deneme sayısı")]
         public int MaxRetriesBeforeInterstitial = 3;
 
         [Tooltip("Interstitial reklamın gösterileceği minimum level (1-indexed)")]
         public int MinLevelForInterstitial = 5;
+
+        [Tooltip("Kaç seviyede bir Interstitial reklam gösterileceği (baraj)")]
+        public int InterstitialLevelInterval = 3;
+
+        [Tooltip("Rewarded Ad izlenince kazanılan altın miktarı")]
+        public int RewardedAdCoinReward = 100;
+
+        [Tooltip("Rewarded Ad izlenince kazanılan ipucu sayısı")]
+        public int RewardedAdHintReward = 2;
+
+        [Tooltip("Seviye sonu 2x Para çarpanı")]
+        public float DoubleCoinMultiplier = 2.0f;
+
+        [Tooltip("Interstitial Reklam Placement ID")]
+        public string InterstitialPlacementId = "interstitial_level_end";
+
+        [Tooltip("Rewarded Reklam Placement ID")]
+        public string RewardedPlacementId = "rewarded_double_coins";
+
+        [Tooltip("Banner Reklam Placement ID")]
+        public string BannerPlacementId = "banner_bottom";
 
         [Header("=== Gameplay Timer ===")]
         [Tooltip("Boşta kalma hatırlatma süresi (saniye)")]

@@ -50,17 +50,20 @@ namespace PixelFlow.Views
 
         private void HandleGlobalPointerDown(Vector2Int pos)
         {
+            if (UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject()) return;
             NexusLog.Info("GridMediator", "PointerDown", "?", $"Firing InputInteractionSignal at {pos}");
             SignalBus.Fire(new InputInteractionSignal { Type = InputType.PointerDown, GridPosition = pos });
         }
 
         private void HandleGlobalPointerDrag(Vector2Int pos)
         {
+            if (UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject()) return;
             SignalBus.Fire(new InputInteractionSignal { Type = InputType.Drag, GridPosition = pos });
         }
 
         private void HandleGlobalPointerUp(Vector2Int pos)
         {
+            if (UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject()) return;
             NexusLog.Info("GridMediator", "PointerUp", "?", $"Firing InputInteractionSignal at {pos}");
             SignalBus.Fire(new InputInteractionSignal { Type = InputType.PointerUp, GridPosition = pos });
         }

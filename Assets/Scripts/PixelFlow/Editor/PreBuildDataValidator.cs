@@ -11,7 +11,7 @@ namespace PixelFlow.Editor
     /// <summary>
     /// Color Jam 3D - Build Öncesi Veri Doğrulayıcı (Pre-Build Data Validator).
     /// Derleme (Build) veya Play Mode öncesinde projede eksik ScriptableObject, hardcoded ihlal
-    /// veya çözümsüz seviye olup olmadığını denetler. Hata varsa Build almayı engeller.
+    /// veya çözümsüz seviye olup olmadığını denetler. Hata varsa Build almayı engeller (game_plan.md §2.1.B3 & §2.2).
     /// </summary>
     public class PreBuildDataValidator : IPreprocessBuildWithReport
     {
@@ -61,6 +61,12 @@ namespace PixelFlow.Editor
                 return false;
             }
 
+            if (gameConfig.InterstitialLevelInterval <= 0)
+            {
+                errorMessage = "GameConfig.InterstitialLevelInterval değeri 0 veya negatif olamaz!";
+                return false;
+            }
+
             // 2. Seviye Kataloğu Kontrolü
             var levelCatalog = Resources.Load<LevelCatalogAsset>("LevelCatalog");
             if (levelCatalog != null && levelCatalog.Levels != null)
@@ -73,6 +79,19 @@ namespace PixelFlow.Editor
                         errorMessage = $"LevelCatalog içindeki LevelIndex {entry.LevelIndex} için AuthoredLevel NULL!";
                         return false;
                     }
+                }
+            }
+
+            // 3. VehicleSkinConfig Kontrolü
+            var skinGuids = AssetDatabase.FindAssets("t:VehicleSkinConfig");
+            foreach (var guid in skinGuids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                var skin = AssetDatabase.LoadAssetAtPath<VehicleSkinConfig>(path);
+                if (skin != null && string.IsNullOrEmpty(skin.SkinId))
+                {
+                    errorMessage = $"VehicleSkinConfig ({path}) için SkinId boş bırakılamaz!";
+                    return false;
                 }
             }
 

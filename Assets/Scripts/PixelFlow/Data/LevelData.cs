@@ -94,6 +94,25 @@ public enum ColorType { None, Red, Green, Blue, Yellow, Purple }
         public List<Vector2Int> pathPositions;
     }
 
+    /// <summary>game_plan.md §2.1.A: Seviye bazlı 3D Toy Temaları.</summary>
+    public enum ToyThemeType { Default, PastelToy, NeonCity, CandyPark, Woodland }
+
+    /// <summary>game_plan.md §2.1.A: Zıplayan Araç (Bouncy Physics) parametreleri.</summary>
+    [System.Serializable]
+    public struct BouncyPhysicsConfig
+    {
+        [Tooltip("Zıplama kuvveti (g-force/impulse)")] public float BounceForce;
+        [Tooltip("Zayıflama / sönümleme katsayısı")] public float BounceDamping;
+        [Tooltip("Esneklik / ezilme-büzülme şiddeti")] public float SquishFactor;
+
+        public static BouncyPhysicsConfig Default => new BouncyPhysicsConfig
+        {
+            BounceForce = 4.5f,
+            BounceDamping = 0.75f,
+            SquishFactor = 0.35f
+        };
+    }
+
     [CreateAssetMenu(fileName = "LevelData", menuName = "PixelFlow/LevelData")]
     public class LevelData : ScriptableObject
     {
@@ -101,6 +120,12 @@ public enum ColorType { None, Red, Green, Blue, Yellow, Purple }
 
         [Min(3)] public int width = 5;
         [Min(3)] public int height = 5;
+
+        [Header("3D Toy Theme (game_plan.md §2.1.A)")]
+        public ToyThemeType toyTheme = ToyThemeType.PastelToy;
+
+        [Header("Zıplayan Araç Physics (game_plan.md §2.1.A)")]
+        public BouncyPhysicsConfig bouncyPhysics = BouncyPhysicsConfig.Default;
 
         [Header("Nodes (2 per color)")]
         public List<GridNode> initialNodes = new List<GridNode>();

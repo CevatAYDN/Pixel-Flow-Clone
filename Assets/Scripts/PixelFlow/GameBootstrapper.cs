@@ -82,9 +82,15 @@ namespace PixelFlow
                 yield break;
             }
 
-            // İlk çalıştırma veya save bozuk → doğrudan Playing state'e geç, ilk level'ı yükle.
-            _loggerService?.Log("[PixelFlow.GameBootstrapper] No valid save file found — loading initial level directly.");
-            EnterPlaying();
+            // İlk çalıştırma veya save yok → Ana Menü / Hub (GameState.MainMenu) ekranına geçiş yap.
+            _loggerService?.Log("[PixelFlow.GameBootstrapper] No active saved game — entering Main Menu / Hub (GameState.MainMenu).");
+            EnterMainMenu();
+        }
+
+        private void EnterMainMenu()
+        {
+            _loggerService?.Log("[PixelFlow.GameBootstrapper] GameState changing -> MainMenu");
+            _stateModel?.SetState(GameState.MainMenu);
         }
 
         private bool ResolveServices()

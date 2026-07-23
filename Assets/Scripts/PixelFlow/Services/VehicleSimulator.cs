@@ -47,6 +47,7 @@ namespace PixelFlow.Services
         [Inject] public ICrisisAdService CrisisAdService { get; set; }
         [Inject, OptionalInject] public Data.GameConfig Config { get; set; }
         [Inject, OptionalInject] public ITickService TickService { get; set; }
+        [Inject, OptionalInject] public IInventoryModel InventoryModel { get; set; }
 
         private ICrisisAdService _crisisAdService => CrisisAdService;
 
@@ -362,6 +363,8 @@ namespace PixelFlow.Services
             visual.transform.SetParent(parentTransform);
 
             VehicleStyle vehicleStyle = SettingsModel.CurrentVehicleStyle;
+            string equippedSkin = InventoryModel?.GetEquippedSkin(color) ?? "skin_default";
+            LoggerService?.Log($"[PixelFlow.VehicleSimulator] Spawning {vehicleStyle} with equipped skin '{equippedSkin}' for color {color}");
             
             Transform loco = null, wagon1 = null, wagon2 = null, coupler1 = null, coupler2 = null;
             List<Renderer> renderers = vehicleStyle == VehicleStyle.Train 

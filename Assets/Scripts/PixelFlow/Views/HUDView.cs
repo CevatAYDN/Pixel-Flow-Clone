@@ -15,6 +15,7 @@ namespace PixelFlow.Views
         [SerializeField] private TMP_Text _hintCountText;
         [SerializeField] private TMP_Text _scoreText;
         [SerializeField] private TMP_Text _timerText;
+        [SerializeField] private TMP_Text _levelTitleText;
         [SerializeField] private GameObject _starsContainer;
         [SerializeField] private GameObject _star1;
         [SerializeField] private GameObject _star2;
@@ -230,6 +231,12 @@ namespace PixelFlow.Views
                 _scoreText.text = string.Format(format, score);
         }
 
+        public void UpdateLevelTitle(int levelNumber, string format)
+        {
+            if (_levelTitleText != null)
+                _levelTitleText.text = string.Format(format, levelNumber);
+        }
+
         public void UpdateCoins(int coins)
         {
             if (_coinsText != null)
@@ -276,16 +283,40 @@ namespace PixelFlow.Views
             if (_crisisUndoButton != null)
                 _crisisUndoButton.gameObject.SetActive(false);
 
-            if (_completionPanel != null)
+            if (_completionPanel == null)
             {
-                _completionPanel.SetActive(true);
-                _completionPanel.transform.localScale = Vector3.zero;
-                StartCoroutine(AnimateCompletion(score, stars, title, scoreFormat, starsLabel));
+                _completionPanel = new GameObject("CompletionPanel");
+                _completionPanel.transform.SetParent(transform, false);
+                var rect = _completionPanel.AddComponent<RectTransform>();
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.sizeDelta = Vector2.zero;
+                var img = _completionPanel.AddComponent<Image>();
+                img.color = new Color(0.1f, 0.12f, 0.18f, 0.95f);
+
+                if (_nextLevelButton == null)
+                {
+                    var btnObj = new GameObject("NextLevelButton");
+                    btnObj.transform.SetParent(_completionPanel.transform, false);
+                    var btnRect = btnObj.AddComponent<RectTransform>();
+                    btnRect.sizeDelta = new Vector2(240, 60);
+                    btnObj.AddComponent<Image>().color = new Color(0.1f, 0.7f, 0.3f);
+                    _nextLevelButton = btnObj.AddComponent<Button>();
+                    _nextLevelButton.onClick.AddListener(() => OnNextLevelClicked?.Invoke());
+
+                    var btnTextObj = new GameObject("Text");
+                    btnTextObj.transform.SetParent(btnObj.transform, false);
+                    var tmp = btnTextObj.AddComponent<TextMeshProUGUI>();
+                    tmp.text = "SONRAKİ SEVİYE";
+                    tmp.alignment = TextAlignmentOptions.Center;
+                    tmp.color = Color.white;
+                }
             }
-            else
-            {
-                LoggerService?.LogWarning("[HUDView] _completionPanel is null in Inspector! Cannot show level completed panel.");
-            }
+
+            _completionPanel.SetActive(true);
+            _completionPanel.transform.SetAsLastSibling();
+            _completionPanel.transform.localScale = Vector3.zero;
+            StartCoroutine(AnimateCompletion(score, stars, title, scoreFormat, starsLabel));
 
             if (_bloomFlashOverlay != null)
             {

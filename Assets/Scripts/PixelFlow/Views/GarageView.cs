@@ -20,10 +20,20 @@ namespace PixelFlow.Views
         public event Action<VehicleSkinConfig> OnBuySkinClicked;
         public event Action<VehicleSkinConfig> OnEquipSkinClicked;
 
-        private void Start()
+        protected override void OnBind(IContext context)
         {
+            base.OnBind(context);
+            AutoWireUIReferences();
             if (_closeButton != null)
                 _closeButton.onClick.AddListener(() => OnCloseClicked?.Invoke());
+        }
+
+        public void AutoWireUIReferences()
+        {
+            if (_panel == null) _panel = gameObject;
+            if (_closeButton == null) _closeButton = GetComponentInChildren<Button>(true);
+            if (_coinsText == null) _coinsText = GetComponentInChildren<TMP_Text>(true);
+            if (_skinContainer == null) _skinContainer = transform.Find("Container") ?? transform;
         }
 
         public void SetActive(bool active)

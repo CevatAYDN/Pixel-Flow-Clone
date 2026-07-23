@@ -77,6 +77,12 @@ namespace PixelFlow.Views
                 return;
             }
 
+            // Pointer UI üzerindeyse (örn: Pause, Viaduct, Clear butonları) grid girdisini yoksay
+            if (UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+            {
+                return;
+            }
+
             var result = _inputService?.ProcessInput(_cam, _cells.GetLength(0), _cells.GetLength(1));
 
             if (result == null || !result.Value.HasEvent) return;
