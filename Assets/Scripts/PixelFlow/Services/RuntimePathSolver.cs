@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using PixelFlow.Data;
 using UnityEngine;
 
@@ -19,7 +21,11 @@ namespace PixelFlow.Services
     /// </summary>
     public sealed class RuntimePathSolver : IPathSolver
     {
-        private const int MaxIterations = 200000;
+        private const int MinIterations = 200000;
+        private const int MaxIterationsCap = 1000000;
+
+        private int _perSolveMaxIterations = MinIterations;
+        private CancellationToken _cancellationToken;
 
         // ─── Iterative Path Search Data Structures ────────────────────────
         // FindPathIterative için explicit stack frame.
@@ -55,6 +61,7 @@ namespace PixelFlow.Services
 
             var colorNodes = CollectColorNodes(level);
             if (colorNodes == null || colorNodes.Count == 0) return false;
+            _perSolveMaxIterations = CalculateMaxIterations(level.width, level.height, colorNodes.Count);
 
             var bridges = new HashSet<Vector2Int>(level.bridgePositions ?? new List<Vector2Int>());
             var grid = new ColorType[level.width, level.height];
@@ -82,6 +89,20 @@ namespace PixelFlow.Services
             return false;
         }
 
+        public async Task<bool> SolveAsync(LevelData level, Dictionary<ColorType, List<Vector2Int>> solutions, CancellationToken cancellationToken = default)
+        {
+            _cancellationToken = cancellationToken;
+            Dictionary<ColorType, List<Vector2Int>> result = null;
+            bool success = await Task.Run(() => Solve(level, out result), cancellationToken);
+            if (success && result != null)
+            {
+                foreach (var kvp in result)
+                    solutions[kvp.Key] = kvp.Value;
+                return true;
+            }
+            return false;
+        }
+
         public bool SolvePartial(LevelData level, ColorType color, int steps, out List<Vector2Int> partialPath)
         {
             partialPath = null;
@@ -91,6 +112,8 @@ namespace PixelFlow.Services
                 return false;
 
             if (steps <= 0) return false;
+
+            _perSolveMaxIterations = MinIterations;
 
             var bridges = level.bridgePositions != null ? new HashSet<Vector2Int>(level.bridgePositions) : new HashSet<Vector2Int>();
             var grid = new ColorType[level.width, level.height];
@@ -124,7 +147,8 @@ namespace PixelFlow.Services
             List<Vector2Int> path, ColorType[,] grid, HashSet<Vector2Int> bridges,
             int w, int h, int maxSteps, ref int iterationCount)
         {
-            if (iterationCount > MaxIterations) return null;
+            if (iterationCount > _perSolveMaxIterations) return null;
+            if (_cancellationToken.IsCancellationRequested) return null;
             iterationCount++;
 
             if (path.Count - 1 >= maxSteps || current == end)
@@ -225,7 +249,8 @@ namespace PixelFlow.Services
                 return true;
             }
 
-            if (iterationCount > MaxIterations) return false;
+            if (iterationCount > _perSolveMaxIterations) return false;
+            if (_cancellationToken.IsCancellationRequested) return false;
             iterationCount++;
 
             var color = colors[colorIndex];
@@ -294,7 +319,8 @@ namespace PixelFlow.Services
 
             while (_pathStack.Count > 0)
             {
-                if (iterationCount > MaxIterations) return null;
+                if (iterationCount > _perSolveMaxIterations) return null;
+                if (_cancellationToken.IsCancellationRequested) return null;
                 iterationCount++;
 
                 var frame = _pathStack.Peek();
@@ -435,6 +461,13 @@ namespace PixelFlow.Services
             }
 
             return null;
+        }
+
+        private static int CalculateMaxIterations(int width, int height, int colorCount)
+        {
+            long raw = width * height * colorCount * 2000L;
+            int clamped = (int)Math.Max(MinIterations, Math.Min(MaxIterationsCap, raw));
+            return clamped;
         }
 
         private static Dictionary<ColorType, List<Vector2Int>> CollectColorNodes(LevelData level)

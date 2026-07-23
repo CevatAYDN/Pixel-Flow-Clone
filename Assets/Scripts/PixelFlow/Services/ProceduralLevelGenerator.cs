@@ -54,8 +54,8 @@ namespace PixelFlow.Services
                     return level;
                 }
             }
-            (_logger ?? NexusRuntime.Logger)?.LogWarning($"[ProceduralLevelGenerator] Failed to generate solvable level after {maxAttempts} attempts.");
-            return null;
+            (_logger ?? NexusRuntime.Logger)?.LogWarning($"[ProceduralLevelGenerator] Failed to generate solvable level after {maxAttempts} attempts. Generating fallback level.");
+            return GenerateFallbackLevel(param);
         }
 
         /// <summary>
@@ -199,6 +199,57 @@ namespace PixelFlow.Services
             int obstacleCount = level.obstacles != null ? level.obstacles.Count : 0;
             int viaductLimit = level.viaductLimit;
             level.difficultyScore = (solutionColorCount * 10) + (intersections * 5) + (obstacleCount * 3) - (viaductLimit * 4);
+
+            return level;
+        }
+
+        /// <summary>
+        /// Creates a simple but solvable fallback level when all generation attempts fail.
+        /// Uses 5x5 grid, 1 color, 2 nodes at opposite corners with a straight L-shaped path.
+        /// No bridges, no obstacles. Trivially solvable — does not call the solver.
+        /// </summary>
+        private LevelData GenerateFallbackLevel(DifficultyParams param)
+        {
+            var level = ScriptableObject.CreateInstance<LevelData>();
+            level.width = 5;
+            level.height = 5;
+            level.requireFullGridCoverage = false;
+            level.viaductLimit = 0;
+            level.flowScoreThreshold = 5;
+
+            // Single color — first standard color
+            ColorType fallbackColor = GddColorPalette.Standard[0];
+
+            // Two nodes at opposite corners of 5x5 grid
+            var nodes = new List<GridNode>
+            {
+                new GridNode { position = new Vector2Int(0, 0), color = fallbackColor, shape = ShapeType.Triangle },
+                new GridNode { position = new Vector2Int(4, 4), color = fallbackColor, shape = ShapeType.Triangle }
+            };
+            level.initialNodes = nodes;
+            _lastLevelNodes = nodes;
+
+            // Straight L-shaped path from (0,0) to (4,4): right across top, then down right column
+            var pathPositions = new List<Vector2Int>();
+            for (int x = 0; x <= 4; x++)
+                pathPositions.Add(new Vector2Int(x, 0));
+            for (int y = 1; y <= 4; y++)
+                pathPositions.Add(new Vector2Int(4, y));
+
+            level.solutions = new List<PathSolution>
+            {
+                new PathSolution { color = fallbackColor, pathPositions = pathPositions }
+            };
+
+            level.bridgePositions = new List<Vector2Int>();
+            level.obstacles = new List<ObstacleData>();
+
+            // Name reflects the original requested dimensions for traceability
+            level.name = $"Procedural_Fallback_{param.gridWidth}x{param.gridHeight}";
+
+            // Calculate difficulty score with fallback params (5x5, 1 color, 0 bridges)
+            var fallbackParams = new DifficultyParams(5, 5, 1, 0);
+            level.difficultyScore = CalculateDifficultyScore(level, fallbackParams);
 
             return level;
         }

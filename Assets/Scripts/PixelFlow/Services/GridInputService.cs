@@ -128,11 +128,18 @@ namespace PixelFlow.Services
                 else
                 {
                     // Touch drag devam ediyor
-                    var touches = _touchscreen.touches;
-                    if (touches.Count > 0)
+                    try
                     {
-                        isPressed = touches[0].press.isPressed;
-                        screenPos = touches[0].position.ReadValue();
+                        var touches = _touchscreen.touches;
+                        if (touches.Count > 0)
+                        {
+                            isPressed = touches[0].press.isPressed;
+                            screenPos = touches[0].position.ReadValue();
+                        }
+                    }
+                    catch
+                    {
+                        return false;
                     }
                     isMouse = false;
                     return true;
@@ -140,14 +147,18 @@ namespace PixelFlow.Services
             }
 
             // ── Idle: yeni basış algıla (touch öncelikli) ──
-            if (_touchscreen != null && _touchscreen.touches.Count > 0 && _touchscreen.touches[0].press.isPressed)
+            try
             {
-                var touch = _touchscreen.touches[0];
-                isPressed = true;
-                isMouse = false;
-                screenPos = touch.position.ReadValue();
-                return true;
+                if (_touchscreen != null && _touchscreen.touches.Count > 0 && _touchscreen.touches[0].press.isPressed)
+                {
+                    var touch = _touchscreen.touches[0];
+                    isPressed = true;
+                    isMouse = false;
+                    screenPos = touch.position.ReadValue();
+                    return true;
+                }
             }
+            catch { }
 
             if (_mouse != null && _mouse.leftButton.isPressed)
             {

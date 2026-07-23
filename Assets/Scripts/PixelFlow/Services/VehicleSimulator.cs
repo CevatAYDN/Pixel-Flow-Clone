@@ -73,6 +73,8 @@ namespace PixelFlow.Services
         private readonly List<List<VehicleInstance>> _occupancyListPool = new List<List<VehicleInstance>>();
 
         private float _simulationPhaseTimer = 0f;
+        private const float FixedTimeStep = 1f / 60f;
+        private float _fixedAccumulator = 0f;
         private float ConfigVehicleSpeed => Config != null ? Config.VehicleSpeed : 3f;
         private float ConfigSpawnInterval => Config != null ? Config.SpawnInterval : 1.2f;
         private ISignalSubscription _undoSubscription;
@@ -227,34 +229,28 @@ namespace PixelFlow.Services
             if (state != GameState.Playing && state != GameState.Simulating)
                 return;
 
-            // Direct call: TimerTickSignal yerine direkt UpdateTime çağrısı — SignalBus yükünü atla
-            // Sadece Playing state'de: simülasyon sırasında süre sayılmaz
+            // Game timer uses real deltaTime (should track wall-clock time)
             if (state == GameState.Playing)
                 GameSessionModel?.UpdateTime(Time.deltaTime);
 
-            if (ObstacleService != null)
+            // ── Fixed timestep accumulation ──
+            // Obstacle ticks and vehicle movement run at a fixed 60Hz rate
+            // regardless of frame rate. This ensures consistent simulation
+            // behavior on mobile devices with variable FPS.
+            _fixedAccumulator += deltaTime;
+            _fixedAccumulator = Mathf.Min(_fixedAccumulator, FixedTimeStep * 5); // Cap: prevent spiral of death
+
+            while (_fixedAccumulator >= FixedTimeStep)
             {
-                ObstacleService.Tick(deltaTime);
+                ObstacleService?.Tick(FixedTimeStep);
+                _movementService?.UpdateMovement(_activeVehicles, FixedTimeStep);
+                _fixedAccumulator -= FixedTimeStep;
             }
 
-            // Remove stale vehicles whose paths have been modified
-            for (int i = _activeVehicles.Count - 1; i >= 0; i--)
-            {
-                if (IsVehiclePathStale(_activeVehicles[i]))
-                {
-                    LoggerService?.Log($"[PixelFlow.VehicleSimulator] Path for color {_activeVehicles[i].Color} was modified. Recycling stale vehicle.");
-                    if (_activeVehicles[i].Visual != null)
-                    {
-                        VehicleVisualFactory.RecycleVehicle(_activeVehicles[i].Visual);
-                    }
-                    _activeVehicles.RemoveAt(i);
-                }
-            }
-
+            // Spawn timing, collision detection, and completion timer use real deltaTime
+            // (these are timer-based, not physics-based)
             UpdateSpawning(deltaTime);
-            _movementService?.UpdateMovement(_activeVehicles, deltaTime);
             
-            // Collision detection runs in BOTH Playing and Simulating states per GDD §2.4
             if (state == GameState.Playing || state == GameState.Simulating)
             {
                 UpdateCollisionDetection();

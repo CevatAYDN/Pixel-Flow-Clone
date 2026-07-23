@@ -28,7 +28,17 @@ namespace PixelFlow.Services
     {
         [Inject] public ISettingsModel SettingsModel { get; set; }
 
-        private readonly Dictionary<SfxType, AudioSource> _sources = new Dictionary<SfxType, AudioSource>();
+        private const int PoolSize = 3;
+
+        private static readonly HashSet<SfxType> CriticalTypes = new HashSet<SfxType>
+        {
+            SfxType.Crash,
+            SfxType.UIClick,
+            SfxType.PathDraw,
+            SfxType.LevelComplete
+        };
+
+        private readonly Dictionary<SfxType, List<AudioSource>> _sources = new Dictionary<SfxType, List<AudioSource>>();
         private readonly Dictionary<SfxType, AudioClip> _clips = new Dictionary<SfxType, AudioClip>();
         private GameObject _audioRoot;
         private float _masterVolume = 1f;
@@ -43,6 +53,8 @@ namespace PixelFlow.Services
                    type == SfxType.VehicleEngine;
         }
 
+        private static bool IsCritical(SfxType type) => CriticalTypes.Contains(type);
+
         public ValueTask InitializeAsync(CancellationToken ct)
         {
             if (!Application.isPlaying) return default;
@@ -52,16 +64,28 @@ namespace PixelFlow.Services
 
             foreach (SfxType type in Enum.GetValues(typeof(SfxType)))
             {
-                var child = new GameObject(type.ToString());
-                child.transform.SetParent(_audioRoot.transform);
-                var source = child.AddComponent<AudioSource>();
-                source.playOnAwake = false;
-                source.loop = (type == SfxType.VehicleEngine || type == SfxType.AmbientHub ||
-                               type == SfxType.AmbientPuzzle || type == SfxType.AmbientOverclock ||
-                               type == SfxType.MainTheme);
-                _sources[type] = source;
+                int count = IsCritical(type) ? PoolSize : 1;
+                var list = new List<AudioSource>(count);
+
+                for (int i = 0; i < count; i++)
+                {
+                    var child = new GameObject($"{type}_{i}");
+                    child.transform.SetParent(_audioRoot.transform);
+                    var source = child.AddComponent<AudioSource>();
+                    source.playOnAwake = false;
+                    source.loop = (type == SfxType.VehicleEngine || type == SfxType.AmbientHub ||
+                                   type == SfxType.AmbientPuzzle || type == SfxType.AmbientOverclock ||
+                                   type == SfxType.MainTheme);
+                    list.Add(source);
+                }
+
+                _sources[type] = list;
                 _clips[type] = CreateClipForType(type);
-                if (_clips[type] != null) source.clip = _clips[type];
+                if (_clips[type] != null)
+                {
+                    foreach (var source in list)
+                        source.clip = _clips[type];
+                }
             }
 
             // Başlangıç volume ayarlarını SettingsModel'den al
@@ -81,7 +105,8 @@ namespace PixelFlow.Services
             foreach (var kvp in _sources)
             {
                 float typeVol = IsMusicOrAmbient(kvp.Key) ? _musicVolume : _sfxVolume;
-                kvp.Value.volume = typeVol * _masterVolume;
+                foreach (var source in kvp.Value)
+                    source.volume = typeVol * _masterVolume;
             }
         }
 
@@ -99,19 +124,36 @@ namespace PixelFlow.Services
 
         public void PlaySfx(SfxType type)
         {
-            if (_sources.TryGetValue(type, out var source))
+            if (_sources.TryGetValue(type, out var list))
             {
                 float typeVol = IsMusicOrAmbient(type) ? _musicVolume : _sfxVolume;
-                source.volume = typeVol * _masterVolume;
-                if (!source.isPlaying)
-                    source.Play();
+                float vol = typeVol * _masterVolume;
+
+                // Find first idle source, or fall back to the first (oldest) source
+                AudioSource target = null;
+                foreach (var source in list)
+                {
+                    if (!source.isPlaying)
+                    {
+                        target = source;
+                        break;
+                    }
+                }
+
+                target ??= list[0]; // all busy — reuse the first/oldest
+
+                target.volume = vol;
+                target.Play();
             }
         }
 
         public void StopSfx(SfxType type)
         {
-            if (_sources.TryGetValue(type, out var source))
-                source.Stop();
+            if (_sources.TryGetValue(type, out var list))
+            {
+                foreach (var source in list)
+                    source.Stop();
+            }
         }
 
         public void SetMasterVolume(float volume)
@@ -127,7 +169,9 @@ namespace PixelFlow.Services
             {
                 if (!IsMusicOrAmbient(kvp.Key))
                 {
-                    kvp.Value.volume = _sfxVolume * _masterVolume;
+                    float vol = _sfxVolume * _masterVolume;
+                    foreach (var source in kvp.Value)
+                        source.volume = vol;
                 }
             }
         }
@@ -139,7 +183,9 @@ namespace PixelFlow.Services
             {
                 if (IsMusicOrAmbient(kvp.Key))
                 {
-                    kvp.Value.volume = _musicVolume * _masterVolume;
+                    float vol = _musicVolume * _masterVolume;
+                    foreach (var source in kvp.Value)
+                        source.volume = vol;
                 }
             }
         }

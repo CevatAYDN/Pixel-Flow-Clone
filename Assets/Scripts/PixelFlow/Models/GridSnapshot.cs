@@ -88,6 +88,10 @@ namespace PixelFlow.Models
 
         /// <summary>
         /// GridModel + GameSessionModel'den anlık snapshot alır.
+        /// Deep copy yapar: Her hücrenin değer-tipli alanlarını (CellState, ColorType, byte, bool, ObstacleType)
+        /// ayrı ayrı yeni dizilere kopyalar. CellData class (reference type) olduğu için doğrudan
+        /// grid.Grid dizisi kopyalanmaz — bunun yerine her alan teker teker value-copy yapılır.
+        /// Böylece snapshot ile canlı grid aynı CellData nesnelerini paylaşmaz; grid değişse de snapshot bozulmaz.
         /// </summary>
         public static GridSnapshot Capture(IGridModel grid, IGameSessionModel session)
         {

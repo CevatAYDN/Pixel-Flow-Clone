@@ -52,5 +52,30 @@ namespace PixelFlow.Services
 
             return ArePerpendicular(existingDir, newEntryDir);
         }
+
+        public static bool HasReachedMaxPaths(HashSet<ColorType> existingColors, Vector2Int bridgePos)
+        {
+            return existingColors.Count >= MaxPathsPerBridge;
+        }
+
+        public static string GetRejectionReason(
+            IList<Vector2Int> existingPath, IList<Vector2Int> newPath,
+            Vector2Int bridgePos, Vector2Int newEntryDir)
+        {
+            if (!newPath.Contains(bridgePos))
+                return "Path doesn't cross this cell";
+
+            var existingDir = GetCrossingDirection(existingPath, bridgePos);
+            if (existingDir == Vector2Int.zero)
+                return "Path doesn't cross this cell";
+
+            if (newEntryDir == Vector2Int.zero)
+                return "Invalid direction";
+
+            if (!ArePerpendicular(existingDir, newEntryDir))
+                return "Not perpendicular";
+
+            return null;
+        }
     }
 }

@@ -28,6 +28,10 @@ namespace PixelFlow.Data
         [Tooltip("Simülasyon güvenlik zaman aşımı (saniye) — darboğazda kilitlenmeyi önler")]
         public float MaxSimulationSafetyDuration = 45f;
 
+        [Tooltip("Simülasyon hız çarpanı (1x = normal, 2x = iki kat hızlı)")]
+        [SerializeField, Range(0.5f, 5f)] private float _simulationSpeedMultiplier = 1f;
+        public float SimulationSpeedMultiplier => _simulationSpeedMultiplier;
+
         [Header("=== Obstacles ===")]
         [Tooltip("Ferry engelinin yön değiştirme periyodu (saniye)")]
         public float FerryPeriod = 10f;

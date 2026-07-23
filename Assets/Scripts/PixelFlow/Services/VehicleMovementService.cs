@@ -99,14 +99,12 @@ namespace PixelFlow.Services
         public void UpdateMovement(List<VehicleInstance> activeVehicles, float deltaTime)
         {
             bool isPlaying = _gameStateModel.CurrentState == GameState.Playing;
-            float baseAlpha = isPlaying ? (0.45f + Mathf.Sin(Time.time * 6f) * 0.25f) : 1f;
 
-            // ── Ghost alpha: GPU tabanlı — 1 Shader.SetGlobalFloat, 0 SetPropertyBlock ──
-            // Eskiden: 160+ SetPropertyBlock/frame (60fps × 8 renderer × 20 araç)
-            // Şimdi: 1 Shader.SetGlobalFloat/frame
-            // VehicleGhost.shader, _PixelFlow_GhostAlpha global değerini okuyup alpha'ya uygular
-            // SRP Batcher ile tam uyumlu: per-instance _Color (spawn'da set edilir) değişmez
-            Shader.SetGlobalFloat("_PixelFlow_GhostAlpha", baseAlpha);
+            // ── Ghost alpha: Per-instance MaterialPropertyBlock ──
+            // Her araç kendi ghost alpha değerini bağımsız taşır.
+            // Global Shader.SetGlobalFloat kullanılmaz — bu GPU'da race condition yaratır
+            // ve tüm araçların ghost alpha'sının aynı olmasına yol açar.
+            // Her araç kendi MPB'si ile renderer'a yazılır.
 
             for (int i = activeVehicles.Count - 1; i >= 0; i--)
             {
@@ -120,9 +118,25 @@ namespace PixelFlow.Services
                 // Narrow pass enter/leave tracking
                 UpdateNarrowPassTracking(v);
 
-                // Ghost alpha GPU'da VehicleGhost.shader tarafından yönetilir
-                // Per-frame SetPropertyBlock tamamen kalktı — tüm araç renderer'ları
-                // SRP Batcher ile tek batch'te toplanabilir
+                // Per-vehicle ghost alpha via MaterialPropertyBlock
+                float vehicleAlpha = isPlaying 
+                    ? (0.45f + Mathf.Sin(Time.time * 6f + v.GetHashCode() * 0.1f) * 0.25f) 
+                    : 1f;
+                
+                if (v.CachedRenderers != null && v.CachedRenderers.Length > 0)
+                {
+                    for (int r = 0; r < v.CachedRenderers.Length; r++)
+                    {
+                        var renderer = v.CachedRenderers[r];
+                        if (renderer == null) continue;
+                        
+                        renderer.GetPropertyBlock(v.Mpb);
+                        Color c = renderer.sharedMaterial.color;
+                        c.a = vehicleAlpha;
+                        v.Mpb.SetColor("_BaseColor", c);
+                        renderer.SetPropertyBlock(v.Mpb);
+                    }
+                }
 
                 // Distance progression with obstacle blocking (Ferry & NarrowPass)
                 float proposedDistance = v.TotalDistance + Mathf.Min(v.Speed * deltaTime, ConfigMaxProgressPerFrame);
