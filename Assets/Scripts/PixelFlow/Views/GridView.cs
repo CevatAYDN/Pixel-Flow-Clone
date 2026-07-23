@@ -78,9 +78,19 @@ namespace PixelFlow.Views
             }
 
             // Pointer UI üzerindeyse (örn: Pause, Viaduct, Clear butonları) grid girdisini yoksay
-            if (UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+            var es = UnityEngine.EventSystems.EventSystem.current;
+            bool overUI = es != null && es.IsPointerOverGameObject();
+            if (overUI)
             {
                 return;
+            }
+
+            // Log EventSystem status periodically (every 60 ticks ~1 sec at 60fps)
+            if (Time.frameCount % 60 == 0)
+            {
+                LoggerService?.Log($"[PixelFlow.GridView] EventSystem: current={(bool)es}, " +
+                    $"inputModule={(es != null ? es.currentInputModule?.GetType().Name : "null")}, " +
+                    $"overUI={overUI}, inputServiceActive={_inputService != null}");
             }
 
             var result = _inputService?.ProcessInput(_cam, _cells.GetLength(0), _cells.GetLength(1));

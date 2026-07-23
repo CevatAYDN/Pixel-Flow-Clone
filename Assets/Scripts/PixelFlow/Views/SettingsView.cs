@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using PixelFlow.Models;
 using Nexus.Core;
+using Nexus.Core.Services;
 
 namespace PixelFlow.Views
 {
@@ -32,6 +33,8 @@ namespace PixelFlow.Views
         public event Action<ColorBlindMode> OnColorBlindChanged;
         public event Action<bool> OnHapticsToggled;
 
+        [Inject] public ILoggerService LoggerService { get; set; }
+
         public void AutoWireUIReferences()
         {
             if (_settingsCanvas == null) _settingsCanvas = gameObject;
@@ -54,6 +57,12 @@ namespace PixelFlow.Views
                 if (_colorBlindTritanButton == null && name.Contains("tritan")) _colorBlindTritanButton = b;
             }
             if (_hapticsToggle == null) _hapticsToggle = GetComponentInChildren<Toggle>(true);
+
+            LoggerService?.Log($"[PixelFlow.SettingsView] AutoWire: masterSlider={(bool)_masterVolumeSlider}, sfxSlider={(bool)_sfxVolumeSlider}, " +
+                $"musicSlider={(bool)_musicVolumeSlider}, closeButton={(bool)_closeButton}, " +
+                $"cbNone={(bool)_colorBlindNoneButton}, cbProtan={(bool)_colorBlindProtanButton}, " +
+                $"cbDeutan={(bool)_colorBlindDeutanButton}, cbTritan={(bool)_colorBlindTritanButton}, " +
+                $"hapticsToggle={(bool)_hapticsToggle}");
         }
 
         public void SetVisible(bool visible)
@@ -92,10 +101,25 @@ namespace PixelFlow.Views
             if (img != null) img.color = active ? new Color(0.2f, 0.6f, 1f) : new Color(0.2f, 0.2f, 0.25f);
         }
 
+        private void LogCanvasGroupDiagnostics()
+        {
+            var cg = GetComponent<CanvasGroup>();
+            var canvas = GetComponent<Canvas>();
+            LoggerService?.Log($"[PixelFlow.SettingsView] CanvasGroup: alpha={(cg != null ? cg.alpha.ToString("F2") : "null")}, " +
+                $"blocksRaycasts={(cg != null ? cg.blocksRaycasts.ToString() : "null")}, interactable={(cg != null ? cg.interactable.ToString() : "null")}, " +
+                $"canvasEnabled={(canvas != null ? canvas.enabled.ToString() : "null")}, " +
+                $"activeInHierarchy={gameObject.activeInHierarchy}");
+
+            var es = UnityEngine.EventSystems.EventSystem.current;
+            LoggerService?.Log($"[PixelFlow.SettingsView] EventSystem: current={(bool)es}, " +
+                $"inputModule={(es != null ? es.currentInputModule?.GetType().Name : "null")}");
+        }
+
         protected override void OnBind(IContext context)
         {
             base.OnBind(context);
             AutoWireUIReferences();
+            LogCanvasGroupDiagnostics();
 
             if (_masterVolumeSlider != null) _masterVolumeSlider.onValueChanged.AddListener(v => OnMasterVolumeChanged?.Invoke(v));
             if (_sfxVolumeSlider != null) _sfxVolumeSlider.onValueChanged.AddListener(v => OnSfxVolumeChanged?.Invoke(v));

@@ -97,6 +97,7 @@ namespace PixelFlow.Views
         {
             if (GameStateModel == null || View == null) return;
             bool isMainMenu = GameStateModel.CurrentState == GameState.MainMenu;
+            LoggerService?.Log($"[PixelFlow.MainMenuMediator] UpdateVisibility: state={GameStateModel.CurrentState}, isMainMenu={isMainMenu}");
             View.SetVisible(isMainMenu);
         }
     }

@@ -42,6 +42,10 @@ namespace PixelFlow
         private IPlayerPrefsService _prefs;
         private ILevelProgressionService _progressionService;
 
+        // Save format version — increment when save structure changes
+        private const int SaveFormatVersion = 2;
+        private const string SaveVersionKey = "PF_SaveFormat_Version";
+
         private IEnumerator Start()
         {
             FallbackLogger?.Log("[PixelFlow.GameBootstrapper] Bootstrapper starting up. Waiting for Nexus Root...");
@@ -81,6 +85,10 @@ namespace PixelFlow
                 _loggerService?.Log("[PixelFlow.GameBootstrapper] Saved game state restored successfully. Startup complete.");
                 yield break;
             }
+
+            // Ensure save format version is stored so future boots can validate
+            _prefs?.SetInt(SaveVersionKey, SaveFormatVersion);
+            _prefs?.Save();
 
             // İlk çalıştırma veya save yok → Ana Menü / Hub (GameState.MainMenu) ekranına geçiş yap.
             _loggerService?.Log("[PixelFlow.GameBootstrapper] No active saved game — entering Main Menu / Hub (GameState.MainMenu).");
@@ -133,6 +141,17 @@ namespace PixelFlow
             if (!GridStateSerializer.HasSavedGame(_prefs))
                 return false;
 
+            // Check save format version — clear if mismatched (prevents stale-save skip-to-gameplay)
+            int savedVersion = _prefs.GetInt(SaveVersionKey, 0);
+            if (savedVersion != SaveFormatVersion)
+            {
+                _loggerService?.LogWarning($"[PixelFlow.GameBootstrapper] Save format version mismatch: found {savedVersion}, expected {SaveFormatVersion}. Clearing stale save data.");
+                GridStateSerializer.ClearSave(_prefs);
+                _prefs.DeleteKey(SaveVersionKey);
+                _prefs.Save();
+                return false;
+            }
+
             _loggerService?.Log("[PixelFlow.GameBootstrapper] Saved game detected in PlayerPrefs. Checking save validity...");
             var saved = GridStateSerializer.Load(_prefs);
             if (saved == null)
@@ -183,6 +202,10 @@ namespace PixelFlow
                 GridStateSerializer.ClearSave(_prefs);
                 return false;
             }
+
+                        // Refresh save version timestamp on successful restore
+            _prefs.SetInt(SaveVersionKey, SaveFormatVersion);
+            _prefs.Save();
 
             _loggerService?.Log($"[PixelFlow.GameBootstrapper] Restoring valid saved game: Level {saved.levelIndex + 1} ({level.name}, Grid: {saved.width}x{saved.height}, Cells: {saved.cells.Count}, Paths: {saved.paths.Count})");
             _levelModel.SetLevel(level);

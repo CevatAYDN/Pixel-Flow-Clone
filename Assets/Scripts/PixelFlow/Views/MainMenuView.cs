@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using System;
 using Nexus.Core;
+using Nexus.Core.Services;
 
 namespace PixelFlow.Views
 {
@@ -32,17 +33,50 @@ namespace PixelFlow.Views
         public event Action OnGarageClicked;
         public event Action OnSettingsClicked;
 
+        [Inject] public ILoggerService LoggerService { get; set; }
+
         protected override void OnBind(IContext context)
         {
             base.OnBind(context);
             AutoWireUIReferences();
+            BindButtonListeners();
+            LogBindingDiagnostics();
+        }
+
+        private void LogBindingDiagnostics()
+        {
+            LoggerService?.Log($"[PixelFlow.MainMenuView] UI Reference Diagnostics: " +
+                $"titleText={(bool)_titleText}, coinText={(bool)_coinText}, " +
+                $"garageCard={(bool)_garageCard}, vehName={(bool)_equippedVehicleNameText}, " +
+                $"vehType={(bool)_equippedVehicleTypeText}, " +
+                $"playButton={(bool)_playButton}, playBtnText={(bool)_playButtonText}, " +
+                $"garageButton={(bool)_openGarageButton}, settingsButton={(bool)_settingsButton}");
 
             if (_playButton != null)
-                _playButton.onClick.AddListener(() => OnPlayClicked?.Invoke());
+                LoggerService?.Log($"[PixelFlow.MainMenuView] PlayButton interactable={_playButton.interactable}, active={_playButton.gameObject.activeInHierarchy}");
+            if (_openGarageButton != null)
+                LoggerService?.Log($"[PixelFlow.MainMenuView] GarageButton interactable={_openGarageButton.interactable}, active={_openGarageButton.gameObject.activeInHierarchy}");
+            if (_settingsButton != null)
+                LoggerService?.Log($"[PixelFlow.MainMenuView] SettingsButton interactable={_settingsButton.interactable}, active={_settingsButton.gameObject.activeInHierarchy}");
 
+            var canvas = GetComponent<Canvas>();
+            var cg = GetComponent<CanvasGroup>();
+            LoggerService?.Log($"[PixelFlow.MainMenuView] Canvas enabled={(canvas != null ? canvas.enabled.ToString() : "null")}, " +
+                $"CanvasGroup alpha={(cg != null ? cg.alpha.ToString() : "null")}, " +
+                $"blocksRaycasts={(cg != null ? cg.blocksRaycasts.ToString() : "null")}, " +
+                $"interactable={(cg != null ? cg.interactable.ToString() : "null")}");
+
+            var es = UnityEngine.EventSystems.EventSystem.current;
+            LoggerService?.Log($"[PixelFlow.MainMenuView] EventSystem current={(bool)es}, " +
+                $"inputModule={(es != null ? es.currentInputModule?.GetType().Name : "null")}");
+        }
+
+        private void BindButtonListeners()
+        {
+            if (_playButton != null)
+                _playButton.onClick.AddListener(() => OnPlayClicked?.Invoke());
             if (_openGarageButton != null)
                 _openGarageButton.onClick.AddListener(() => OnGarageClicked?.Invoke());
-
             if (_settingsButton != null)
                 _settingsButton.onClick.AddListener(() => OnSettingsClicked?.Invoke());
         }

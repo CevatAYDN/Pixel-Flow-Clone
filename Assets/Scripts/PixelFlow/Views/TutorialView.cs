@@ -143,11 +143,11 @@ namespace PixelFlow.Views
                 case TutorialStep.ReturnToHub:   return ("Hub'a Dön", 0f);
                 case TutorialStep.TaxCollect:    return ("Vergi topla", 4f);
                 case TutorialStep.SecondColor:   return ("Yeni renk geldi", 4f);
-                case TutorialStep.CrashIntro:    return ("⚠ Kaza! Yolu değiştir", 0f);
-                case TutorialStep.ViaductIntro:  return ("🌉 Viyadük ile çöz", 0f);
-                case TutorialStep.UndoIntro:     return ("↩ Geri al", 4f);
-                case TutorialStep.ObstacleIntro: return ("🚧 Engel var", 4f);
-                case TutorialStep.OneWayIntro:   return ("➡ Tek yön", 4f);
+                case TutorialStep.CrashIntro:    return ("[!] Kaza! Yolu değiştir", 0f);
+                case TutorialStep.ViaductIntro:  return ("[Köprü] Viyadük ile çöz", 0f);
+                case TutorialStep.UndoIntro:     return ("Geri al", 4f);
+                case TutorialStep.ObstacleIntro: return ("[!] Engel var", 4f);
+                case TutorialStep.OneWayIntro:   return ("[>] Tek yön", 4f);
                 default: return ("", 3f);
             }
         }

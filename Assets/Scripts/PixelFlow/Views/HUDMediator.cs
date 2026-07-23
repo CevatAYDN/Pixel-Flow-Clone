@@ -164,7 +164,7 @@ namespace PixelFlow.Views
         {
             _lastCrashPosition = signal.Position;
             
-            string title = LocalizationService?.GetString("crisis_title") ?? "TRAFİK KRİZİ! 🚨";
+            string title = LocalizationService?.GetString("crisis_title") ?? "TRAFİK KRİZİ!";
             string desc = LocalizationService?.GetString("crisis_desc") ?? "Çarpışmayı çözmek için viyadük yerleştirin!";
             string format = LocalizationService?.GetString("crisis_viaducts_format") ?? "Kalan Viyadük: {0}";
             string viaductBtn = LocalizationService?.GetString("crisis_viaduct_btn") ?? "Viyadük Kullan";
@@ -422,13 +422,14 @@ namespace PixelFlow.Views
         {
             var state = GameStateModel.CurrentState;
             bool isGameplay = state == GameState.Playing || state == GameState.Simulating || state == GameState.Paused || state == GameState.LevelCompleted || state == GameState.LevelFailed;
-            
+
             // Do not disable the GameObject itself, as that unregisters the View and destroys the Mediator binding.
             // Instead, disable/enable the Canvas component, or control CanvasGroup alpha/interactivity.
             var canvas = View.GetComponent<Canvas>();
             if (canvas != null)
             {
                 canvas.enabled = isGameplay;
+                LoggerService?.Log($"[PixelFlow.HUDMediator] UpdateVisibility: state={state}, isGameplay={isGameplay}, canvas.enabled={canvas.enabled}");
             }
             else
             {
@@ -436,11 +437,19 @@ namespace PixelFlow.Views
                 if (canvasGroup == null)
                 {
                     canvasGroup = View.gameObject.AddComponent<CanvasGroup>();
+                    LoggerService?.Log("[PixelFlow.HUDMediator] UpdateVisibility: Added CanvasGroup to HUDView (was null)");
                 }
                 canvasGroup.alpha = isGameplay ? 1f : 0f;
                 canvasGroup.blocksRaycasts = isGameplay;
                 canvasGroup.interactable = isGameplay;
+                LoggerService?.Log($"[PixelFlow.HUDMediator] UpdateVisibility: state={state}, isGameplay={isGameplay}, " +
+                    $"cg.alpha={canvasGroup.alpha:F2}, blocksRaycasts={canvasGroup.blocksRaycasts}, interactable={canvasGroup.interactable}");
             }
+
+            var es = UnityEngine.EventSystems.EventSystem.current;
+            LoggerService?.Log($"[PixelFlow.HUDMediator] EventSystem check: current={(bool)es}, " +
+                $"inputModule={(es != null ? es.currentInputModule?.GetType().Name : "null")}, " +
+                $"activeGO={(es != null && es.currentSelectedGameObject != null ? es.currentSelectedGameObject.name : "null")}");
         }
 
         private void HandleSimulateDebugPressed()

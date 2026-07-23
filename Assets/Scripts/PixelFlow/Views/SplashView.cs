@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections;
 using Nexus.Core;
+using Nexus.Core.Services;
 
 namespace PixelFlow.Views
 {
@@ -15,11 +16,14 @@ namespace PixelFlow.Views
 
         public bool IsComplete { get; private set; }
 
+        [Inject] public ILoggerService LoggerService { get; set; }
+
         private void Start()
         {
             if (_canvasGroup == null) _canvasGroup = GetComponent<CanvasGroup>();
             if (_canvasGroup == null) _canvasGroup = gameObject.AddComponent<CanvasGroup>();
 
+            LoggerService?.Log($"[PixelFlow.SplashView] Starting splash animation: displayDuration={_displayDuration}s, fadeDuration={_fadeDuration}s");
             StartCoroutine(PlaySplash());
         }
 
@@ -46,8 +50,10 @@ namespace PixelFlow.Views
             }
 
             IsComplete = true;
+            LoggerService?.Log("[PixelFlow.SplashView] Splash animation complete. Mediator will handle hiding.");
             OnSplashComplete?.Invoke();
-            SetVisible(false);
+            // SetVisible(false) is handled by SplashMediator.HandleSplashComplete
+            // to avoid double-call with the mediator's own SetVisible(false).
         }
 
         public void SetVisible(bool visible)
@@ -59,6 +65,9 @@ namespace PixelFlow.Views
                 _canvasGroup.blocksRaycasts = visible;
                 _canvasGroup.interactable = visible;
             }
+            LoggerService?.Log($"[PixelFlow.SplashView] SetVisible({visible}): " +
+                $"cgAlpha={(_canvasGroup != null ? _canvasGroup.alpha.ToString() : "null")}, " +
+                $"blocksRaycasts={(_canvasGroup != null ? _canvasGroup.blocksRaycasts.ToString() : "null")}");
         }
     }
 }

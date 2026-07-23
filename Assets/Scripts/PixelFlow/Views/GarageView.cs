@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Nexus.Core;
+using Nexus.Core.Services;
 using PixelFlow.Data;
 
 namespace PixelFlow.Views
@@ -20,12 +21,28 @@ namespace PixelFlow.Views
         public event Action<VehicleSkinConfig> OnBuySkinClicked;
         public event Action<VehicleSkinConfig> OnEquipSkinClicked;
 
+        [Inject] public ILoggerService LoggerService { get; set; }
+
         protected override void OnBind(IContext context)
         {
             base.OnBind(context);
             AutoWireUIReferences();
             if (_closeButton != null)
                 _closeButton.onClick.AddListener(() => OnCloseClicked?.Invoke());
+
+            LoggerService?.Log($"[PixelFlow.GarageView] AutoWire: panel={(bool)_panel}, closeButton={(bool)_closeButton}, " +
+                $"coinsText={(bool)_coinsText}, skinContainer={(bool)_skinContainer}");
+            if (_closeButton != null)
+                LoggerService?.Log($"[PixelFlow.GarageView] CloseButton interactable={_closeButton.interactable}, active={_closeButton.gameObject.activeInHierarchy}");
+
+            var cg = GetComponent<CanvasGroup>();
+            var canvas = GetComponent<Canvas>();
+            LoggerService?.Log($"[PixelFlow.GarageView] CanvasGroup: alpha={(cg != null ? cg.alpha.ToString("F2") : "null")}, " +
+                $"blocksRaycasts={(cg != null ? cg.blocksRaycasts.ToString() : "null")}, interactable={(cg != null ? cg.interactable.ToString() : "null")}");
+
+            var es = UnityEngine.EventSystems.EventSystem.current;
+            LoggerService?.Log($"[PixelFlow.GarageView] EventSystem: current={(bool)es}, " +
+                $"inputModule={(es != null ? es.currentInputModule?.GetType().Name : "null")}");
         }
 
         public void AutoWireUIReferences()

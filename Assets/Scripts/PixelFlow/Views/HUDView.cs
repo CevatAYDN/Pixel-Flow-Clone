@@ -96,6 +96,7 @@ namespace PixelFlow.Views
                 if (_completionText == null && name.Contains("complet")) _completionText = t;
                 if (_completionScoreText == null && name.Contains("finalscore")) _completionScoreText = t;
                 if (_levelFailedText == null && name.Contains("failed")) _levelFailedText = t;
+                if (_levelTitleText == null && name.Contains("leveltitle")) _levelTitleText = t;
             }
 
             foreach (var b in buttons)
@@ -111,6 +112,9 @@ namespace PixelFlow.Views
                 if (_themeDarkButton == null && name.Contains("dark")) _themeDarkButton = b;
                 if (_themeLightButton == null && name.Contains("light")) _themeLightButton = b;
                 if (_themeNeonButton == null && name.Contains("neon")) _themeNeonButton = b;
+                if (_garageButton == null && name.Contains("garage")) _garageButton = b;
+                if (_rainbowRoadButton == null && name.Contains("rainbow")) _rainbowRoadButton = b;
+                if (_clearJamButton == null && name.Contains("clearjam")) _clearJamButton = b;
             }
 
             var transforms = GetComponentsInChildren<Transform>(true);
@@ -121,12 +125,20 @@ namespace PixelFlow.Views
                 if (_levelFailedPanel == null && (name.Contains("fail") || name.Contains("gameover"))) _levelFailedPanel = tr.gameObject;
                 if (_starsContainer == null && name.Contains("star")) _starsContainer = tr.gameObject;
             }
+
+            LoggerService?.Log($"[PixelFlow.HUDView] AutoWire: hintBtn={(bool)_hintButton}, undoBtn={(bool)_undoButton}, redoBtn={(bool)_redoButton}, " +
+                $"nextLvlBtn={(bool)_nextLevelButton}, continueBtn={(bool)_continueButton}, pauseBtn={(bool)_pauseButton}, " +
+                $"retryBtn={(bool)_retryButton}, garageBtn={(bool)_garageButton}, rainbowBtn={(bool)_rainbowRoadButton}, " +
+                $"clearJamBtn={(bool)_clearJamButton}, themeDark={(bool)_themeDarkButton}, themeLight={(bool)_themeLightButton}, themeNeon={(bool)_themeNeonButton}, " +
+                $"completionPanel={(bool)_completionPanel}, levelFailedPanel={(bool)_levelFailedPanel}, starsContainer={(bool)_starsContainer}");
         }
 
         protected override void OnBind(IContext context)
         {
             base.OnBind(context);
             AutoWireUIReferences();
+            LogHUDButtonDiagnostics();
+            LogCanvasState("OnBind");
             if (_hintButton != null)
                 _hintButton.onClick.AddListener(() => OnHintClicked?.Invoke());
             if (_nextLevelButton != null)
@@ -165,6 +177,8 @@ namespace PixelFlow.Views
                 _completionPanel.SetActive(false);
             if (_levelFailedPanel != null)
                 _levelFailedPanel.SetActive(false);
+
+            LogCanvasState("AfterOnBind");
         }
 
         protected override void OnUnbind()
@@ -528,6 +542,37 @@ namespace PixelFlow.Views
             SetThemeButtonColor(_themeDarkButton, theme == PixelFlow.Models.AppTheme.Dark);
             SetThemeButtonColor(_themeLightButton, theme == PixelFlow.Models.AppTheme.Light);
             SetThemeButtonColor(_themeNeonButton, theme == PixelFlow.Models.AppTheme.Neon);
+        }
+
+        private void LogHUDButtonDiagnostics()
+        {
+            LoggerService?.Log($"[PixelFlow.HUDView] Button Interactable States: " +
+                $"hint={(bool)_hintButton && _hintButton.interactable}, " +
+                $"undo={(bool)_undoButton && _undoButton.interactable}, " +
+                $"redo={(bool)_redoButton && _redoButton.interactable}, " +
+                $"pause={(bool)_pauseButton && _pauseButton.interactable}, " +
+                $"nextLvl={(bool)_nextLevelButton && _nextLevelButton.interactable}, " +
+                $"continue={(bool)_continueButton && _continueButton.interactable}, " +
+                $"retry={(bool)_retryButton && _retryButton.interactable}, " +
+                $"garage={(bool)_garageButton && _garageButton.interactable}");
+        }
+
+        private void LogCanvasState(string context)
+        {
+            var canvas = GetComponent<Canvas>();
+            var cg = GetComponent<CanvasGroup>();
+            LoggerService?.Log($"[PixelFlow.HUDView] Canvas state [{context}]: " +
+                $"canvasEnabled={(canvas != null ? canvas.enabled.ToString() : "null")}, " +
+                $"cgAlpha={(cg != null ? cg.alpha.ToString("F2") : "null")}, " +
+                $"cgBlocksRaycasts={(cg != null ? cg.blocksRaycasts.ToString() : "null")}, " +
+                $"cgInteractable={(cg != null ? cg.interactable.ToString() : "null")}, " +
+                $"activeInHierarchy={gameObject.activeInHierarchy}");
+
+            var es = UnityEngine.EventSystems.EventSystem.current;
+            LoggerService?.Log($"[PixelFlow.HUDView] EventSystem [{context}]: " +
+                $"current={(bool)es}, " +
+                $"inputModule={(es != null ? es.currentInputModule?.GetType().Name : "null")}, " +
+                $"firstSelected={(es != null && es.firstSelectedGameObject != null ? es.firstSelectedGameObject.name : "null")}");
         }
 
         private static void SetThemeButtonColor(Button button, bool isActive)
