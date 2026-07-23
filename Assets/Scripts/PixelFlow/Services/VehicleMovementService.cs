@@ -487,14 +487,5 @@ namespace PixelFlow.Services
                            2f * (2f * p0 - 5f * p1 + 4f * p2 - p3) * t +
                            3f * (-p0 + 3f * p1 - 3f * p2 + p3) * t2);
         }
-
-        private static void SafeDestroy(UnityEngine.Object obj)
-        {
-            if (obj == null) return;
-            if (Application.isPlaying)
-                UnityEngine.Object.Destroy(obj);
-            else
-                UnityEngine.Object.DestroyImmediate(obj);
-        }
     }
 }

@@ -51,7 +51,9 @@ namespace PixelFlow.Views
         [SerializeField] private TMP_Text _coinsText;
         [SerializeField] private Button _garageButton;
         [SerializeField] private Button _rainbowRoadButton;
+        [SerializeField] private TMP_Text _rainbowRoadCountText;
         [SerializeField] private Button _clearJamButton;
+        [SerializeField] private TMP_Text _clearJamCountText;
 
         public event Action OnGarageClicked;
         public event Action OnRainbowRoadClicked;
@@ -93,6 +95,8 @@ namespace PixelFlow.Views
                 if (_scoreText == null && (name.Contains("score") || name.Contains("puan"))) _scoreText = t;
                 if (_timerText == null && (name.Contains("timer") || name.Contains("time") || name.Contains("sure"))) _timerText = t;
                 if (_hintCountText == null && name.Contains("hint")) _hintCountText = t;
+                if (_rainbowRoadCountText == null && name.Contains("rainbowcount")) _rainbowRoadCountText = t;
+                if (_clearJamCountText == null && name.Contains("clearjamcount")) _clearJamCountText = t;
                 if (_completionText == null && name.Contains("complet")) _completionText = t;
                 if (_completionScoreText == null && name.Contains("finalscore")) _completionScoreText = t;
                 if (_levelFailedText == null && name.Contains("failed")) _levelFailedText = t;
@@ -206,6 +210,12 @@ namespace PixelFlow.Views
                 _retryButton.onClick.RemoveAllListeners();
             if (_levelFailedContinueButton != null)
                 _levelFailedContinueButton.onClick.RemoveAllListeners();
+            if (_garageButton != null)
+                _garageButton.onClick.RemoveAllListeners();
+            if (_rainbowRoadButton != null)
+                _rainbowRoadButton.onClick.RemoveAllListeners();
+            if (_clearJamButton != null)
+                _clearJamButton.onClick.RemoveAllListeners();
 
             if (_crisisViaductButton != null)
             {
@@ -231,6 +241,44 @@ namespace PixelFlow.Views
         {
             if (_redoButton != null)
                 _redoButton.interactable = interactable;
+        }
+
+        public void UpdateRainbowRoadCount(int remaining)
+        {
+            if (_rainbowRoadCountText != null)
+                _rainbowRoadCountText.text = remaining > 0 ? remaining.ToString() : "";
+            // Buton etkileşimi: kullanım varsa veya henüz aktif edilmemişse aktif
+            if (_rainbowRoadButton != null)
+                _rainbowRoadButton.interactable = true; // Her zaman tıklanabilir (activate etmek için)
+        }
+
+        public void UpdateClearJamCount(int remaining)
+        {
+            if (_clearJamCountText != null)
+                _clearJamCountText.text = remaining > 0 ? remaining.ToString() : "";
+            // Clear Jam sadece kullanım hakkı varsa tıklanabilir
+            SetClearJamInteractable(remaining > 0);
+        }
+
+        public void SetClearJamInteractable(bool interactable)
+        {
+            if (_clearJamButton != null)
+            {
+                _clearJamButton.interactable = interactable;
+                // Görsel feedback Unity Button ColorTint transition tarafından otomatik yönetilir
+            }
+        }
+
+        /// <summary>
+        /// Power-up butonlarının tümünü etkileşime aç/kapa.
+        /// Simülasyon modunda tüm power-up'lar devre dışı bırakılır.
+        /// </summary>
+        public void SetPowerUpButtonsInteractable(bool interactable)
+        {
+            if (_rainbowRoadButton != null)
+                _rainbowRoadButton.interactable = interactable;
+            if (_clearJamButton != null)
+                _clearJamButton.interactable = interactable;
         }
 
         public void UpdateHintCount(int count, string format)
@@ -264,10 +312,7 @@ namespace PixelFlow.Views
                 int minutes = Mathf.FloorToInt(elapsedTime / 60f);
                 int seconds = Mathf.FloorToInt(elapsedTime % 60f);
                 _timerText.text = $"{minutes:00}:{seconds:00}";
-            }
-            if (_timerText != null)
-            {
-                _timerText.color = Color.white; // Simülasyondan çıkışta rengi sıfırla
+                _timerText.color = Color.white;
             }
         }
 

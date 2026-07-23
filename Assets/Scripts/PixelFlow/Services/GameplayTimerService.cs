@@ -28,8 +28,8 @@ namespace PixelFlow.Services
         private float _idleTimer;
         private int _graceSkipCount;
 
-        private float ConfigIdleReminderSeconds => Config != null ? Config.IdleReminderSeconds : 300f;
-        private int ConfigMaxGraceSkips => Config != null ? Config.MaxGraceSkips : 3;
+        private float ConfigIdleReminderSeconds => Config != null ? Config.IdleReminderSeconds : throw new Data.DataValidationException("GameConfig.IdleReminderSeconds erişilemedi!");
+        private int ConfigMaxGraceSkips => Config != null ? Config.MaxGraceSkips : throw new Data.DataValidationException("GameConfig.MaxGraceSkips erişilemedi!");
 
         public bool CanGraceSkip => _graceSkipCount < ConfigMaxGraceSkips;
 
@@ -60,8 +60,9 @@ namespace PixelFlow.Services
             _graceSkipCount++;
             _idleTimer = 0f;
 
-            GameStateModel.SetState(GameState.LevelCompleted);
-            SignalBus.Fire(new LevelCompletedSignal());
+            // HATA FIX: Win condition validasyonu için direkt state değiştirme
+            // CheckWinConditionSignal fırlat — Command içinde skor/star hesaplaması yapılır
+            SignalBus?.Fire(new CheckWinConditionSignal());
         }
 
         public void Tick(float deltaTime)

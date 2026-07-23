@@ -100,5 +100,26 @@ namespace PixelFlow.Data
         [Header("=== Progress ===")]
         [Tooltip("İlk açılışta unlock edilen seviye sayısı")]
         public int DefaultUnlockedLevels = 1;
+
+        [Header("=== Power-Ups (IPowerUpService) ===")]
+        [Tooltip("Rainbow Road her aktivasyonda verilen segment sayısı")]
+        public int RainbowRoadSegmentsPerActivation = 3;
+
+        [Tooltip("Her level'da verilen Clear Jam kullanım hakkı")]
+        public int ClearJamUsesPerLevel = 1;
+
+        [Header("=== Save System ===")]
+        [Tooltip("Kayıt formatı versiyonu — yapı değiştiğinde artırılır")]
+        public int SaveFormatVersion = 2;
+
+        [Tooltip("Kayıt PlayerPrefs anahtarı")]
+        public string SaveVersionKey = "PF_SaveFormat_Version";
+
+        [Header("=== Economy / Coins ===")]
+        [Tooltip("Simülasyonda hedefe ulaşan her araç başına kazanılan coin")]
+        public int CoinPerFlowScore = 5;
+
+        [Tooltip("Seviye tamamlama bonus coin")]
+        public int LevelCompleteCoinBonus = 50;
     }
 }

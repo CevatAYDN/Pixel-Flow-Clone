@@ -24,6 +24,12 @@ namespace PixelFlow.Views
             View.OnBuySkinClicked += HandleBuySkin;
             View.OnEquipSkinClicked += HandleEquipSkin;
 
+            Subscribe<ShowGarageSignal>(_ =>
+            {
+                LoggerService?.Log("[PixelFlow.GarageMediator] ShowGarageSignal received, opening panel.");
+                View?.SetActive(true);
+            });
+
             LoggerService?.Log("[PixelFlow.GarageMediator] Garage UI successfully bound.");
         }
 

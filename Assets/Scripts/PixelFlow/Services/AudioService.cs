@@ -12,6 +12,7 @@ namespace PixelFlow.Services
     {
         UIClick, PathDraw, VehicleEngine, Crash, Horn,
         CoinCollect, LevelComplete, ViaductPlace,
+        PowerUpActivate, PowerUpClear,
         AmbientHub, AmbientPuzzle, AmbientOverclock, MainTheme
     }
 

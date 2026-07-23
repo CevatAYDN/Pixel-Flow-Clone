@@ -39,6 +39,7 @@ namespace PixelFlow.Editor.Tests
                 builder.BindService<ICrisisAdService, CrisisAdService>();
                 builder.BindService<IObstacleService, ObstacleService>();
                 builder.BindService<ITutorialDriver, TutorialDriver>();
+                builder.BindService<IPowerUpService, PowerUpService>();
                 builder.BindService<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
                 builder.Bind<IFeedbackService, FeedbackService>();
                 builder.Bind<Nexus.Core.Services.IAudioService, StubAudioService>();

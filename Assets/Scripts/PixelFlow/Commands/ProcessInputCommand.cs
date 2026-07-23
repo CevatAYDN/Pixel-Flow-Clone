@@ -28,13 +28,9 @@ namespace PixelFlow.Commands
         [Inject] public ILoggerService LoggerService { get; set; }
 
         // Batched history bypass edilerek her adımda snapshot kaydı sağlanır (Testler ve oyun hassasiyeti için)
-        private bool _hasPendingHistory;
-
         private void EnsureHistoryRecorded()
         {
             HistoryService.Record(GridModel, GameSessionModel);
-            _hasPendingHistory = true;
-            _ = _hasPendingHistory; // Suppress CS0414 warning
         }
 
         // Önbelleğe alınmış save Action — her RequestSave()'de yeni closure alloc'u önler
@@ -51,12 +47,10 @@ namespace PixelFlow.Commands
         {
             var state = GameStateModel.CurrentState;
 
-            if (state == GameState.Simulating && signal.Type == InputType.PointerDown)
-            {
-                LoggerService?.Log($"[PixelFlow.ProcessInputCommand] PointerDown received in Simulating state. Reverting to Playing state.");
-                GameStateModel.SetState(GameState.Playing);
-                state = GameState.Playing;
-            }
+            // HATA FIX: Simülasyon modunda grid tıklamaları state'i değiştirmez.
+            // Sadece pause/durdur butonu ile simülasyon kesilebilir.
+            if (state == GameState.Simulating)
+                return;
 
             if (state != GameState.Playing && state != GameState.Paused)
             {
@@ -155,7 +149,12 @@ namespace PixelFlow.Commands
                 if (distance != 1)
                     return;
 
-                var path = GridModel.Paths[GridModel.ActiveColor.Value];
+                if (!GridModel.Paths.TryGetValue(GridModel.ActiveColor.Value, out var path))
+                {
+                    LoggerService?.LogWarning($"[PixelFlow.ProcessInputCommand] Drag aborted: no path found for active color {GridModel.ActiveColor.Value}.");
+                    GridModel.ActiveColor.Value = ColorType.None;
+                    return;
+                }
 
                 if (path.Contains(signal.GridPosition))
                 {
@@ -233,7 +232,6 @@ namespace PixelFlow.Commands
                     path.Add(signal.GridPosition);
                     GridModel.LastPosition.Value = signal.GridPosition;
                     GridModel.ActiveColor.Value = ColorType.None;
-                    _hasPendingHistory = false;
                     SignalBus.Fire(new GridUpdatedSignal());
                     SignalBus.Fire(new CheckWinConditionSignal());
                     HapticService?.Vibrate(HapticType.Medium);
@@ -310,12 +308,10 @@ namespace PixelFlow.Commands
                     EnsureHistoryRecorded();
                     GridModel.ActiveColor.Value = ColorType.None;
                     GridModel.LastPosition.Value = new Vector2Int(-1, -1);
-                    _hasPendingHistory = false;
                     RequestSave();
                 }
                 else
                 {
-                    _hasPendingHistory = false;
                 }
             }
         }

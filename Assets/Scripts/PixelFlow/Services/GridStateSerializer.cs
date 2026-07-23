@@ -24,6 +24,7 @@ namespace PixelFlow.Services
             public float elapsedTime;
             public int score;
             public int stars;
+            public int targetFlowScore;
             public int activeColor;   // (int)ColorType
             public int lastPosX;
             public int lastPosY;
@@ -73,6 +74,7 @@ namespace PixelFlow.Services
                 elapsedTime = session != null ? session.ElapsedTime : 0f,
                 score = session != null ? session.Score : 0,
                 stars = session != null ? session.StarsEarned : 0,
+                targetFlowScore = session != null ? session.TargetFlowScore : 5,
                 activeColor = grid.ActiveColor != null ? (int)grid.ActiveColor.Value : 0,
                 lastPosX = grid.LastPosition != null ? grid.LastPosition.Value.x : -1,
                 lastPosY = grid.LastPosition != null ? grid.LastPosition.Value.y : -1,
@@ -197,10 +199,6 @@ namespace PixelFlow.Services
             // ---- Rebuild PathColorsMask from grid.Paths ----
             // Eski save formatlarında pathColors listesi boş olabilir; ayrıca
             // cell-level ve path-level veri arasında tutarlılık sağlar.
-            for (int x = 0; x < grid.Width; x++)
-                for (int y = 0; y < grid.Height; y++)
-                    grid.Grid[x, y].ClearPathColors();
-
             foreach (var kvp in grid.Paths)
             {
                 byte bit = (byte)(1 << (int)kvp.Key);

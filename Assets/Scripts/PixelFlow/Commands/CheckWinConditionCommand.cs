@@ -18,13 +18,14 @@ namespace PixelFlow.Commands
         [Inject] public IHintModel HintModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject, OptionalInject] public Data.EconomyConfigAsset EconomyConfig { get; set; }
 
         public void Execute(CheckWinConditionSignal signal)
         {
             LoggerService?.Log("[PixelFlow.CheckWinConditionCommand] Running win condition verification...");
-            if (GameStateModel.CurrentState != GameState.Playing)
+            if (GameStateModel.CurrentState != GameState.Playing && GameStateModel.CurrentState != GameState.Simulating)
             {
-                LoggerService?.Log($"[PixelFlow.CheckWinConditionCommand] Aborting check: GameState is not Playing (current: {GameStateModel.CurrentState})");
+                LoggerService?.Log($"[PixelFlow.CheckWinConditionCommand] Aborting check: GameState is not Playing/Simulating (current: {GameStateModel.CurrentState})");
                 return;
             }
 
@@ -83,13 +84,25 @@ namespace PixelFlow.Commands
                         return;
                     }
 
-                    // Additionally verify all path positions belong to the grid
-                    foreach (var pos in path)
+                    // Additionally verify all path positions belong to the grid and path is continuous
+                    for (int pi = 0; pi < path.Count; pi++)
                     {
+                        var pos = path[pi];
                         if (pos.x < 0 || pos.x >= GridModel.Width || pos.y < 0 || pos.y >= GridModel.Height)
                         {
                             LoggerService?.Log($"[PixelFlow.CheckWinConditionCommand] Win check failed: path position {pos} out of bounds");
                             return;
+                        }
+                        // Path continuity: each cell must be adjacent to the next
+                        if (pi > 0)
+                        {
+                            var prev = path[pi - 1];
+                            int dist = UnityEngine.Mathf.Abs(pos.x - prev.x) + UnityEngine.Mathf.Abs(pos.y - prev.y);
+                            if (dist != 1)
+                            {
+                                LoggerService?.Log($"[PixelFlow.CheckWinConditionCommand] Win check failed: path discontinuity between {prev} and {pos} for color {kvp.Key}");
+                                return;
+                            }
                         }
                     }
                     LoggerService?.Log($"[PixelFlow.CheckWinConditionCommand] Verified path for color {kvp.Key}: properly connects {node1} and {node2} with {path.Count} cells.");
@@ -111,7 +124,8 @@ namespace PixelFlow.Commands
                 GridModel.Width, GridModel.Height,
                 GameSessionModel.ElapsedTime,
                 hintsUsed, totalHints,
-                viaductsUsed);
+                viaductsUsed,
+                EconomyConfig);
 
             LoggerService?.Log($"[PixelFlow.CheckWinConditionCommand] Score calculation - Width: {GridModel.Width}, Height: {GridModel.Height}, Time: {GameSessionModel.ElapsedTime}s, Hints Used: {hintsUsed}/{totalHints}, Viaducts Used: {viaductsUsed}. Resulting Score: {finalScore}, Stars: {stars}");
 

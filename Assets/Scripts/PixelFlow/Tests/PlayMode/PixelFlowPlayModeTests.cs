@@ -161,7 +161,6 @@ namespace PixelFlow.PlayMode.Tests
                 builder.BindCommand<LevelCompletedSignal, SaveProgressCommand>(ExecutionMode.Exclusive, priority: 0);
                 builder.BindSignal<UndoSignal>().To<UndoCommand>();
                 builder.BindSignal<RedoSignal>().To<RedoCommand>();
-                builder.BindSignal<TimerTickSignal>().To<TimerCommand>();
                 builder.BindSignal<PlaceViaductSignal>().To<PlaceViaductCommand>();
                 builder.BindSignal<RequestInterstitialAdSignal>().To<InterstitialAdCommand>();
             });

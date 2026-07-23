@@ -78,6 +78,10 @@ namespace PixelFlow.Commands
                 }
 
                 var cell = GridModel.Grid[pos.x, pos.y];
+                if (!cell.HasPathColor(colorToHint))
+                {
+                    cell.AddPathColor(colorToHint);
+                }
                 if (cell.State == CellState.Empty)
                 {
                     cell.State = CellState.Path;

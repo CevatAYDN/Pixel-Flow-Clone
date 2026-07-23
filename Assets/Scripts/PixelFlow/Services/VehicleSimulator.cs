@@ -49,8 +49,6 @@ namespace PixelFlow.Services
         [Inject, OptionalInject] public ITickService TickService { get; set; }
         [Inject, OptionalInject] public IInventoryModel InventoryModel { get; set; }
 
-        private ICrisisAdService _crisisAdService => CrisisAdService;
-
         private static readonly ColorType[] AllColors;
 
         static VehicleSimulator()
@@ -76,8 +74,8 @@ namespace PixelFlow.Services
         private float _simulationPhaseTimer = 0f;
         private const float FixedTimeStep = 1f / 60f;
         private float _fixedAccumulator = 0f;
-        private float ConfigVehicleSpeed => Config != null ? Config.VehicleSpeed : 3f;
-        private float ConfigSpawnInterval => Config != null ? Config.SpawnInterval : 1.2f;
+        private float ConfigVehicleSpeed => Config != null ? Config.VehicleSpeed : throw new Data.DataValidationException("GameConfig.VehicleSpeed erişilemedi!");
+        private float ConfigSpawnInterval => Config != null ? Config.SpawnInterval : throw new Data.DataValidationException("GameConfig.SpawnInterval erişilemedi!");
         private ISignalSubscription _undoSubscription;
         private ISignalSubscription _redoSubscription;
         private ISignalSubscription _levelFailedSubscription;
@@ -251,6 +249,21 @@ namespace PixelFlow.Services
             // Spawn timing, collision detection, and completion timer use real deltaTime
             // (these are timer-based, not physics-based)
             UpdateSpawning(deltaTime);
+
+            // Remove vehicles whose path has been modified by the player
+            for (int i = _activeVehicles.Count - 1; i >= 0; i--)
+            {
+                if (IsVehiclePathStale(_activeVehicles[i]))
+                {
+                    var stale = _activeVehicles[i];
+                    // Spline cache'i bu renk için temizle — eski path'in kontrol
+                    // noktaları yeni araçlar tarafından kullanılmamalı
+                    _movementService?.InvalidateSplineCache(stale.Color);
+                    if (stale.Visual != null)
+                        VehicleVisualFactory.RecycleVehicle(stale.Visual);
+                    _activeVehicles.RemoveAt(i);
+                }
+            }
             
             if (state == GameState.Playing || state == GameState.Simulating)
             {
@@ -423,10 +436,18 @@ namespace PixelFlow.Services
 
         /// <summary>
         /// Grid-based spatial partitioning collision detection.
-        /// Instead of O(n²) brute-force distance checks, vehicles register which cell
-        /// they occupy. Collision is checked only between vehicles on the same
-        /// or adjacent cells, reducing complexity to O(n × avgDensity) in practice.
+        /// Vehicles register which cell they occupy. Collision is checked between
+        /// vehicles on the same or adjacent cells (8-neighborhood), reducing
+        /// complexity to O(n × avgDensity) in practice.
         /// </summary>
+        private static readonly Vector2Int[] NeighborOffsets =
+        {
+            new Vector2Int(1, 0), new Vector2Int(-1, 0),
+            new Vector2Int(0, 1), new Vector2Int(0, -1),
+            new Vector2Int(1, 1), new Vector2Int(1, -1),
+            new Vector2Int(-1, 1), new Vector2Int(-1, -1)
+        };
+
         private void UpdateCollisionDetection()
         {
             // Return all pooled lists before rebuilding
@@ -466,44 +487,60 @@ namespace PixelFlow.Services
                 list.Add(v);
             }
 
-            // Check collisions only on cells with multiple vehicles
+            // Check collisions on cells with multiple vehicles + adjacent cells
             foreach (var kvp in _cellOccupancy)
             {
                 var vehicles = kvp.Value;
-                if (vehicles.Count < 2) continue;
+                var cellPos = kvp.Key;
 
+                // Same-cell collisions
                 for (int i = 0; i < vehicles.Count; i++)
                 {
                     for (int j = i + 1; j < vehicles.Count; j++)
                     {
-                        var v1 = vehicles[i];
-                        var v2 = vehicles[j];
-                        if (v1.Color == v2.Color) continue;
+                        if (CheckCollisionPair(vehicles[i], vehicles[j], cellPos))
+                            return;
+                    }
+                }
 
-                        float sqrDist = (v1.CurrentPosition - v2.CurrentPosition).sqrMagnitude;
-                        if (sqrDist < 0.2025f) // 0.45²
+                // Adjacent-cell collisions (only check positive offsets to avoid double-checking)
+                for (int n = 0; n < 4; n++)
+                {
+                    Vector2Int neighborPos = cellPos + NeighborOffsets[n];
+                    if (!_cellOccupancy.TryGetValue(neighborPos, out var neighborVehicles))
+                        continue;
+
+                    for (int i = 0; i < vehicles.Count; i++)
+                    {
+                        for (int j = 0; j < neighborVehicles.Count; j++)
                         {
-                            Vector2Int cellPos = kvp.Key;
-                            var cell = GridModel.Grid[cellPos.x, cellPos.y];
-
-                            if (cell.HasViaduct)
-                            {
-                                float zDiff = Mathf.Abs(v1.CurrentPosition.z - v2.CurrentPosition.z);
-                                if (zDiff < 0.15f)
-                                {
-                                    TriggerCrash(cellPos, v1.Color, v2.Color);
-                                    return;
-                                }
-                            }
-                            else
-                            {
-                                TriggerCrash(cellPos, v1.Color, v2.Color);
+                            if (CheckCollisionPair(vehicles[i], neighborVehicles[j], cellPos))
                                 return;
-                            }
                         }
                     }
                 }
             }
+        }
+
+        private bool CheckCollisionPair(VehicleInstance v1, VehicleInstance v2, Vector2Int cellPos)
+        {
+            if (v1.Color == v2.Color) return false;
+
+            float sqrDist = (v1.CurrentPosition - v2.CurrentPosition).sqrMagnitude;
+            if (sqrDist >= 0.2025f) return false; // 0.45²
+
+            var cell = GridModel.Grid[
+                Mathf.Clamp(cellPos.x, 0, GridModel.Width - 1),
+                Mathf.Clamp(cellPos.y, 0, GridModel.Height - 1)];
+
+            if (cell.HasViaduct)
+            {
+                float zDiff = Mathf.Abs(v1.CurrentPosition.z - v2.CurrentPosition.z);
+                if (zDiff >= 0.15f) return false;
+            }
+
+            TriggerCrash(cellPos, v1.Color, v2.Color);
+            return true;
         }
 
         private void TriggerCrash(Vector2Int crashPos, ColorType colorA, ColorType colorB)

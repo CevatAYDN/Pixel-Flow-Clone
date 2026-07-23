@@ -210,6 +210,54 @@ namespace PixelFlow.Views
         private Dictionary<ColorType, LineRenderer> _glowLines = new Dictionary<ColorType, LineRenderer>();
         private HashSet<ColorType> _previousPathColors = new HashSet<ColorType>();
         private static Shader _cachedSpriteShader;
+        private static Gradient _rainbowGradient;
+        private static bool _rainbowGradientInitialized;
+
+        /// <summary>
+        /// Rainbow Road hücrelerinden geçen path'ler için gökkuşağı gradient'i oluşturur.
+        /// </summary>
+        private static Gradient GetRainbowGradient()
+        {
+            if (_rainbowGradientInitialized)
+                return _rainbowGradient;
+
+            _rainbowGradient = new Gradient();
+            _rainbowGradient.colorKeys = new GradientColorKey[]
+            {
+                new GradientColorKey(Color.red, 0f / 5f),
+                new GradientColorKey(Color.yellow, 1f / 5f),
+                new GradientColorKey(Color.green, 2f / 5f),
+                new GradientColorKey(Color.cyan, 3f / 5f),
+                new GradientColorKey(Color.blue, 4f / 5f),
+                new GradientColorKey(new Color(0.5f, 0f, 1f), 5f / 5f) // purple
+            };
+            _rainbowGradient.alphaKeys = new GradientAlphaKey[]
+            {
+                new GradientAlphaKey(1f, 0f),
+                new GradientAlphaKey(1f, 1f)
+            };
+            _rainbowGradientInitialized = true;
+            return _rainbowGradient;
+        }
+
+        /// <summary>
+        /// Bir path'teki hücrelerden en az biri Rainbow Road işaretli mi?
+        /// </summary>
+        private static bool PathHasRainbowCell(List<Vector2Int> pathPositions, CellData[,] gridData)
+        {
+            if (gridData == null) return false;
+            int gw = gridData.GetLength(0);
+            int gh = gridData.GetLength(1);
+            foreach (var pos in pathPositions)
+            {
+                if (pos.x >= 0 && pos.x < gw && pos.y >= 0 && pos.y < gh)
+                {
+                    if (gridData[pos.x, pos.y].IsRainbowRoad)
+                        return true;
+                }
+            }
+            return false;
+        }
 
         public void UpdateGridVisuals(CellData[,] gridData, int width, int height, AppTheme theme, Dictionary<ColorType, List<Vector2Int>> paths, Vector2Int crashPos = default)
         {
@@ -346,18 +394,27 @@ namespace PixelFlow.Views
                 glowRenderer.gameObject.SetActive(true);
                 glowRenderer.positionCount = pathPositions.Count;
                 
+                bool hasRainbow = PathHasRainbowCell(pathPositions, gridData);
                 Color pipeColor = CellView.GetColor(colorType);
-                // Glow alpha: 0.55 × GPU pulse (0.55-0.75) = final 0.30-0.41
                 Color glowColor = new Color(pipeColor.r, pipeColor.g, pipeColor.b, 0.55f);
 
                 bool isCrashColor = crashPos.x >= 0 && 
                     (colorType == crashColorA || colorType == crashColorB);
 
-                lineRenderer.startColor = pipeColor;
-                lineRenderer.endColor = pipeColor;
-
-                glowRenderer.startColor = glowColor;
-                glowRenderer.endColor = glowColor;
+                if (hasRainbow && !isCrashColor)
+                {
+                    // Rainbow Road path'i: gradient ile gökkuşağı renkleri
+                    lineRenderer.colorGradient = GetRainbowGradient();
+                    glowRenderer.startColor = new Color(1f, 1f, 1f, 0.55f);
+                    glowRenderer.endColor = new Color(1f, 1f, 1f, 0.55f);
+                }
+                else
+                {
+                    lineRenderer.startColor = pipeColor;
+                    lineRenderer.endColor = pipeColor;
+                    glowRenderer.startColor = glowColor;
+                    glowRenderer.endColor = glowColor;
+                }
 
                 int gw = gridData != null ? gridData.GetLength(0) : 0;
                 int gh = gridData != null ? gridData.GetLength(1) : 0;

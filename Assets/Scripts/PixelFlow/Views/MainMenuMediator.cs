@@ -3,6 +3,7 @@ using Nexus.Core.Services;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Services;
+using PixelFlow.Data;
 
 namespace PixelFlow.Views
 {
@@ -10,6 +11,7 @@ namespace PixelFlow.Views
     /// DesignSystem/Mockups/index.html mimarisine uygun Ana Menü / Hub Mediator'ı.
     /// GameState.MainMenu aktifleştiğinde görünür olur, OYUNA BAŞLA butonuna tıklanınca
     /// LoadLevelSignal ve GameState.Playing geçişini tetikler.
+    /// Kayıtlı oyun varsa restore edilir, yoksa yeni level yüklenir.
     /// </summary>
     public class MainMenuMediator : Mediator<MainMenuView>
     {
@@ -18,6 +20,13 @@ namespace PixelFlow.Views
         [Inject] public IInventoryModel InventoryModel { get; set; }
         [Inject] public ILevelProgressionService ProgressionService { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject] public IGridModel GridModel { get; set; }
+        [Inject] public IGameSessionModel GameSessionModel { get; set; }
+        [Inject] public ILevelModel LevelModel { get; set; }
+        [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
+        [Inject] public IObstacleService ObstacleService { get; set; }
+        [Inject] public ITutorialDriver TutorialDriver { get; set; }
+        [Inject] public ISignalBus SignalBus { get; set; }
 
         protected override void OnBind()
         {
@@ -43,7 +52,16 @@ namespace PixelFlow.Views
 
         private void HandlePlayClicked()
         {
-            LoggerService?.Log("[PixelFlow.MainMenuMediator] 'OYUNA BAŞLA' clicked on Main Hub. Resolving unlocked level...");
+            LoggerService?.Log("[PixelFlow.MainMenuMediator] 'OYUNA BAŞLA' clicked. Checking for saved game...");
+
+            // Kayıtlı oyun varsa restore et
+            if (TryRestoreSavedGame())
+            {
+                LoggerService?.Log("[PixelFlow.MainMenuMediator] Saved game restored. Transitioning to Playing.");
+                return;
+            }
+
+            // Save yok — yeni level yükle
             int currentUnlockedLevel = ProgressModel != null ? ProgressModel.UnlockedLevels : 1;
             int levelIndex = currentUnlockedLevel - 1;
 
@@ -60,13 +78,50 @@ namespace PixelFlow.Views
 
             LoggerService?.Log("[PixelFlow.MainMenuMediator] Transitioning GameState -> Playing...");
             GameStateModel?.SetState(GameState.Playing);
-            LoggerService?.Log("[PixelFlow.MainMenuMediator] GameState set to Playing. MainMenuView hidden, HUDView active.");
+        }
+
+        private bool TryRestoreSavedGame()
+        {
+            if (!GridStateSerializer.HasSavedGame(PlayerPrefsService))
+                return false;
+
+            var saved = GridStateSerializer.Load(PlayerPrefsService);
+            if (saved == null || saved.cells == null || saved.cells.Count == 0)
+                return false;
+            if (saved.paths == null || saved.paths.Count == 0)
+            {
+                GridStateSerializer.ClearSave(PlayerPrefsService);
+                return false;
+            }
+
+            var level = ProgressionService?.GetOrGenerateLevel(saved.levelIndex);
+            if (level == null)
+                return false;
+
+            if (!GridStateSerializer.IsSaveDataValidForLevel(saved, level))
+            {
+                GridStateSerializer.ClearSave(PlayerPrefsService);
+                return false;
+            }
+
+            LoggerService?.Log($"[PixelFlow.MainMenuMediator] Restoring saved game: Level {saved.levelIndex + 1}");
+            LevelModel.SetLevel(level);
+            GridStateSerializer.ApplyToGrid(saved, GridModel);
+            GridStateSerializer.EnsureInitialNodesOnGrid(level, GridModel);
+            GameSessionModel.ApplySave(saved.availableViaducts, saved.maxViaducts,
+                saved.elapsedTime, saved.score, saved.stars, saved.levelIndex, saved.targetFlowScore);
+
+            ObstacleService?.InitializeFromLevel(level);
+            TutorialDriver?.OnLevelLoaded(level.levelIndex);
+
+            SignalBus.Fire(new GridUpdatedSignal());
+            GameStateModel.SetState(GameState.Playing);
+            return true;
         }
 
         private void HandleGarageClicked()
         {
             LoggerService?.Log("[MainMenuMediator] 'Garaj' button clicked from Hub.");
-            // Garaj modali / paneli tetiklenir
         }
 
         private void HandleSettingsClicked()

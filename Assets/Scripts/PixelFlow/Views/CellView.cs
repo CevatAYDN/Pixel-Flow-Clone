@@ -282,6 +282,14 @@ namespace PixelFlow.Views
                 cellBg = Color.Lerp(crashBright, crashDark, pulse);
             }
 
+            // Rainbow Road detection: tüm 5 renge sahip hücrelerde gökkuşağı animasyonu
+            _isRainbow = cellData.PathColorCount >= 5;
+            if (_isRainbow)
+            {
+                // Rastgele offset ile her hücre farklı fazda başlasın
+                _rainbowHueOffset = (GridPosition.x * 0.137f + GridPosition.y * 0.269f) % 1f;
+            }
+
             _bgRenderer.transform.localScale = new Vector3(0.92f, 0.92f, 1f);
 
             if (_bg3D != null) _bg3D.SetActive(true);
@@ -291,10 +299,11 @@ namespace PixelFlow.Views
             bool hasConflict = cellData.PathColorCount >= 2 && !cellData.HasViaduct;
             if (_warningRenderer != null)
             {
-                _warningRenderer.enabled = hasConflict;
+                // Rainbow hücrelerde conflict warning gösterme (rainbow zaten çok renk demek)
+                _warningRenderer.enabled = hasConflict && !_isRainbow;
                 _warningRenderer.transform.localScale = new Vector3(0.4f, 0.4f, 1f);
                 _warningRenderer.transform.localPosition = new Vector3(0f, 0f, -0.3f);
-                if (hasConflict && _warningSprite != null)
+                if (hasConflict && !_isRainbow && _warningSprite != null)
                     _warningRenderer.sprite = _warningSprite;
             }
 
@@ -490,12 +499,27 @@ namespace PixelFlow.Views
         private Color _rejectionColor = new Color(0.937f, 0.267f, 0.267f, 1f); // Default fallback; overridden by ThemePaletteAsset
         private const float _rejectionPulseFrequency = 15f;
 
+        // Rainbow Road visual effect
+        private bool _isRainbow = false;
+        private float _rainbowHueOffset = 0f;
+
         public void TickAnimation(float deltaTime)
         {
-            // Early-out: çoğu hücre çoğu frame'de animasyonsuzdur
-            // 400 hücre × 60 fps = 24.000 kontrol/sn — iki bool check ihmal edilebilir
-            if (!_isBouncing && !_isRejecting)
+            // 3 bool check: bounce, reject, rainbow — çoğu hücre çoğu frame'de animasyonsuz
+            if (!_isBouncing && !_isRejecting && !_isRainbow)
                 return;
+
+            if (_isRainbow && !_isRejecting)
+            {
+                // Gökkuşağı renk döngüsü: HSL hue 0→1 arasında gezdir
+                float hue = Mathf.Repeat(Time.time * 0.4f + _rainbowHueOffset, 1f);
+                Color rainbowColor = Color.HSVToRGB(hue, 0.85f, 1f);
+                if (_bgRenderer != null)
+                {
+                    Color current = _bgRenderer.color;
+                    _bgRenderer.color = new Color(rainbowColor.r, rainbowColor.g, rainbowColor.b, current.a);
+                }
+            }
 
             if (_isBouncing)
             {

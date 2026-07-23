@@ -21,6 +21,7 @@ namespace PixelFlow.Views
         [Inject] public IGameHistoryService HistoryService { get; set; }
         [Inject] public ILevelProgressionService ProgressionService { get; set; }
         [Inject] public ILocalizationService LocalizationService { get; set; }
+        [Inject] public IPowerUpService PowerUpService { get; set; }
 
         private Action _themeDarkHandler;
         private Action _themeLightHandler;
@@ -47,6 +48,9 @@ namespace PixelFlow.Views
             View.OnPauseClicked += HandlePauseClicked;
             View.OnRetryClicked += HandleRetryClicked;
             View.OnLevelFailedContinueClicked += HandleLevelFailedContinueClicked;
+            View.OnGarageClicked += HandleGarageClicked;
+            View.OnRainbowRoadClicked += HandleRainbowRoadClicked;
+            View.OnClearJamClicked += HandleClearJamClicked;
 
             HintModel.OnHintCountChanged += HandleHintCountChanged;
             GameSessionModel.OnScoreChanged += HandleScoreChanged;
@@ -54,6 +58,11 @@ namespace PixelFlow.Views
             GameSessionModel.OnStarsChanged += HandleStarsChanged;
             GameSessionModel.OnSimulationTimerChanged += HandleSimulationTimerChanged;
             GameSessionModel.OnViaductsChanged += HandleViaductsChanged;
+            if (PowerUpService != null)
+            {
+                PowerUpService.OnRainbowRoadUsesChanged += HandleRainbowRoadUsesChanged;
+                PowerUpService.OnClearJamUsesChanged += HandleClearJamUsesChanged;
+            }
 
             View.HideCompletion();
             UpdateHintCountText(HintModel.HintsRemaining);
@@ -62,6 +71,11 @@ namespace PixelFlow.Views
             View.UpdateStars(GameSessionModel.StarsEarned);
             View.HighlightActiveTheme(SettingsModel.CurrentTheme);
             UpdateLevelTitleText();
+            if (PowerUpService != null)
+            {
+                View.UpdateRainbowRoadCount(PowerUpService.RainbowRoadUses);
+                View.UpdateClearJamCount(PowerUpService.ClearJamUsesRemaining);
+            }
 
             Subscribe<LevelCompletedSignal>(HandleLevelCompleted);
             Subscribe<LoadLevelSignal>(OnLoadLevelSignalReceived);
@@ -72,6 +86,7 @@ namespace PixelFlow.Views
             Subscribe<ViaductExhaustedSignal>(HandleViaductExhausted);
             Subscribe<CrisisRetryExhaustedSignal>(HandleCrisisRetryExhausted);
             Subscribe<LevelFailedSignal>(HandleLevelFailed);
+            Subscribe<CheckWinConditionSignal>(OnCheckWinConditionReceived);
 
             GameStateModel.OnStateChanged += HandleStateChanged;
             UpdateVisibility();
@@ -92,6 +107,9 @@ namespace PixelFlow.Views
             View.OnPauseClicked -= HandlePauseClicked;
             View.OnRetryClicked -= HandleRetryClicked;
             View.OnLevelFailedContinueClicked -= HandleLevelFailedContinueClicked;
+            View.OnGarageClicked -= HandleGarageClicked;
+            View.OnRainbowRoadClicked -= HandleRainbowRoadClicked;
+            View.OnClearJamClicked -= HandleClearJamClicked;
 
             if (_themeDarkHandler != null) View.OnThemeDarkClicked -= _themeDarkHandler;
             if (_themeLightHandler != null) View.OnThemeLightClicked -= _themeLightHandler;
@@ -108,6 +126,11 @@ namespace PixelFlow.Views
             GameSessionModel.OnStarsChanged -= HandleStarsChanged;
             GameSessionModel.OnSimulationTimerChanged -= HandleSimulationTimerChanged;
             GameSessionModel.OnViaductsChanged -= HandleViaductsChanged;
+            if (PowerUpService != null)
+            {
+                PowerUpService.OnRainbowRoadUsesChanged -= HandleRainbowRoadUsesChanged;
+                PowerUpService.OnClearJamUsesChanged -= HandleClearJamUsesChanged;
+            }
             GameStateModel.OnStateChanged -= HandleStateChanged;
         }
 
@@ -262,6 +285,18 @@ namespace PixelFlow.Views
             }
         }
 
+        private void HandleRainbowRoadUsesChanged(int remaining)
+        {
+            LoggerService?.Log($"[PixelFlow.HUDMediator] Rainbow Road uses updated: {remaining}");
+            View?.UpdateRainbowRoadCount(remaining);
+        }
+
+        private void HandleClearJamUsesChanged(int remaining)
+        {
+            LoggerService?.Log($"[PixelFlow.HUDMediator] Clear Jam uses updated: {remaining}");
+            View?.UpdateClearJamCount(remaining);
+        }
+
         private void HandleHintCountChanged(int count)
         {
             UpdateHintCountText(count);
@@ -343,6 +378,13 @@ namespace PixelFlow.Views
             UpdateLevelTitleText();
         }
 
+        private void OnCheckWinConditionReceived(CheckWinConditionSignal signal)
+        {
+            LoggerService?.Log("[HUDMediator] CheckWinConditionSignal received (from timer or completion).");
+            // Win condition kontrolü CheckWinConditionCommand tarafından yapılır.
+            // Burada sadece log tutulur — görsel güncelleme gerekirse eklenebilir.
+        }
+
         private void UpdateLevelTitleText()
         {
             var currentLevel = LevelModel?.CurrentLevel;
@@ -370,6 +412,24 @@ namespace PixelFlow.Views
         {
             LoggerService?.Log($"[HUDMediator] Crisis retries exhausted ({signal.RetryCount}). Requesting ad/skip.");
             View.ShowCrisisRetryExhausted(signal.RetryCount);
+        }
+
+        private void HandleGarageClicked()
+        {
+            LoggerService?.Log("[PixelFlow.HUDMediator] 'Garage' button clicked from gameplay.");
+            SignalBus.Fire(new PixelFlow.Signals.ShowGarageSignal());
+        }
+
+        private void HandleRainbowRoadClicked()
+        {
+            LoggerService?.Log("[PixelFlow.HUDMediator] 'Rainbow Road' power-up button clicked. Firing ActivateRainbowRoadSignal.");
+            SignalBus.Fire(new PixelFlow.Signals.ActivateRainbowRoadSignal());
+        }
+
+        private void HandleClearJamClicked()
+        {
+            LoggerService?.Log("[PixelFlow.HUDMediator] 'Clear Jam' power-up button clicked. Firing ClearJamSignal.");
+            SignalBus.Fire(new PixelFlow.Signals.ClearJamSignal());
         }
 
         private void HandlePauseClicked()
@@ -416,6 +476,13 @@ namespace PixelFlow.Views
         {
             LoggerService?.Log($"[PixelFlow.HUDMediator] HandleStateChanged: State -> {state}");
             UpdateVisibility();
+
+            // Simülasyon modunda power-up butonlarını devre dışı bırak
+            if (View != null)
+            {
+                bool canUsePowerUps = state == GameState.Playing || state == GameState.Paused;
+                View.SetPowerUpButtonsInteractable(canUsePowerUps);
+            }
         }
 
         private void UpdateVisibility()

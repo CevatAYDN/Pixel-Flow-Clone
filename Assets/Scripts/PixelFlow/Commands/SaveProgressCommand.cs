@@ -3,6 +3,7 @@ using Nexus.Core.Services;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Services;
+using PixelFlow.Data;
 
 namespace PixelFlow.Commands
 {
@@ -16,6 +17,8 @@ namespace PixelFlow.Commands
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public IHintModel HintModel { get; set; }
         [Inject] public IGameSessionModel GameSessionModel { get; set; }
+        [Inject] public IEconomyService EconomyService { get; set; }
+        [Inject, OptionalInject] public GameConfig Config { get; set; }
 
         public void Execute(LevelCompletedSignal signal)
         {
@@ -39,6 +42,13 @@ namespace PixelFlow.Commands
             int stars = GameSessionModel.StarsEarned;
             HintModel?.AwardHintForStar(stars);
             LoggerService?.Log($"[SaveProgressCommand] Awarded hint for {stars} stars.");
+
+            // Coin ödülü: flow score başına coin + seviye tamamlama bonusu
+            int coinPerFlow = Config != null ? Config.CoinPerFlowScore : 5;
+            int levelBonus = Config != null ? Config.LevelCompleteCoinBonus : 50;
+            int totalCoins = (GameSessionModel.CurrentFlowScore * coinPerFlow) + levelBonus;
+            EconomyService?.Earn("coins", totalCoins, "level_complete");
+            LoggerService?.Log($"[SaveProgressCommand] Awarded {totalCoins} coins (flow: {GameSessionModel.CurrentFlowScore}x{coinPerFlow} + bonus: {levelBonus}).");
 
             // Seviye tamamlandığı için yarım kalan bulmaca kaydını sil
             GridStateSerializer.ClearSave(PlayerPrefsService);

@@ -42,9 +42,10 @@ namespace PixelFlow
         private IPlayerPrefsService _prefs;
         private ILevelProgressionService _progressionService;
 
-        // Save format version — increment when save structure changes
-        private const int SaveFormatVersion = 2;
-        private const string SaveVersionKey = "PF_SaveFormat_Version";
+        // Save format version — GameConfig ScriptableObject'ten okunur (Zero-Hardcode Policy)
+        private int SaveFormatVersion => _gameConfig != null ? _gameConfig.SaveFormatVersion : 2;
+        private string SaveVersionKey => _gameConfig != null ? _gameConfig.SaveVersionKey : "PF_SaveFormat_Version";
+        private Data.GameConfig _gameConfig;
 
         private IEnumerator Start()
         {
@@ -79,19 +80,15 @@ namespace PixelFlow
             }
 #endif
 
-            _loggerService?.Log("[PixelFlow.GameBootstrapper] Checking for saved game states to restore...");
-            if (TryRestoreSavedGame())
-            {
-                _loggerService?.Log("[PixelFlow.GameBootstrapper] Saved game state restored successfully. Startup complete.");
-                yield break;
-            }
+            _loggerService?.Log("[PixelFlow.GameBootstrapper] Checking for saved game states...");
 
             // Ensure save format version is stored so future boots can validate
             _prefs?.SetInt(SaveVersionKey, SaveFormatVersion);
             _prefs?.Save();
 
-            // İlk çalıştırma veya save yok → Ana Menü / Hub (GameState.MainMenu) ekranına geçiş yap.
-            _loggerService?.Log("[PixelFlow.GameBootstrapper] No active saved game — entering Main Menu / Hub (GameState.MainMenu).");
+            // Her zaman Ana Menü'ye git — save varsa MainMenu'dan "Devam Et" ile restore edilir.
+            // Otomatik restore kaldırıldı: oyuncu her açılışta MainMenu'yu görmeli.
+            _loggerService?.Log("[PixelFlow.GameBootstrapper] Entering Main Menu / Hub (GameState.MainMenu).");
             EnterMainMenu();
         }
 
@@ -117,6 +114,7 @@ namespace PixelFlow
                 _levelModel = container.Resolve<ILevelModel>();
                 _prefs = container.Resolve<IPlayerPrefsService>();
                 _progressionService = container.Resolve<ILevelProgressionService>();
+                _gameConfig = container.Resolve<Data.GameConfig>();
 
                 // Trigger lazy init for services that need to be alive at boot
                 container.Resolve<IVehicleSimulator>();
@@ -171,9 +169,25 @@ namespace PixelFlow
             string resolvedJson = Models.CloudSaveManager.ResolveConflict(local, cloud);
             if (!string.IsNullOrEmpty(resolvedJson) && resolvedJson != localJson)
             {
-                _loggerService?.Log("[PixelFlow.GameBootstrapper] Cloud conflict resolved. Updating local save json.");
-                _prefs.SetString("NT_PuzzleSave_", resolvedJson);
-                saved = GridStateSerializer.Load(_prefs);
+                _loggerService?.Log("[PixelFlow.GameBootstrapper] Cloud conflict resolved. Validating before overwrite...");
+                // Cloud verisini doğrudan parse et — geçerliyse local'i güncelle
+                try
+                {
+                    var cloudSnapshot = UnityEngine.JsonUtility.FromJson<GridStateSerializer.GridSaveData>(resolvedJson);
+                    if (cloudSnapshot != null && cloudSnapshot.cells != null && cloudSnapshot.cells.Count > 0)
+                    {
+                        _prefs.SetString("NT_PuzzleSave_", resolvedJson);
+                        saved = cloudSnapshot;
+                    }
+                    else
+                    {
+                        _loggerService?.LogWarning("[PixelFlow.GameBootstrapper] Cloud save data invalid. Keeping local save.");
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    _loggerService?.LogWarning($"[PixelFlow.GameBootstrapper] Cloud save parse failed: {ex.Message}. Keeping local save.");
+                }
             }
 
             if (saved == null || saved.cells == null || saved.cells.Count == 0)
@@ -212,7 +226,7 @@ namespace PixelFlow
             GridStateSerializer.ApplyToGrid(saved, _gridModel);
             GridStateSerializer.EnsureInitialNodesOnGrid(level, _gridModel);
             _sessionModel.ApplySave(saved.availableViaducts, saved.maxViaducts,
-                saved.elapsedTime, saved.score, saved.stars, saved.levelIndex);
+                saved.elapsedTime, saved.score, saved.stars, saved.levelIndex, saved.targetFlowScore);
 
             var obstacleService = nexusRoot.Context.Container.Resolve<IObstacleService>();
             obstacleService?.InitializeFromLevel(level);
@@ -244,7 +258,6 @@ namespace PixelFlow
                     ColorB = colors.Count >= 2 ? colors[1] : ColorType.None
                 });
                 _signalBus.Fire(new GridUpdatedSignal());
-                _stateModel.SetState(GameState.Playing);
                 _stateModel.SetState(GameState.Paused);
                 _loggerService?.Log($"[PixelFlow.GameBootstrapper] Game state transitioned to Paused for crisis resolution at {crashCell.Value}.");
             }
@@ -287,48 +300,6 @@ namespace PixelFlow
             {
                 (_loggerService ?? FallbackLogger)?.LogWarning($"[GameBootstrapper] Failed to save game state: {ex.Message}");
             }
-        }
-
-        private void EnterPlaying()
-        {
-            LevelData targetLevel = null;
-
-            // Try progression service first (handles Resources + procedural fallback)
-            if (_progressionService != null)
-            {
-                int targetIndex = -1;
-                try
-                {
-                    var progressModel = nexusRoot.Context.Container.Resolve<IProgressModel>();
-                    if (progressModel != null)
-                    {
-                        targetIndex = progressModel.UnlockedLevels - 1;
-                        targetLevel = _progressionService.GetOrGenerateLevel(targetIndex);
-                        if (targetLevel != null)
-                            _loggerService?.Log($"[PixelFlow] Progression indicates Level {progressModel.UnlockedLevels} is unlocked. Resolved via LevelProgressionService: {targetLevel.name}");
-                    }
-                }
-                catch (System.Exception ex)
-                {
-                    _loggerService?.LogWarning($"[PixelFlow] Failed to resolve level from progression model: {ex.Message}");
-                }
-            }
-
-            // Fallback to initialLevel public field (Editor-assigned) or Level 1 via Resources
-            if (targetLevel == null)
-            {
-                targetLevel = initialLevel != null ? initialLevel : ResolveLevelByIndex(0);
-            }
-
-            if (targetLevel != null)
-            {
-                _signalBus.Fire(new LoadLevelSignal { LevelToLoad = targetLevel });
-            }
-            else
-            {
-                _stateModel.SetState(GameState.Playing);
-            }
-            _signalBus.Fire(new LoadedInitialLevelSignal());
         }
 
         private IEnumerator WaitForRoot()

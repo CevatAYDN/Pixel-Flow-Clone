@@ -57,6 +57,7 @@ namespace PixelFlow
             builder.BindService<IDailyCrisisService, DailyCrisisService>();
             builder.Bind<IPathSolver, RuntimePathSolver>();
             builder.BindService<IHintService, HintService>(); // Fixed: was Bind<> now BindService<> for auto-init
+            builder.BindService<IPowerUpService, PowerUpService>();
             builder.Bind<ILevelProgressionService, LevelProgressionService>();
             builder.BindService<ILevelLoaderService, LevelLoaderService>(); // GDD §8: DI injection for level loading
 
@@ -85,6 +86,8 @@ namespace PixelFlow
             builder.BindSignal<PixelFlow.Signals.CheckWinConditionSignal>().To<PixelFlow.Commands.CheckWinConditionCommand>();
             builder.BindSignal<PixelFlow.Signals.LoadLevelSignal>().To<PixelFlow.Commands.LoadLevelCommand>();
             builder.BindSignal<PixelFlow.Signals.RequestHintSignal>().To<PixelFlow.Commands.UseHintCommand>();
+            builder.BindSignal<PixelFlow.Signals.ActivateRainbowRoadSignal>().To<PixelFlow.Commands.RainbowRoadCommand>();
+            builder.BindSignal<PixelFlow.Signals.ClearJamSignal>().To<PixelFlow.Commands.ClearJamCommand>();
             builder.BindSignal<PixelFlow.Signals.ChangeThemeSignal>().To<PixelFlow.Commands.ChangeThemeCommand>();
             builder.BindCommand<PixelFlow.Signals.LevelCompletedSignal, PixelFlow.Commands.SaveProgressCommand>(ExecutionMode.Exclusive, priority: 0);
             builder.BindSignal<PixelFlow.Signals.UndoSignal>().To<PixelFlow.Commands.UndoCommand>();
@@ -120,9 +123,13 @@ namespace PixelFlow
             var palette = UnityEngine.Resources.Load<ThemePaletteAsset>("Configs/ThemePalette");
             if (palette == null)
             {
+#if !UNITY_EDITOR
+                throw new DataValidationException("Resources/Configs/ThemePalette.asset bulunamadı!");
+#else
                 palette = UnityEngine.ScriptableObject.CreateInstance<ThemePaletteAsset>();
                 palette.name = "ThemePalette (Runtime Default)";
                 NexusRuntime.Logger?.LogWarning("[PixelFlow.GameContextLifecycle] ThemePalette.asset not found in Resources. Using runtime defaults.");
+#endif
             }
             else
             {
@@ -134,9 +141,13 @@ namespace PixelFlow
             var colorBlindPalette = UnityEngine.Resources.Load<ColorBlindPaletteAsset>("Configs/ColorBlindPalette");
             if (colorBlindPalette == null)
             {
+#if !UNITY_EDITOR
+                throw new DataValidationException("Resources/Configs/ColorBlindPalette.asset bulunamadı!");
+#else
                 colorBlindPalette = UnityEngine.ScriptableObject.CreateInstance<ColorBlindPaletteAsset>();
                 colorBlindPalette.name = "ColorBlindPalette (Runtime Default)";
                 NexusRuntime.Logger?.LogWarning("[PixelFlow.GameContextLifecycle] ColorBlindPalette.asset not found in Resources. Using runtime defaults.");
+#endif
             }
             else
             {
@@ -149,9 +160,13 @@ namespace PixelFlow
             var vehicleMatConfig = UnityEngine.Resources.Load<VehicleMaterialConfigAsset>("Configs/VehicleMaterialConfig");
             if (vehicleMatConfig == null)
             {
+#if !UNITY_EDITOR
+                throw new DataValidationException("Resources/Configs/VehicleMaterialConfig.asset bulunamadı!");
+#else
                 vehicleMatConfig = UnityEngine.ScriptableObject.CreateInstance<VehicleMaterialConfigAsset>();
                 vehicleMatConfig.name = "VehicleMaterialConfig (Runtime Default)";
                 NexusRuntime.Logger?.LogWarning("[PixelFlow.GameContextLifecycle] VehicleMaterialConfig.asset not found in Resources. Using runtime defaults.");
+#endif
             }
             else
             {
@@ -164,9 +179,13 @@ namespace PixelFlow
             var economyConfig = UnityEngine.Resources.Load<EconomyConfigAsset>("Configs/EconomyConfig");
             if (economyConfig == null)
             {
+#if !UNITY_EDITOR
+                throw new DataValidationException("Resources/Configs/EconomyConfig.asset bulunamadı!");
+#else
                 economyConfig = UnityEngine.ScriptableObject.CreateInstance<EconomyConfigAsset>();
                 economyConfig.name = "EconomyConfig (Runtime Default)";
                 NexusRuntime.Logger?.LogWarning("[PixelFlow.GameContextLifecycle] EconomyConfig.asset not found in Resources. Using runtime defaults.");
+#endif
             }
             else
             {
@@ -178,9 +197,13 @@ namespace PixelFlow
             var levelCatalog = UnityEngine.Resources.Load<LevelCatalogAsset>("Configs/LevelCatalog");
             if (levelCatalog == null)
             {
+#if !UNITY_EDITOR
+                throw new DataValidationException("Resources/Configs/LevelCatalog.asset bulunamadı!");
+#else
                 levelCatalog = UnityEngine.ScriptableObject.CreateInstance<LevelCatalogAsset>();
                 levelCatalog.name = "LevelCatalog (Runtime Default)";
                 NexusRuntime.Logger?.LogWarning("[PixelFlow.GameContextLifecycle] Configs/LevelCatalog.asset not found in Resources. Using runtime defaults (fallback to Resources.Load chain).");
+#endif
             }
             else
             {

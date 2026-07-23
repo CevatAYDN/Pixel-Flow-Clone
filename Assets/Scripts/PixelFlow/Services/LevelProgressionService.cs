@@ -35,8 +35,11 @@ namespace PixelFlow.Services
         public int LevelsPerDifficulty => 5;
 
         [Inject]
-        public LevelProgressionService() : this(new ProceduralLevelGenerator(new RuntimePathSolver()), null)
+        public LevelProgressionService(IPathSolver pathSolver)
         {
+            _generator = new ProceduralLevelGenerator(pathSolver);
+            _generatedCache = new Dictionary<int, LevelData>();
+            _logger = NexusRuntime.Logger;
             // GDD §3.6: Resources'tan PhaseConfigAsset yükle (editörde oluşturulmuş olmalı)
             _phaseConfig = UnityEngine.Resources.Load<PhaseConfigAsset>("Configs/PhaseConfig");
             _levelCatalog = UnityEngine.Resources.Load<LevelCatalogAsset>("Configs/LevelCatalog");

@@ -73,6 +73,8 @@ namespace PixelFlow.Models
         public ColorType UnderColor = ColorType.None;
         public ColorType OverColor = ColorType.None;
         public ObstacleType ObstacleType = ObstacleType.None;
+        /// <summary>Rainbow Road power-up ile işaretlenmiş hücre. Görsel efekt için kullanılır.</summary>
+        public bool IsRainbowRoad;
     }
 
     public interface IGridModel
@@ -149,6 +151,7 @@ namespace PixelFlow.Models
                     cell.UnderColor = ColorType.None;
                     cell.OverColor = ColorType.None;
                     cell.ObstacleType = ObstacleType.None;
+                    cell.IsRainbowRoad = false;
                     Grid[x, y] = cell;
                 }
             }
@@ -214,13 +217,27 @@ namespace PixelFlow.Models
 
         public bool AllColorPairsConnected()
         {
-            // Her renk için Path kaydı varsa ve path count >= 2 ise bağlı kabul et
-            foreach (var kvp in Paths)
+            if (Paths.Count == 0) return false;
+
+            // Grid'deki tüm node renklerini topla
+            var nodeColors = new HashSet<ColorType>();
+            for (int x = 0; x < Width; x++)
             {
-                if (kvp.Value == null || kvp.Value.Count < 2)
+                for (int y = 0; y < Height; y++)
+                {
+                    var cell = Grid[x, y];
+                    if (cell.State == CellState.Node && cell.Color != ColorType.None)
+                        nodeColors.Add(cell.Color);
+                }
+            }
+
+            // Her node rengi için bağlı path olmalı
+            foreach (var color in nodeColors)
+            {
+                if (!Paths.TryGetValue(color, out var path) || path == null || path.Count < 2)
                     return false;
             }
-            return Paths.Count > 0;
+            return true;
         }
 
         public bool IsGridFullyCovered()

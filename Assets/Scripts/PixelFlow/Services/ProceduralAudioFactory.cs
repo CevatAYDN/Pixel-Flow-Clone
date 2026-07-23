@@ -64,6 +64,8 @@ namespace PixelFlow.Services
                 case SfxType.UIClick:       return "Audio/SFX/UIClick";
                 case SfxType.PathDraw:      return "Audio/SFX/PathDraw";
                 case SfxType.VehicleEngine: return "Audio/SFX/VehicleEngine";
+                case SfxType.PowerUpActivate: return "Audio/SFX/PowerUpActivate";
+                case SfxType.PowerUpClear:    return "Audio/SFX/PowerUpClear";
 
                 // ── Ambient ──
                 case SfxType.AmbientHub:       return "Audio/AMB/AmbientHub";
@@ -90,6 +92,8 @@ namespace PixelFlow.Services
             else if (name.Contains("Horn")) { duration = 0.25f; freq = 350f; }
             else if (name.Contains("Crash")) { duration = 0.2f; freq = 180f; }
             else if (name.Contains("VehicleEngine")) { duration = 0.3f; freq = 220f; }
+            else if (name.Contains("PowerUpActivate")) { duration = 0.3f; freq = 880f; }
+            else if (name.Contains("PowerUpClear")) { duration = 0.25f; freq = 660f; }
 
             int sampleCount = Mathf.RoundToInt(sampleRate * duration);
             var clip = AudioClip.Create(name, sampleCount, 1, sampleRate, false);

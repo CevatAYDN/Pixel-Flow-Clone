@@ -737,6 +737,21 @@ namespace PixelFlow.Editor
             var rrTRect = rrText.GetComponent<RectTransform>();
             if (rrTRect != null) { rrTRect.anchorMin = Vector2.zero; rrTRect.anchorMax = Vector2.one; rrTRect.sizeDelta = Vector2.zero; }
 
+            // Rainbow Road kullanım sayacı (sağ üst köşede küçük rozet)
+            var rrCountText = EnsureTMPText(rainbowBtn.gameObject, "RainbowCountText");
+            rrCountText.text = "";
+            rrCountText.fontSize = 14;
+            rrCountText.fontStyle = TMPro.FontStyles.Bold;
+            rrCountText.color = Color.white;
+            rrCountText.alignment = TMPro.TextAlignmentOptions.Center;
+            var rrCountRect = rrCountText.GetComponent<RectTransform>();
+            if (rrCountRect != null)
+            {
+                rrCountRect.anchorMin = new Vector2(0.75f, 0.65f);
+                rrCountRect.anchorMax = new Vector2(0.98f, 0.92f);
+                rrCountRect.sizeDelta = Vector2.zero;
+            }
+
             // Clear Jam Button (Orange)
             var clearJamBtn = EnsureButton(secondaryBarObj, "ClearJamButton");
             var cjImg = clearJamBtn.GetComponent<UnityEngine.UI.Image>();
@@ -756,6 +771,21 @@ namespace PixelFlow.Editor
             cjText.alignment = TMPro.TextAlignmentOptions.Center;
             var cjTRect = cjText.GetComponent<RectTransform>();
             if (cjTRect != null) { cjTRect.anchorMin = Vector2.zero; cjTRect.anchorMax = Vector2.one; cjTRect.sizeDelta = Vector2.zero; }
+
+            // Clear Jam kullanım sayacı (sağ üst köşede küçük rozet)
+            var cjCountText = EnsureTMPText(clearJamBtn.gameObject, "ClearJamCountText");
+            cjCountText.text = "";
+            cjCountText.fontSize = 14;
+            cjCountText.fontStyle = TMPro.FontStyles.Bold;
+            cjCountText.color = Color.white;
+            cjCountText.alignment = TMPro.TextAlignmentOptions.Center;
+            var cjCountRect = cjCountText.GetComponent<RectTransform>();
+            if (cjCountRect != null)
+            {
+                cjCountRect.anchorMin = new Vector2(0.75f, 0.65f);
+                cjCountRect.anchorMax = new Vector2(0.98f, 0.92f);
+                cjCountRect.sizeDelta = Vector2.zero;
+            }
 
             // 3. COMPLETION PANEL (Victory Modal)
             var compPanelObj = FindOrCreateChild(hudObj.transform, "CompletionPanel");
@@ -878,7 +908,9 @@ namespace PixelFlow.Editor
             SetProp(so, "_redoButton", redoBtn);
             SetProp(so, "_garageButton", garageBtn);
             SetProp(so, "_rainbowRoadButton", rainbowBtn);
+            SetProp(so, "_rainbowRoadCountText", rrCountText);
             SetProp(so, "_clearJamButton", clearJamBtn);
+            SetProp(so, "_clearJamCountText", cjCountText);
 
             SetProp(so, "_completionPanel", compPanelObj);
             SetProp(so, "_completionText", compText);
