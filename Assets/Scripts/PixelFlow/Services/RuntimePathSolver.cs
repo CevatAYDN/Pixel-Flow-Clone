@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using PixelFlow.Data;
 using UnityEngine;
+using Nexus.Core;
 
 namespace PixelFlow.Services
 {
@@ -21,10 +22,12 @@ namespace PixelFlow.Services
     /// </summary>
     public sealed class RuntimePathSolver : IPathSolver
     {
-        private const int MinIterations = 200000;
-        private const int MaxIterationsCap = 1000000;
+        [Inject, OptionalInject] public GameConfig Config { get; set; }
 
-        private int _perSolveMaxIterations = MinIterations;
+        private int MinIterations => Config != null ? Config.PathSolverMaxIterations : 200000;
+        private int MaxIterationsCap => Config != null ? Config.PathSolverMaxIterationsCap : 1000000;
+
+        private int _perSolveMaxIterations;
         private CancellationToken _cancellationToken;
 
         // ─── Iterative Path Search Data Structures ────────────────────────
@@ -463,7 +466,7 @@ namespace PixelFlow.Services
             return null;
         }
 
-        private static int CalculateMaxIterations(int width, int height, int colorCount)
+        private int CalculateMaxIterations(int width, int height, int colorCount)
         {
             long raw = width * height * colorCount * 2000L;
             int clamped = (int)Math.Max(MinIterations, Math.Min(MaxIterationsCap, raw));

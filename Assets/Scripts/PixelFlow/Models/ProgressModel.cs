@@ -20,19 +20,23 @@ namespace PixelFlow.Models
     public class ProgressModel : IProgressModel, IReactiveModel
     {
         private const string Key = "UnlockedLevels";
-        private const int DefaultUnlocked = 1;
 
         private readonly IPlayerPrefsService _prefs;
 
         public int UnlockedLevels { get; private set; }
 
         [Inject]
-        public ProgressModel(IPlayerPrefsService prefs) : this(prefs, null) { }
-
         public ProgressModel(IPlayerPrefsService prefs, GameConfig config)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
-            int defaultUnlocked = config != null ? config.DefaultUnlockedLevels : DefaultUnlocked;
+            int defaultUnlocked = config != null ? config.DefaultUnlockedLevels : throw new DataValidationException("GameConfig.DefaultUnlockedLevels erişilemedi!");
+            UnlockedLevels = _prefs.GetInt(Key, defaultUnlocked);
+        }
+
+        // Test amaçlı constructor (config olmadan)
+        internal ProgressModel(IPlayerPrefsService prefs, int defaultUnlocked)
+        {
+            _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
             UnlockedLevels = _prefs.GetInt(Key, defaultUnlocked);
         }
 

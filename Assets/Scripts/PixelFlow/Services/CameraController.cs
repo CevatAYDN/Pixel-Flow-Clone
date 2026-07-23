@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using Nexus.Core;
+using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 
@@ -18,6 +19,7 @@ namespace PixelFlow.Services
         [Inject] public ICameraProvider CameraProvider { get; set; }
         [Inject] public IGameStateModel GameStateModel { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
+        [Inject, OptionalInject] public GameConfig Config { get; set; }
 
         private Camera _cam;
         private Coroutine _transition;
@@ -26,7 +28,7 @@ namespace PixelFlow.Services
         // Hub: izometrik 45° görünüm, tüm şehir görünür.
         private readonly Vector3 _hubPosition = new Vector3(8f, 12f, -8f);
         private readonly Quaternion _hubRotation = Quaternion.Euler(45f, 45f, 0f);
-        private const float HubSize = 7f;
+        private float HubSize => Config != null ? Config.HubCameraSize : throw new DataValidationException("GameConfig.HubCameraSize erişilemedi!");
 
         // Puzzle: top-down 90° görünüm, grid tam ekran.
         private Vector3 _puzzlePosition;
@@ -148,7 +150,7 @@ namespace PixelFlow.Services
             Vector3 dir = (target - originalPos).normalized * 0.4f;
             Vector3 focused = originalPos + dir;
             float t = 0f;
-            const float dur = 0.18f;
+            float dur = Config != null ? Config.CameraTransitionDuration : throw new DataValidationException("GameConfig.CameraTransitionDuration erişilemedi!");
             while (t < dur)
             {
                 if (_cam == null) yield break;

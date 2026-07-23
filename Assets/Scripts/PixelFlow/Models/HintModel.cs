@@ -28,7 +28,6 @@ namespace PixelFlow.Models
     public class HintModel : IHintModel, IReactiveModel
     {
         private const string Key = "HintCount";
-        private const int DefaultHints = 3;
 
         private readonly IPlayerPrefsService _prefs;
         private int _hintsRemaining;
@@ -39,12 +38,17 @@ namespace PixelFlow.Models
         public event Action<int> OnHintCountChanged;
 
         [Inject]
-        public HintModel(IPlayerPrefsService prefs) : this(prefs, null) { }
-
         public HintModel(IPlayerPrefsService prefs, GameConfig config)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
-            int defaultHints = config != null ? config.DefaultHintCount : DefaultHints;
+            int defaultHints = config != null ? config.DefaultHintCount : throw new DataValidationException("GameConfig.DefaultHintCount erişilemedi!");
+            _hintsRemaining = _prefs.GetInt(Key, defaultHints);
+        }
+
+        // Test amaçlı constructor (config olmadan)
+        internal HintModel(IPlayerPrefsService prefs, int defaultHints)
+        {
+            _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
             _hintsRemaining = _prefs.GetInt(Key, defaultHints);
         }
 

@@ -35,14 +35,12 @@ namespace PixelFlow.Views
         private static bool _initialized;
         private static readonly List<GameObject> _recycleList = new List<GameObject>(128);
 
-        private const int PreAllocCubes = 512;
-        private const int PreAllocCylinders = 256;
-
         /// <summary>
         /// Ensures the pool is initialized with pre-allocated primitives.
         /// Safe to call multiple times — only allocates once.
+        /// game_plan.md §2.2: Pool boyutları GameConfig'den gelir.
         /// </summary>
-        public static void Initialize()
+        public static void Initialize(int preAllocCubes = 512, int preAllocCylinders = 256)
         {
             if (_initialized) return;
             _initialized = true;
@@ -51,13 +49,13 @@ namespace PixelFlow.Views
             rootObj.hideFlags = HideFlags.DontSave;
             _poolRoot = rootObj.transform;
 
-            for (int i = 0; i < PreAllocCubes; i++)
+            for (int i = 0; i < preAllocCubes; i++)
                 _cubes.Push(CreatePart(PrimitiveType.Cube));
 
-            for (int i = 0; i < PreAllocCylinders; i++)
+            for (int i = 0; i < preAllocCylinders; i++)
                 _cylinders.Push(CreatePart(PrimitiveType.Cylinder));
 
-            Nexus.Core.Services.NexusLog.Info("VehiclePartPool", "Initialize", "?", "Initialized pool with " + PreAllocCubes + " cubes and " + PreAllocCylinders + " cylinders.");
+            Nexus.Core.Services.NexusLog.Info("VehiclePartPool", "Initialize", "?", "Initialized pool with " + preAllocCubes + " cubes and " + preAllocCylinders + " cylinders.");
         }
 
         private static GameObject CreatePart(PrimitiveType type)

@@ -43,6 +43,7 @@ namespace PixelFlow
             builder.BindService<IGameHistoryService, GameHistoryService>();
             builder.BindService<IVehicleSimulator, VehicleSimulator>();
             builder.BindService<ICameraProvider, CameraProvider>();
+            builder.BindService<IGridViewProvider, GridViewProvider>();
             builder.BindService<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
             builder.BindService<IGameplayTimerService, GameplayTimerService>();
             builder.Bind<ITimeProvider, UnityTimeProvider>();

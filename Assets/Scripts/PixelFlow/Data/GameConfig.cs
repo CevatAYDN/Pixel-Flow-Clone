@@ -121,5 +121,57 @@ namespace PixelFlow.Data
 
         [Tooltip("Seviye tamamlama bonus coin")]
         public int LevelCompleteCoinBonus = 50;
+
+        [Header("=== Vehicle Simulation (Advanced) ===")]
+        [Tooltip("Sabit zaman adımı (saniye) — fizik tutarlılığı için")]
+        public float FixedTimeStep = 1f / 60f;
+
+        [Tooltip("Spawn kontrolü frame atlama aralığı (performans optimizasyonu)")]
+        public int SpawnCheckInterval = 10;
+
+        [Tooltip("Araç hız rastgele varyasyon aralığı (+/-)")]
+        public float SpeedVariationRange = 0.3f;
+
+        [Tooltip("Çarpışma tespit mesafesi (grid birimi)")]
+        public float CollisionDistance = 0.45f;
+
+        [Tooltip("Viyadük Z-fark eşiği (çarpışma yok sayma)")]
+        public float ViaductZDiffThreshold = 0.15f;
+
+        [Tooltip("Viyadük üst yol Z offset")]
+        public float ViaductOverZOffset = -0.4f;
+
+        [Tooltip("Viyadük alt yol Z offset")]
+        public float ViaductUnderZOffset = -0.1f;
+
+        [Tooltip("Normal yol Z offset")]
+        public float NormalZOffset = -0.2f;
+
+        [Header("=== Camera (Advanced) ===")]
+        [Tooltip("Kamera geçiş süresi (saniye)")]
+        public float CameraTransitionDuration = 0.18f;
+
+        [Header("=== Audio ===")]
+        [Tooltip("Ses havuzu önceden tahsis boyutu")]
+        public int AudioPoolSize = 3;
+
+        [Header("=== Path Solver (Advanced) ===")]
+        [Tooltip("Path solver maksimum iterasyon üst sınırı")]
+        public int PathSolverMaxIterationsCap = 1000000;
+
+        [Header("=== Vehicle Visual Pool ===")]
+        [Tooltip("Önceden tahsis edilen küp (cube) sayısı")]
+        public int VehiclePartPoolCubes = 512;
+
+        [Tooltip("Önceden tahsis edilen silindir (cylinder) sayısı")]
+        public int VehiclePartPoolCylinders = 256;
+
+        [Header("=== Visual Feedback ===")]
+        [Tooltip("Üçüncü renk reddi nabız frekansı (Hz)")]
+        public float RejectionPulseFrequency = 15f;
+
+        [Header("=== Bridge Rules ===")]
+        [Tooltip("Köprü başına maksimum yol sayısı")]
+        public int MaxPathsPerBridge = 2;
     }
 }

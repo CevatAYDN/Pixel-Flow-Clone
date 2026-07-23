@@ -12,6 +12,7 @@ namespace PixelFlow.Views
     {
         [Inject] public ThemePaletteAsset ThemePalette { get; set; }
         [Inject, OptionalInject] public IObstacleService ObstacleService { get; set; }
+        [Inject, OptionalInject] public GameConfig Config { get; set; }
         [Header("Sprite Renderers")]
         [SerializeField] private SpriteRenderer _bgRenderer;
         [SerializeField] private SpriteRenderer _dotRenderer;
@@ -497,7 +498,7 @@ namespace PixelFlow.Views
         private bool _isRejecting = false;
         private Color _rejectionOriginalColor;
         private Color _rejectionColor = new Color(0.937f, 0.267f, 0.267f, 1f); // Default fallback; overridden by ThemePaletteAsset
-        private const float _rejectionPulseFrequency = 15f;
+        private float RejectionPulseFrequency => Config != null ? Config.RejectionPulseFrequency : 15f;
 
         // Rainbow Road visual effect
         private bool _isRainbow = false;
@@ -556,7 +557,7 @@ namespace PixelFlow.Views
                     if (_bgRenderer != null)
                     {
                         float t = _rejectionTimer / _rejectionDuration;
-                        float pulse = (Mathf.Sin(Time.time * _rejectionPulseFrequency) + 1f) * 0.5f;
+                        float pulse = (Mathf.Sin(Time.time * RejectionPulseFrequency) + 1f) * 0.5f;
                         _bgRenderer.color = Color.Lerp(_rejectionColor, _rejectionOriginalColor, t + pulse * (1f - t) * 0.3f);
                     }
                 }

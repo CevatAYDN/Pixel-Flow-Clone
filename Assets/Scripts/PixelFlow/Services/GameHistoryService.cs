@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Nexus.Core;
+using PixelFlow.Data;
 using PixelFlow.Models;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,8 +14,6 @@ namespace PixelFlow.Services
     /// </summary>
     public sealed class GameHistoryService : IGameHistoryService, INexusService
     {
-        private const int DefaultMaxDepth = 200;
-
         private readonly int _maxDepth;
         private readonly LinkedList<GridSnapshot> _undoStack = new LinkedList<GridSnapshot>();
         private readonly LinkedList<GridSnapshot> _redoStack = new LinkedList<GridSnapshot>();
@@ -25,12 +24,15 @@ namespace PixelFlow.Services
         public bool CanRedo => _redoStack.Count > 0;
 
         [Inject]
-        public GameHistoryService() : this(DefaultMaxDepth) { }
+        public GameHistoryService(GameConfig config)
+        {
+            _maxDepth = config != null ? config.HistoryMaxDepth : throw new DataValidationException("GameConfig.HistoryMaxDepth erişilemedi!");
+        }
 
         // DI dışı manuel oluşturma (testler vb.) için internal bırakıldı.
         internal GameHistoryService(int maxDepth)
         {
-            _maxDepth = maxDepth > 0 ? maxDepth : DefaultMaxDepth;
+            _maxDepth = maxDepth > 0 ? maxDepth : 200;
         }
 
         public void Record(IGridModel grid)

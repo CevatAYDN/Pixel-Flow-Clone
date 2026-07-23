@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using Nexus.Core;
+using PixelFlow.Data;
 using PixelFlow.Models;
 
 namespace PixelFlow.Services
@@ -28,8 +29,9 @@ namespace PixelFlow.Services
     public class AudioService : IAudioService, INexusService
     {
         [Inject] public ISettingsModel SettingsModel { get; set; }
+        [Inject, OptionalInject] public GameConfig Config { get; set; }
 
-        private const int PoolSize = 3;
+        private int PoolSize => Config != null ? Config.AudioPoolSize : 3;
 
         private static readonly HashSet<SfxType> CriticalTypes = new HashSet<SfxType>
         {

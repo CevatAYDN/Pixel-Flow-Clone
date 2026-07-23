@@ -45,6 +45,7 @@ namespace PixelFlow.Services
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public ICameraProvider CamProvider { get; set; }
         [Inject] public ICrisisAdService CrisisAdService { get; set; }
+        [Inject] public IGridViewProvider GridViewProvider { get; set; }
         [Inject, OptionalInject] public Data.GameConfig Config { get; set; }
         [Inject, OptionalInject] public ITickService TickService { get; set; }
         [Inject, OptionalInject] public IInventoryModel InventoryModel { get; set; }
@@ -63,7 +64,7 @@ namespace PixelFlow.Services
         private readonly Dictionary<ColorType, float> _spawnTimers = new Dictionary<ColorType, float>();
         private readonly Dictionary<ColorType, (Vector2Int, Vector2Int)> _cachedEndpoints = new Dictionary<ColorType, (Vector2Int, Vector2Int)>();
         private Transform _vehicleContainer;
-        private GridView _cachedGridView;
+        private Transform _cachedGridView;
         private CameraController _cachedCameraController;
         private VehicleMovementService _movementService;
 
@@ -72,10 +73,11 @@ namespace PixelFlow.Services
         private readonly List<List<VehicleInstance>> _occupancyListPool = new List<List<VehicleInstance>>();
 
         private float _simulationPhaseTimer = 0f;
-        private const float FixedTimeStep = 1f / 60f;
         private float _fixedAccumulator = 0f;
+        private float FixedTimeStep => Config != null ? Config.FixedTimeStep : throw new Data.DataValidationException("GameConfig.FixedTimeStep erişilemedi!");
         private float ConfigVehicleSpeed => Config != null ? Config.VehicleSpeed : throw new Data.DataValidationException("GameConfig.VehicleSpeed erişilemedi!");
         private float ConfigSpawnInterval => Config != null ? Config.SpawnInterval : throw new Data.DataValidationException("GameConfig.SpawnInterval erişilemedi!");
+        private int ConfigSpawnCheckInterval => Config != null ? Config.SpawnCheckInterval : throw new Data.DataValidationException("GameConfig.SpawnCheckInterval erişilemedi!");
         private ISignalSubscription _undoSubscription;
         private ISignalSubscription _redoSubscription;
         private ISignalSubscription _levelFailedSubscription;
@@ -89,11 +91,11 @@ namespace PixelFlow.Services
                 _vehicleContainer = new GameObject("[Vehicles]").transform;
                 _vehicleContainer.gameObject.hideFlags = HideFlags.DontSave;
 
-                // Parenting sırasını düzelt: GridView objesini bulup onun transform'u altında topla
-                _cachedGridView = UnityEngine.Object.FindAnyObjectByType<GridView>();
-                if (_cachedGridView != null)
+                // Parenting sırasını düzelt: GridView objesini DI provider üzerinden bul
+                var gridTransform = GridViewProvider?.GridTransform;
+                if (gridTransform != null)
                 {
-                    _vehicleContainer.SetParent(_cachedGridView.transform, false);
+                    _vehicleContainer.SetParent(gridTransform, false);
                 }
 
                 // CameraController'ı önbellekle (TriggerCrash'te GetComponent çağırmamak için)
@@ -277,7 +279,6 @@ namespace PixelFlow.Services
 
         // Frame skip counter: boş frame'lerde spawn kontrolünü atla
         private int _spawnSkipCounter;
-        private const int SpawnCheckInterval = 10; // Her 10 frame'de 1 kontrol (%90 azalma)
 
         private void UpdateSpawning(float deltaTime)
         {
@@ -286,7 +287,7 @@ namespace PixelFlow.Services
             if (_activeVehicles.Count == 0 && !isSimulating)
             {
                 _spawnSkipCounter++;
-                if (_spawnSkipCounter < SpawnCheckInterval)
+                if (_spawnSkipCounter < ConfigSpawnCheckInterval)
                     return;
             }
             _spawnSkipCounter = 0;
@@ -366,11 +367,11 @@ namespace PixelFlow.Services
             }
 
             if (_cachedGridView == null)
-                _cachedGridView = UnityEngine.Object.FindAnyObjectByType<GridView>();
+                _cachedGridView = GridViewProvider?.GridTransform;
 
             if (_vehicleContainer != null && _vehicleContainer.parent == null && _cachedGridView != null)
-                _vehicleContainer.SetParent(_cachedGridView.transform, false);
-            Transform parentTransform = _cachedGridView != null ? _cachedGridView.transform : _vehicleContainer;
+                _vehicleContainer.SetParent(_cachedGridView, false);
+            Transform parentTransform = _cachedGridView != null ? _cachedGridView : _vehicleContainer;
 
             GameObject visual = new GameObject($"V_{color}");
             visual.transform.SetParent(parentTransform);
@@ -396,7 +397,7 @@ namespace PixelFlow.Services
                 Progress = 0f,
                 Visual = visual,
                 CurrentPosition = new Vector3(path[0].x, path[0].y, GetZOffset(path[0], color)),
-                Speed = ConfigVehicleSpeed + UnityEngine.Random.Range(-0.3f, 0.3f),
+                Speed = ConfigVehicleSpeed + UnityEngine.Random.Range(-Config.SpeedVariationRange, Config.SpeedVariationRange),
                 CachedRenderers = renderers.ToArray(),
                 LocoTransform = loco,
                 Wagon1Transform = wagon1,
@@ -424,14 +425,14 @@ namespace PixelFlow.Services
                 var cell = GridModel.Grid[gridPos.x, gridPos.y];
                 if (cell.HasViaduct && cell.OverColor == color)
                 {
-                    return -0.4f; // Over: Yükseltilmiş yol (GDD §4.4)
+                    return Config.ViaductOverZOffset;
                 }
                 if (cell.HasViaduct && cell.UnderColor == color)
                 {
-                    return -0.1f; // Under: Alçaltılmış yol (GDD §4.4)
+                    return Config.ViaductUnderZOffset;
                 }
             }
-            return -0.2f; // Normal yol
+            return Config.NormalZOffset;
         }
 
         /// <summary>
@@ -526,8 +527,9 @@ namespace PixelFlow.Services
         {
             if (v1.Color == v2.Color) return false;
 
+            float collisionDist = Config.CollisionDistance;
             float sqrDist = (v1.CurrentPosition - v2.CurrentPosition).sqrMagnitude;
-            if (sqrDist >= 0.2025f) return false; // 0.45²
+            if (sqrDist >= collisionDist * collisionDist) return false;
 
             var cell = GridModel.Grid[
                 Mathf.Clamp(cellPos.x, 0, GridModel.Width - 1),
@@ -536,7 +538,7 @@ namespace PixelFlow.Services
             if (cell.HasViaduct)
             {
                 float zDiff = Mathf.Abs(v1.CurrentPosition.z - v2.CurrentPosition.z);
-                if (zDiff >= 0.15f) return false;
+                if (zDiff >= Config.ViaductZDiffThreshold) return false;
             }
 
             TriggerCrash(cellPos, v1.Color, v2.Color);
@@ -580,8 +582,8 @@ namespace PixelFlow.Services
         {
             _simulationPhaseTimer += deltaTime;
             
-            // Maksimum 45 saniye güvenlik limiti (darboğaz durumlarında kilitlenmeyi önlemek için)
-            float maxDuration = Config != null ? Config.MaxSimulationSafetyDuration : 45f;
+            // Maksimum güvenlik limiti (darboğaz durumlarında kilitlenmeyi önlemek için)
+            float maxDuration = Config != null ? Config.MaxSimulationSafetyDuration : throw new Data.DataValidationException("GameConfig.MaxSimulationSafetyDuration erişilemedi!");
             float remaining = Mathf.Max(0f, maxDuration - _simulationPhaseTimer);
             GameSessionModel.SetSimulationTimer(remaining);
 

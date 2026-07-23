@@ -21,6 +21,7 @@ namespace PixelFlow.Commands
         [Inject] public IHapticService HapticService { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
+        [Inject, OptionalInject] public GameConfig Config { get; set; }
 
         public void Execute(PlaceViaductSignal signal)
         {
@@ -42,7 +43,7 @@ namespace PixelFlow.Commands
             var cell = GridModel.Grid[pos.x, pos.y];
 
             // Viyadük sadece en az 2 yolun kesiştiği yerlere ve henüz viyadük olmayan hücrelere konulabilir
-            if (cell.PathColorCount < 2 || cell.PathColorCount > BridgeValidationUtility.MaxPathsPerBridge || cell.HasViaduct)
+            if (cell.PathColorCount < 2 || cell.PathColorCount > Config.MaxPathsPerBridge || cell.HasViaduct)
             {
                 LoggerService?.LogWarning($"[PixelFlow.PlaceViaductCommand] Cannot place viaduct at {pos}. PathColorCount: {cell.PathColorCount}, HasViaduct: {cell.HasViaduct}");
                 return;

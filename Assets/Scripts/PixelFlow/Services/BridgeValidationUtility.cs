@@ -6,7 +6,11 @@ namespace PixelFlow.Services
 {
     public static class BridgeValidationUtility
     {
-        public const int MaxPathsPerBridge = 2;
+        /// <summary>game_plan.md §2.2: GameConfig.MaxPathsPerBridge üzerinden erişilir.</summary>
+        public static int GetMaxPathsPerBridge(Data.GameConfig config)
+        {
+            return config != null ? config.MaxPathsPerBridge : throw new Data.DataValidationException("GameConfig.MaxPathsPerBridge erişilemedi!");
+        }
 
         public static Vector2Int GetCrossingDirection(IList<Vector2Int> path, Vector2Int bridgePos)
         {
@@ -53,9 +57,9 @@ namespace PixelFlow.Services
             return ArePerpendicular(existingDir, newEntryDir);
         }
 
-        public static bool HasReachedMaxPaths(HashSet<ColorType> existingColors, Vector2Int bridgePos)
+        public static bool HasReachedMaxPaths(HashSet<ColorType> existingColors, Vector2Int bridgePos, int maxPathsPerBridge)
         {
-            return existingColors.Count >= MaxPathsPerBridge;
+            return existingColors.Count >= maxPathsPerBridge;
         }
 
         public static string GetRejectionReason(
