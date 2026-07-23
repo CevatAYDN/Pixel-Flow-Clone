@@ -505,25 +505,28 @@ namespace PixelFlow.Services
 
         private void TriggerCrash(Vector2Int crashPos, ColorType colorA, ColorType colorB)
         {
-            LoggerService?.LogError($"[PixelFlow.VehicleSimulator] TRAFFIC CRASH detected at cell {crashPos} between color {colorA} and {colorB}! Focusing camera and setting state to Paused.");
+            LoggerService?.Log($"[PixelFlow.VehicleSimulator] Bouncy collision at cell {crashPos} between {colorA} and {colorB}.");
 
             GridModel.LastCrashPosition.Value = crashPos;
             GridModel.CrashColorA.Value = colorA;
             GridModel.CrashColorB.Value = colorB;
 
-            var camCtrl = _cachedCameraController;
-            if (camCtrl != null)
+            // Apply bouncy squash/stretch physics to vehicles at collision position
+            for (int i = 0; i < _activeVehicles.Count; i++)
             {
-                camCtrl.FocusOnCrash(crashPos);
+                var v = _activeVehicles[i];
+                if (v.Color == colorA || v.Color == colorB)
+                {
+                    Vector2Int vPos = new Vector2Int(Mathf.RoundToInt(v.CurrentPosition.x), Mathf.RoundToInt(v.CurrentPosition.y));
+                    if (vPos == crashPos && v.Visual != null)
+                    {
+                        BouncyCollisionHandler.ApplyBouncyBounce(v.Visual, Vector3.up);
+                    }
+                }
             }
-
-            GameStateModel.SetState(GameState.Paused);
 
             HapticService?.Vibrate(HapticType.Warning);
             AudioService?.PlaySfx(SfxType.Crash);
-
-            // GDD §2.4: 3 ardışık kaza denemesi → LevelFailed
-            _crisisAdService?.RecordCrisisAttempt();
 
             SignalBus.Fire(new CrashDetectedSignal
             {

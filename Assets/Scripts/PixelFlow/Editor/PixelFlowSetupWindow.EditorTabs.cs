@@ -21,10 +21,173 @@ namespace PixelFlow.Editor
 
         private void DrawLevelStudioTab()
         {
+            DrawInteractiveGridPainterCard();
             DrawCustomLevelCreator();
             DrawPhaseManagement();
             DrawProceduralGenerator();
             DrawLevelDatabase();
+        }
+
+        private void DrawInteractiveGridPainterCard()
+        {
+            GUILayout.BeginVertical(_cardStyle);
+            GUILayout.Label("🖌️ CANLI İNTERAKTİF SEVİYE ÇİZİCİ (IN-WINDOW GRID PAINTER)", _sectionHeaderStyle);
+            GUILayout.Space(5);
+
+            if (_cachedLevels == null || _cachedLevels.Count == 0)
+            {
+                GUILayout.Label("Çizim yapmak için önce bir seviye oluşturun.", EditorStyles.miniLabel);
+                GUILayout.EndVertical();
+                GUILayout.Space(8);
+                return;
+            }
+
+            // Seviye Seçici Dropdown
+            string[] levelNames = _cachedLevels.Select(l => l != null ? $"Level {l.levelIndex} ({l.name})" : "Empty").ToArray();
+            _painterSelectedLevelIdx = Mathf.Clamp(_painterSelectedLevelIdx, 0, _cachedLevels.Count - 1);
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Düzenlenecek Seviye:", GUILayout.Width(130));
+            _painterSelectedLevelIdx = EditorGUILayout.Popup(_painterSelectedLevelIdx, levelNames);
+            var selectedLevel = _cachedLevels[_painterSelectedLevelIdx];
+            if (GUILayout.Button("Inspector'da Aç", GUILayout.Width(110)))
+            {
+                Selection.activeObject = selectedLevel;
+                EditorGUIUtility.PingObject(selectedLevel);
+            }
+            GUILayout.EndHorizontal();
+
+            if (selectedLevel == null)
+            {
+                GUILayout.EndVertical();
+                GUILayout.Space(8);
+                return;
+            }
+
+            GUILayout.Space(8);
+
+            // Fırça Renk & Araç Seçici
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Fırça Rengi:", GUILayout.Width(80));
+            var colors = new[] { ColorType.Red, ColorType.Green, ColorType.Blue, ColorType.Yellow, ColorType.Purple };
+            var colorNames = new[] { "🔴 Red", "🟢 Green", "🔵 Blue", "🟡 Yellow", "🟣 Purple" };
+            for (int c = 0; c < colors.Length; c++)
+            {
+                bool isSelected = !_painterIsEraser && _painterSelectedColor == colors[c];
+                GUI.backgroundColor = isSelected ? Color.cyan : Color.white;
+                if (GUILayout.Button(colorNames[c], GUILayout.Height(24)))
+                {
+                    _painterSelectedColor = colors[c];
+                    _painterIsEraser = false;
+                }
+            }
+            GUI.backgroundColor = _painterIsEraser ? Color.red : Color.white;
+            if (GUILayout.Button("🧹 Silgi", GUILayout.Height(24)))
+            {
+                _painterIsEraser = true;
+            }
+            GUI.backgroundColor = Color.white;
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(8);
+
+            // Canlı Çözülebilirlik Rozeti
+            var solver = new PixelFlow.Services.RuntimePathSolver();
+            bool isSolvable = solver.Solve(selectedLevel, out _);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"Boyut: {selectedLevel.width}x{selectedLevel.height} | Düğüm Sayısı: {selectedLevel.initialNodes?.Count ?? 0}", EditorStyles.boldLabel);
+            GUILayout.FlexibleSpace();
+            GUILayout.Label(isSolvable ? "✔ ÇÖZÜLEBİLİR (SOLVABLE)" : "❌ ÇÖZÜLEMEZ (UNSOLVABLE)", isSolvable ? _okBadgeStyle : _errorBadgeStyle);
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(8);
+
+            // İnteraktif Grid Matrisi (Tıklanabilir Hücreler)
+            GUILayout.BeginVertical(EditorStyles.helpBox);
+            int w = selectedLevel.width;
+            int h = selectedLevel.height;
+
+            for (int y = h - 1; y >= 0; y--)
+            {
+                GUILayout.BeginHorizontal();
+                for (int x = 0; x < w; x++)
+                {
+                    Vector2Int pos = new Vector2Int(x, y);
+                    GridNode existingNode = selectedLevel.initialNodes != null ? selectedLevel.initialNodes.FirstOrDefault(n => n.position == pos) : default;
+                    bool hasNode = selectedLevel.initialNodes != null && selectedLevel.initialNodes.Any(n => n.position == pos);
+
+                    string cellText = hasNode ? GetColorSymbol(existingNode.color) : "·";
+                    GUI.backgroundColor = hasNode ? GetColorGUIColor(existingNode.color) : Color.white;
+
+                    if (GUILayout.Button(cellText, GUILayout.Width(36), GUILayout.Height(36)))
+                    {
+                        Undo.RecordObject(selectedLevel, "Grid Cell Paint");
+                        if (selectedLevel.initialNodes == null) selectedLevel.initialNodes = new List<GridNode>();
+
+                        selectedLevel.initialNodes.RemoveAll(n => n.position == pos);
+
+                        if (!_painterIsEraser)
+                        {
+                            selectedLevel.initialNodes.Add(new GridNode
+                            {
+                                position = pos,
+                                color = _painterSelectedColor,
+                                shape = GetDefaultShapeForColor(_painterSelectedColor),
+                                type = NodeType.Home
+                            });
+                        }
+
+                        EditorUtility.SetDirty(selectedLevel);
+                        AssetDatabase.SaveAssets();
+                        RunBatchSolver();
+                    }
+                }
+                GUI.backgroundColor = Color.white;
+                GUILayout.EndHorizontal();
+            }
+            GUILayout.EndVertical();
+
+            GUILayout.EndVertical();
+            GUILayout.Space(8);
+        }
+
+        private static string GetColorSymbol(ColorType color)
+        {
+            switch (color)
+            {
+                case ColorType.Red: return "🔴";
+                case ColorType.Green: return "🟢";
+                case ColorType.Blue: return "🔵";
+                case ColorType.Yellow: return "🟡";
+                case ColorType.Purple: return "🟣";
+                default: return "⚪";
+            }
+        }
+
+        private static Color GetColorGUIColor(ColorType color)
+        {
+            switch (color)
+            {
+                case ColorType.Red: return new Color(1f, 0.4f, 0.4f);
+                case ColorType.Green: return new Color(0.4f, 1f, 0.4f);
+                case ColorType.Blue: return new Color(0.4f, 0.6f, 1f);
+                case ColorType.Yellow: return new Color(1f, 0.9f, 0.3f);
+                case ColorType.Purple: return new Color(0.8f, 0.4f, 1f);
+                default: return Color.white;
+            }
+        }
+
+        private static ShapeType GetDefaultShapeForColor(ColorType color)
+        {
+            switch (color)
+            {
+                case ColorType.Red: return ShapeType.Circle;
+                case ColorType.Green: return ShapeType.Square;
+                case ColorType.Blue: return ShapeType.Triangle;
+                case ColorType.Yellow: return ShapeType.Star;
+                case ColorType.Purple: return ShapeType.Diamond;
+                default: return ShapeType.Circle;
+            }
         }
 
         private void DrawCustomLevelCreator()
@@ -176,8 +339,9 @@ namespace PixelFlow.Editor
             GUILayout.Space(5);
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("3 Seviyeli Başlangıç Paketi Oluştur", GUILayout.Height(25))) { CreateThreeLevelPack(); RefreshData(); }
-            if (GUILayout.Button("Faz 1+2 El Yapımı Paket (12 seviye)", GUILayout.Height(25))) { CreatePhase1And2HandCraftedPack(); RefreshData(); }
+            if (GUILayout.Button("3 Seviyeli Başlangıç Paketi Oluştur", GUILayout.Height(25))) { CreateThreeLevelPack(); RefreshData(); RunBatchSolver(); }
+            if (GUILayout.Button("Faz 1+2 El Yapımı Paket (12 seviye)", GUILayout.Height(25))) { CreatePhase1And2HandCraftedPack(); RefreshData(); RunBatchSolver(); }
+            if (GUILayout.Button("⚡ tüm Seviyeleri Tara & Doğrula", GUILayout.Height(25))) { RunBatchSolver(); }
             GUILayout.EndHorizontal();
 
             GUILayout.Space(6);
@@ -188,11 +352,15 @@ namespace PixelFlow.Editor
                 GUILayout.Label("Bu projede hiç LevelData varlığı bulunamadı.", EditorStyles.miniLabel);
             else
             {
+                if (_solvabilityCache.Count == 0) RunBatchSolver();
                 DrawLevelTableHeader();
                 for (int i = 0; i < _cachedLevels.Count; i++)
                 {
                     if (_cachedLevels[i] != null)
-                        DrawLevelTableRow(_cachedLevels[i], false);
+                    {
+                        bool isSolvable = _solvabilityCache.TryGetValue(_cachedLevels[i], out var sol) && sol;
+                        DrawLevelTableRow(_cachedLevels[i], isSolvable);
+                    }
                 }
             }
             GUILayout.EndVertical();

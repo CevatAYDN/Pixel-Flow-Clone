@@ -45,6 +45,16 @@ namespace PixelFlow.Views
         [SerializeField] private Button _retryButton;
         [SerializeField] private Button _levelFailedContinueButton;
 
+        // Color Jam 3D - Gold Coins & Power-Up UI
+        [SerializeField] private Text _coinsText;
+        [SerializeField] private Button _garageButton;
+        [SerializeField] private Button _rainbowRoadButton;
+        [SerializeField] private Button _clearJamButton;
+
+        public event Action OnGarageClicked;
+        public event Action OnRainbowRoadClicked;
+        public event Action OnClearJamClicked;
+
         public event Action OnHintClicked;
         public event Action OnNextLevelClicked;
         public event Action OnContinueClicked;
@@ -139,8 +149,13 @@ namespace PixelFlow.Views
             // GDD §2.4: LevelFailed paneli
             if (_retryButton != null)
                 _retryButton.onClick.AddListener(() => OnRetryClicked?.Invoke());
-            if (_levelFailedContinueButton != null)
-                _levelFailedContinueButton.onClick.AddListener(() => OnLevelFailedContinueClicked?.Invoke());
+            // Color Jam 3D - Gold Coins & Power-Up UI Listeners
+            if (_garageButton != null)
+                _garageButton.onClick.AddListener(() => OnGarageClicked?.Invoke());
+            if (_rainbowRoadButton != null)
+                _rainbowRoadButton.onClick.AddListener(() => OnRainbowRoadClicked?.Invoke());
+            if (_clearJamButton != null)
+                _clearJamButton.onClick.AddListener(() => OnClearJamClicked?.Invoke());
 
             if (_completionPanel != null)
                 _completionPanel.SetActive(false);
@@ -210,6 +225,12 @@ namespace PixelFlow.Views
         {
             if (_scoreText != null)
                 _scoreText.text = string.Format(format, score);
+        }
+
+        public void UpdateCoins(int coins)
+        {
+            if (_coinsText != null)
+                _coinsText.text = coins.ToString("N0");
         }
 
         public void UpdateTimer(float elapsedTime)

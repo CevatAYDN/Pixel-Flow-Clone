@@ -56,6 +56,7 @@ namespace PixelFlow.Editor.Tests
                 builder.BindReactiveModel<ISettingsModel, SettingsModel>();
                 builder.BindReactiveModel<ISoundModel, SoundModel>();
                 builder.BindReactiveModel<ITutorialModel, TutorialModel>();
+                builder.BindReactiveModel<IInventoryModel, InventoryModel>();
                 builder.Bind<ILevelProgressionService, LevelProgressionService>();
 
                 builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));

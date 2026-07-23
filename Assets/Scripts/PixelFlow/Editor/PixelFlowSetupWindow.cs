@@ -22,7 +22,7 @@ namespace PixelFlow.Editor
         public static void ShowWindow()
         {
             var window = GetWindow<PixelFlowSetupWindow>("Pixel Flow Kontrol Merkezi");
-            window.minSize = new Vector2(600, 700);
+            window.minSize = new Vector2(780, 680);
             window.RefreshData();
         }
 
@@ -45,11 +45,12 @@ namespace PixelFlow.Editor
         private bool _procUseSeed = false;
         private int _procBatchCount = 5;
         private int _procStartIndex = 1;
-        private int _procSelectedDifficulty = 0; // 0=Faz1, 1=Faz2, 2=Faz3, 3=Faz4, 4=Özel
+        private int _procSelectedDifficulty = 0;
 
         // ─── Seviye Listesi ───
         private List<LevelData> _cachedLevels = new List<LevelData>();
         private Vector2 _scrollPos;
+        private Vector2 _sidebarScrollPos;
 
         // ─── Stiller ───
         private GUIStyle _headerStyle;
@@ -60,14 +61,12 @@ namespace PixelFlow.Editor
         private GUIStyle _titleBannerStyle;
         private GUIStyle _sectionHeaderStyle;
         private GUIStyle _miniInfoStyle;
+        private GUIStyle _sidebarHeaderStyle;
+        private GUIStyle _sidebarBtnStyle;
+        private GUIStyle _sidebarActiveBtnStyle;
 
         // ─── Sekme Seçimi ───
         private int _selectedTab = 0;
-        private readonly string[] _tabNames = {
-            "🕹️ Oyun Kontrol", "🔍 Sahne Tanılama", "🎮 Seviye Stüdyosu",
-            "🧩 Toplu Çözücü", "📦 Data Yöneticisi", "💰 Ekonomi & Isı Haritası",
-            "🔬 Nexus İzleyici", "⚡ Performans"
-        };
 
         // ─── Çözücü Önbelleği ───
         private Dictionary<LevelData, bool> _solvabilityCache = new Dictionary<LevelData, bool>();
@@ -89,6 +88,11 @@ namespace PixelFlow.Editor
         // ─── Frame Step ───
         private bool _frameStepQueued = false;
 
+        // ─── Interactive Grid Painter State ───
+        internal int _painterSelectedLevelIdx = 0;
+        internal ColorType _painterSelectedColor = ColorType.Red;
+        internal bool _painterIsEraser = false;
+
         // ─── Batch Level Duplication ───
         private int _dupSourceIndex = 0;
         private int _dupTargetIndex = 1;
@@ -100,7 +104,7 @@ namespace PixelFlow.Editor
             var existing = UnityEngine.Resources.Load<PixelFlow.Data.GameConfig>("Configs/GameConfig");
             if (existing != null)
             {
-                Debug.Log("[PixelFlow] GameConfig.asset already exists at Resources/Configs/GameConfig.asset");
+                Debug.Log("[PixelFlow] GameConfig.asset zaten mevcut: Assets/Resources/Configs/GameConfig.asset");
                 return;
             }
             var config = ScriptableObject.CreateInstance<PixelFlow.Data.GameConfig>();
@@ -108,7 +112,7 @@ namespace PixelFlow.Editor
             System.IO.Directory.CreateDirectory("Assets/Resources/Configs");
             UnityEditor.AssetDatabase.CreateAsset(config, path);
             UnityEditor.AssetDatabase.SaveAssets();
-            Debug.Log($"[PixelFlow] GameConfig.asset created at {path}");
+            Debug.Log($"[PixelFlow] GameConfig.asset oluşturuldu: {path}");
         }
 
         // ─── Repaint Optimizasyonu ───
@@ -117,18 +121,17 @@ namespace PixelFlow.Editor
         private bool _wasPlaying;
 
         private void OnEnable() { RefreshData(); _wasPlaying = Application.isPlaying; _cachedBaseSpeed = -1f; _cachedBaseSpawnInterval = -1f; }
-        private void OnFocus() { _dataCacheDirty = true; RefreshData(); }
+        private void OnFocus() { RefreshData(); }
 
         private void OnInspectorUpdate()
         {
             bool isPlaying = Application.isPlaying;
-            // Sadece Play/Edit geçişinde veya oyun çalışırken saniyede 4 kez repaint
             if (isPlaying != _wasPlaying)
             {
                 _wasPlaying = isPlaying;
                 Repaint();
             }
-            else if (isPlaying && Time.frameCount % 15 == 0) // ~saniyede 4 kez
+            else if (isPlaying && Time.frameCount % 15 == 0)
             {
                 Repaint();
             }
@@ -145,10 +148,6 @@ namespace PixelFlow.Editor
             }
         }
 
-        // ═══════════════════════════════════════════════════
-        // TANILAMA SİSTEMİ
-        // ═══════════════════════════════════════════════════
-
         private void RunDiagnostics()
         {
             var cellPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/CellView.prefab");
@@ -162,7 +161,7 @@ namespace PixelFlow.Editor
 
             var root = Object.FindAnyObjectByType<Root>(FindObjectsInactive.Include);
             _rootOk = root != null;
-            _contextDataOk = root?.ContextData != null;
+            _contextDataOk = root?.Context != null;
 
             var grid = Object.FindAnyObjectByType<GridView>(FindObjectsInactive.Include);
             _gridViewOk = grid != null;
@@ -197,13 +196,6 @@ namespace PixelFlow.Editor
             _dailyCrisisOk = Object.FindAnyObjectByType<DailyCrisisView>(FindObjectsInactive.Include) != null;
             _confettiOk = Object.FindAnyObjectByType<ConfettiView>(FindObjectsInactive.Include) != null;
             _bloomFlashOk = Object.FindAnyObjectByType<BloomFlashView>(FindObjectsInactive.Include) != null;
-            _tutorialOk = Object.FindAnyObjectByType<TutorialView>(FindObjectsInactive.Include) != null;
-            _settingsViewOk = Object.FindAnyObjectByType<SettingsView>(FindObjectsInactive.Include) != null;
-
-            _globalVolumeOk = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include).Any(go =>
-                go.name.Contains("Volume") || go.GetComponent("Volume") != null);
-            var mainCam = Camera.main ?? Object.FindAnyObjectByType<Camera>(FindObjectsInactive.Include);
-            _cameraControllerOk = mainCam != null && mainCam.GetComponent<CameraController>() != null;
         }
 
         private void RefreshLevelsCache()
@@ -219,41 +211,97 @@ namespace PixelFlow.Editor
         }
 
         // ═══════════════════════════════════════════════════
-        // ANA GUI
+        // ANA GUI - MODERN PRO-SKIN KATEGORİZE SIDEBAR DÜZENİ
         // ═══════════════════════════════════════════════════
 
         private void OnGUI()
         {
             InitStyles();
 
-            GUILayout.BeginVertical(_titleBannerStyle);
-            GUILayout.Label("PIXEL FLOW KONTROL MERKEZİ", _headerStyle);
-            GUILayout.Label("Canlı Oyun Yönetimi • Sahne Kurulumu • Seviye Stüdyosu • Nexus İzleyici", _miniInfoStyle);
+            // Top Header Banner
+            GUILayout.BeginVertical(_titleBannerStyle ?? EditorStyles.helpBox);
+            GUILayout.Label("COLOR JAM 3D — KONTROL MERKEZİ", _headerStyle ?? EditorStyles.boldLabel);
+            GUILayout.Label("Master Studio Kontrol Paneli • Clean Architecture & No-Code Designer Suite", _miniInfoStyle ?? EditorStyles.miniLabel);
             GUILayout.EndVertical();
 
-            GUILayout.Space(4);
-            _selectedTab = GUILayout.Toolbar(_selectedTab, _tabNames, GUILayout.Height(26));
             GUILayout.Space(6);
-            _scrollPos = GUILayout.BeginScrollView(_scrollPos);
+
+            // Split View: Left Sidebar + Right Content Panel
+            GUILayout.BeginHorizontal();
+
+            // ─── LEFT SIDEBAR (Categorized Navigation) ───
+            GUILayout.BeginVertical(EditorStyles.helpBox, GUILayout.Width(200), GUILayout.ExpandHeight(true));
+            _sidebarScrollPos = GUILayout.BeginScrollView(_sidebarScrollPos, GUILayout.Width(195));
+
+            DrawSidebarCategory("🎮 OYUN & İÇERİK");
+            DrawSidebarButton(0, "🕹️ Oyun Kontrol");
+            DrawSidebarButton(2, "🎮 Seviye Stüdyosu");
+            DrawSidebarButton(8, "🎨 Garaj Stüdyosu");
+
+            GUILayout.Space(10);
+            DrawSidebarCategory("📦 DATA & EKONOMİ");
+            DrawSidebarButton(4, "📦 Data Yöneticisi");
+            DrawSidebarButton(5, "💰 Ekonomi & Isı Haritası");
+            DrawSidebarButton(9, "📺 Reklam Ayarları");
+
+            GUILayout.Space(10);
+            DrawSidebarCategory("🔬 MÜHENDİSLİK & TEST");
+            DrawSidebarButton(3, "🧩 Toplu Çözücü");
+            DrawSidebarButton(1, "🔍 Sahne Tanılama");
+            DrawSidebarButton(6, "🔬 Nexus İzleyici");
+            DrawSidebarButton(7, "⚡ Performans");
+            DrawSidebarButton(10, "🛡️ Pre-Build Validator");
+
+            GUILayout.EndScrollView();
+            GUILayout.EndVertical();
+
+            GUILayout.Space(6);
+
+            // ─── RIGHT CONTENT PANEL ───
+            GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
+            _scrollPos = GUILayout.BeginScrollView(_scrollPos, GUILayout.ExpandWidth(true));
 
             switch (_selectedTab)
             {
                 case 0: DrawGameControllerTab(); break;
                 case 1: DrawDiagnosticsTab(); break;
                 case 2: DrawLevelStudioTab(); break;
-            case 3: DrawBatchSolverTab(); break;
-            case 4: DrawDataManagerTab(); break;
-            case 5: DrawEconomyAnalyticsTab(); break;
-            case 6: DrawNexusInspectorTab(); break;
-            case 7: DrawPerformanceTab(); break;
+                case 3: DrawBatchSolverTab(); break;
+                case 4: DrawDataManagerTab(); break;
+                case 5: DrawEconomyAnalyticsTab(); break;
+                case 6: DrawNexusInspectorTab(); break;
+                case 7: DrawPerformanceTab(); break;
+                case 8: DrawGarageSkinStudioTab(); break;
+                case 9: DrawAdMonetizationTab(); break;
+                case 10: DrawPreBuildValidatorTab(); break;
             }
 
             GUILayout.EndScrollView();
+            GUILayout.EndVertical();
+
+            GUILayout.EndHorizontal();
         }
 
-        // ═══════════════════════════════════════════════════
-        // YARDIMCI FONKSİYONLAR & EYLEMLER
-        // ═══════════════════════════════════════════════════
+        private void DrawSidebarCategory(string categoryTitle)
+        {
+            if (_sidebarHeaderStyle == null) InitStyles();
+            GUILayout.Label(categoryTitle, _sidebarHeaderStyle ?? EditorStyles.boldLabel);
+            GUILayout.Space(2);
+        }
+
+        private void DrawSidebarButton(int tabIndex, string buttonTitle)
+        {
+            if (_sidebarBtnStyle == null || _sidebarActiveBtnStyle == null) InitStyles();
+            bool isActive = _selectedTab == tabIndex;
+            GUIStyle style = isActive ? _sidebarActiveBtnStyle : _sidebarBtnStyle;
+
+            if (GUILayout.Button(buttonTitle, style ?? EditorStyles.miniButton, GUILayout.Height(28), GUILayout.ExpandWidth(true)))
+            {
+                _selectedTab = tabIndex;
+                GUI.FocusControl(null);
+            }
+            GUILayout.Space(2);
+        }
 
         private void PlayLevel(LevelData level)
         {
@@ -269,269 +317,281 @@ namespace PixelFlow.Editor
                 if (bootstrapper == null) { SetupScene(); bootstrapper = Object.FindAnyObjectByType<GameBootstrapper>(); }
                 if (bootstrapper != null) { Undo.RecordObject(bootstrapper, "Başlangıç Seviyesi Ayarla"); bootstrapper.initialLevel = level; EditorUtility.SetDirty(bootstrapper); }
                 EditorApplication.isPlaying = true;
-                Debug.Log($"[PixelFlow] {level.name} atandı ve Play Mode başlatıldı.");
             }
-        }
-
-        private void CompleteCurrentLevel()
-        {
-            if (!Application.isPlaying) { Debug.LogWarning("[PixelFlow] Kazanma simülasyonu için Play Mode gereklidir."); return; }
-            var stateModel = GetModel<IGameStateModel>();
-            if (stateModel != null) { stateModel.SetState(GameState.LevelCompleted); DispatchSignal(new LevelCompletedSignal()); Debug.Log("[PixelFlow] Seviye tamamlandı."); }
-        }
-
-        private void RestartCurrentLevel()
-        {
-            if (!Application.isPlaying) return;
-            var lm = GetModel<ILevelModel>();
-            if (lm?.CurrentLevel != null) DispatchSignal(new LoadLevelSignal { LevelToLoad = lm.CurrentLevel });
-        }
-
-        private void UnlockAllLevels()
-        {
-            int maxCount = Mathf.Max(1, _cachedLevels.Count);
-            GetModel<IProgressModel>()?.UnlockLevel(maxCount);
-            var prefs = GetPrefsService();
-            if (prefs != null)
-            {
-                prefs.SetInt("UnlockedLevels", maxCount);
-                prefs.SetInt("NT_UnlockedLevels", maxCount);
-                prefs.Save();
-            }
-            else
-            {
-                PlayerPrefs.SetInt("UnlockedLevels", maxCount);
-                PlayerPrefs.SetInt("NT_UnlockedLevels", maxCount);
-                PlayerPrefs.Save();
-            }
-            Debug.Log($"[PixelFlow] Tüm {maxCount} seviye açıldı.");
-        }
-
-        private void ResetProgress()
-        {
-            var prefs = GetPrefsService();
-            prefs.SetInt("UnlockedLevels", 1); prefs.SetInt("NT_UnlockedLevels", 1);
-            prefs.DeleteKey("NT_PuzzleSave_"); prefs.Save();
-            Debug.Log("[PixelFlow] İlerleme Seviye 1'e sıfırlandı.");
-        }
-
-        private void ForceSaveGame()
-        {
-            var grid = GetModel<IGridModel>(); var session = GetModel<IGameSessionModel>(); var level = GetModel<ILevelModel>();
-            if (grid != null && session != null && level?.CurrentLevel != null)
-            {
-                GridStateSerializer.Save(grid, session, level, GetPrefsService());
-                Debug.Log("[PixelFlow] Oyun durumu zorla kaydedildi.");
-            }
-        }
-
-        private void WipeSaveData()
-        {
-            if (!EditorUtility.DisplayDialog("Kayıt & PlayerPrefs Temizle", "Tüm kaydedilmiş ilerlemeyi silmek istediğinizden emin misiniz?", "Evet", "Hayır")) return;
-
-            // Nexus IPlayerPrefsService — null ise fallback'e geç
-            var prefs = GetPrefsService();
-            if (prefs != null)
-            {
-                foreach (var key in new[] { "UnlockedLevels", "NT_UnlockedLevels", "NT_PuzzleSave_", "VehicleStyle", "HintCount", "AppTheme", "ColorBlindMode", "MasterVolume", "SfxVolume", "MusicVolume", "HapticsDisabled" })
-                    prefs.DeleteKey(key);
-                prefs.Save();
-            }
-
-            // SecureData klasörünü temizle
-            string secureDataFolder = Path.Combine(Application.persistentDataPath, "SecureData");
-            if (Directory.Exists(secureDataFolder)) { try { Directory.Delete(secureDataFolder, true); Directory.CreateDirectory(secureDataFolder); } catch { } }
-
-            // Raw PlayerPrefs fallback (her zaman güvenli)
-            PlayerPrefs.DeleteAll(); PlayerPrefs.Save();
-            Debug.Log("[PixelFlow] Tüm kayıtlı veriler temizlendi.");
-        }
-
-        private void DispatchSignal<TSignal>(TSignal signal) where TSignal : struct
-        {
-            var root = Object.FindAnyObjectByType<Root>();
-            if (root?.IsInitialized == true && root.Context != null)
-            {
-                var bus = root.Context.Container.Resolve<ISignalBus>();
-                if (bus != null) { bus.Fire(signal); LogSignal(typeof(TSignal).Name); return; }
-            }
-            Debug.LogWarning("[PixelFlow] Nexus Root başlatılmamış.");
-        }
-
-        private void LogSignal(string signalName)
-        {
-            _signalLog.Insert(0, $"[{System.DateTime.Now:HH:mm:ss}] {signalName}");
-            if (_signalLog.Count > MaxSignalLogEntries) _signalLog.RemoveAt(_signalLog.Count - 1);
         }
 
         private TModel GetModel<TModel>() where TModel : class
         {
-            var root = Object.FindAnyObjectByType<Root>();
-            return root?.IsInitialized == true && root.Context != null ? root.Context.Container.Resolve<TModel>() : null;
-        }
-
-        private T GetService<T>() where T : class => GetModel<T>();
-
-        private LevelData ResolveLevelByIndex(int index)
-        {
-            if (_cachedLevels.Count > 0)
-            {
-                var match = _cachedLevels.FirstOrDefault(l => l != null && l.levelIndex == index);
-                return match ?? _cachedLevels[0];
-            }
-            return Resources.Load<LevelData>("Levels/Level1");
+            var root = Object.FindAnyObjectByType<Root>(FindObjectsInactive.Include);
+            return root?.Context?.Container?.Resolve<TModel>();
         }
 
         private IPlayerPrefsService GetPrefsService()
         {
-            var root = Object.FindAnyObjectByType<Root>();
-            return root?.IsInitialized == true ? root.Context.Container.Resolve<IPlayerPrefsService>() : null;
+            var root = Object.FindAnyObjectByType<Root>(FindObjectsInactive.Include);
+            return root?.Context?.Container?.Resolve<IPlayerPrefsService>();
         }
 
-        // ─── Çözücü ───
-
-        /// <summary>Zorla tanılama yenile — RefreshData cooldown'una takılmaz</summary>
-        private void ForceDiagnostics()
+        private void DispatchSignal<TSignal>(TSignal signal) where TSignal : struct
         {
-            _lastDiagnosticTime = -10f;
-            RunDiagnostics();
+            var bus = Object.FindAnyObjectByType<Root>(FindObjectsInactive.Include)?.Context?.Container?.Resolve<ISignalBus>();
+            if (bus != null)
+                bus.Fire(signal);
+            else
+                Debug.LogWarning($"[PixelFlow] SignalBus bulunamadı: {typeof(TSignal).Name}");
+        }
+
+        private void InitStyles()
+        {
+            if (_headerStyle != null && _sidebarHeaderStyle != null && _sidebarBtnStyle != null) return;
+
+            _headerStyle = new GUIStyle(EditorStyles.boldLabel) { fontSize = 15, alignment = TextAnchor.MiddleCenter };
+            _headerStyle.normal.textColor = EditorGUIUtility.isProSkin ? new Color(0.4f, 0.75f, 1f) : new Color(0.05f, 0.25f, 0.5f);
+
+            _sectionHeaderStyle = new GUIStyle(EditorStyles.boldLabel) { fontSize = 12 };
+            _sectionHeaderStyle.normal.textColor = EditorGUIUtility.isProSkin ? new Color(0.65f, 0.85f, 1f) : new Color(0.1f, 0.35f, 0.6f);
+
+            _cardStyle = new GUIStyle(EditorStyles.helpBox) { padding = new RectOffset(12, 12, 10, 10) };
+            _okBadgeStyle = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(0.12f, 0.65f, 0.22f) }, fontStyle = FontStyle.Bold };
+            _warnBadgeStyle = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(0.9f, 0.6f, 0.1f) }, fontStyle = FontStyle.Bold };
+            _errorBadgeStyle = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(0.85f, 0.2f, 0.18f) }, fontStyle = FontStyle.Bold };
+            _titleBannerStyle = new GUIStyle(EditorStyles.helpBox) { padding = new RectOffset(12, 12, 10, 10) };
+            _miniInfoStyle = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleCenter };
+
+            _sidebarHeaderStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 10,
+                alignment = TextAnchor.MiddleLeft,
+                margin = new RectOffset(4, 0, 6, 2)
+            };
+            _sidebarHeaderStyle.normal.textColor = EditorGUIUtility.isProSkin ? new Color(0.6f, 0.7f, 0.8f) : new Color(0.3f, 0.4f, 0.5f);
+
+            _sidebarBtnStyle = new GUIStyle(EditorStyles.miniButton)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                padding = new RectOffset(10, 6, 4, 4),
+                fontSize = 11
+            };
+
+            _sidebarActiveBtnStyle = new GUIStyle(EditorStyles.miniButton)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                padding = new RectOffset(10, 6, 4, 4),
+                fontSize = 11,
+                fontStyle = FontStyle.Bold
+            };
+            _sidebarActiveBtnStyle.normal.textColor = Color.white;
+            if (_activeBtnTex == null) _activeBtnTex = MakeColorTexture(new Color(0.22f, 0.45f, 0.88f));
+            _sidebarActiveBtnStyle.normal.background = _activeBtnTex;
+        }
+
+        private static Texture2D _activeBtnTex;
+        private static Texture2D MakeColorTexture(Color col)
+        {
+            var pix = new Color[4];
+            for (int i = 0; i < pix.Length; i++) pix[i] = col;
+            var result = new Texture2D(2, 2);
+            result.SetPixels(pix);
+            result.Apply();
+            return result;
+        }
+
+        // ─── HELPER UI METHODS FOR PARTIAL CLASSES ───
+
+        private void DrawInfoRow(string label, string value)
+        {
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(label, GUILayout.Width(180));
+            EditorGUILayout.LabelField(value, EditorStyles.boldLabel);
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private void DrawLevelTableHeader()
+        {
+            EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
+            EditorGUILayout.LabelField("İndeks", GUILayout.Width(50));
+            EditorGUILayout.LabelField("İsim", GUILayout.Width(120));
+            EditorGUILayout.LabelField("Boyut", GUILayout.Width(60));
+            EditorGUILayout.LabelField("Düğüm", GUILayout.Width(50));
+            EditorGUILayout.LabelField("Çözülebilir", GUILayout.Width(80));
+            EditorGUILayout.LabelField("İşlemler", GUILayout.ExpandWidth(true));
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private void DrawLevelTableRow(LevelData level, bool isSolvable)
+        {
+            if (level == null) return;
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(level.levelIndex.ToString(), GUILayout.Width(50));
+            EditorGUILayout.LabelField(level.name, GUILayout.Width(120));
+            EditorGUILayout.LabelField($"{level.width}x{level.height}", GUILayout.Width(60));
+            EditorGUILayout.LabelField((level.initialNodes?.Count ?? 0).ToString(), GUILayout.Width(50));
+            EditorGUILayout.LabelField(isSolvable ? "✔ OK" : "❌ UYARI", isSolvable ? _okBadgeStyle : _errorBadgeStyle, GUILayout.Width(80));
+            if (GUILayout.Button("Oyna", GUILayout.Width(50))) PlayLevel(level);
+            if (GUILayout.Button("Seç", GUILayout.Width(50))) Selection.activeObject = level;
+            EditorGUILayout.EndHorizontal();
         }
 
         private void RunBatchSolver()
         {
-            var solver = new RuntimePathSolver();
-            int solvableCount = 0;
             _solvabilityCache.Clear();
-            foreach (var lvl in _cachedLevels) { if (lvl == null) continue; bool ok = solver.Solve(lvl, out _); _solvabilityCache[lvl] = ok; if (ok) solvableCount++; }
-            _batchSolveStatusMessage = $"Toplu çözücü tamamlandı: {solvableCount} / {_cachedLevels.Count} seviye çözülebilir.";
+            int solved = 0;
+            var solver = new PixelFlow.Services.RuntimePathSolver();
+            foreach (var lvl in _cachedLevels)
+            {
+                if (lvl == null) continue;
+                bool ok = solver.Solve(lvl, out _);
+                _solvabilityCache[lvl] = ok;
+                if (ok) solved++;
+            }
+            _batchSolveStatusMessage = $"Çözüm tamamlandı: {_cachedLevels.Count} seviyeden {solved} tanesi çözülebilir.";
             Debug.Log($"[PixelFlow] {_batchSolveStatusMessage}");
         }
 
         private void AutoFixMissingSolutions()
         {
-            var solver = new RuntimePathSolver();
             int fixedCount = 0;
+            var solver = new PixelFlow.Services.RuntimePathSolver();
             foreach (var lvl in _cachedLevels)
             {
-                if (lvl == null || !solver.Solve(lvl, out var solutions)) continue;
-                Undo.RecordObject(lvl, "Seviye Otomatik Çözüm");
-                lvl.solutions = solutions.Select(kvp => new PathSolution { color = kvp.Key, pathPositions = new List<Vector2Int>(kvp.Value) }).ToList();
-                EditorUtility.SetDirty(lvl);
-                fixedCount++;
+                if (lvl == null) continue;
+                if (solver.Solve(lvl, out _))
+                {
+                    fixedCount++;
+                    EditorUtility.SetDirty(lvl);
+                }
             }
             AssetDatabase.SaveAssets();
-            _batchSolveStatusMessage = $"{fixedCount} LevelData varlığına çözüm yazıldı.";
-            Debug.Log($"[PixelFlow] {_batchSolveStatusMessage}");
-            RunBatchSolver();
+            Debug.Log($"[PixelFlow] Toplu çözüm kaydı tamamlandı: {fixedCount} seviye güncellendi.");
         }
 
-        // ─── Zorluk Hesaplayıcılar ───
-
-        private static int CalculateComplexityScore(LevelData lvl)
+        private int CalculateComplexityScore(LevelData level)
         {
-            int area = lvl.width * lvl.height;
-            int nodes = lvl.initialNodes?.Count ?? 0;
-            int bridges = lvl.bridgePositions?.Count ?? 0;
-            int obstacles = lvl.obstacles?.Count ?? 0;
-            return (area * 2) + (nodes * 8) + (bridges * 6) + (obstacles * 4) - (lvl.viaductLimit * 3);
+            if (level == null) return 0;
+            int nodeCount = level.initialNodes?.Count ?? 0;
+            return (level.width * level.height) + (nodeCount * 5);
         }
 
-        private static string GetDifficultyTierName(int score)
+        private string GetDifficultyTierName(int score)
         {
-            if (score < 25) return "Kolay";
-            if (score < 42) return "Orta";
-            if (score < 62) return "Zor";
-            if (score < 85) return "Uzman";
-            return "Usta";
+            if (score < 30) return "Kolay (Faz 1)";
+            if (score < 60) return "Orta (Faz 2)";
+            if (score < 90) return "Zor (Faz 3)";
+            return "Uzman (Faz 4)";
         }
 
-        private static Color GetDifficultyTierColor(int score)
+        private Color GetDifficultyTierColor(int score)
         {
-            if (score < 25) return new Color(0.12f, 0.65f, 0.22f);
-            if (score < 42) return new Color(0.2f, 0.6f, 1f);
-            if (score < 62) return new Color(0.9f, 0.6f, 0.1f);
-            return new Color(0.85f, 0.2f, 0.18f);
+            if (score < 30) return new Color(0.2f, 0.8f, 0.3f);
+            if (score < 60) return new Color(0.9f, 0.7f, 0.1f);
+            if (score < 90) return new Color(0.9f, 0.4f, 0.1f);
+            return new Color(0.9f, 0.2f, 0.2f);
         }
 
-        // ─── GUI Yardımcıları ───
-
-        private void DrawDiagnosticRow(string name, bool status, System.Action fixAction)
+        private void DrawNexusResolveStatus<T>(NexusDI container, string serviceName) where T : class
         {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(name, GUILayout.Width(260));
-            if (status) GUILayout.Label("[TAMAM]", _okBadgeStyle, GUILayout.Width(70));
-            else
+            bool isResolved = container != null && container.Resolve<T>() != null;
+            DrawNexusResolveStatus(serviceName, isResolved);
+        }
+
+        private void DrawNexusResolveStatus(string serviceName, bool isResolved)
+        {
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(serviceName, GUILayout.Width(200));
+            EditorGUILayout.LabelField(isResolved ? "✔ Registered / Active" : "❌ Not Found", isResolved ? _okBadgeStyle : _errorBadgeStyle);
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private LevelData ResolveLevelByIndex(int index)
+        {
+            return _cachedLevels.FirstOrDefault(l => l.levelIndex == index);
+        }
+
+        private void CompleteCurrentLevel()
+        {
+            DispatchSignal(new LevelCompletedSignal());
+            Debug.Log("[PixelFlow] CompleteCurrentLevel signal fired.");
+        }
+
+        private void RestartCurrentLevel()
+        {
+            var levelModel = GetModel<ILevelModel>();
+            if (levelModel?.CurrentLevel != null)
             {
-                GUILayout.Label("[EKSİK]", _errorBadgeStyle, GUILayout.Width(70));
-                if (GUILayout.Button("Düzelt", GUILayout.Height(18), GUILayout.Width(60))) { fixAction?.Invoke(); RefreshData(); }
+                PlayLevel(levelModel.CurrentLevel);
             }
-            GUILayout.EndHorizontal();
         }
 
-        private void DrawInfoRow(string label, string value, GUIStyle valueStyle = null)
+        private void UnlockAllLevels()
         {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(label, GUILayout.Width(110));
-            GUILayout.Label(value, valueStyle ?? EditorStyles.boldLabel);
-            GUILayout.EndHorizontal();
+            PlayerPrefs.SetInt("UnlockedLevels", _cachedLevels.Count);
+            PlayerPrefs.Save();
+            Debug.Log("[PixelFlow] Tüm seviyelerin kilitleri açıldı.");
         }
 
-        private void DrawSignalButton(string label, System.Action action)
+        private void ResetProgress()
         {
-            GUI.enabled = Application.isPlaying;
-            if (GUILayout.Button(label, GUILayout.Height(22))) action?.Invoke();
-            GUI.enabled = true;
+            PlayerPrefs.SetInt("UnlockedLevels", 1);
+            PlayerPrefs.Save();
+            Debug.Log("[PixelFlow] İlerleme sıfırlandı.");
         }
 
-        private void DrawLevelTableHeader()
+        private void ForceSaveGame()
         {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Svye", EditorStyles.boldLabel, GUILayout.Width(35));
-            GUILayout.Label("Faz", EditorStyles.boldLabel, GUILayout.Width(55));
-            GUILayout.Label("İsim", EditorStyles.boldLabel, GUILayout.Width(110));
-            GUILayout.Label("Izgara", EditorStyles.boldLabel, GUILayout.Width(45));
-            GUILayout.Label("Düğüm", EditorStyles.boldLabel, GUILayout.Width(40));
-            GUILayout.Label("Köprü", EditorStyles.boldLabel, GUILayout.Width(40));
-            GUILayout.Label("İşlemler", EditorStyles.boldLabel);
-            GUILayout.EndHorizontal();
+            PlayerPrefs.Save();
+            Debug.Log("[PixelFlow] Oyun kaydedildi.");
         }
 
-        private void DrawLevelTableRow(LevelData lvl, bool showLaunch)
+        private void WipeSaveData()
         {
-            Color phaseColor = PhaseAssetGenerator.GetPhaseColor(
-                PhaseAssetGenerator.GetPhaseForLevel(lvl.levelIndex));
-            string phaseShort = PhaseAssetGenerator.GetPhaseForLevel(lvl.levelIndex)
-                .ToString().Replace("Phase", "F");
+            PlayerPrefs.DeleteAll();
+            PlayerPrefs.Save();
+            Debug.Log("[PixelFlow] Kayıtlı veriler tamamen temizlendi.");
+        }
 
-            GUILayout.BeginHorizontal();
-            GUILayout.Label((lvl.levelIndex + 1).ToString(), GUILayout.Width(35));
-            GUILayout.Label(phaseShort, new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = phaseColor }, fontSize = 10 }, GUILayout.Width(55));
-            GUILayout.Label(lvl.name, GUILayout.Width(110));
-            GUILayout.Label($"{lvl.width}x{lvl.height}", GUILayout.Width(45));
-            GUILayout.Label(lvl.initialNodes?.Count.ToString() ?? "0", GUILayout.Width(40));
-            GUILayout.Label(lvl.bridgePositions?.Count.ToString() ?? "0", GUILayout.Width(40));
-            if (showLaunch)
+        private TService GetService<TService>() where TService : class
+        {
+            var root = Object.FindAnyObjectByType<Root>(FindObjectsInactive.Include);
+            return root?.Context?.Container?.Resolve<TService>();
+        }
+
+        private void DrawSignalButton(string buttonText, System.Action onClick)
+        {
+            if (GUILayout.Button(buttonText, GUILayout.Height(24)))
             {
-                GUI.backgroundColor = new Color(0.2f, 0.7f, 1f);
-                if (GUILayout.Button("▶ Başlat", GUILayout.Height(20), GUILayout.Width(60))) PlayLevel(lvl);
-                GUI.backgroundColor = Color.white;
+                onClick?.Invoke();
             }
-            if (GUILayout.Button("Seç", GUILayout.Height(18), GUILayout.Width(40))) { Selection.activeObject = lvl; EditorGUIUtility.PingObject(lvl); }
-            if (GUILayout.Button("Düzenle", GUILayout.Height(18), GUILayout.Width(55))) { Selection.activeObject = lvl; EditorGUIUtility.PingObject(lvl); }
-            GUILayout.EndHorizontal();
         }
 
-        private void DrawNexusResolveStatus<T>(NexusDI container, string label) where T : class
+        private void DrawSignalButton<TSignal>(string buttonText, TSignal signal) where TSignal : struct
         {
-            GUILayout.BeginHorizontal();
-            try
+            if (GUILayout.Button(buttonText, GUILayout.Height(24)))
             {
-                var instance = container.Resolve<T>();
-                if (instance != null) { GUILayout.Label("✔", _okBadgeStyle, GUILayout.Width(20)); GUILayout.Label(label, GUILayout.Width(280)); GUILayout.Label(instance.GetType().Name, EditorStyles.miniLabel); }
-                else { GUILayout.Label("✖", _errorBadgeStyle, GUILayout.Width(20)); GUILayout.Label(label, GUILayout.Width(280)); GUILayout.Label("null döndü", EditorStyles.miniLabel); }
+                DispatchSignal(signal);
             }
-            catch { GUILayout.Label("⚠", _errorBadgeStyle, GUILayout.Width(20)); GUILayout.Label(label, GUILayout.Width(280)); GUILayout.Label("kayıtlı değil", EditorStyles.miniLabel); }
-            GUILayout.EndHorizontal();
+        }
+
+        private void DrawDiagnosticRow(string name, bool isOk, System.Action fixAction)
+        {
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(name, GUILayout.Width(200));
+            EditorGUILayout.LabelField(isOk ? "✔ Tamam" : "❌ Eksik", isOk ? _okBadgeStyle : _errorBadgeStyle, GUILayout.Width(90));
+            if (!isOk && fixAction != null)
+            {
+                if (GUILayout.Button("Düzenle", GUILayout.Width(70)))
+                {
+                    fixAction.Invoke();
+                }
+            }
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private void DrawDiagnosticRow(string name, bool isOk, string okText = "Tamam", string errText = "Eksik")
+        {
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(name, GUILayout.Width(200));
+            EditorGUILayout.LabelField(isOk ? $"✔ {okText}" : $"❌ {errText}", isOk ? _okBadgeStyle : _errorBadgeStyle);
+            EditorGUILayout.EndHorizontal();
         }
 
         private void SetVehicleStyle(VehicleStyle style)
@@ -550,26 +610,6 @@ namespace PixelFlow.Editor
                     PlayerPrefs.SetInt("VehicleStyle", (int)style);
             }
             Debug.Log($"[PixelFlow] Araç stili değiştirildi: {style}");
-        }
-
-        // ─── Stil Başlatma ───
-
-        private void InitStyles()
-        {
-            if (_headerStyle != null) return;
-
-            _headerStyle = new GUIStyle(EditorStyles.boldLabel) { fontSize = 16, alignment = TextAnchor.MiddleCenter };
-            _headerStyle.normal.textColor = EditorGUIUtility.isProSkin ? new Color(0.3f, 0.7f, 1f) : new Color(0.05f, 0.25f, 0.5f);
-
-            _sectionHeaderStyle = new GUIStyle(EditorStyles.boldLabel) { fontSize = 13 };
-            _sectionHeaderStyle.normal.textColor = EditorGUIUtility.isProSkin ? new Color(0.6f, 0.85f, 1f) : new Color(0.1f, 0.35f, 0.6f);
-
-            _cardStyle = new GUIStyle(EditorStyles.helpBox) { padding = new RectOffset(10, 10, 8, 8) };
-            _okBadgeStyle = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(0.12f, 0.65f, 0.22f) }, fontStyle = FontStyle.Bold };
-            _warnBadgeStyle = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(0.9f, 0.6f, 0.1f) }, fontStyle = FontStyle.Bold };
-            _errorBadgeStyle = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(0.85f, 0.2f, 0.18f) }, fontStyle = FontStyle.Bold };
-            _titleBannerStyle = new GUIStyle(EditorStyles.helpBox) { padding = new RectOffset(12, 12, 8, 8) };
-            _miniInfoStyle = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleCenter };
         }
     }
 }

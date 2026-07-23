@@ -3,308 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixel Flow - Design System Overview</title>
+    <title>Color Jam 3D - Garage & Main Hub (v6.0.0)</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0c12; color: #e8eaf0; line-height: 1.6; }
-        .container { max-width: 1400px; margin: 0 auto; padding: 40px 24px; }
-        header { text-align: center; margin-bottom: 48px; padding-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-        h1 { font-size: 2.5rem; font-weight: 700; background: linear-gradient(135deg, #ff5e8c 0%, #6c5ce7 50%, #00d4ff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 12px; }
-        .subtitle { color: #8a8f9e; font-size: 1.1rem; }
-        .screen-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px; }
-        .screen-card { background: linear-gradient(145deg, rgba(20,22,32,0.9) 0%, rgba(12,14,22,0.95) 100%); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
-        .screen-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -12px rgba(108, 92, 231, 0.25); border-color: rgba(108, 92, 231, 0.3); }
-        .screen-preview { aspect-ratio: 9 / 16; background: #0d0f16; position: relative; overflow: hidden; }
-        .screen-preview::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 20%, rgba(108, 92, 231, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(0, 212, 255, 0.1) 0%, transparent 50%); }
-        .screen-info { padding: 20px 24px 24px; }
-        .screen-title { font-size: 1.15rem; font-weight: 600; margin-bottom: 8px; color: #fff; }
-        .screen-desc { color: #8a8f9e; font-size: 0.9rem; margin-bottom: 16px; }
-        .tags { display: flex; flex-wrap: wrap; gap: 6px; }
-        .tag { font-size: 0.7rem; padding: 4px 10px; border-radius: 100px; background: rgba(108, 92, 231, 0.15); color: #b8b0ff; border: 1px solid rgba(108, 92, 231, 0.2); text-transform: uppercase; letter-spacing: 0.04em; }
-        .tag.accent { background: rgba(0, 212, 255, 0.15); color: #80f0ff; border-color: rgba(0, 212, 255, 0.2); }
-        .tag.warning { background: rgba(255, 94, 140, 0.15); color: #ffb0c8; border-color: rgba(255, 94, 140, 0.2); }
-        .design-tokens { margin-top: 60px; padding-top: 40px; border-top: 1px solid rgba(255,255,255,0.08); }
-        .token-section { margin-bottom: 40px; }
-        .token-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: #b8b0ff; text-transform: uppercase; letter-spacing: 0.08em; }
-        .color-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
-        .color-swatch { border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); }
-        .color-preview { height: 80px; }
-        .color-info { padding: 12px; background: rgba(255,255,255,0.03); }
-        .color-name { font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; }
-        .color-hex { font-size: 0.7rem; color: #8a8f9e; font-family: monospace; }
+        body { font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #E2E8F0; color: #1E293B; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
+        .device-frame { width: 100%; max-width: 390px; aspect-ratio: 9 / 19.5; background: #F8FAFC; border-radius: 40px; box-shadow: 0 0 0 10px #CBD5E1, 0 30px 60px -15px rgba(15,23,42,0.25); position: relative; overflow: hidden; }
+        .screen { width: 100%; height: 100%; position: relative; overflow: hidden; background: linear-gradient(180deg, #EFF6FF 0%, #F1F5F9 100%); display: flex; flex-direction: column; justify-content: space-between; padding: 40px 20px 24px; }
+
+        /* Header */
+        .header { display: flex; justify-content: space-between; align-items: center; }
+        .title { font-size: 1.5rem; font-weight: 900; color: #1E3A8A; letter-spacing: -0.02em; }
+        .coin-pill { background: #FEF3C7; border: 2px solid #FDE047; padding: 6px 14px; border-radius: 100px; font-weight: 800; color: #B45309; font-size: 0.9rem; }
+
+        /* Vehicle Garage Showcase Card */
+        .garage-card { background: #FFFFFF; border-radius: 28px; padding: 20px; box-shadow: 0 12px 30px rgba(0,0,0,0.06); border: 2px solid #E2E8F0; text-align: center; margin: 20px 0; }
+        .vehicle-preview { width: 100%; height: 140px; background: radial-gradient(circle, #E0F2FE 0%, #BAE6FD 100%); border-radius: 20px; display: flex; justify-content: center; align-items: center; font-size: 64px; margin-bottom: 12px; }
+        .vehicle-name { font-size: 1.2rem; font-weight: 800; color: #0F172A; }
+        .vehicle-type { font-size: 0.75rem; font-weight: 700; color: #64748B; text-transform: uppercase; margin-bottom: 12px; }
+        .skin-select-btn { width: 100%; padding: 12px; border-radius: 16px; background: #3B82F6; color: #FFF; font-weight: 800; border: none; cursor: pointer; }
+
+        /* Play Button */
+        .play-btn { width: 100%; padding: 18px; border-radius: 24px; background: linear-gradient(135deg, #10B981, #059669); color: #FFF; font-size: 1.3rem; font-weight: 900; border: none; box-shadow: 0 10px 25px rgba(16,185,129,0.35); cursor: pointer; text-shadow: 0 2px 4px rgba(0,0,0,0.15); }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Pixel Flow Design System</h1>
-            <p class="subtitle">Production-grade UI specification — Bento-glass aesthetic, dark-first, color-blind safe</p>
-        </header>
-
-        <section class="design-tokens">
-            <div class="token-section">
-                <h2 class="token-title">Color Palette — GDD §3.2 (Color-Blind Safe)</h2>
-                <div class="color-grid">
-                    <div class="color-swatch">
-                        <div class="color-preview" style="background: #00d4ff;"></div>
-                        <div class="color-info">
-                            <div class="color-name">Blue — Circle</div>
-                            <div class="color-hex">#00D4FF</div>
-                        </div>
-                    </div>
-                    <div class="color-swatch">
-                        <div class="color-preview" style="background: #ff3d7f;"></div>
-                        <div class="color-info">
-                            <div class="color-name">Red — Triangle</div>
-                            <div class="color-hex">#FF3D7F</div>
-                        </div>
-                    </div>
-                    <div class="color-swatch">
-                        <div class="color-preview" style="background: #ffd93d;"></div>
-                        <div class="color-info">
-                            <div class="color-name">Yellow — Square</div>
-                            <div class="color-hex">#FFD93D</div>
-                        </div>
-                    </div>
-                    <div class="color-swatch">
-                        <div class="color-preview" style="background: #6bcb77;"></div>
-                        <div class="color-info">
-                            <div class="color-name">Green — Diamond</div>
-                            <div class="color-hex">#6BCB77</div>
-                        </div>
-                    </div>
-                    <div class="color-swatch">
-                        <div class="color-preview" style="background: #b36bff;"></div>
-                        <div class="color-info">
-                            <div class="color-name">Purple — Star</div>
-                            <div class="color-hex">#B36BFF</div>
-                        </div>
-                    </div>
-                    <div class="color-swatch">
-                        <div class="color-preview" style="background: #0a0c12;"></div>
-                        <div class="color-info">
-                            <div class="color-name">Surface Dark</div>
-                            <div class="color-hex">#0A0C12</div>
-                        </div>
-                    </div>
-                    <div class="color-swatch">
-                        <div class="color-preview" style="background: #141620;"></div>
-                        <div class="color-info">
-                            <div class="color-name">Card / Bento</div>
-                            <div class="color-hex">#141620</div>
-                        </div>
-                    </div>
-                    <div class="color-swatch">
-                        <div class="color-preview" style="background: #1e2030;"></div>
-                        <div class="color-info">
-                            <div class="color-name">Elevated Card</div>
-                            <div class="color-hex">#1E2030</div>
-                        </div>
-                    </div>
-                </div>
+    <div class="device-frame">
+        <div class="screen">
+            <div class="header">
+                <div class="title">Color Jam 3D</div>
+                <div class="coin-pill">💰 1,450</div>
             </div>
 
-            <div class="token-section">
-                <h2 class="token-title">Semantic Colors</h2>
-                <div class="color-grid">
-                    <div class="color-swatch">
-                        <div class="color-preview" style="background: linear-gradient(135deg, #6c5ce7 0%, #8b7dff 100%);"></div>
-                        <div class="color-info">
-                            <div class="color-name">Primary Brand</div>
-                            <div class="color-hex">#6C5CE7 → #8B7DFF</div>
-                        </div>
-                    </div>
-                    <div class="color-swatch">
-                        <div class="color-preview" style="background: linear-gradient(135deg, #00d4ff 0%, #4de0ff 100%);"></div>
-                        <div class="color-info">
-                            <div class="color-name">Secondary / Info</div>
-                            <div class="color-hex">#00D4FF → #4DE0FF</div>
-                        </div>
-                    </div>
-                    <div class="color-swatch">
-                        <div class="color-preview" style="background: linear-gradient(135deg, #ff5e8c 0%, #ff8fab 100%);"></div>
-                        <div class="color-info">
-                            <div class="color-name">Danger / Rejection</div>
-                            <div class="color-hex">#FF5E8C → #FF8FAB</div>
-                        </div>
-                    </div>
-                    <div class="color-swatch">
-                        <div class="color-preview" style="background: linear-gradient(135deg, #6bcb77 0%, #8de090 100%);"></div>
-                        <div class="color-info">
-                            <div class="color-name">Success / Complete</div>
-                            <div class="color-hex">#6BCB77 → #8DE090</div>
-                        </div>
-                    </div>
-                    <div class="color-swatch">
-                        <div class="color-preview" style="background: linear-gradient(135deg, #ffd93d 0%, #ffe67a 100%);"></div>
-                        <div class="color-info">
-                            <div class="color-name">Warning / Pending</div>
-                            <div class="color-hex">#FFD93D → #FFE67A</div>
-                        </div>
-                    </div>
-                    <div class="color-swatch">
-                        <div class="color-preview" style="background: linear-gradient(135deg, #b36bff 0%, #d09fff 100%);"></div>
-                        <div class="color-info">
-                            <div class="color-name">Premium / VIP</div>
-                            <div class="color-hex">#B36BFF → #D09FFF</div>
-                        </div>
-                    </div>
-                </div>
+            <!-- Vehicle Garage Showcase -->
+            <div class="garage-card">
+                <div class="vehicle-preview">🍦</div>
+                <div class="vehicle-name">Dondurma Arabası</div>
+                <div class="vehicle-type">Kuşanılan Sarı Araç</div>
+                <button class="skin-select-btn">Garajı Aç (12/24 Skin)</button>
             </div>
-        </section>
 
-        <section>
-            <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 24px; color: #fff;">Screen Compositions</h2>
-            <div class="screen-grid">
-                <article class="screen-card">
-                    <div class="screen-preview" style="background: linear-gradient(180deg, #0a0c12 0%, #141620 100%);"></div>
-                    <div class="screen-info">
-                        <h3 class="screen-title">1. Splash / Boot</h3>
-                        <p class="screen-desc">Animated logo reveal with phase-based progress ring. Theme loads from PlayerPrefs.</p>
-                        <div class="tags"><span class="tag">Entry Point</span><span class="tag">Animated</span><span class="tag accent">Theme Aware</span></div>
-                    </div>
-                </article>
-                <article class="screen-card">
-                    <div class="screen-preview" style="background: linear-gradient(180deg, #0a0c12 0%, #141620 100%);"></div>
-                    <div class="screen-info">
-                        <h3 class="screen-title">2. Main Menu</h3>
-                        <p class="screen-desc">Bento-grid layout: Continue, New Game, Daily Crisis, Settings. Live theme preview.</p>
-                        <div class="tags"><span class="tag">Navigation Hub</span><span class="tag">Bento Grid</span><span class="tag accent">Live Preview</span></div>
-                    </div>
-                </article>
-                <article class="screen-card">
-                    <div class="screen-preview" style="background: linear-gradient(180deg, #0a0c12 0%, #141620 100%);"></div>
-                    <div class="screen-info">
-                        <h3 class="screen-title">3. Level Select (Map)</h3>
-                        <p class="screen-desc">Horizontal scroll with phase separators. Star indicators, lock states, difficulty badges.</p>
-                        <div class="tags"><span class="tag">Progression</span><span class="tag">Scrollable</span><span class="tag warning">Phase Gated</span></div>
-                    </div>
-                </article>
-                <article class="screen-card">
-                    <div class="screen-preview" style="background: linear-gradient(180deg, #0a0c12 0%, #141620 100%);"></div>
-                    <div class="screen-info">
-                        <h3 class="screen-title">4. Gameplay HUD</h3>
-                        <p class="screen-desc">Minimal overlay: color palette (bottom), viaduct counter, timer, undo/redo, crisis panel.</p>
-                        <div class="tags"><span class="tag">Core Loop</span><span class="tag">Gesture Driven</span><span class="tag warning">Crisis Modal</span></div>
-                    </div>
-                </article>
-                <article class="screen-card">
-                    <div class="screen-preview" style="background: linear-gradient(180deg, #0a0c12 0%, #141620 100%);"></div>
-                    <div class="screen-info">
-                        <h3 class="screen-title">5. Crisis Panel</h3>
-                        <p class="screen-desc">Modal with animated crash visualization. Viaduct (cost) vs Undo (penalty) with haptic feedback.</p>
-                        <div class="tags"><span class="tag">Modal</span><span class="tag">High Stakes</span><span class="tag warning">Haptic</span></div>
-                    </div>
-                </article>
-                <article class="screen-card">
-                    <div class="screen-preview" style="background: linear-gradient(180deg, #0a0c12 0%, #141620 100%);"></div>
-                    <div class="screen-info">
-                        <h3 class="screen-title">6. Level Victory</h3>
-                        <p class="screen-desc">Star animation cascade, flow score breakdown, next level CTA, share/replay options.</p>
-                        <div class="tags"><span class="tag">Reward</span><span class="tag">Animated</span><span class="tag accent">Social Ready</span></div>
-                    </div>
-                </article>
-                <article class="screen-card">
-                    <div class="screen-preview" style="background: linear-gradient(180deg, #0a0c12 0%, #141620 100%);"></div>
-                    <div class="screen-info">
-                        <h3 class="screen-title">7. Settings</h3>
-                        <div class="tags"><span class="tag">Theme Toggle</span><span class="tag">Audio Sliders</span><span class="tag accent">Color-Blind Mode</span><span class="tag">Haptics</span><span class="tag">Language</span><span class="tag">Data Reset</span></div>
-                    </div>
-                </article>
-                <article class="screen-card">
-                    <div class="screen-preview" style="background: linear-gradient(180deg, #0a0c12 0%, #141620 100%);"></div>
-                    <div class="screen-info">
-                        <h3 class="screen-title">8. Daily Crisis</h3>
-                        <p class="screen-desc">Procedural level with difficulty badge, leaderboard, streak counter, reward preview.</p>
-                        <div class="tags"><span class="tag">Procedural</span><span class="tag">Daily Reset</span><span class="tag accent">Leaderboard</span></div>
-                    </div>
-                </article>
-            </div>
-        </section>
-
-        <section style="margin-top: 60px; padding-top: 40px; border-top: 1px solid rgba(255,255,255,0.08);">
-            <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 24px; color: #fff;">Bento-Glass Component System</h2>
-            <div class="screen-grid">
-                <article class="screen-card">
-                    <div class="screen-preview" style="background: rgba(30,32,48,0.8);"></div>
-                    <div class="screen-info">
-                        <h3 class="screen-title">Bento Card</h3>
-                        <p class="screen-desc">Rounded-xl, glassmorphism background, subtle border glow on hover/focus. 12px grid alignment.</p>
-                        <div class="tags"><span class="tag">Base Unit</span><span class="tag accent">Glassmorphism</span><span class="tag">12px Grid</span></div>
-                    </div>
-                </article>
-                <article class="screen-card">
-                    <div class="screen-preview" style="background: rgba(30,32,48,0.8);"></div>
-                    <div class="screen-info">
-                        <h3 class="screen-title">Color Pill</h3>
-                        <p class="screen-desc">Circular (36px) with shape icon + color ring. Pressed state scales to 0.92. Long-press = color info tooltip.</p>
-                        <div class="tags"><span class="tag">Input</span><span class="tag">Haptic</span><span class="tag warning">Tooltip</span></div>
-                    </div>
-                </article>
-                <article class="screen-card">
-                    <div class="screen-preview" style="background: rgba(30,32,48,0.8);"></div>
-                    <div class="screen-info">
-                        <h3 class="screen-title">Viaduct Counter</h3>
-                        <p class="screen-desc">Icon + count badge. Pulse animation when < 2 remaining. Gradient fill based on availability.</p>
-                        <div class="tags"><span class="tag">Resource</span><span class="tag">Animated</span><span class="tag warning">Low-State Pulse</span></div>
-                    </div>
-                </article>
-                <article class="screen-card">
-                    <div class="screen-preview" style="background: rgba(30,32,48,0.8);"></div>
-                    <div class="screen-info">
-                        <h3 class="screen-title">Progress Ring</h3>
-                        <p class="screen-desc">Conic gradient stroke. Used for simulation timer, splash loading, daily streak. 48px diameter.</p>
-                        <div class="tags"><span class="tag">Feedback</span><span class="tag">SVG/Canvas</span><span class="tag accent">Configurable</span></div>
-                    </div>
-                </article>
-                <article class="screen-card">
-                    <div class="screen-preview" style="background: rgba(30,32,48,0.8);"></div>
-                    <div class="screen-info">
-                        <h3 class="screen-title">Crisis Button</h3>
-                        <p class="screen-desc">Wide CTA with icon + label. Viaduct=primary gradient, Undo=outline danger. 56px height, 16px radius.</p>
-                        <div class="tags"><span class="tag">CTA</span><span class="tag">High Contrast</span><span class="tag warning">Destructive Variant</span></div>
-                    </div>
-                </article>
-                <article class="screen-card">
-                    <div class="screen-preview" style="background: rgba(30,32,48,0.8);"></div>
-                    <div class="screen-info">
-                        <h3 class="screen-title">Star Badge</h3>
-                        <p class="screen-desc">Three states: empty, filled, animating. 24px. Staggered pop-in on victory screen (120ms delay each).</p>
-                        <div class="tags"><span class="tag">Reward</span><span class="tag">Staggered</span><span class="tag accent">Spring Physics</span></div>
-                    </div>
-                </article>
-            </div>
-        </section>
-
-        <section style="margin-top: 60px; padding-top: 40px; border-top: 1px solid rgba(255,255,255,0.08);">
-            <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 24px; color: #fff;">Motion & Interaction Spec</h2>
-            <div class="screen-grid">
-                <article class="screen-card">
-                    <div class="screen-preview"></div>
-                    <div class="screen-info">
-                        <h3 class="screen-title">Easing Curves</h3>
-                        <p class="screen-desc">Standard: cubic-bezier(0.2, 0, 0, 1) — 200ms. Spring: stiffness 300, damping 30 — for pop-ins. Sharp: cubic-bezier(0.4, 0, 1, 1) — 150ms for micro-interactions.</p>
-                        <div class="tags"><span class="tag">Motion</span><span class="tag">Tokens</span></div>
-                    </div>
-                </article>
-                <article class="screen-card">
-                    <div class="screen-preview"></div>
-                    <div class="screen-info">
-                        <h3 class="screen-title">Gesture Responses</h3>
-                        <p class="screen-desc">Tap: 80ms scale to 0.95 + haptic light. Drag: follow finger, path preview line. Release: snap to grid, 120ms settle. Long-press: 400ms → tooltip + haptic medium.</p>
-                        <div class="tags"><span class="tag">Touch</span><span class="tag">Haptic</span></div>
-                    </div>
-                </article>
-                <article class="screen-card">
-                    <div class="screen-preview"></div>
-                    <div class="screen-info">
-                        <h3 class="screen-title">Screen Transitions</h3>
-                        <p class="screen-desc">Push (horizontal) for level flow. Modal fade + scale (0.96→1) for crisis/victory. Cross-fade (160ms) for settings/theme change. No transitions during simulation.</p>
-                        <div class="tags"><span class="tag">Navigation</span><span class="tag">Performance</span></div>
-                    </div>
-                </article>
-            </div>
-        </section>
+            <!-- Play Button -->
+            <button class="play-btn">OYUNA BAŞLA (LEVEL 15)</button>
+        </div>
     </div>
 </body>
 </html>

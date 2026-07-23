@@ -3,117 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixel Flow - Gameplay HUD</title>
+    <title>Color Jam 3D - Gameplay HUD (v6.0.0)</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0c12; color: #e8eaf0; min-height: 100vh; display: flex; flex-direction: column; }
-        .device-frame { width: 100%; max-width: 390px; aspect-ratio: 9 / 19.5; margin: 0 auto; background: #1a1a2e; border-radius: 36px; box-shadow: 0 0 0 8px #1a1a2e, 0 40px 80px -20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05); position: relative; overflow: hidden; }
-        .device-frame::before { content: ''; position: absolute; top: 16px; left: 50%; transform: translateX(-50%); width: 140px; height: 6px; background: #2a2a3e; border-radius: 3px; z-index: 10; }
-        .screen { width: 100%; height: 100%; position: relative; overflow: hidden; background: #0a0c12; }
+        body { font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #E2E8F0; color: #2D3748; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
+        .device-frame { width: 100%; max-width: 390px; aspect-ratio: 9 / 19.5; background: #F8FAFC; border-radius: 40px; box-shadow: 0 0 0 10px #CBD5E1, 0 30px 60px -15px rgba(15,23,42,0.25); position: relative; overflow: hidden; }
+        .device-frame::before { content: ''; position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: 130px; height: 5px; background: #94A3B8; border-radius: 3px; z-index: 20; }
+        .screen { width: 100%; height: 100%; position: relative; overflow: hidden; background: #F1F5F9; }
         
-        /* Grid Background */
+        /* Bright Toy Grid Background */
         .grid-bg { position: absolute; inset: 0; background-image: 
-            linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-            background-size: 40px 40px; pointer-events: none; }
+            linear-gradient(rgba(148,163,184,0.12) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(148,163,184,0.12) 1px, transparent 1px);
+            background-size: 44px 44px; pointer-events: none; }
         
         /* Top HUD Bar */
-        .top-hud { position: absolute; top: 0; left: 0; right: 0; padding: 16px 20px 12px; display: flex; align-items: center; justify-content: space-between; z-index: 5; background: linear-gradient(180deg, rgba(10,12,18,0.95) 0%, transparent 100%); }
-        .hud-left { display: flex; align-items: center; gap: 16px; }
-        .hud-right { display: flex; align-items: center; gap: 12px; }
+        .top-hud { position: absolute; top: 30px; left: 0; right: 0; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; z-index: 10; background: linear-gradient(180deg, rgba(248,250,252,0.95) 0%, rgba(248,250,252,0) 100%); }
         
         /* Level Badge */
-        .level-badge { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 10px; background: rgba(108, 92, 231, 0.15); border: 1px solid rgba(108, 92, 231, 0.3); border-radius: 100px; backdrop-filter: blur(10px); }
-        .level-icon { width: 20px; height: 20px; background: linear-gradient(135deg, #6c5ce7, #00d4ff); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #0a0c12; font-weight: 700; }
-        .level-text { font-size: 0.75rem; font-weight: 600; color: #e8eaf0; }
-        .level-num { color: #b8b0ff; font-variant-numeric: tabular-nums; }
+        .level-badge { display: flex; align-items: center; gap: 6px; padding: 6px 14px; background: #FFFFFF; border: 2px solid #E2E8F0; border-radius: 100px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); font-weight: 800; font-size: 0.85rem; color: #475569; }
+        .level-num { color: #6366F1; }
         
-        /* Viaduct Counter */
-        .viaduct-counter { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: rgba(255, 94, 140, 0.1); border: 1px solid rgba(255, 94, 140, 0.25); border-radius: 100px; backdrop-filter: blur(10px); }
-        .viaduct-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
-        .viaduct-icon svg { width: 18px; height: 18px; stroke: #ff5e8c; stroke-width: 2; fill: none; }
-        .viaduct-count { font-size: 0.85rem; font-weight: 700; color: #ff5e8c; font-variant-numeric: tabular-nums; }
+        /* Gold Coin Counter */
+        .coin-counter { display: flex; align-items: center; gap: 6px; padding: 6px 14px; background: #FEF3C7; border: 2px solid #FDE047; border-radius: 100px; box-shadow: 0 4px 12px rgba(234,179,8,0.2); font-weight: 800; color: #B45309; font-size: 0.9rem; }
+        .coin-icon { width: 20px; height: 20px; background: #F59E0B; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #FFF; font-size: 11px; font-weight: 900; }
         
-        /* Flow Score */
-        .flow-score { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: rgba(0, 212, 255, 0.12); border: 1px solid rgba(0, 212, 255, 0.25); border-radius: 100px; backdrop-filter: blur(10px); }
-        .flow-label { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #80f0ff; }
-        .flow-value { font-size: 1rem; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
-        .flow-target { font-size: 0.75rem; color: rgba(255,255,255,0.4); font-variant-numeric: tabular-nums; }
-        
-        /* Timer */
-        .sim-timer { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 100px; backdrop-filter: blur(10px); font-family: monospace; }
-        .timer-icon { width: 16px; height: 16px; stroke: #8a8f9e; }
-        .timer-value { font-size: 0.8rem; font-weight: 600; color: #e8eaf0; font-variant-numeric: tabular-nums; }
-        .timer-value.warning { color: #ff5e8c; animation: pulse 1s ease-in-out infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        
-        /* Pause Button */
-        .pause-btn { width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(10px); }
-        .pause-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.15); }
-        .pause-btn svg { width: 20px; height: 20px; stroke: #e8eaf0; stroke-width: 2.5; }
-        
-        /* Grid Area */
-        .grid-area { position: absolute; top: 120px; bottom: 160px; left: 16px; right: 16px; display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(7, 1fr); gap: 2px; z-index: 2; }
-        .cell { position: relative; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 4px; transition: all 0.15s ease; }
-        .cell.node { background: rgba(255,255,255,0.05); }
-        .cell.path { background: rgba(255,255,255,0.03); }
-        .cell.bridge { background: rgba(108, 92, 231, 0.2); border-color: rgba(108, 92, 231, 0.4); }
-        .cell.bridge::after { content: ''; position: absolute; inset: 2px; border: 1px dashed rgba(108, 92, 231, 0.5); border-radius: 2px; pointer-events: none; }
-        
-        /* Color Dots on Cells */
-        .color-dot { position: absolute; inset: 4px; border-radius: 3px; opacity: 0.9; }
-        .color-dot.multi { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); } /* diamond for multi */
-        
-        /* Path Lines (SVG overlay) */
-        .path-layer { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
-        
-        /* Bottom HUD */
-        .bottom-hud { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 20px 24px; display: flex; align-items: center; justify-content: space-between; z-index: 5; background: linear-gradient(0deg, rgba(10,12,18,0.95) 0%, transparent 100%); }
-        
-        /* Undo/Redo Buttons */
-        .action-group { display: flex; gap: 8px; }
-        .action-btn { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(10px); }
-        .action-btn.undo { background: rgba(255, 94, 140, 0.15); border: 1px solid rgba(255, 94, 140, 0.3); color: #ff5e8c; }
-        .action-btn.redo { background: rgba(0, 212, 255, 0.15); border: 1px solid rgba(0, 212, 255, 0.3); color: #00d4ff; }
-        .action-btn:hover { transform: scale(1.05); box-shadow: 0 8px 24px -8px currentColor; }
-        .action-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
-        .action-btn svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 2.5; fill: none; }
-        
-        /* Color Palette */
-        .color-palette { display: flex; gap: 6px; padding: 4px; }
-        .color-btn { width: 36px; height: 36px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.08); cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden; }
-        .color-btn::before { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity 0.2s; }
-        .color-btn.active { border-color: #fff; transform: scale(1.1); box-shadow: 0 0 20px -4px currentColor; }
-        .color-btn.locked { opacity: 0.3; cursor: not-allowed; }
-        .color-btn .shape-icon { position: absolute; inset: 6px; opacity: 0.9; }
-        
-        /* Start Simulation Button */
-        .start-sim-btn { flex: 1; max-width: 160px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #6c5ce7 0%, #00d4ff 100%); border: none; color: #0a0c12; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.02em; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease; box-shadow: 0 8px 24px -8px rgba(108, 92, 231, 0.5); }
-        .start-sim-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px -8px rgba(108, 92, 231, 0.6); }
-        .start-sim-btn:active { transform: translateY(0); }
-        .start-sim-btn svg { width: 18px; height: 18px; fill: currentColor; }
-        
-        /* Crisis Panel (Modal) */
-        .crisis-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 24px; opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.2, 0, 0, 1); }
-        .crisis-overlay.active { opacity: 1; visibility: visible; }
-        .crisis-panel { width: 100%; max-width: 320px; background: linear-gradient(145deg, rgba(20,22,32,0.98) 0%, rgba(12,14,22,0.99) 100%); border: 1px solid rgba(255, 94, 140, 0.3); border-radius: 20px; padding: 24px; box-shadow: 0 24px 48px -12px rgba(255, 94, 140, 0.3); transform: scale(0.9) translateY(20px); transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1); }
-        .crisis-overlay.active .crisis-panel { transform: scale(1) translateY(0); }
-        .crisis-header { text-align: center; margin-bottom: 20px; }
-        .crisis-icon { width: 56px; height: 56px; margin: 0 auto 12px; background: linear-gradient(135deg, rgba(255, 94, 140, 0.2), rgba(255, 94, 140, 0.05)); border-radius: 16px; display: flex; align-items: center; justify-content: center; animation: crisisPulse 1.5s ease-in-out infinite; }
-        @keyframes crisisPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 94, 140, 0.4); } 50% { box-shadow: 0 0 0 12px rgba(255, 94, 140, 0); } }
-        .crisis-icon svg { width: 28px; height: 28px; stroke: #ff5e8c; stroke-width: 2.5; }
-        .crisis-title { font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
-        .crisis-desc { font-size: 0.85rem; color: #8a8f9e; }
-        .crisis-viaducts { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 20px; padding: 12px; background: rgba(255, 94, 140, 0.1); border-radius: 12px; border: 1px solid rgba(255, 94, 140, 0.2); }
-        .crisis-viaducts-label { font-size: 0.75rem; font-weight: 600; color: #ffb0c8; text-transform: uppercase; letter-spacing: 0.06em; }
-        .crisis-viaducts-count { font-size: 1.5rem; font-weight: 800; color: #ff5e8c; font-variant-numeric: tabular-nums; }
-        .crisis-actions { display: flex; flex-direction: column; gap: 10px; }
-        .crisis-btn { height: 52px; border-radius: 14px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .crisis-btn.viaduct { background: linear-gradient(135deg, #ff5e8c 0%, #ff8aad 100%); border: none; color: #0a0c12; box-shadow: 0 8px 24px -8px rgba(255, 94, 140, 0.5); }
-        .crisis-btn.viaduct:hover { transform: translateY(-2px); box-shadow: 0 12px 32px -8px rgba(255, 94, 140, 0.6); }
-        .crisis-btn.undo { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #e8eaf0; }
-        .crisis-btn.undo:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
-        .crisis-btn svg { width: 20px; height: 20px; }
+        /* Pause & Settings Button */
+        .icon-btn { width: 38px; height: 38px; border-radius: 12px; background: #FFFFFF; border: 2px solid #E2E8F0; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.05); font-weight: 700; color: #64748B; }
+
+        /* Power-Up Bottom Bar */
+        .powerup-bar { position: absolute; bottom: 24px; left: 16px; right: 16px; display: flex; justify-content: space-around; z-index: 10; background: #FFFFFF; padding: 10px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 2px solid #F1F5F9; }
+        .powerup-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; border: none; background: none; cursor: pointer; }
+        .powerup-icon { width: 44px; height: 44px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .powerup-rainbow { background: linear-gradient(135deg, #FF4757, #FFA502, #2ED573, #1E90FF); }
+        .powerup-clear { background: #38BDF8; color: #FFF; }
+        .powerup-viaduct { background: #8B5CF6; color: #FFF; }
+        .powerup-label { font-size: 0.65rem; font-weight: 700; color: #64748B; }
+
+        /* Bouncy Warning Toast */
+        .bouncy-toast { position: absolute; top: 90px; left: 50%; transform: translateX(-50%); background: #FF4757; color: #FFF; font-weight: 800; padding: 8px 16px; border-radius: 100px; font-size: 0.75rem; box-shadow: 0 8px 20px rgba(255,71,87,0.3); display: flex; align-items: center; gap: 6px; animation: bounce 1s infinite alternate; }
+        @keyframes bounce { from { transform: translate(-50%, 0); } to { transform: translate(-50%, -6px); } }
     </style>
 </head>
 <body>
@@ -122,214 +51,39 @@
             <div class="grid-bg"></div>
             
             <!-- Top HUD -->
-            <header class="top-hud">
-                <div class="hud-left">
-                    <div class="level-badge">
-                        <div class="level-icon">1</div>
-                        <span class="level-text">Level <span class="level-num">12</span></span>
-                    </div>
-                    <div class="viaduct-counter">
-                        <div class="viaduct-icon">
-                            <svg viewBox="0 0 24 24"><path d="M4 14h16M4 10h16M8 6v8M16 6v8"/></svg>
-                        </div>
-                        <span class="viaduct-count">2</span>
-                    </div>
+            <div class="top-hud">
+                <div class="level-badge">
+                    <span>LEVEL</span>
+                    <span class="level-num">15</span>
                 </div>
-                <div class="hud-right">
-                    <div class="flow-score">
-                        <span class="flow-label">Flow</span>
-                        <span class="flow-value">3</span>
-                        <span class="flow-target">/ 5</span>
-                    </div>
-                    <div class="sim-timer">
-                        <svg class="timer-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                        <span class="timer-value">45.2</span>
-                    </div>
-                    <button class="pause-btn" aria-label="Pause">
-                        <svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-                    </button>
+                <div class="coin-counter">
+                    <div class="coin-icon">💰</div>
+                    <span>1,450</span>
                 </div>
-            </header>
-
-            <!-- Grid Area -->
-            <div class="grid-area" id="gridArea"></div>
-
-            <!-- Path Lines Layer -->
-            <svg class="path-layer" id="pathLayer"></svg>
-
-            <!-- Bottom HUD -->
-            <footer class="bottom-hud">
-                <div class="action-group">
-                    <button class="action-btn undo" aria-label="Undo" disabled>
-                        <svg viewBox="0 0 24 24"><path d="M3 7v6h6M3 13a9 9 0 1 0 2.746-6.302"/></svg>
-                    </button>
-                    <button class="action-btn redo" aria-label="Redo" disabled>
-                        <svg viewBox="0 0 24 24"><path d="M21 7v6h-6M21 13a9 9 0 1 1-2.746-6.302"/></svg>
-                    </button>
-                </div>
-                
-                <div class="color-palette" id="colorPalette"></div>
-                
-                <button class="start-sim-btn" id="startSimBtn">
-                    <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21"/></svg>
-                    Simulate
-                </button>
-            </footer>
-        </div>
-    </div>
-
-    <!-- Crisis Modal -->
-    <div class="crisis-overlay" id="crisisOverlay">
-        <div class="crisis-panel">
-            <div class="crisis-header">
-                <div class="crisis-icon">
-                    <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                </div>
-                <h2 class="crisis-title">TRAFFIC CRISIS!</h2>
-                <p class="crisis-desc">Two paths collide. Place a viaduct to separate them.</p>
+                <div class="icon-btn">⏸️</div>
             </div>
-            <div class="crisis-viaducts">
-                <span class="crisis-viaducts-label">Viaducts Remaining</span>
-                <span class="crisis-viaducts-count">2</span>
+
+            <!-- Bouncy Collision Toast -->
+            <div class="bouncy-toast">
+                <span>🚗💨 Araçlar Zıpladı! Parmağınla Yolu Düzelt</span>
             </div>
-            <div class="crisis-actions">
-                <button class="crisis-btn viaduct">
-                    <svg viewBox="0 0 24 24"><path d="M4 14h16M4 10h16M8 6v8M16 6v8"/></svg>
-                    Place Viaduct
+
+            <!-- Bottom Power-Up Bar -->
+            <div class="powerup-bar">
+                <button class="powerup-btn">
+                    <div class="powerup-icon powerup-rainbow">🌈</div>
+                    <span class="powerup-label">Gökkuşağı</span>
                 </button>
-                <button class="crisis-btn undo">
-                    <svg viewBox="0 0 24 24"><path d="M3 7v6h6M3 13a9 9 0 1 0 2.746-6.302"/></svg>
-                    Undo / Cancel
+                <button class="powerup-btn">
+                    <div class="powerup-icon powerup-clear">⚡</div>
+                    <span class="powerup-label">Temizle</span>
+                </button>
+                <button class="powerup-btn">
+                    <div class="powerup-icon powerup-viaduct">🌉</div>
+                    <span class="powerup-label">Viyadük</span>
                 </button>
             </div>
         </div>
     </div>
-
-    <script>
-        // Generate 7x7 grid
-        const gridArea = document.getElementById('gridArea');
-        const pathLayer = document.getElementById('pathLayer');
-        
-        const gridSize = 7;
-        const cellSize = 40; // approximate
-        
-        // Sample level data
-        const nodes = [
-            {x: 0, y: 0, color: '#ff3d7f', shape: 'triangle'}, // Red - Home
-            {x: 6, y: 6, color: '#ff3d7f', shape: 'triangle'}, // Red - Office
-            {x: 0, y: 6, color: '#00d4ff', shape: 'circle'},   // Blue - Hospital
-            {x: 6, y: 0, color: '#00d4ff', shape: 'circle'},   // Blue - School
-            {x: 3, y: 0, color: '#ffd93d', shape: 'square'},   // Yellow - Mall
-            {x: 3, y: 6, color: '#ffd93d', shape: 'square'},   // Yellow - Park
-        ];
-        
-        const paths = [
-            {color: '#ff3d7f', points: [[0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0]]}, // Red horizontal
-            {color: '#00d4ff', points: [[0,6],[0,5],[0,4],[0,3],[0,2],[0,1],[0,0]]}, // Blue vertical
-            {color: '#ffd93d', points: [[3,0],[3,1],[3,2],[3,3],[3,4],[3,5],[3,6]]}, // Yellow vertical center
-        ];
-        
-        const bridges = [[3,3]]; // viaduct at center
-        
-        // Create grid cells
-        for (let y = 0; y < gridSize; y++) {
-            for (let x = 0; x < gridSize; x++) {
-                const cell = document.createElement('div');
-                cell.className = 'cell';
-                cell.style.gridColumn = x + 1;
-                cell.style.gridRow = y + 1;
-                
-                // Check if node
-                const node = nodes.find(n => n.x === x && n.y === y);
-                if (node) {
-                    cell.classList.add('node');
-                    const dot = document.createElement('div');
-                    dot.className = 'color-dot';
-                    dot.style.background = node.color;
-                    cell.appendChild(dot);
-                }
-                
-                // Check if bridge
-                if (bridges.some(b => b[0] === x && b[1] === y)) {
-                    cell.classList.add('bridge');
-                }
-                
-                // Check if path
-                const pathColors = paths.filter(p => p.points.some(pt => pt[0] === x && pt[1] === y));
-                if (pathColors.length > 0 && !node) {
-                    cell.classList.add('path');
-                    if (pathColors.length >= 2) {
-                        const dot = document.createElement('div');
-                        dot.className = 'color-dot multi';
-                        dot.style.background = `conic-gradient(${pathColors.map(p => p.color).join(', ')})`;
-                        cell.appendChild(dot);
-                    } else {
-                        const dot = document.createElement('div');
-                        dot.className = 'color-dot';
-                        dot.style.background = pathColors[0].color;
-                        cell.appendChild(dot);
-                    }
-                }
-                
-                gridArea.appendChild(cell);
-            }
-        }
-        
-        // Draw path lines
-        paths.forEach(path => {
-            const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-            const points = path.points.map(([x, y]) => {
-                const cellWidth = 100 / gridSize;
-                const cellHeight = 100 / gridSize;
-                return `${(x + 0.5) * cellWidth}% ${(y + 0.5) * cellHeight}%`;
-            }).join(' ');
-            polyline.setAttribute('points', points);
-            polyline.setAttribute('stroke', path.color);
-            polyline.setAttribute('stroke-width', '3');
-            polyline.setAttribute('fill', 'none');
-            polyline.setAttribute('stroke-linecap', 'round');
-            polyline.setAttribute('stroke-linejoin', 'round');
-            polyline.style.filter = 'drop-shadow(0 0 4px ' + path.color + ')';
-            pathLayer.appendChild(polyline);
-        });
-        
-        // Color palette
-        const palette = document.getElementById('colorPalette');
-        const colors = [
-            {color: '#ff3d7f', name: 'Red', shape: 'triangle'},
-            {color: '#6bcb77', name: 'Green', shape: 'diamond'},
-            {color: '#00d4ff', name: 'Blue', shape: 'circle'},
-            {color: '#ffd93d', name: 'Yellow', shape: 'square'},
-            {color: '#b36bff', name: 'Purple', shape: 'star'},
-        ];
-        
-        colors.forEach((c, i) => {
-            const btn = document.createElement('button');
-            btn.className = 'color-btn';
-            btn.style.color = c.color;
-            btn.style.borderColor = c.color;
-            btn.innerHTML = `
-                <svg class="shape-icon" viewBox="0 0 24 24" fill="currentColor">
-                    ${c.shape === 'circle' ? '<circle cx="12" cy="12" r="7"/>' : ''}
-                    ${c.shape === 'triangle' ? '<path d="M12 3L21 21H3Z"/>' : ''}
-                    ${c.shape === 'square' ? '<rect x="5" y="5" width="14" height="14" rx="2"/>' : ''}
-                    ${c.shape === 'diamond' ? '<path d="M12 3L21 12 12 21 3 12Z"/>' : ''}
-                    ${c.shape === 'star' ? '<path d="M12 2l1.5 5h5.2l-4.2 3 1.5 5.2L12 17.5 5.3 22.2l1.5-5.2L2 7h5.2z"/>' : ''}
-                </svg>
-            `;
-            palette.appendChild(btn);
-        });
-        
-        // Crisis modal demo - show after 3s
-        setTimeout(() => {
-            document.getElementById('crisisOverlay').classList.add('active');
-        }, 3000);
-        
-        document.getElementById('crisisOverlay').addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) {
-                e.currentTarget.classList.remove('active');
-            }
-        });
-    </script>
 </body>
 </html>

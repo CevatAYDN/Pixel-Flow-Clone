@@ -144,6 +144,7 @@ namespace PixelFlow.PlayMode.Tests
                 builder.BindReactiveModel<ISettingsModel, SettingsModel>();
                 builder.BindReactiveModel<ISoundModel, SoundModel>();
                 builder.BindReactiveModel<ITutorialModel, TutorialModel>();
+                builder.BindReactiveModel<IInventoryModel, InventoryModel>();
                 builder.Bind<ILevelProgressionService, LevelProgressionService>();
                 builder.BindService<ILevelLoaderService, LevelLoaderService>();
 
@@ -434,10 +435,27 @@ namespace PixelFlow.PlayMode.Tests
         }
 
         // ──────────────────────────────────────────────
-        // Test 10: City Economy passive tax generation and upgrades
+        // Test 11: InventoryModel PlayMode Integration
         // ──────────────────────────────────────────────
-        // REMOVED: City economy system removed from game
-        // This test was checking passive tax generation and upgrade purchases,
-        // which no longer exist in the puzzle-focused version.
+
+        [Test]
+        public void InventoryModel_PlayModeIntegration_AddsCoinsAndUnlocksSkins()
+        {
+            using var ctx = CreateGameContext();
+            var inventory = ctx.GetModel<IInventoryModel>();
+
+            Assert.AreEqual(0, inventory.Coins);
+            inventory.AddCoins(250);
+            Assert.AreEqual(250, inventory.Coins);
+
+            Assert.IsTrue(inventory.TrySpendCoins(100));
+            Assert.AreEqual(150, inventory.Coins);
+
+            inventory.UnlockSkin("skin_ice_cream");
+            Assert.IsTrue(inventory.IsSkinUnlocked("skin_ice_cream"));
+
+            inventory.EquipSkin(ColorType.Yellow, "skin_ice_cream");
+            Assert.AreEqual("skin_ice_cream", inventory.GetEquippedSkin(ColorType.Yellow));
+        }
     }
 }
