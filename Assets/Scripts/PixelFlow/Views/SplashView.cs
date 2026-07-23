@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.UI;
 using System.Collections;
 using Nexus.Core;
 
@@ -8,7 +7,6 @@ namespace PixelFlow.Views
     [Mediator(typeof(SplashMediator))]
     public class SplashView : View
     {
-        [SerializeField] private Image _logoSplash;
         [SerializeField] private CanvasGroup _canvasGroup;
         [SerializeField] private float _displayDuration = 2f;
         [SerializeField] private float _fadeDuration = 0.5f;

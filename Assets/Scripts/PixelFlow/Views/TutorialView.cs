@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using PixelFlow.Core;
 using PixelFlow.Models;
 using PixelFlow.Services;
@@ -12,7 +13,7 @@ namespace PixelFlow.Views
     public class TutorialView : TickableView
     {
         [SerializeField] private GameObject _bubble;
-        [SerializeField] private Text _bubbleText;
+        [SerializeField] private TMP_Text _bubbleText;
         [SerializeField] private CanvasGroup _canvasGroup;
         [SerializeField] private GameObject _fingerIndicator;
         [SerializeField] private RectTransform _fingerTarget;

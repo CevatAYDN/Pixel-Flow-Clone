@@ -29,11 +29,53 @@ namespace PixelFlow.Editor
             if (existingPrefab != null) return;
 
             var cellObj = new GameObject("CellView");
-            cellObj.AddComponent<CellView>();
+
+            // CellView component
+            var cellView = cellObj.AddComponent<CellView>();
+
+            // Z-sıralaması: Background(0) > Bridge(-0.2f) > DotNode(-0.4f) > Warning(-0.5f)
+            var bgObj = new GameObject("Background");
+            bgObj.transform.SetParent(cellObj.transform, false);
+            var bgRenderer = bgObj.AddComponent<SpriteRenderer>();
+            bgRenderer.sortingOrder = 0;
+
+            var bridgeObj = new GameObject("Bridge");
+            bridgeObj.transform.SetParent(cellObj.transform, false);
+            bridgeObj.transform.localPosition = new Vector3(0, 0, -0.2f);
+            var bridgeRenderer = bridgeObj.AddComponent<SpriteRenderer>();
+            bridgeRenderer.sortingOrder = 1;
+
+            var dotObj = new GameObject("DotNode");
+            dotObj.transform.SetParent(cellObj.transform, false);
+            dotObj.transform.localPosition = new Vector3(0, 0, -0.4f);
+            var dotRenderer = dotObj.AddComponent<SpriteRenderer>();
+            dotRenderer.sortingOrder = 2;
+
+            var warnObj = new GameObject("Warning");
+            warnObj.transform.SetParent(cellObj.transform, false);
+            warnObj.transform.localPosition = new Vector3(0, 0, -0.5f);
+            var warnRenderer = warnObj.AddComponent<SpriteRenderer>();
+            warnRenderer.sortingOrder = 3;
+
+            var arrowObj = new GameObject("OneWayArrow");
+            arrowObj.transform.SetParent(cellObj.transform, false);
+            arrowObj.transform.localPosition = new Vector3(0, 0, -0.25f);
+            var arrowRenderer = arrowObj.AddComponent<SpriteRenderer>();
+            arrowRenderer.sortingOrder = 2;
+
+            // SerializedField referanslarını SerializedObject ile ata
+            var so = new SerializedObject(cellView);
+            so.FindProperty("_bgRenderer").objectReferenceValue = bgRenderer;
+            so.FindProperty("_dotRenderer").objectReferenceValue = dotRenderer;
+            so.FindProperty("_bridgeRenderer").objectReferenceValue = bridgeRenderer;
+            so.FindProperty("_warningRenderer").objectReferenceValue = warnRenderer;
+            so.FindProperty("_oneWayArrow").objectReferenceValue = arrowRenderer;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
             PrefabUtility.SaveAsPrefabAsset(cellObj, "Assets/Prefabs/CellView.prefab");
             DestroyImmediate(cellObj);
             AssetDatabase.Refresh();
-            Debug.Log("[PixelFlow] CellView.prefab created.");
+            Debug.Log("[PixelFlow] CellView.prefab created with full renderer hierarchy.");
         }
 
         private void FixCellViewWarningIcon()
@@ -67,6 +109,9 @@ namespace PixelFlow.Editor
                 root = rootObj.AddComponent<Root>();
             }
             AssignContextData(root, config);
+
+            // ✅ GameContextLifecycle'i Root'a ekle — yoksa Nexus DI servis kaydı yapılmaz
+            EnsureComponent<GameContextLifecycle>(rootObj);
 
             var canvasObj = FindOrCreateChild(rootObj.transform, "Canvas");
             var canvas = canvasObj.GetComponent<Canvas>();

@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using TMPro;
 using UnityEngine.UI;
 using Nexus.Core;
 
@@ -9,18 +10,18 @@ namespace PixelFlow.Views
     public class DailyCrisisView : View
     {
         [SerializeField] private GameObject _panelContainer;
-        [SerializeField] private Text _titleText;
-        [SerializeField] private Text _streakText;
-        [SerializeField] private Text _badgesText;
+        [SerializeField] private TMP_Text _titleText;
+        [SerializeField] private TMP_Text _streakText;
+        [SerializeField] private TMP_Text _badgesText;
         [SerializeField] private Button _closeButton;
 
         [SerializeField] private Button _easyButton;
         [SerializeField] private Button _mediumButton;
         [SerializeField] private Button _hardButton;
 
-        [SerializeField] private Text _easyStatusText;
-        [SerializeField] private Text _mediumStatusText;
-        [SerializeField] private Text _hardStatusText;
+        [SerializeField] private TMP_Text _easyStatusText;
+        [SerializeField] private TMP_Text _mediumStatusText;
+        [SerializeField] private TMP_Text _hardStatusText;
 
         public event Action OnCloseClicked;
         public event Action<int> OnStartCrisisClicked;

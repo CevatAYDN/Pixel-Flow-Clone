@@ -61,16 +61,16 @@ namespace PixelFlow.Editor
             GUILayout.Space(6);
 
             GUILayout.BeginHorizontal();
-            _dataSearchFilter = EditorGUILayout.TextField("🔍 Filtrele", _dataSearchFilter, GUILayout.Width(300));
-            _dataSortMode = GUILayout.Toolbar(_dataSortMode, _dataSortOptions, GUILayout.Height(20), GUILayout.Width(300));
+            _dataSearchFilter = EditorGUILayout.TextField("🔍 Filtrele", _dataSearchFilter, GUILayout.MinWidth(300));
+            _dataSortMode = GUILayout.Toolbar(_dataSortMode, _dataSortOptions, GUILayout.MinHeight(20), GUILayout.MinWidth(300));
             GUILayout.FlexibleSpace();
 
-            if (GUILayout.Button("🔄 Tara", GUILayout.Height(22), GUILayout.Width(80)))
+            if (GUILayout.Button("🔄 Tara", GUILayout.MinHeight(22), GUILayout.MinWidth(80)))
             {
                 _dataCacheDirty = true;
                 AssetDatabase.Refresh();
             }
-            if (GUILayout.Button("📂 Resources'u Aç", GUILayout.Height(22), GUILayout.Width(120)))
+            if (GUILayout.Button("📂 Resources'u Aç", GUILayout.MinHeight(22), GUILayout.MinWidth(120)))
             {
                 EditorUtility.OpenWithDefaultApp(Path.GetFullPath("Assets/Resources"));
             }
@@ -132,7 +132,7 @@ namespace PixelFlow.Editor
             _statBoxStyle.normal.textColor = color;
             _statValueStyle.normal.textColor = color;
 
-            GUILayout.BeginVertical(_statBoxStyle, GUILayout.Width(110), GUILayout.Height(50));
+            GUILayout.BeginVertical(_statBoxStyle, GUILayout.MinWidth(110), GUILayout.MinHeight(50));
             GUILayout.Label(value, _statValueStyle);
             GUILayout.Label(label, _statLabelStyle);
             GUILayout.EndVertical();
@@ -266,17 +266,17 @@ namespace PixelFlow.Editor
             GUILayout.BeginHorizontal();
 
             GUI.backgroundColor = new Color(0.2f, 0.6f, 1f);
-            if (GUILayout.Button("🔄 Asset Database'i Yenile", GUILayout.Height(24), GUILayout.Width(180)))
+            if (GUILayout.Button("🔄 Asset Database'i Yenile", GUILayout.MinHeight(24), GUILayout.MinWidth(180)))
             {
                 AssetDatabase.Refresh();
                 _dataCacheDirty = true;
             }
-            if (GUILayout.Button("🧹 Boş Konfig Varlığı Oluştur", GUILayout.Height(24), GUILayout.Width(200)))
+            if (GUILayout.Button("🧹 Boş Konfig Varlığı Oluştur", GUILayout.MinHeight(24), GUILayout.MinWidth(200)))
             {
                 CreateDefaultConfigAssets();
                 _dataCacheDirty = true;
             }
-            if (GUILayout.Button("📋 Export Asset List (CSV)", GUILayout.Height(24), GUILayout.Width(180)))
+            if (GUILayout.Button("📋 Export Asset List (CSV)", GUILayout.MinHeight(24), GUILayout.MinWidth(180)))
             {
                 ExportDataAssetList();
             }
@@ -295,7 +295,7 @@ namespace PixelFlow.Editor
             GUILayout.BeginHorizontal(EditorStyles.toolbar);
             for (int i = 0; i < headers.Length; i++)
             {
-                GUILayout.Label(headers[i], EditorStyles.boldLabel, GUILayout.Width(widths[i]));
+                GUILayout.Label(headers[i], EditorStyles.boldLabel, GUILayout.MinWidth(widths[i]));
             }
             GUILayout.EndHorizontal();
         }
@@ -307,27 +307,27 @@ namespace PixelFlow.Editor
             GUILayout.BeginHorizontal(isSelected ? EditorStyles.helpBox : EditorStyles.toolbar);
 
             // Name
-            GUILayout.Label(asset.Name, GUILayout.Width(180));
+            GUILayout.Label(asset.Name, GUILayout.MinWidth(180));
 
             // Type
-            GUILayout.Label(asset.TypeName, EditorStyles.miniLabel, GUILayout.Width(160));
+            GUILayout.Label(asset.TypeName, EditorStyles.miniLabel, GUILayout.MinWidth(160));
 
             // Size
-            GUILayout.Label(FormatSize(asset.FileSizeBytes), GUILayout.Width(70));
+            GUILayout.Label(FormatSize(asset.FileSizeBytes), GUILayout.MinWidth(70));
 
             // Last modified
-            GUILayout.Label(asset.LastModified, EditorStyles.miniLabel, GUILayout.Width(130));
+            GUILayout.Label(asset.LastModified, EditorStyles.miniLabel, GUILayout.MinWidth(130));
 
             // Status badge
             if (!asset.IsValid)
-                GUILayout.Label("⚠ Boş", _warnBadgeStyle, GUILayout.Width(80));
+                GUILayout.Label("⚠ Boş", _warnBadgeStyle, GUILayout.MinWidth(80));
             else if (asset.FileSizeBytes == 0)
-                GUILayout.Label("📭", GUILayout.Width(80));
+                GUILayout.Label("📭", GUILayout.MinWidth(80));
             else
-                GUILayout.Label("✅", _okBadgeStyle, GUILayout.Width(80));
+                GUILayout.Label("✅", _okBadgeStyle, GUILayout.MinWidth(80));
 
             // Actions
-            if (GUILayout.Button("Seç", GUILayout.Height(16), GUILayout.Width(45)))
+            if (GUILayout.Button("Seç", GUILayout.MinHeight(16), GUILayout.MinWidth(45)))
             {
                 _selectedDataAsset = asset;
                 var obj = AssetDatabase.LoadAssetAtPath<ScriptableObject>(asset.Path);
@@ -337,7 +337,7 @@ namespace PixelFlow.Editor
                     EditorGUIUtility.PingObject(obj);
                 }
             }
-            if (GUILayout.Button("Aç", GUILayout.Height(16), GUILayout.Width(40)))
+            if (GUILayout.Button("Aç", GUILayout.MinHeight(16), GUILayout.MinWidth(40)))
             {
                 var obj = AssetDatabase.LoadAssetAtPath<ScriptableObject>(asset.Path);
                 if (obj != null)

@@ -1,4 +1,5 @@
 using UnityEngine;
+using TMPro;
 using UnityEngine.UI;
 using System;
 using Nexus.Core;
@@ -11,17 +12,17 @@ namespace PixelFlow.Views
     public class HUDView : TickableView
     {
         [SerializeField] private Button _hintButton;
-        [SerializeField] private Text _hintCountText;
-        [SerializeField] private Text _scoreText;
-        [SerializeField] private Text _timerText;
+        [SerializeField] private TMP_Text _hintCountText;
+        [SerializeField] private TMP_Text _scoreText;
+        [SerializeField] private TMP_Text _timerText;
         [SerializeField] private GameObject _starsContainer;
         [SerializeField] private GameObject _star1;
         [SerializeField] private GameObject _star2;
         [SerializeField] private GameObject _star3;
         [SerializeField] private GameObject _completionPanel;
-        [SerializeField] private Text _completionText;
-        [SerializeField] private Text _completionScoreText;
-        [SerializeField] private Text _completionStarsText;
+        [SerializeField] private TMP_Text _completionText;
+        [SerializeField] private TMP_Text _completionScoreText;
+        [SerializeField] private TMP_Text _completionStarsText;
         [SerializeField] private Button _nextLevelButton;
         [SerializeField] private Button _continueButton;
         [SerializeField] private GameObject _bloomFlashOverlay;
@@ -41,12 +42,12 @@ namespace PixelFlow.Views
 
         // GDD §2.4: LevelFailed paneli
         [SerializeField] private GameObject _levelFailedPanel;
-        [SerializeField] private Text _levelFailedText;
+        [SerializeField] private TMP_Text _levelFailedText;
         [SerializeField] private Button _retryButton;
         [SerializeField] private Button _levelFailedContinueButton;
 
         // Color Jam 3D - Gold Coins & Power-Up UI
-        [SerializeField] private Text _coinsText;
+        [SerializeField] private TMP_Text _coinsText;
         [SerializeField] private Button _garageButton;
         [SerializeField] private Button _rainbowRoadButton;
         [SerializeField] private Button _clearJamButton;
@@ -82,7 +83,7 @@ namespace PixelFlow.Views
 
         public void AutoWireUIReferences()
         {
-            var texts = GetComponentsInChildren<Text>(true);
+            var texts = GetComponentsInChildren<TMP_Text>(true);
             var buttons = GetComponentsInChildren<Button>(true);
 
             foreach (var t in texts)
@@ -359,14 +360,14 @@ namespace PixelFlow.Views
                     rt.sizeDelta = new Vector2(200f, 50f);
                 }
                 
-                Text btnText = _crisisViaductButton.GetComponentInChildren<Text>();
+                TMP_Text btnText = _crisisViaductButton.GetComponentInChildren<TMP_Text>();
                 if (btnText != null) btnText.text = viaductBtnText;
 
                 _crisisViaductButton.onClick.AddListener(() => OnCrisisViaductClicked?.Invoke());
             }
             else
             {
-                Text btnText = _crisisViaductButton.GetComponentInChildren<Text>();
+                TMP_Text btnText = _crisisViaductButton.GetComponentInChildren<TMP_Text>();
                 if (btnText != null) btnText.text = viaductBtnText;
             }
 
@@ -382,14 +383,14 @@ namespace PixelFlow.Views
                     rt.sizeDelta = new Vector2(200f, 50f);
                 }
                 
-                Text btnText = _crisisUndoButton.GetComponentInChildren<Text>();
+                TMP_Text btnText = _crisisUndoButton.GetComponentInChildren<TMP_Text>();
                 if (btnText != null) btnText.text = undoBtnText;
 
                 _crisisUndoButton.onClick.AddListener(() => OnCrisisUndoClicked?.Invoke());
             }
             else
             {
-                Text btnText = _crisisUndoButton.GetComponentInChildren<Text>();
+                TMP_Text btnText = _crisisUndoButton.GetComponentInChildren<TMP_Text>();
                 if (btnText != null) btnText.text = undoBtnText;
             }
         }
@@ -450,12 +451,12 @@ namespace PixelFlow.Views
                     _levelFailedText.text = title;
                 if (_retryButton != null)
                 {
-                    var btnText = _retryButton.GetComponentInChildren<Text>();
+                    var btnText = _retryButton.GetComponentInChildren<TMP_Text>();
                     if (btnText != null) btnText.text = retryLabel;
                 }
                 if (_levelFailedContinueButton != null)
                 {
-                    var btnText = _levelFailedContinueButton.GetComponentInChildren<Text>();
+                    var btnText = _levelFailedContinueButton.GetComponentInChildren<TMP_Text>();
                     if (btnText != null) btnText.text = hubLabel;
                 }
             }

@@ -20,6 +20,7 @@ namespace PixelFlow.Editor
 
         private void DrawGameControllerTab()
         {
+            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
             DrawGameStatusCard();
             DrawLiveGameControls();
             DrawVehicleSimulatorControls();
@@ -28,6 +29,7 @@ namespace PixelFlow.Editor
             DrawVehicleStyleSelector();
             DrawQuickLevelLauncher();
             DrawBootstrapperConfig();
+            EditorGUILayout.EndScrollView();
         }
 
         private void DrawGameStatusCard()
@@ -41,7 +43,7 @@ namespace PixelFlow.Editor
             // GUIStyle cached in _okBadgeStyle/_warnBadgeStyle — inline color overrides for status
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Motor Durumu:", GUILayout.Width(110));
+            GUILayout.Label("Motor Durumu:", GUILayout.MinWidth(110));
             GUILayout.Label(playStatus, isPlaying ? _okBadgeStyle : _warnBadgeStyle);
             GUILayout.EndHorizontal();
 
@@ -65,11 +67,11 @@ namespace PixelFlow.Editor
             DrawInfoRow("Yüklü Seviye:", currentLvlInfo);
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Açık Seviye:", GUILayout.Width(110));
-            GUILayout.Label($"Seviye {unlockedLvl + 1}", EditorStyles.boldLabel, GUILayout.Width(100));
+            GUILayout.Label("Açık Seviye:", GUILayout.MinWidth(110));
+            GUILayout.Label($"Seviye {unlockedLvl + 1}", EditorStyles.boldLabel, GUILayout.MinWidth(100));
             if (hints >= 0)
             {
-                GUILayout.Label("İpucu:", GUILayout.Width(45));
+                GUILayout.Label("İpucu:", GUILayout.MinWidth(45));
                 GUILayout.Label($"{hints}", EditorStyles.boldLabel);
             }
             GUILayout.EndHorizontal();
@@ -90,7 +92,7 @@ namespace PixelFlow.Editor
 
             GUILayout.BeginHorizontal();
             GUI.backgroundColor = isPlaying ? new Color(0.2f, 0.7f, 1f) : new Color(0.2f, 0.8f, 0.3f);
-            if (GUILayout.Button(isPlaying ? "▶ Açık Seviyeyi Yeniden Yükle" : "▶ Oyunu Başlat (Seviye 1)", GUILayout.Height(32)))
+            if (GUILayout.Button(isPlaying ? "▶ Açık Seviyeyi Yeniden Yükle" : "▶ Oyunu Başlat (Seviye 1)", GUILayout.MinHeight(32)))
             {
                 if (!isPlaying) EditorApplication.isPlaying = true;
                 else
@@ -101,17 +103,17 @@ namespace PixelFlow.Editor
                 }
             }
             GUI.backgroundColor = new Color(0.2f, 0.85f, 0.3f);
-            if (GUILayout.Button("🏆 Seviyeyi Tamamla (Kazan)", GUILayout.Height(32))) CompleteCurrentLevel();
+            if (GUILayout.Button("🏆 Seviyeyi Tamamla (Kazan)", GUILayout.MinHeight(32))) CompleteCurrentLevel();
             GUI.backgroundColor = Color.white;
-            if (GUILayout.Button("🔁 Seviyeyi Yeniden Başlat", GUILayout.Height(32))) RestartCurrentLevel();
+            if (GUILayout.Button("🔁 Seviyeyi Yeniden Başlat", GUILayout.MinHeight(32))) RestartCurrentLevel();
             GUILayout.EndHorizontal();
 
             GUILayout.Space(6);
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("💡 Bedava İpucu Ver", GUILayout.Height(28))) DispatchSignal(new RequestHintSignal());
-            if (GUILayout.Button("↩️ Geri Al", GUILayout.Height(28))) DispatchSignal(new UndoSignal());
-            if (GUILayout.Button("↪️ Yinele", GUILayout.Height(28))) DispatchSignal(new RedoSignal());
-            if (GUILayout.Button("🧹 Temiz Seviye Yükle (Save Temizle)", GUILayout.Height(28)))
+            if (GUILayout.Button("💡 Bedava İpucu Ver", GUILayout.MinHeight(28))) DispatchSignal(new RequestHintSignal());
+            if (GUILayout.Button("↩️ Geri Al", GUILayout.MinHeight(28))) DispatchSignal(new UndoSignal());
+            if (GUILayout.Button("↪️ Yinele", GUILayout.MinHeight(28))) DispatchSignal(new RedoSignal());
+            if (GUILayout.Button("🧹 Temiz Seviye Yükle (Save Temizle)", GUILayout.MinHeight(28)))
             {
                 var prefs = GetPrefsService();
                 if (prefs != null) { prefs.DeleteKey("NT_PuzzleSave_"); prefs.Save(); }
@@ -123,10 +125,10 @@ namespace PixelFlow.Editor
 
             GUILayout.Space(6);
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("🔓 Tüm Seviyeleri Aç", GUILayout.Height(28))) UnlockAllLevels();
-            if (GUILayout.Button("🔒 İlerlemeyi Sıfırla", GUILayout.Height(28))) ResetProgress();
-            if (GUILayout.Button("💾 Zorla Kaydet", GUILayout.Height(28))) ForceSaveGame();
-            if (GUILayout.Button("🗑️ Tüm Kayıtları Sil", GUILayout.Height(28))) WipeSaveData();
+            if (GUILayout.Button("🔓 Tüm Seviyeleri Aç", GUILayout.MinHeight(28))) UnlockAllLevels();
+            if (GUILayout.Button("🔒 İlerlemeyi Sıfırla", GUILayout.MinHeight(28))) ResetProgress();
+            if (GUILayout.Button("💾 Zorla Kaydet", GUILayout.MinHeight(28))) ForceSaveGame();
+            if (GUILayout.Button("🗑️ Tüm Kayıtları Sil", GUILayout.MinHeight(28))) WipeSaveData();
             GUILayout.EndHorizontal();
 
             GUILayout.EndVertical();
@@ -165,15 +167,15 @@ namespace PixelFlow.Editor
 
             // Speed Multiplier Slider
             GUILayout.BeginHorizontal();
-            GUILayout.Label("🚀 Hız Çarpanı:", GUILayout.Width(110));
-            _vehicleSpeedMultiplier = GUILayout.HorizontalSlider(_vehicleSpeedMultiplier, 0.1f, 5.0f, GUILayout.Width(120));
-            GUILayout.Label($"{_vehicleSpeedMultiplier:F1}x", EditorStyles.boldLabel, GUILayout.Width(40));
+            GUILayout.Label("🚀 Hız Çarpanı:", GUILayout.MinWidth(110));
+            _vehicleSpeedMultiplier = GUILayout.HorizontalSlider(_vehicleSpeedMultiplier, 0.1f, 5.0f, GUILayout.MinWidth(120));
+            GUILayout.Label($"{_vehicleSpeedMultiplier:F1}x", EditorStyles.boldLabel, GUILayout.MinWidth(40));
 
             if (config != null)
             {
 
                 float effectiveSpeed = _cachedBaseSpeed * _vehicleSpeedMultiplier;
-                GUILayout.Label($"({effectiveSpeed:F1} br/sn)", EditorStyles.miniLabel, GUILayout.Width(70));
+                GUILayout.Label($"({effectiveSpeed:F1} br/sn)", EditorStyles.miniLabel, GUILayout.MinWidth(70));
 
                 // Apply speed to GameConfig for new spawns
                 float newSpeed = _cachedBaseSpeed * _vehicleSpeedMultiplier;
@@ -193,8 +195,8 @@ namespace PixelFlow.Editor
 
             // Spawn Toggle
             GUILayout.BeginHorizontal();
-            GUILayout.Label("🐣 Araç Spawn'ı:", GUILayout.Width(110));
-            bool newSpawnState = GUILayout.Toggle(_vehicleSpawnEnabled, _vehicleSpawnEnabled ? "AÇIK" : "KAPALI", GUILayout.Width(80));
+            GUILayout.Label("🐣 Araç Spawn'ı:", GUILayout.MinWidth(110));
+            bool newSpawnState = GUILayout.Toggle(_vehicleSpawnEnabled, _vehicleSpawnEnabled ? "AÇIK" : "KAPALI", GUILayout.MinWidth(80));
             if (newSpawnState != _vehicleSpawnEnabled)
             {
                 _vehicleSpawnEnabled = newSpawnState;
@@ -209,13 +211,13 @@ namespace PixelFlow.Editor
 
             // Clear Vehicles Button
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("🧹 Tüm Araçları Temizle", GUILayout.Height(24)))
+            if (GUILayout.Button("🧹 Tüm Araçları Temizle", GUILayout.MinHeight(24)))
             {
                 var sim = GetService<IVehicleSimulator>();
                 sim?.ClearAllVehicles();
                 Debug.Log("[PixelFlow] All vehicles cleared.");
             }
-            if (GUILayout.Button("🔄 Simülasyonu Sıfırla", GUILayout.Height(24)))
+            if (GUILayout.Button("🔄 Simülasyonu Sıfırla", GUILayout.MinHeight(24)))
             {
                 var sim = GetService<IVehicleSimulator>();
                 sim?.StopSimulationPhase();
@@ -244,26 +246,26 @@ namespace PixelFlow.Editor
             }
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("⏸ Önce Durdur", GUILayout.Height(28)))
+            if (GUILayout.Button("⏸ Önce Durdur", GUILayout.MinHeight(28)))
             {
                 Time.timeScale = 0f;
                 _frameStepQueued = false;
                 Debug.Log("[PixelFlow] Time scale = 0x (Durduruldu)");
             }
-            if (GUILayout.Button("⏭ Bir Frame İlerlet", GUILayout.Height(28)))
+            if (GUILayout.Button("⏭ Bir Frame İlerlet", GUILayout.MinHeight(28)))
             {
                 EditorApplication.Step();
                 Time.timeScale = 0f;
                 _frameStepQueued = true;
                 Debug.Log("[PixelFlow] Frame Step: 1 frame ilerletildi.");
             }
-            if (GUILayout.Button("▶ 5 Frame İlerlet", GUILayout.Height(28)))
+            if (GUILayout.Button("▶ 5 Frame İlerlet", GUILayout.MinHeight(28)))
             {
                 for (int i = 0; i < 5; i++)
                     EditorApplication.Step();
                 Debug.Log("[PixelFlow] Frame Step: 5 frame ilerletildi.");
             }
-            if (GUILayout.Button("▶ Devam Et (1x)", GUILayout.Height(28)))
+            if (GUILayout.Button("▶ Devam Et (1x)", GUILayout.MinHeight(28)))
             {
                 Time.timeScale = 1f;
                 _frameStepQueued = false;
@@ -333,11 +335,11 @@ namespace PixelFlow.Editor
                 : (GetPrefsService()?.GetInt("VehicleStyle", 0) ?? PlayerPrefs.GetInt("VehicleStyle", 0));
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Aktif Araç Modeli:", GUILayout.Width(140));
+            GUILayout.Label("Aktif Araç Modeli:", GUILayout.MinWidth(140));
             GUI.backgroundColor = currentStyleInt == 0 ? new Color(0.2f, 0.7f, 1f) : Color.white;
-            if (GUILayout.Button("🚘 Araba", GUILayout.Height(28))) SetVehicleStyle(VehicleStyle.Car);
+            if (GUILayout.Button("🚘 Araba", GUILayout.MinHeight(28))) SetVehicleStyle(VehicleStyle.Car);
             GUI.backgroundColor = currentStyleInt == 1 ? new Color(0.9f, 0.7f, 0.2f) : Color.white;
-            if (GUILayout.Button("🚆 Tren / Ekspres", GUILayout.Height(28))) SetVehicleStyle(VehicleStyle.Train);
+            if (GUILayout.Button("🚆 Tren / Ekspres", GUILayout.MinHeight(28))) SetVehicleStyle(VehicleStyle.Train);
             GUI.backgroundColor = Color.white;
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
@@ -354,7 +356,7 @@ namespace PixelFlow.Editor
             if (_cachedLevels.Count == 0)
             {
                 EditorGUILayout.HelpBox("Hiç LevelData varlığı bulunamadı.", MessageType.Warning);
-                if (GUILayout.Button("Faz 1+2 Seviye Paketi Oluştur (12 Seviye)", GUILayout.Height(30)))
+                if (GUILayout.Button("Faz 1+2 Seviye Paketi Oluştur (12 Seviye)", GUILayout.MinHeight(30)))
                 {
                     CreatePhase1And2HandCraftedPack();
                     RefreshData();
@@ -391,7 +393,7 @@ namespace PixelFlow.Editor
                     EditorUtility.SetDirty(bootstrapper);
                 }
 
-                if (GUILayout.Button("Seviye 1'i Başlangıç Hedefi Olarak Ata", GUILayout.Height(24)))
+                if (GUILayout.Button("Seviye 1'i Başlangıç Hedefi Olarak Ata", GUILayout.MinHeight(24)))
                 {
                     var lvl1 = ResolveLevelByIndex(0);
                     if (lvl1 != null)
@@ -415,12 +417,14 @@ namespace PixelFlow.Editor
 
         private void DrawDiagnosticsTab()
         {
+            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
             DrawCoreDiagnostics();
             DrawExtendedViewDiagnostics();
             DrawEnvironmentDiagnostics();
             DrawHierarchySummary();
             DrawQuickFixPanel();
             DrawDevTools();
+            EditorGUILayout.EndScrollView();
         }
 
         private void DrawCoreDiagnostics()
@@ -487,13 +491,13 @@ namespace PixelFlow.Editor
             int rootCount = Object.FindObjectsByType<Root>(FindObjectsInactive.Exclude).Length;
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label($"Toplam Obje: {allObjects.Length}", GUILayout.Width(160));
-            GUILayout.Label($"Aktif: {activeCount}", GUILayout.Width(100));
-            GUILayout.Label($"Pasif: {allObjects.Length - activeCount}", GUILayout.Width(100));
+            GUILayout.Label($"Toplam Obje: {allObjects.Length}", GUILayout.MinWidth(160));
+            GUILayout.Label($"Aktif: {activeCount}", GUILayout.MinWidth(100));
+            GUILayout.Label($"Pasif: {allObjects.Length - activeCount}", GUILayout.MinWidth(100));
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
-            GUILayout.Label($"Nexus View: {viewCount}", GUILayout.Width(160));
-            GUILayout.Label($"Nexus Root: {rootCount}", GUILayout.Width(100));
+            GUILayout.Label($"Nexus View: {viewCount}", GUILayout.MinWidth(160));
+            GUILayout.Label($"Nexus Root: {rootCount}", GUILayout.MinWidth(100));
             GUILayout.EndHorizontal();
 
             GUILayout.EndVertical();
@@ -518,7 +522,7 @@ namespace PixelFlow.Editor
             GUILayout.Space(5);
 
             GUI.backgroundColor = new Color(0.2f, 0.6f, 1f);
-            if (GUILayout.Button("🚀 Tek Tıkla Tam Sahne Kurulumu", GUILayout.Height(35)))
+            if (GUILayout.Button("🚀 Tek Tıkla Tam Sahne Kurulumu", GUILayout.MinHeight(35)))
             {
                 GeneratePrefabs(); SetupScene(); SetupGlobalVolume(); SetupCameraController();
                 RefreshData();
@@ -527,9 +531,9 @@ namespace PixelFlow.Editor
 
             GUILayout.Space(4);
             GUILayout.BeginHorizontal();
-            if (!allCoreOk && GUILayout.Button("Temel Bileşenleri Kur", GUILayout.Height(28))) { GeneratePrefabs(); SetupScene(); RefreshData(); }
-            if (!allExtOk && GUILayout.Button("Genişletilmiş View'leri Kur", GUILayout.Height(28))) { SetupScene(); RefreshData(); }
-            if (!allEnvOk && GUILayout.Button("Ortam Bileşenlerini Kur", GUILayout.Height(28))) { SetupGlobalVolume(); SetupCameraController(); RefreshData(); }
+            if (!allCoreOk && GUILayout.Button("Temel Bileşenleri Kur", GUILayout.MinHeight(28))) { GeneratePrefabs(); SetupScene(); RefreshData(); }
+            if (!allExtOk && GUILayout.Button("Genişletilmiş View'leri Kur", GUILayout.MinHeight(28))) { SetupScene(); RefreshData(); }
+            if (!allEnvOk && GUILayout.Button("Ortam Bileşenlerini Kur", GUILayout.MinHeight(28))) { SetupGlobalVolume(); SetupCameraController(); RefreshData(); }
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
             GUILayout.Space(8);
@@ -542,8 +546,8 @@ namespace PixelFlow.Editor
             GUILayout.Space(5);
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("🗑️ PlayerPrefs & Kayıt Verilerini Temizle", GUILayout.Height(28))) WipeSaveData();
-            if (GUILayout.Button("📂 Sahneyi Kaydet", GUILayout.Height(28)))
+            if (GUILayout.Button("🗑️ PlayerPrefs & Kayıt Verilerini Temizle", GUILayout.MinHeight(28))) WipeSaveData();
+            if (GUILayout.Button("📂 Sahneyi Kaydet", GUILayout.MinHeight(28)))
             {
                 UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
                 Debug.Log("[PixelFlow] Açık sahneler kaydedildi.");

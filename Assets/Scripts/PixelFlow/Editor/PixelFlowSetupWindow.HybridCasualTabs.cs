@@ -13,12 +13,13 @@ namespace PixelFlow.Editor
         // ═══════════════════════════════════════════════════
         private void DrawGarageSkinStudioTab()
         {
+            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
             GUILayout.BeginVertical(_cardStyle);
             GUILayout.Label("🎨 Garaj & Skin Stüdyosu (No-Code Skin Manager)", _sectionHeaderStyle);
             GUILayout.Label("Kod yazmadan yeni 3D araç skin'leri ekleyin, fiyatlandırın ve 3D önizleme yapın.", _miniInfoStyle);
             GUILayout.Space(8);
 
-            if (GUILayout.Button("✨ Yeni VehicleSkinConfig Asset Oluştur", GUILayout.Height(30)))
+            if (GUILayout.Button("✨ Yeni VehicleSkinConfig Asset Oluştur", GUILayout.MinHeight(30)))
             {
                 CreateNewVehicleSkinAsset();
             }
@@ -43,7 +44,7 @@ namespace PixelFlow.Editor
                     GUILayout.BeginHorizontal();
                     GUILayout.Label($"<b>{skin.DisplayName}</b> ({skin.SkinId})", new GUIStyle(EditorStyles.label) { richText = true });
                     GUILayout.Label($"Color: {skin.ColorFamily} │ {skin.UnlockCoinCost} Gold", EditorStyles.miniLabel);
-                    if (GUILayout.Button("Düzenle", GUILayout.Width(60)))
+                    if (GUILayout.Button("Düzenle", GUILayout.MinWidth(60)))
                     {
                         Selection.activeObject = skin;
                         EditorGUIUtility.PingObject(skin);
@@ -55,6 +56,7 @@ namespace PixelFlow.Editor
             }
 
             GUILayout.EndVertical();
+            EditorGUILayout.EndScrollView();
         }
 
         private void CreateNewVehicleSkinAsset()
@@ -84,6 +86,7 @@ namespace PixelFlow.Editor
         // ═══════════════════════════════════════════════════
         private void DrawAdMonetizationTab()
         {
+            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
             GUILayout.BeginVertical(_cardStyle);
             GUILayout.Label("📺 Reklam & Monetization Ayarları", _sectionHeaderStyle);
             GUILayout.Label("Rewarded Ad ödülleri, 2x Coin çarpanları ve Interstitial baraj ayarları.", _miniInfoStyle);
@@ -97,7 +100,7 @@ namespace PixelFlow.Editor
             else
             {
                 EditorGUILayout.HelpBox("Tüm reklam parametreleri GameConfig Asset üzerinden yönetilir (Zero-Hardcode).", MessageType.Info);
-                if (GUILayout.Button("GameConfig Asset'ini Seç ve Düzenle", GUILayout.Height(30)))
+                if (GUILayout.Button("GameConfig Asset'ini Seç ve Düzenle", GUILayout.MinHeight(30)))
                 {
                     Selection.activeObject = gameConfig;
                     EditorGUIUtility.PingObject(gameConfig);
@@ -105,6 +108,7 @@ namespace PixelFlow.Editor
             }
 
             GUILayout.EndVertical();
+            EditorGUILayout.EndScrollView();
         }
 
         // ═══════════════════════════════════════════════════
@@ -112,12 +116,13 @@ namespace PixelFlow.Editor
         // ═══════════════════════════════════════════════════
         private void DrawPreBuildValidatorTab()
         {
+            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
             GUILayout.BeginVertical(_cardStyle);
             GUILayout.Label("🛡️ Pre-Build Data Validator (Zero-Hardcode Denetçi)", _sectionHeaderStyle);
             GUILayout.Label("Build almadan veya Play Mode başlatmadan önce veri eksikliklerini ve hatalarını tarayın.", _miniInfoStyle);
             GUILayout.Space(10);
 
-            if (GUILayout.Button("🔍 Proje Verilerini Şimdi Tara ve Doğrula", GUILayout.Height(34)))
+            if (GUILayout.Button("🔍 Proje Verilerini Şimdi Tara ve Doğrula", GUILayout.MinHeight(34)))
             {
                 if (PreBuildDataValidator.ValidateAllData(out string errorMessage))
                 {
@@ -130,6 +135,7 @@ namespace PixelFlow.Editor
             }
 
             GUILayout.EndVertical();
+            EditorGUILayout.EndScrollView();
         }
     }
 }

@@ -1,10 +1,12 @@
-/* COLOR JAM 3D MASTER STUDIO - VALID UNITY UI TOOLKIT USS STYLESHEET */
+/* COLOR JAM 3D MASTER STUDIO - RESPONSIVE UI TOOLKIT USS STYLESHEET */
 
 .studio-root {
     background-color: #0F172A;
     color: #F8FAFC;
     flex-grow: 1;
     padding: 8px;
+    min-width: 0;
+    min-height: 0;
 }
 
 /* Header Banner */
@@ -18,34 +20,47 @@
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .studio-header-title {
     font-size: 15px;
     -unity-font-style: bold;
     color: #F8FAFC;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .studio-header-subtitle {
     font-size: 11px;
     color: #94A3B8;
+    flex-shrink: 0;
 }
 
 /* Workspace Split Container */
 .studio-workspace {
     flex-direction: row;
     flex-grow: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
 }
 
-/* Left Sidebar Navigation */
+/* Left Sidebar Navigation - Responsive */
 .studio-sidebar {
-    width: 210px;
+    min-width: 160px;
+    max-width: 240px;
+    width: auto;
+    flex-grow: 0;
+    flex-shrink: 0;
     background-color: #1E293B;
     border-color: #334155;
     border-width: 1px;
     border-radius: 12px;
-    padding: 12px 8px;
+    padding: 12px 6px;
     margin-right: 8px;
+    overflow-y: auto;
 }
 
 .studio-nav-section-label {
@@ -55,6 +70,9 @@
     margin-top: 10px;
     margin-bottom: 4px;
     padding-left: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .studio-nav-button {
@@ -63,9 +81,12 @@
     border-radius: 8px;
     color: #94A3B8;
     font-size: 11px;
-    padding: 8px 10px;
+    padding: 8px 8px;
     margin-bottom: 2px;
     -unity-text-align: middle-left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .studio-nav-button:hover {
@@ -78,6 +99,16 @@
     color: #FFFFFF;
     -unity-font-style: bold;
     border-radius: 8px;
+}
+
+/* Content Area - Responsive */
+.studio-content {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 /* Content Cards */
@@ -97,16 +128,19 @@
     margin-bottom: 8px;
 }
 
-/* Tool Palette Buttons */
+/* Tool Palette Buttons - Responsive */
 .studio-color-btn {
-    width: 36px;
-    height: 36px;
+    width: auto;
+    min-width: 28px;
+    height: 32px;
+    aspect-ratio: 1;
     border-radius: 8px;
     border-width: 1px;
     border-color: #334155;
-    margin-right: 6px;
-    margin-bottom: 6px;
-    font-size: 16px;
+    margin-right: 4px;
+    margin-bottom: 4px;
+    font-size: 14px;
+    flex-shrink: 0;
 }
 
 .studio-btn-red { background-color: #EF4444; color: #FFFFFF; }
@@ -117,14 +151,41 @@
 .studio-btn-obstacle { background-color: #64748B; color: #FFFFFF; }
 .studio-btn-eraser { background-color: #475569; color: #FFFFFF; }
 
-/* Grid Cells */
+/* Grid Cells - Responsive */
 .studio-grid-cell {
-    width: 42px;
-    height: 42px;
+    min-width: 32px;
+    min-height: 32px;
+    width: auto;
+    height: auto;
+    flex-grow: 1;
+    aspect-ratio: 1;
     background-color: #0F172A;
     border-color: #334155;
     border-width: 1px;
     border-radius: 6px;
-    margin: 2px;
-    font-size: 18px;
+    margin: 1px;
+    font-size: 16px;
+}
+
+/* Small screen adjustments */
+@media (max-width: 600px) {
+    .studio-sidebar {
+        min-width: 120px;
+        max-width: 180px;
+        padding: 8px 4px;
+    }
+    .studio-nav-button {
+        font-size: 10px;
+        padding: 6px 6px;
+    }
+    .studio-color-btn {
+        min-width: 24px;
+        height: 28px;
+        font-size: 12px;
+    }
+    .studio-grid-cell {
+        min-width: 26px;
+        min-height: 26px;
+        font-size: 12px;
+    }
 }

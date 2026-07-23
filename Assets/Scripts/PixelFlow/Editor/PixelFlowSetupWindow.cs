@@ -503,7 +503,7 @@ namespace PixelFlow.Editor
             bool isActive = _selectedTab == tabIndex;
             GUIStyle style = isActive ? _sidebarActiveBtnStyle : _sidebarBtnStyle;
 
-            if (GUILayout.Button(buttonTitle, style ?? EditorStyles.miniButton, GUILayout.Height(28), GUILayout.ExpandWidth(true)))
+            if (GUILayout.Button(buttonTitle, style ?? EditorStyles.miniButton, GUILayout.MinHeight(28), GUILayout.ExpandWidth(true)))
             {
                 _selectedTab = tabIndex;
                 GUI.FocusControl(null);
@@ -565,7 +565,7 @@ namespace PixelFlow.Editor
         private void DrawInfoRow(string label, string value)
         {
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField(label, GUILayout.Width(180));
+            EditorGUILayout.LabelField(label, GUILayout.MinWidth(180));
             EditorGUILayout.LabelField(value, EditorStyles.boldLabel);
             EditorGUILayout.EndHorizontal();
         }
@@ -573,11 +573,11 @@ namespace PixelFlow.Editor
         private void DrawLevelTableHeader()
         {
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-            EditorGUILayout.LabelField("İndeks", GUILayout.Width(50));
-            EditorGUILayout.LabelField("İsim", GUILayout.Width(120));
-            EditorGUILayout.LabelField("Boyut", GUILayout.Width(60));
-            EditorGUILayout.LabelField("Düğüm", GUILayout.Width(50));
-            EditorGUILayout.LabelField("Çözülebilir", GUILayout.Width(80));
+            EditorGUILayout.LabelField("İndeks", GUILayout.MinWidth(50));
+            EditorGUILayout.LabelField("İsim", GUILayout.MinWidth(120));
+            EditorGUILayout.LabelField("Boyut", GUILayout.MinWidth(60));
+            EditorGUILayout.LabelField("Düğüm", GUILayout.MinWidth(50));
+            EditorGUILayout.LabelField("Çözülebilir", GUILayout.MinWidth(80));
             EditorGUILayout.LabelField("İşlemler", GUILayout.ExpandWidth(true));
             EditorGUILayout.EndHorizontal();
         }
@@ -586,13 +586,13 @@ namespace PixelFlow.Editor
         {
             if (level == null) return;
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField(level.levelIndex.ToString(), GUILayout.Width(50));
-            EditorGUILayout.LabelField(level.name, GUILayout.Width(120));
-            EditorGUILayout.LabelField($"{level.width}x{level.height}", GUILayout.Width(60));
-            EditorGUILayout.LabelField((level.initialNodes?.Count ?? 0).ToString(), GUILayout.Width(50));
-            EditorGUILayout.LabelField(isSolvable ? "✔ OK" : "❌ UYARI", isSolvable ? _okBadgeStyle : _errorBadgeStyle, GUILayout.Width(80));
-            if (GUILayout.Button("Oyna", GUILayout.Width(50))) PlayLevel(level);
-            if (GUILayout.Button("Seç", GUILayout.Width(50))) Selection.activeObject = level;
+            EditorGUILayout.LabelField(level.levelIndex.ToString(), GUILayout.MinWidth(50));
+            EditorGUILayout.LabelField(level.name, GUILayout.MinWidth(120));
+            EditorGUILayout.LabelField($"{level.width}x{level.height}", GUILayout.MinWidth(60));
+            EditorGUILayout.LabelField((level.initialNodes?.Count ?? 0).ToString(), GUILayout.MinWidth(50));
+            EditorGUILayout.LabelField(isSolvable ? "✔ OK" : "❌ UYARI", isSolvable ? _okBadgeStyle : _errorBadgeStyle, GUILayout.MinWidth(80));
+            if (GUILayout.Button("Oyna", GUILayout.MinWidth(50))) PlayLevel(level);
+            if (GUILayout.Button("Seç", GUILayout.MinWidth(50))) Selection.activeObject = level;
             EditorGUILayout.EndHorizontal();
         }
 
@@ -661,7 +661,7 @@ namespace PixelFlow.Editor
         private void DrawNexusResolveStatus(string serviceName, bool isResolved)
         {
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField(serviceName, GUILayout.Width(200));
+            EditorGUILayout.LabelField(serviceName, GUILayout.MinWidth(200));
             EditorGUILayout.LabelField(isResolved ? "✔ Registered / Active" : "❌ Not Found", isResolved ? _okBadgeStyle : _errorBadgeStyle);
             EditorGUILayout.EndHorizontal();
         }
@@ -721,7 +721,7 @@ namespace PixelFlow.Editor
 
         private void DrawSignalButton(string buttonText, System.Action onClick)
         {
-            if (GUILayout.Button(buttonText, GUILayout.Height(24)))
+            if (GUILayout.Button(buttonText, GUILayout.MinHeight(24)))
             {
                 onClick?.Invoke();
             }
@@ -729,7 +729,7 @@ namespace PixelFlow.Editor
 
         private void DrawSignalButton<TSignal>(string buttonText, TSignal signal) where TSignal : struct
         {
-            if (GUILayout.Button(buttonText, GUILayout.Height(24)))
+            if (GUILayout.Button(buttonText, GUILayout.MinHeight(24)))
             {
                 DispatchSignal(signal);
             }
@@ -738,11 +738,11 @@ namespace PixelFlow.Editor
         private void DrawDiagnosticRow(string name, bool isOk, System.Action fixAction)
         {
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField(name, GUILayout.Width(200));
-            EditorGUILayout.LabelField(isOk ? "✔ Tamam" : "❌ Eksik", isOk ? _okBadgeStyle : _errorBadgeStyle, GUILayout.Width(90));
+            EditorGUILayout.LabelField(name, GUILayout.MinWidth(200));
+            EditorGUILayout.LabelField(isOk ? "✔ Tamam" : "❌ Eksik", isOk ? _okBadgeStyle : _errorBadgeStyle, GUILayout.MinWidth(90));
             if (!isOk && fixAction != null)
             {
-                if (GUILayout.Button("Düzenle", GUILayout.Width(70)))
+                if (GUILayout.Button("Düzenle", GUILayout.MinWidth(70)))
                 {
                     fixAction.Invoke();
                 }
@@ -753,7 +753,7 @@ namespace PixelFlow.Editor
         private void DrawDiagnosticRow(string name, bool isOk, string okText = "Tamam", string errText = "Eksik")
         {
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField(name, GUILayout.Width(200));
+            EditorGUILayout.LabelField(name, GUILayout.MinWidth(200));
             EditorGUILayout.LabelField(isOk ? $"✔ {okText}" : $"❌ {errText}", isOk ? _okBadgeStyle : _errorBadgeStyle);
             EditorGUILayout.EndHorizontal();
         }

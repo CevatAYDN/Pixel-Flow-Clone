@@ -116,12 +116,23 @@ namespace PixelFlow.Views
 
         private void EnsurePool(int requiredSize)
         {
+            if (_cellPrefab == null)
+            {
+                Debug.LogError("[GridView] _cellPrefab is not assigned! Cannot create cell pool.");
+                return;
+            }
+
             int currentCount = _instantiatedCells.Count;
             if (currentCount < requiredSize)
             {
                 int toCreate = requiredSize - currentCount;
                 for (int i = 0; i < toCreate; i++)
                 {
+                    if (_gridContainer == null)
+                    {
+                        _gridContainer = transform;
+                    }
+
                     var cell = Instantiate(_cellPrefab, _gridContainer);
                     cell.gameObject.SetActive(false);
                     _cellPool.Enqueue(cell);

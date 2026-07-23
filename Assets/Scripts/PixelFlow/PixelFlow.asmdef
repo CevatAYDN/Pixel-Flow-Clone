@@ -3,7 +3,8 @@
     "rootNamespace": "PixelFlow",
     "references": [
         "com.nexus.core",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

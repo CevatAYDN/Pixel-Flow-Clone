@@ -235,10 +235,12 @@ namespace PixelFlow.Editor
 
         private void DrawLevelStudioTab()
         {
+            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
             DrawCustomLevelCreator();
             DrawPhaseManagement();
             DrawProceduralGenerator();
             DrawLevelDatabase();
+            EditorGUILayout.EndScrollView();
         }
 
         private void DrawInteractiveGridPainterCard()
@@ -260,10 +262,10 @@ namespace PixelFlow.Editor
             _painterSelectedLevelIdx = Mathf.Clamp(_painterSelectedLevelIdx, 0, _cachedLevels.Count - 1);
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Düzenlenecek Seviye:", GUILayout.Width(130));
+            GUILayout.Label("Düzenlenecek Seviye:", GUILayout.MinWidth(130));
             _painterSelectedLevelIdx = EditorGUILayout.Popup(_painterSelectedLevelIdx, levelNames);
             var selectedLevel = _cachedLevels[_painterSelectedLevelIdx];
-            if (GUILayout.Button("Inspector'da Aç", GUILayout.Width(110)))
+            if (GUILayout.Button("Inspector'da Aç", GUILayout.MinWidth(110)))
             {
                 Selection.activeObject = selectedLevel;
                 EditorGUIUtility.PingObject(selectedLevel);
@@ -281,21 +283,21 @@ namespace PixelFlow.Editor
 
             // Fırça Renk & Araç Seçici
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Fırça Rengi:", GUILayout.Width(80));
+            GUILayout.Label("Fırça Rengi:", GUILayout.MinWidth(80));
             var colors = new[] { ColorType.Red, ColorType.Green, ColorType.Blue, ColorType.Yellow, ColorType.Purple };
             var colorNames = new[] { "🔴 Red", "🟢 Green", "🔵 Blue", "🟡 Yellow", "🟣 Purple" };
             for (int c = 0; c < colors.Length; c++)
             {
                 bool isSelected = !_painterIsEraser && _painterSelectedColor == colors[c];
                 GUI.backgroundColor = isSelected ? Color.cyan : Color.white;
-                if (GUILayout.Button(colorNames[c], GUILayout.Height(24)))
+                if (GUILayout.Button(colorNames[c], GUILayout.MinHeight(24)))
                 {
                     _painterSelectedColor = colors[c];
                     _painterIsEraser = false;
                 }
             }
             GUI.backgroundColor = _painterIsEraser ? Color.red : Color.white;
-            if (GUILayout.Button("🧹 Silgi", GUILayout.Height(24)))
+            if (GUILayout.Button("🧹 Silgi", GUILayout.MinHeight(24)))
             {
                 _painterIsEraser = true;
             }
@@ -332,7 +334,7 @@ namespace PixelFlow.Editor
                     string cellText = hasNode ? GetColorSymbol(existingNode.color) : "·";
                     GUI.backgroundColor = hasNode ? GetColorGUIColor(existingNode.color) : Color.white;
 
-                    if (GUILayout.Button(cellText, GUILayout.Width(36), GUILayout.Height(36)))
+                    if (GUILayout.Button(cellText, GUILayout.MinWidth(36), GUILayout.MinHeight(36)))
                     {
                         Undo.RecordObject(selectedLevel, "Grid Cell Paint");
                         if (selectedLevel.initialNodes == null) selectedLevel.initialNodes = new List<GridNode>();
@@ -418,7 +420,7 @@ namespace PixelFlow.Editor
             GUIStyle phaseBadge = new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = phaseColor }, fontSize = 11 };
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("🧩 Faz Ataması:", GUILayout.Width(110));
+            GUILayout.Label("🧩 Faz Ataması:", GUILayout.MinWidth(110));
             GUILayout.Label(phaseName, phaseBadge);
             GUILayout.Label($"│ Level {_newLevelIndex + 1}", EditorStyles.miniLabel);
             GUILayout.EndHorizontal();
@@ -427,7 +429,7 @@ namespace PixelFlow.Editor
             _newHeight = EditorGUILayout.IntSlider("Izgara Yüksekliği", _newHeight, 3, 10);
 
             GUILayout.Space(8);
-            if (GUILayout.Button("Boş Seviye Varlığı Oluştur", GUILayout.Height(28)))
+            if (GUILayout.Button("Boş Seviye Varlığı Oluştur", GUILayout.MinHeight(28)))
             {
                 CreateCustomLevel(_newLevelIndex, _newWidth, _newHeight);
                 RefreshData();
@@ -451,7 +453,7 @@ namespace PixelFlow.Editor
             {
                 Color c = PhaseAssetGenerator.GetPhaseColor(phases[i]);
                 var box = new GUIStyle(EditorStyles.helpBox) { normal = { textColor = c }, alignment = TextAnchor.MiddleCenter };
-                GUILayout.BeginVertical(box, GUILayout.Width(110), GUILayout.Height(40));
+                GUILayout.BeginVertical(box, GUILayout.MinWidth(110), GUILayout.MinHeight(40));
                 GUILayout.Label(PhaseAssetGenerator.GetPhaseName(phases[i]), new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = c }, fontSize = 9, alignment = TextAnchor.MiddleCenter });
                 GUILayout.Label(phaseRanges[i], new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleCenter });
                 GUILayout.EndVertical();
@@ -468,7 +470,7 @@ namespace PixelFlow.Editor
             GUILayout.BeginHorizontal();
             if (GUILayout.Button(phaseConfigExists
                 ? "✅ PhaseConfig Mevcut — Yeniden Oluştur"
-                : "⚠️ PhaseAsset'leri Oluştur (Configs/)", GUILayout.Height(28)))
+                : "⚠️ PhaseAsset'leri Oluştur (Configs/)", GUILayout.MinHeight(28)))
             {
                 PhaseAssetGenerator.GeneratePhaseAssets();
                 AssetDatabase.Refresh();
@@ -479,7 +481,7 @@ namespace PixelFlow.Editor
             {
                 var existingConfig = AssetDatabase.LoadAssetAtPath<PhaseConfigAsset>(
                     "Assets/Resources/Configs/PhaseConfig.asset");
-                if (GUILayout.Button("🔍 Seç", GUILayout.Height(28), GUILayout.Width(50)))
+                if (GUILayout.Button("🔍 Seç", GUILayout.MinHeight(28), GUILayout.MinWidth(50)))
                 {
                     Selection.activeObject = existingConfig;
                     EditorGUIUtility.PingObject(existingConfig);
@@ -501,7 +503,7 @@ namespace PixelFlow.Editor
             GUILayout.Label("Hedef Faz:", EditorStyles.miniLabel);
             int selectedPhaseIdx = GUILayout.Toolbar(_procSelectedDifficulty,
                 new[] { "Faz 1", "Faz 2", "Faz 3", "Faz 4", "Özel" },
-                GUILayout.Height(22));
+                GUILayout.MinHeight(22));
             _procSelectedDifficulty = selectedPhaseIdx;
 
             // Show phase params
@@ -517,10 +519,10 @@ namespace PixelFlow.Editor
                         normal = { textColor = PhaseAssetGenerator.GetPhaseColor(targetPhase) },
                         fontSize = 11
                     });
-                GUILayout.Label($"Izgara: {defaults.gridWidth}x{defaults.gridHeight}", EditorStyles.miniLabel, GUILayout.Width(100));
-                GUILayout.Label($"Renk: {defaults.colorCount}", EditorStyles.miniLabel, GUILayout.Width(60));
-                GUILayout.Label($"Köprü: {defaults.bridgeCount}", EditorStyles.miniLabel, GUILayout.Width(60));
-                GUILayout.Label(defaults.requireFullGridCoverage ? "%100 Kapsama" : "Esnek", EditorStyles.miniLabel, GUILayout.Width(80));
+                GUILayout.Label($"Izgara: {defaults.gridWidth}x{defaults.gridHeight}", EditorStyles.miniLabel, GUILayout.MinWidth(100));
+                GUILayout.Label($"Renk: {defaults.colorCount}", EditorStyles.miniLabel, GUILayout.MinWidth(60));
+                GUILayout.Label($"Köprü: {defaults.bridgeCount}", EditorStyles.miniLabel, GUILayout.MinWidth(60));
+                GUILayout.Label(defaults.requireFullGridCoverage ? "%100 Kapsama" : "Esnek", EditorStyles.miniLabel, GUILayout.MinWidth(80));
                 GUILayout.EndHorizontal();
             }
 
@@ -528,14 +530,14 @@ namespace PixelFlow.Editor
             if (_procUseSeed) _procSeed = EditorGUILayout.IntField("Tohum Değeri", _procSeed);
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Tekli Üret", GUILayout.Height(28)))
+            if (GUILayout.Button("Tekli Üret", GUILayout.MinHeight(28)))
             {
                 GenerateProceduralLevel(_procSelectedDifficulty, _procUseSeed ? _procSeed : (int?)null, _newLevelIndex);
                 RefreshData();
             }
-            _procStartIndex = EditorGUILayout.IntField("Başlangıç", _procStartIndex, GUILayout.Width(70));
-            _procBatchCount = EditorGUILayout.IntField("Adet", _procBatchCount, GUILayout.Width(60));
-            if (GUILayout.Button("Toplu Üret", GUILayout.Height(28)))
+            _procStartIndex = EditorGUILayout.IntField("Başlangıç", _procStartIndex, GUILayout.MinWidth(70));
+            _procBatchCount = EditorGUILayout.IntField("Adet", _procBatchCount, GUILayout.MinWidth(60));
+            if (GUILayout.Button("Toplu Üret", GUILayout.MinHeight(28)))
             {
                 GenerateProceduralBatch(_procSelectedDifficulty, _procUseSeed ? _procSeed : (int?)null, _procStartIndex, _procBatchCount);
                 RefreshData();
@@ -552,9 +554,9 @@ namespace PixelFlow.Editor
             GUILayout.Space(5);
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("3 Seviyeli Başlangıç Paketi Oluştur", GUILayout.Height(25))) { CreateThreeLevelPack(); RefreshData(); RunBatchSolver(); }
-            if (GUILayout.Button("Faz 1+2 El Yapımı Paket (12 seviye)", GUILayout.Height(25))) { CreatePhase1And2HandCraftedPack(); RefreshData(); RunBatchSolver(); }
-            if (GUILayout.Button("⚡ tüm Seviyeleri Tara & Doğrula", GUILayout.Height(25))) { RunBatchSolver(); }
+            if (GUILayout.Button("3 Seviyeli Başlangıç Paketi Oluştur", GUILayout.MinHeight(25))) { CreateThreeLevelPack(); RefreshData(); RunBatchSolver(); }
+            if (GUILayout.Button("Faz 1+2 El Yapımı Paket (12 seviye)", GUILayout.MinHeight(25))) { CreatePhase1And2HandCraftedPack(); RefreshData(); RunBatchSolver(); }
+            if (GUILayout.Button("⚡ tüm Seviyeleri Tara & Doğrula", GUILayout.MinHeight(25))) { RunBatchSolver(); }
             GUILayout.EndHorizontal();
 
             GUILayout.Space(6);
@@ -586,22 +588,22 @@ namespace PixelFlow.Editor
             GUILayout.Space(4);
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Kaynak Index:", GUILayout.Width(90));
-            _dupSourceIndex = EditorGUILayout.IntField(_dupSourceIndex, GUILayout.Width(50));
-            GUILayout.Label("→ Hedef Index:", GUILayout.Width(90));
-            _dupTargetIndex = EditorGUILayout.IntField(_dupTargetIndex, GUILayout.Width(50));
-            GUILayout.Label("Adet:", GUILayout.Width(35));
-            _dupBatchCount = EditorGUILayout.IntField(_dupBatchCount, GUILayout.Width(50));
+            GUILayout.Label("Kaynak Index:", GUILayout.MinWidth(90));
+            _dupSourceIndex = EditorGUILayout.IntField(_dupSourceIndex, GUILayout.MinWidth(50));
+            GUILayout.Label("→ Hedef Index:", GUILayout.MinWidth(90));
+            _dupTargetIndex = EditorGUILayout.IntField(_dupTargetIndex, GUILayout.MinWidth(50));
+            GUILayout.Label("Adet:", GUILayout.MinWidth(35));
+            _dupBatchCount = EditorGUILayout.IntField(_dupBatchCount, GUILayout.MinWidth(50));
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Tekil Kopyala", GUILayout.Height(24), GUILayout.Width(100)))
+            if (GUILayout.Button("Tekil Kopyala", GUILayout.MinHeight(24), GUILayout.MinWidth(100)))
             {
                 DuplicateLevel(_dupSourceIndex, _dupTargetIndex);
                 RefreshData();
             }
             if (GUILayout.Button($"Batch: Lv{_dupSourceIndex} → Lv{_dupTargetIndex}-{_dupTargetIndex + _dupBatchCount - 1}",
-                GUILayout.Height(24), GUILayout.Width(250)))
+                GUILayout.MinHeight(24), GUILayout.MinWidth(250)))
             {
                 DuplicateLevelBatch(_dupSourceIndex, _dupTargetIndex, _dupBatchCount);
                 RefreshData();
@@ -616,14 +618,15 @@ namespace PixelFlow.Editor
 
         private void DrawBatchSolverTab()
         {
+            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
             GUILayout.BeginVertical(_cardStyle);
             GUILayout.Label("🧪 Toplu Otomatik Çözücü & Seviye Bütünlük Denetçisi", _sectionHeaderStyle);
             GUILayout.Label("Projedeki tüm seviyelerin matematiksel olarak çözülebilirliğini doğrulayın.", EditorStyles.miniLabel);
             GUILayout.Space(8);
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("TÜM Seviyelerde Toplu Çözücüyü Çalıştır", GUILayout.Height(32))) RunBatchSolver();
-            if (GUILayout.Button("Eksik Çözümleri Otomatik Düzelt & Üret", GUILayout.Height(32))) AutoFixMissingSolutions();
+            if (GUILayout.Button("TÜM Seviyelerde Toplu Çözücüyü Çalıştır", GUILayout.MinHeight(32))) RunBatchSolver();
+            if (GUILayout.Button("Eksik Çözümleri Otomatik Düzelt & Üret", GUILayout.MinHeight(32))) AutoFixMissingSolutions();
             GUILayout.EndHorizontal();
 
             if (!string.IsNullOrEmpty(_batchSolveStatusMessage))
@@ -635,6 +638,7 @@ namespace PixelFlow.Editor
             GUILayout.Space(8);
 
             DrawSolverResultsTable();
+            EditorGUILayout.EndScrollView();
         }
 
         private void DrawSolverResultsTable()
@@ -646,10 +650,10 @@ namespace PixelFlow.Editor
             if (_cachedLevels.Count == 0) { GUILayout.EndVertical(); return; }
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Seviye", EditorStyles.boldLabel, GUILayout.Width(60));
-            GUILayout.Label("Izgara", EditorStyles.boldLabel, GUILayout.Width(60));
-            GUILayout.Label("Çözülebilirlik", EditorStyles.boldLabel, GUILayout.Width(160));
-            GUILayout.Label("Çözüm Sayısı", EditorStyles.boldLabel, GUILayout.Width(100));
+            GUILayout.Label("Seviye", EditorStyles.boldLabel, GUILayout.MinWidth(60));
+            GUILayout.Label("Izgara", EditorStyles.boldLabel, GUILayout.MinWidth(60));
+            GUILayout.Label("Çözülebilirlik", EditorStyles.boldLabel, GUILayout.MinWidth(160));
+            GUILayout.Label("Çözüm Sayısı", EditorStyles.boldLabel, GUILayout.MinWidth(100));
             GUILayout.Label("İşlem", EditorStyles.boldLabel);
             GUILayout.EndHorizontal();
 
@@ -658,18 +662,18 @@ namespace PixelFlow.Editor
             {
                 if (lvl == null) continue;
                 GUILayout.BeginHorizontal();
-                GUILayout.Label($"Svye {lvl.levelIndex}", GUILayout.Width(60));
-                GUILayout.Label($"{lvl.width}x{lvl.height}", GUILayout.Width(60));
+                GUILayout.Label($"Svye {lvl.levelIndex}", GUILayout.MinWidth(60));
+                GUILayout.Label($"{lvl.width}x{lvl.height}", GUILayout.MinWidth(60));
 
                 if (!_solvabilityCache.TryGetValue(lvl, out bool isSolvable))
                 {
                     isSolvable = solver.Solve(lvl, out _);
                     _solvabilityCache[lvl] = isSolvable;
                 }
-                GUILayout.Label(isSolvable ? "✔ ÇÖZÜLEBİLİR" : "✖ ÇÖZÜLEMİYOR!", isSolvable ? _okBadgeStyle : _errorBadgeStyle, GUILayout.Width(160));
+                GUILayout.Label(isSolvable ? "✔ ÇÖZÜLEBİLİR" : "✖ ÇÖZÜLEMİYOR!", isSolvable ? _okBadgeStyle : _errorBadgeStyle, GUILayout.MinWidth(160));
                 int sc = lvl.solutions?.Count ?? 0;
-                GUILayout.Label(sc > 0 ? $"{sc} renk çözüldü" : "Çözüm yok", GUILayout.Width(100));
-                if (GUILayout.Button("İncele", GUILayout.Height(18), GUILayout.Width(60))) { Selection.activeObject = lvl; EditorGUIUtility.PingObject(lvl); }
+                GUILayout.Label(sc > 0 ? $"{sc} renk çözüldü" : "Çözüm yok", GUILayout.MinWidth(100));
+                if (GUILayout.Button("İncele", GUILayout.MinWidth(60), GUILayout.MinHeight(18))) { Selection.activeObject = lvl; EditorGUIUtility.PingObject(lvl); }
                 GUILayout.EndHorizontal();
             }
             GUILayout.EndVertical();
@@ -681,8 +685,10 @@ namespace PixelFlow.Editor
 
         private void DrawEconomyAnalyticsTab()
         {
+            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
             DrawDifficultyHeatmap();
             DrawEconomyTable();
+            EditorGUILayout.EndScrollView();
         }
 
         private void DrawDifficultyHeatmap()
@@ -695,10 +701,10 @@ namespace PixelFlow.Editor
             if (_cachedLevels.Count > 0)
             {
                 GUILayout.BeginHorizontal();
-                GUILayout.Label("Seviye", EditorStyles.boldLabel, GUILayout.Width(60));
-                GUILayout.Label("Alan", EditorStyles.boldLabel, GUILayout.Width(70));
-                GUILayout.Label("Karmaşıklık Skoru", EditorStyles.boldLabel, GUILayout.Width(120));
-                GUILayout.Label("Zorluk Seviyesi", EditorStyles.boldLabel, GUILayout.Width(110));
+                GUILayout.Label("Seviye", EditorStyles.boldLabel, GUILayout.MinWidth(60));
+                GUILayout.Label("Alan", EditorStyles.boldLabel, GUILayout.MinWidth(70));
+                GUILayout.Label("Karmaşıklık Skoru", EditorStyles.boldLabel, GUILayout.MinWidth(120));
+                GUILayout.Label("Zorluk Seviyesi", EditorStyles.boldLabel, GUILayout.MinWidth(110));
                 GUILayout.Label("Kapsama Kuralı", EditorStyles.boldLabel);
                 GUILayout.EndHorizontal();
 
@@ -715,10 +721,10 @@ namespace PixelFlow.Editor
                     tierStyle.normal.textColor = tierColor;
 
                     GUILayout.BeginHorizontal();
-                    GUILayout.Label($"Svye {lvl.levelIndex}", GUILayout.Width(60));
-                    GUILayout.Label($"{lvl.width}x{lvl.height} ({lvl.width * lvl.height})", GUILayout.Width(70));
-                    GUILayout.Label($"{score} puan", GUILayout.Width(120));
-                    GUILayout.Label(tierName, tierStyle, GUILayout.Width(110));
+                    GUILayout.Label($"Svye {lvl.levelIndex}", GUILayout.MinWidth(60));
+                    GUILayout.Label($"{lvl.width}x{lvl.height} ({lvl.width * lvl.height})", GUILayout.MinWidth(70));
+                    GUILayout.Label($"{score} puan", GUILayout.MinWidth(120));
+                    GUILayout.Label(tierName, tierStyle, GUILayout.MinWidth(110));
                     GUILayout.Label(lvl.requireFullGridCoverage ? "Tam Izgara (%100)" : "Esnek Bağlantı");
                     GUILayout.EndHorizontal();
                 }
@@ -734,10 +740,10 @@ namespace PixelFlow.Editor
             GUILayout.Space(5);
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Kademe", EditorStyles.boldLabel, GUILayout.Width(55));
-            GUILayout.Label("Depo Kapasitesi", EditorStyles.boldLabel, GUILayout.Width(100));
-            GUILayout.Label("Oran Maliyeti", EditorStyles.boldLabel, GUILayout.Width(90));
-            GUILayout.Label("Depo Maliyeti", EditorStyles.boldLabel, GUILayout.Width(90));
+            GUILayout.Label("Kademe", EditorStyles.boldLabel, GUILayout.MinWidth(55));
+            GUILayout.Label("Depo Kapasitesi", EditorStyles.boldLabel, GUILayout.MinWidth(100));
+            GUILayout.Label("Oran Maliyeti", EditorStyles.boldLabel, GUILayout.MinWidth(90));
+            GUILayout.Label("Depo Maliyeti", EditorStyles.boldLabel, GUILayout.MinWidth(90));
             GUILayout.Label("Viyadük Maliyeti", EditorStyles.boldLabel);
             GUILayout.EndHorizontal();
 
@@ -748,10 +754,10 @@ namespace PixelFlow.Editor
                 int storageC = Mathf.RoundToInt(150f * Mathf.Pow(1.35f, lvl));
                 int viaductC = Mathf.RoundToInt(500f * Mathf.Pow(1.35f, lvl));
                 GUILayout.BeginHorizontal();
-                GUILayout.Label($"K{lvl + 1}", GUILayout.Width(55));
-                GUILayout.Label($"{storageCaps[lvl]:N0}", GUILayout.Width(100));
-                GUILayout.Label($"{rateC:N0} ₺", GUILayout.Width(90));
-                GUILayout.Label($"{storageC:N0} ₺", GUILayout.Width(90));
+                GUILayout.Label($"K{lvl + 1}", GUILayout.MinWidth(55));
+                GUILayout.Label($"{storageCaps[lvl]:N0}", GUILayout.MinWidth(100));
+                GUILayout.Label($"{rateC:N0} ₺", GUILayout.MinWidth(90));
+                GUILayout.Label($"{storageC:N0} ₺", GUILayout.MinWidth(90));
                 GUILayout.Label($"{viaductC:N0} ₺");
                 GUILayout.EndHorizontal();
             }
@@ -764,16 +770,22 @@ namespace PixelFlow.Editor
 
         private void DrawNexusInspectorTab()
         {
+            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
             var root = Object.FindAnyObjectByType<Root>();
             bool initialized = root != null && root.IsInitialized && root.Context != null;
 
             DrawNexusRootStatus(root, initialized);
-            if (!initialized) return;
+            if (!initialized)
+            {
+                EditorGUILayout.EndScrollView();
+                return;
+            }
 
             var container = root.Context.Container;
             DrawReactiveModels(container);
             DrawRegisteredServices(container);
             DrawActiveViews();
+            EditorGUILayout.EndScrollView();
         }
 
         private void DrawNexusRootStatus(Root root, bool initialized)
@@ -854,9 +866,9 @@ namespace PixelFlow.Editor
                     GUILayout.BeginHorizontal();
                     var origColor = GUI.color;
                     GUI.color = active ? new Color(0.12f, 0.65f, 0.22f) : new Color(0.6f, 0.6f, 0.6f);
-                    GUILayout.Label(active ? "●" : "○", GUILayout.Width(15));
+                    GUILayout.Label(active ? "●" : "○", GUILayout.MinWidth(15));
                     GUI.color = origColor;
-                    GUILayout.Label(view.GetType().Name, EditorStyles.boldLabel, GUILayout.Width(180));
+                    GUILayout.Label(view.GetType().Name, EditorStyles.boldLabel, GUILayout.MinWidth(180));
                     GUILayout.Label($"({view.gameObject.name})", EditorStyles.miniLabel);
                     GUILayout.EndHorizontal();
                 }
@@ -872,11 +884,13 @@ namespace PixelFlow.Editor
 
         private void DrawPerformanceTab()
         {
+            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
             bool isPlaying = Application.isPlaying;
             DrawRuntimeMetrics(isPlaying);
             DrawTimeScaleControls(isPlaying);
             DrawSceneStats();
             DrawAssetSummary();
+            EditorGUILayout.EndScrollView();
         }
 
         private void DrawRuntimeMetrics(bool isPlaying)
@@ -893,7 +907,7 @@ namespace PixelFlow.Editor
                 _fpsStyle.normal.textColor = fps > 55 ? new Color(0.12f, 0.65f, 0.22f) : fps > 30 ? new Color(0.9f, 0.6f, 0.1f) : new Color(0.85f, 0.2f, 0.18f);
 
                 GUILayout.BeginHorizontal();
-                GUILayout.Label("FPS:", GUILayout.Width(110));
+                GUILayout.Label("FPS:", GUILayout.MinWidth(110));
                 GUILayout.Label($"{fps:F1}", _fpsStyle);
                 GUILayout.EndHorizontal();
 
@@ -917,11 +931,11 @@ namespace PixelFlow.Editor
             GUILayout.Label("⏱️ Zaman Ölçeği Kontrolü", _sectionHeaderStyle);
             GUILayout.Space(5);
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("⏸ Durdur (0x)", GUILayout.Height(28))) Time.timeScale = 0f;
-            if (GUILayout.Button("▶ Normal (1x)", GUILayout.Height(28))) Time.timeScale = 1f;
-            if (GUILayout.Button("⏩ Hızlı (2x)", GUILayout.Height(28))) Time.timeScale = 2f;
-            if (GUILayout.Button("⏩⏩ Çok Hızlı (5x)", GUILayout.Height(28))) Time.timeScale = 5f;
-            if (GUILayout.Button("🐌 Ağır Çekim (0.25x)", GUILayout.Height(28))) Time.timeScale = 0.25f;
+            if (GUILayout.Button("⏸ Durdur (0x)", GUILayout.MinHeight(28))) Time.timeScale = 0f;
+            if (GUILayout.Button("▶ Normal (1x)", GUILayout.MinHeight(28))) Time.timeScale = 1f;
+            if (GUILayout.Button("⏩ Hızlı (2x)", GUILayout.MinHeight(28))) Time.timeScale = 2f;
+            if (GUILayout.Button("⏩⏩ Çok Hızlı (5x)", GUILayout.MinHeight(28))) Time.timeScale = 5f;
+            if (GUILayout.Button("🐌 Ağır Çekim (0.25x)", GUILayout.MinHeight(28))) Time.timeScale = 0.25f;
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
             GUILayout.Space(8);
@@ -1005,7 +1019,7 @@ namespace PixelFlow.Editor
             GUILayout.BeginHorizontal();
             GUILayout.Label("📁 Proje Varlık Özeti", _sectionHeaderStyle);
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button("🔄 Yenile", GUILayout.Width(70), GUILayout.Height(18)))
+            if (GUILayout.Button("🔄 Yenile", GUILayout.MinWidth(70), GUILayout.MinHeight(18)))
             {
                 _assetsCached = false;
                 _lastStatsUpdateTime = -999f;

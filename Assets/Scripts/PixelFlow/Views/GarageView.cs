@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using Nexus.Core;
 using PixelFlow.Data;
 
@@ -12,7 +13,7 @@ namespace PixelFlow.Views
     {
         [SerializeField] private GameObject _panel;
         [SerializeField] private Button _closeButton;
-        [SerializeField] private Text _coinsText;
+        [SerializeField] private TMP_Text _coinsText;
         [SerializeField] private Transform _skinContainer;
 
         public event Action OnCloseClicked;
