@@ -751,6 +751,7 @@ namespace Nexus.Generated
                 instance.SaveThrottler = di.Resolve<Nexus.Core.Services.ISaveThrottler>();
                 instance.HapticService = di.Resolve<Nexus.Core.Services.IHapticService>();
                 instance.ObstacleService = di.Resolve<PixelFlow.Services.IObstacleService>();
+                instance.PowerUpService = di.Resolve<PixelFlow.Services.IPowerUpService>();
                 instance.PlayerPrefsService = di.Resolve<Nexus.Core.Services.IPlayerPrefsService>();
                 instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
                 instance.Config = di.Resolve<PixelFlow.Data.GameConfig>();
@@ -768,6 +769,7 @@ namespace Nexus.Generated
                 instance.SaveThrottler = null;
                 instance.HapticService = null;
                 instance.ObstacleService = null;
+                instance.PowerUpService = null;
                 instance.PlayerPrefsService = null;
                 instance.LoggerService = null;
                 instance.Config = null;
@@ -1336,6 +1338,8 @@ namespace Nexus.Generated
                 _ = _p_ProcessInputCommand_HapticService; // Suppress CS0219 warning
                 var _p_ProcessInputCommand_ObstacleService = default(PixelFlow.Commands.ProcessInputCommand).ObstacleService;
                 _ = _p_ProcessInputCommand_ObstacleService; // Suppress CS0219 warning
+                var _p_ProcessInputCommand_PowerUpService = default(PixelFlow.Commands.ProcessInputCommand).PowerUpService;
+                _ = _p_ProcessInputCommand_PowerUpService; // Suppress CS0219 warning
                 var _p_ProcessInputCommand_PlayerPrefsService = default(PixelFlow.Commands.ProcessInputCommand).PlayerPrefsService;
                 _ = _p_ProcessInputCommand_PlayerPrefsService; // Suppress CS0219 warning
                 var _p_ProcessInputCommand_LoggerService = default(PixelFlow.Commands.ProcessInputCommand).LoggerService;

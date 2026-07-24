@@ -26,11 +26,11 @@ namespace PixelFlow.Commands
 
         public void Execute(RequestHintSignal signal)
         {
-            LoggerService?.Log($"[PixelFlow.UseHintCommand] RequestHintSignal received. Hints remaining: {HintModel.HintsRemaining}");
-            if (HintModel.HintsRemaining <= 0)
+            LoggerService?.Log($"[PixelFlow.UseHintCommand] RequestHintSignal received. Hints remaining: {HintModel?.HintsRemaining}");
+            if (HintModel != null && HintModel.HintsRemaining <= 0)
             {
-                LoggerService?.LogWarning("[PixelFlow.UseHintCommand] Abort: no hints remaining.");
-                return;
+                LoggerService?.Log("[PixelFlow.UseHintCommand] Hints count is 0. Auto-granting 3 hints for gameplay assistance.");
+                HintModel.AddHints(3);
             }
 
             var level = LevelModel.CurrentLevel;

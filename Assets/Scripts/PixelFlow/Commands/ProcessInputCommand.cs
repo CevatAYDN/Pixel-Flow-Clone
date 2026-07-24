@@ -24,6 +24,7 @@ namespace PixelFlow.Commands
         [Inject] public ISaveThrottler SaveThrottler { get; set; }
         [Inject] public IHapticService HapticService { get; set; }
         [Inject] public IObstacleService ObstacleService { get; set; }
+        [Inject, OptionalInject] public IPowerUpService PowerUpService { get; set; }
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject, OptionalInject] public GameConfig Config { get; set; }
@@ -201,8 +202,30 @@ namespace PixelFlow.Commands
                     }
                 }
 
+                bool isRainbowActive = PowerUpService != null && PowerUpService.HasActiveRainbowRoad;
                 bool isDrawableObstacle = currentCell.State == CellState.Obstacle &&
                     (currentCell.ObstacleType == ObstacleType.Ferry || currentCell.ObstacleType == ObstacleType.NarrowPass);
+
+                if (isRainbowActive && currentCell.State != CellState.Node)
+                {
+                    if (PowerUpService.TryConsumeRainbowRoadSegment())
+                    {
+                        LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Rainbow Road segment applied at {signal.GridPosition} for color {GridModel.ActiveColor.Value}. Remaining: {PowerUpService.RainbowRoadUses}");
+                        EnsureHistoryRecorded();
+                        currentCell.Color = GridModel.ActiveColor.Value;
+                        currentCell.State = CellState.Path;
+                        if (!currentCell.HasPathColor(GridModel.ActiveColor.Value))
+                        {
+                            currentCell.AddPathColor(GridModel.ActiveColor.Value);
+                        }
+                        path.Add(signal.GridPosition);
+                        GridModel.LastPosition.Value = signal.GridPosition;
+                        SignalBus.Fire(new GridUpdatedSignal());
+                        SoundModel?.PlayDrawSound(path.Count);
+                        HapticService?.Vibrate(HapticType.Light);
+                        return;
+                    }
+                }
 
                 if (currentCell.State == CellState.Empty || (isDrawableObstacle && currentCell.PathColorCount == 0))
                 {
@@ -218,9 +241,6 @@ namespace PixelFlow.Commands
                     GridModel.LastPosition.Value = signal.GridPosition;
                     SignalBus.Fire(new GridUpdatedSignal());
                     SoundModel.PlayDrawSound(path.Count);
-                    // Batched save: drag intermetiate steps atlanır — PointerUp veya path
-                    // complete kaydeder. SaveThrottler 2s throttle ile zaten bekletiyor.
-                    // RequestSave();  ← kaldırıldı: intermediate drag step, save gerekmez
                 }
                 else if (currentCell.State == CellState.Node && currentCell.Color == GridModel.ActiveColor.Value)
                 {

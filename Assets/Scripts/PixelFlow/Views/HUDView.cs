@@ -105,20 +105,25 @@ namespace PixelFlow.Views
 
             foreach (var b in buttons)
             {
+                ButtonJuice.AttachTo(b);
                 string name = b.gameObject.name.ToLower();
-                if (_hintButton == null && name.Contains("hint")) _hintButton = b;
-                if (_undoButton == null && name.Contains("undo")) _undoButton = b;
-                if (_redoButton == null && name.Contains("redo")) _redoButton = b;
-                if (_nextLevelButton == null && name.Contains("next")) _nextLevelButton = b;
-                if (_continueButton == null && name.Contains("continue")) _continueButton = b;
-                if (_pauseButton == null && name.Contains("pause")) _pauseButton = b;
-                if (_retryButton == null && name.Contains("retry")) _retryButton = b;
+                string txt = "";
+                var tmp = b.GetComponentInChildren<TMPro.TMP_Text>();
+                if (tmp != null) txt = tmp.text.ToLower();
+
+                if (_hintButton == null && (name.Contains("hint") || name.Contains("ipucu") || txt.Contains("hint") || txt.Contains("ipucu"))) _hintButton = b;
+                if (_undoButton == null && (name.Contains("undo") || name.Contains("geri") || txt.Contains("geri"))) _undoButton = b;
+                if (_redoButton == null && (name.Contains("redo") || name.Contains("ileri") || txt.Contains("ileri"))) _redoButton = b;
+                if (_nextLevelButton == null && (name.Contains("next") || name.Contains("sonraki"))) _nextLevelButton = b;
+                if (_continueButton == null && (name.Contains("continue") || name.Contains("devam"))) _continueButton = b;
+                if (_pauseButton == null && (name.Contains("pause") || name.Contains("duraklat"))) _pauseButton = b;
+                if (_retryButton == null && (name.Contains("retry") || name.Contains("tekrar"))) _retryButton = b;
                 if (_themeDarkButton == null && name.Contains("dark")) _themeDarkButton = b;
                 if (_themeLightButton == null && name.Contains("light")) _themeLightButton = b;
                 if (_themeNeonButton == null && name.Contains("neon")) _themeNeonButton = b;
-                if (_garageButton == null && name.Contains("garage")) _garageButton = b;
-                if (_rainbowRoadButton == null && name.Contains("rainbow")) _rainbowRoadButton = b;
-                if (_clearJamButton == null && name.Contains("clearjam")) _clearJamButton = b;
+                if (_garageButton == null && (name.Contains("garage") || name.Contains("garaj") || txt.Contains("garaj") || txt.Contains("garage"))) _garageButton = b;
+                if (_rainbowRoadButton == null && (name.Contains("rainbow") || name.Contains("gokkusagi") || name.Contains("gökkuşağı") || txt.Contains("gökkuşağı") || txt.Contains("gokkusagi") || txt.Contains("rainbow"))) _rainbowRoadButton = b;
+                if (_clearJamButton == null && (name.Contains("clearjam") || name.Contains("temizle") || txt.Contains("temizle") || txt.Contains("clear"))) _clearJamButton = b;
             }
 
             var transforms = GetComponentsInChildren<Transform>(true);
@@ -129,12 +134,13 @@ namespace PixelFlow.Views
                 if (_levelFailedPanel == null && (name.Contains("fail") || name.Contains("gameover"))) _levelFailedPanel = tr.gameObject;
                 if (_starsContainer == null && name.Contains("star")) _starsContainer = tr.gameObject;
             }
-
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
             LoggerService?.Log($"[PixelFlow.HUDView] AutoWire: hintBtn={(bool)_hintButton}, undoBtn={(bool)_undoButton}, redoBtn={(bool)_redoButton}, " +
                 $"nextLvlBtn={(bool)_nextLevelButton}, continueBtn={(bool)_continueButton}, pauseBtn={(bool)_pauseButton}, " +
                 $"retryBtn={(bool)_retryButton}, garageBtn={(bool)_garageButton}, rainbowBtn={(bool)_rainbowRoadButton}, " +
                 $"clearJamBtn={(bool)_clearJamButton}, themeDark={(bool)_themeDarkButton}, themeLight={(bool)_themeLightButton}, themeNeon={(bool)_themeNeonButton}, " +
                 $"completionPanel={(bool)_completionPanel}, levelFailedPanel={(bool)_levelFailedPanel}, starsContainer={(bool)_starsContainer}");
+#endif
         }
 
         private void RemoveAllHUDButtonListeners()
@@ -612,6 +618,7 @@ namespace PixelFlow.Views
 
         private void LogHUDButtonDiagnostics()
         {
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
             LoggerService?.Log($"[PixelFlow.HUDView] Button Interactable States: " +
                 $"hint={(bool)_hintButton && _hintButton.interactable}, " +
                 $"undo={(bool)_undoButton && _undoButton.interactable}, " +
@@ -621,10 +628,12 @@ namespace PixelFlow.Views
                 $"continue={(bool)_continueButton && _continueButton.interactable}, " +
                 $"retry={(bool)_retryButton && _retryButton.interactable}, " +
                 $"garage={(bool)_garageButton && _garageButton.interactable}");
+#endif
         }
 
         private void LogCanvasState(string context)
         {
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
             var canvas = GetComponent<Canvas>();
             var cg = GetComponent<CanvasGroup>();
             LoggerService?.Log($"[PixelFlow.HUDView] Canvas state [{context}]: " +
@@ -639,6 +648,7 @@ namespace PixelFlow.Views
                 $"current={(bool)es}, " +
                 $"inputModule={(es != null ? es.currentInputModule?.GetType().Name : "null")}, " +
                 $"firstSelected={(es != null && es.firstSelectedGameObject != null ? es.firstSelectedGameObject.name : "null")}");
+#endif
         }
 
         private static void SetThemeButtonColor(Button button, bool isActive)
