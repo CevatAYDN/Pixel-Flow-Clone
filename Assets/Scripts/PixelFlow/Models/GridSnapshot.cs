@@ -198,7 +198,9 @@ namespace PixelFlow.Models
         public void ApplySessionTo(IGameSessionModel session)
         {
             if (!HasSessionState || session == null) return;
-            session.ApplySave(SessionAvailableViaducts, SessionMaxViaducts, SessionElapsedTime, SessionScore, SessionStarsEarned, 0);
+            // TargetFlowScore ve CurrentFlowScore da geri yüklenir; aksi halde undo/redo
+            // hedef akış skorunu varsayılana (5) düşürüp kazanma koşulunu bozardı.
+            session.ApplySave(SessionAvailableViaducts, SessionMaxViaducts, SessionElapsedTime, SessionScore, SessionStarsEarned, 0, SessionTargetFlowScore, SessionCurrentFlowScore);
         }
     }
 }

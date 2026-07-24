@@ -169,7 +169,7 @@ FAZ 0: 3 Günlük MVP (Hafta 1)  ──►  CPI Testi ($500 Bütçe)  ──► 
 │     └─ Köprü (Bridge) node'ları üstten geçişe izin verir          │
 │                                                                    │
 │  3. ARAÇLAR HAREKET EDER (Auto-Run)                                │
-│     └─ Yol çizilince araç otomatik ilerler                        │
+│     └─ Yollar bitince araçlar hareket eder                        │
 │     └─ Doğru renkte durağa ulaşırsa → "POP!" patlama + coin      │
 │     └─ Yanlış renk / çıkmaz → araç komik şekilde zıplar (bouncy)  │
 │                                                                    │
@@ -192,8 +192,10 @@ FAZ 0: 3 Günlük MVP (Hafta 1)  ──►  CPI Testi ($500 Bütçe)  ──► 
 | Drag (başlangıç node → hedef) | Yol çizimi |
 | Tap (çizilmiş yol) | Yolu sil / geri al |
 | Tap (Undo butonu) | Son hamleyi geri al |
-| Tap (Play butonu) | Tüm araçları aynı anda hareket ettir |
+| Tap (Pause/Durdur butonu) | Simülasyonu duraklat/devam ettir (toggle) |
 | Long-press (araç) | Araç skin önizleme |
+
+> **Not (kod gerçeği):** Oyun-içi ayrı bir "Play" butonu **yoktur**. Tüm renk çiftleri bağlandığında simülasyon **otomatik** başlar (`CheckWinConditionCommand → StartSimulationSignal → StartSimulationCommand → VehicleSimulator.StartSimulationPhase()`). Ana menüdeki Play butonu (`MainMenuView.OnPlayClicked`) ise yalnızca seçili seviyeyi başlatır. Simülasyon sırasında input pasiftir; yalnızca HUD'daki Pause/Durdur butonu `PauseSimulationSignal` (toggle) ateşler.
 
 ### 8.3 Zorluk Mekanikleri (Progressive Complexity)
 
@@ -609,6 +611,8 @@ public interface IGameStateMachine
 }
 ```
 
+> **⚠️ Kod gerçeği (AI-Ready Not):** Yukarıdaki `IGameState` / `IGameStateMachine` arayüzleri Nexus Core'un sunduğu **soyut, opsiyonel** durum-makinesi API'sidir. **PixelFlow bu API'yi KULLANMAZ.** Gerçek oyun, hafif bir `enum GameState` + reaktif `IGameStateModel` (`GameStateModel.SetState(GameState)`) + geçiş beyaz-listesi (transition whitelist) deseniyle çalışır. Durum akışı ve izinli geçişler için tek doğru kaynak **§15.2.2 GameState Machine (Kesin Tanım)** bölümüdür. Yeni durum eklerken `ChangeStateAsync<TState>` değil, `IGameStateModel.SetState()` + geçiş tablosu güncellenir.
+
 #### 15.1.2 DI Registration Kuralları (IContextBuilder)
 
 ```csharp
@@ -693,7 +697,8 @@ Assets/Scripts/PixelFlow/
 │   ├── HintModel.cs             ← İpucu state
 │   ├── VehicleInstance.cs       ← Runtime araç instance
 │   ├── GridSnapshot.cs          ← Grid anlık görüntü (undo/save)
-│   └── CloudSaveManager.cs      ← Cloud save logic
+│   ├── CloudSaveManager.cs      ← Cloud save logic
+│   └── ColorBlindPalette.cs     ← Runtime renk körlüğü paleti tutucu (statik init)
 │
 ├── Services/                    ← INexusService implementasyonları
 │   ├── PathService.cs           ← Yol çizim/validasyon
@@ -718,6 +723,15 @@ Assets/Scripts/PixelFlow/
 │   ├── ProceduralAudioFactory.cs ← Prosedürel ses
 │   ├── GridStateSerializer.cs   ← Save/Load serialization
 │   ├── LocalEconomyValidator.cs ← Anti-cheat (local)
+│   ├── AdManagerService.cs      ← Reklam yöneticisi (AdService köprüsü)
+│   ├── AudioService.cs          ← PixelFlow ses efekt/müzik servisi
+│   ├── BridgeValidationUtility.cs ← Köprü/viyadük yol doğrulama (Config'ten okur)
+│   ├── CameraControllerMediator.cs ← Kamera mediator
+│   ├── CameraProvider.cs        ← Aktif kamera erişim sağlayıcısı
+│   ├── GridViewProvider.cs      ← Aktif GridView erişim sağlayıcısı
+│   ├── ResourceLocalizationTableProvider.cs ← Yerelleştirme tablo yükleyici
+│   ├── (Arayüzler) ICameraProvider, IGameHistoryService, IGridViewProvider,
+│   │               IHintService, IPathService, IPathSolver, IPowerUpService
 │   └── GlobalRelease/           ← Global mağaza servisleri
 │       ├── PrivacyComplianceService.cs
 │       ├── SilentCrashDiagnosticsService.cs
@@ -738,8 +752,13 @@ Assets/Scripts/PixelFlow/
 │   ├── ClearJamCommand.cs       ← Sıkışıklık temizle
 │   ├── RainbowRoadCommand.cs    ← Gökkuşağı yol
 │   ├── ChangeThemeCommand.cs    ← Tema değiştir
-│   ├── InterstitialAdCommand.cs ← Reklam göster
-│   └── LevelVictoryCompositeHandler.cs ← Zafer composite
+│   ├── ChangeAudioVolumeCommand.cs ← Ses seviyesi değiştir
+│   ├── ChangeColorBlindModeCommand.cs ← Renk körlüğü modu değiştir
+│   ├── ToggleHapticsCommand.cs  ← Titreşim aç/kapa
+│   ├── InterstitialAdCommand.cs ← Interstitial reklam göster
+│   ├── RewardedAdCommand.cs     ← Ödüllü reklam göster (2x coin, ekstra undo)
+│   ├── SaveHelper.cs            ← Kaydetme yardımcı (paylaşılan util)
+│   └── LevelVictoryCompositeHandler.cs ← Zafer composite (multi-signal fan-in)
 │
 ├── Signals/                     ← struct Signal tanımları
 │   ├── InputInteractionSignal.cs
@@ -756,9 +775,17 @@ Assets/Scripts/PixelFlow/
 │   ├── PlaceViaductSignal.cs
 │   ├── RequestHintSignal.cs
 │   ├── ProgressUpdatedSignal.cs
-│   ├── CollectionSignals.cs
-│   ├── FlowSignals.cs
-│   └── ... (diğerleri)
+│   ├── CollectionSignals.cs     ← Koleksiyon/garaj sinyalleri (ShowGarage vb.)
+│   ├── FlowSignals.cs           ← FlowScoreUpdated, LoadedInitialLevel vb.
+│   ├── SettingsSignals.cs       ← ChangeAudioVolume/ColorBlind/ToggleHaptics
+│   ├── ActivateRainbowRoadSignal.cs
+│   ├── ClearJamSignal.cs
+│   ├── ChangeThemeSignal.cs
+│   ├── ThemeChangedSignal.cs
+│   ├── ShowGarageSignal.cs
+│   ├── PathIntersectionWarningSignal.cs
+│   ├── ThirdColorRejectionSignal.cs
+│   └── TimerTickSignal.cs
 │
 ├── Views/                       ← IView + Mediator (MVCS View katmanı)
 │   ├── GridView.cs + GridMediator.cs
@@ -774,13 +801,25 @@ Assets/Scripts/PixelFlow/
 │   ├── CellView.cs
 │   ├── ConfettiView.cs
 │   ├── BloomFlashView.cs
-│   └── SoundHandlerView.cs / ThemeHandlerView.cs
+│   ├── SoundHandlerView.cs / ThemeHandlerView.cs
+│   ├── ButtonJuice.cs           ← Buton dokunsal animasyonu
+│   ├── PixelTextHelper.cs       ← TMP yardımcı
+│   └── SafeArea.cs              ← Çentik/safe-area yerleşimi
 │
 └── Editor/                      ← Editör araçları (Runtime'a dahil DEĞİL)
-    ├── PixelFlowSetupWindow.cs  ← Ana editör penceresi (11 sekme)
-    ├── LevelDataEditor.cs       ← Visual grid editör
+    ├── PixelFlowSetupWindow.cs  ← Ana editör penceresi (11 sekme, partial class)
+    ├── PixelFlowSetupWindow.EditorTabs.cs      ← Seviye/çözücü sekmeleri
+    ├── PixelFlowSetupWindow.SceneSetup.cs      ← Sahne kurulum otomasyonu
+    ├── PixelFlowSetupWindow.DataManager.cs     ← Data yöneticisi sekmesi
+    ├── PixelFlowSetupWindow.GameAndDiagnostics.cs ← Oyun kontrol & tanılama
+    ├── PixelFlowSetupWindow.HybridCasualTabs.cs ← Garaj/Reklam/Validator sekmeleri
+    ├── LevelDataEditor.cs       ← Visual grid editör (CustomEditor)
     ├── PreBuildDataValidator.cs ← Build öncesi doğrulama
-    └── Tests/                   ← Editör testleri
+    ├── PhaseAssetGenerator.cs   ← Faz asset üretici
+    ├── PixelFlowEmojiFontSetup.cs ← Emoji font kurulumu
+    ├── AutoReferenceEditor.cs / FixMissingScriptRefs.cs ← Referans onarım
+    ├── PixelFlowDiagnosticTests.cs ← Editör tanılama testleri
+    └── Tests/                   ← 30+ NUnit test dosyası (GameTestContext + stub'lar)
 ```
 
 #### 15.2.2 GameState Machine (Kesin Tanım)
@@ -806,19 +845,30 @@ namespace PixelFlow.Models
 
 ```
 Boot → Loading → MainMenu
-Boot → MainMenu (direkt)
+Boot → MainMenu (direkt fresh start)
 Boot → Playing (save restore)
 MainMenu → Playing
 Playing ↔ Paused
 Playing → Simulating
+Playing → MainMenu (hub'a çıkış)
+Playing → LevelCompleted (grace skip / debug kısayolu)
+Playing → LevelFailed (GDD §2.4)
 Simulating → Playing (araçlar durdu, tekrar çizim)
+Simulating → Paused
+Simulating → MainMenu (hub'a çıkış)
 Simulating → LevelCompleted
 Simulating → LevelFailed
+Paused → Playing
+Paused → Simulating (kriz viyadük çözümü simülasyonu geri yükler)
+Paused → MainMenu (hub'a çıkış)
+Paused → LevelFailed
 LevelCompleted → MainMenu
 LevelCompleted → Playing (sonraki seviye)
 LevelFailed → Playing (retry)
 LevelFailed → MainMenu
 ```
+
+> **Not (kod gerçeği — `GameStateModel.AllowedTransitions`):** Aynı duruma geçiş (X→X) `SetState` başında **no-op**'tur (erken çıkış). Whitelist'te olmayan geçişler sessizce yutulmaz; `LogError` ile loglanıp **bloklanır** (Zero-Silent Fallback ilkesi).
 
 #### 15.2.3 Data Model Şemaları (ScriptableObject)
 
@@ -889,8 +939,16 @@ public class CellData
 | `ClearJamSignal` | `ClearJamCommand` | Sıkışıklık temizle |
 | `ActivateRainbowRoadSignal` | `RainbowRoadCommand` | Gökkuşağı yol power-up |
 | `ChangeThemeSignal` | `ChangeThemeCommand` | Tema değiştir |
-| `LevelCompletedSignal` | `SaveProgressCommand` | İlerlemeyi kaydet |
-| `RequestInterstitialAdSignal` | `InterstitialAdCommand` | Reklam göster |
+| `ChangeAudioVolumeSignal` | `ChangeAudioVolumeCommand` | Ses seviyesi değiştir |
+| `ChangeColorBlindModeSignal` | `ChangeColorBlindModeCommand` | Renk körlüğü modu değiştir |
+| `ToggleHapticsSignal` | `ToggleHapticsCommand` | Titreşim aç/kapa |
+| `LevelCompletedSignal` | `SaveProgressCommand` | İlerlemeyi kaydet (`ExecutionMode.Exclusive`, priority 0) |
+| `RequestInterstitialAdSignal` | `InterstitialAdCommand` | Interstitial reklam göster |
+
+> **Ek bağlama notları (kod gerçeği — `GameContextLifecycle.OnConfigure`):**
+> - `LevelVictoryCompositeHandler` bir **composite handler**'dır (çoklu-sinyal fan-in); tek signal→command eşlemesi değildir, DI'da `Bind<LevelVictoryCompositeHandler>` ile kayıtlıdır.
+> - `RewardedAdCommand` sinyalsizdir; `Bind<RewardedAdCommand>` ile çözülür ve HUD/mediator tarafından doğrudan çağrılır.
+> - Yalnızca **bildirim** amaçlı (command'siz `BindSignal`) sinyaller: `ShowGarageSignal`, `LoadedInitialLevelSignal`, `FlowScoreUpdatedSignal`, `ProgressUpdatedSignal` — mediator/view abone olur, command tetiklemez.
 
 #### 15.2.5 Reactive Model Bağımlılık Grafiği
 
@@ -1066,18 +1124,29 @@ ALGORİTMA: BFS (Breadth-First Search)
 #### 15.4.2 Çakışma Tespiti (Crash Detection)
 
 ```
-TETİKLEYİCİ: Her yol çiziminden sonra (ProcessInputCommand)
+İKİ AYRI KATMAN VARDIR (kod gerçeği):
 
-ALGORİTMA:
-1. Tüm hücreleri tara
-2. Her hücrede PathColorsMask kontrol et
-3. Eğer PathColorCount >= 2 VE HasViaduct == false → CRASH
-4. CrashDetectedSignal ateşle (Position, ColorA, ColorB)
-5. GameState → Paused (kriz paneli gösterilir)
+A) ÇİZİM ANI — Viyadüksüz Kesişim (ProcessInputCommand)
+   TETİKLEYİCİ: Her yol çiziminden sonra (drag)
+   ALGORİTMA:
+   1. Hücrede HasViaduct == false VE PathColorCount >= 2 ise
+   2. PathIntersectionWarningSignal ateşlenir (Position)
+   → SÜRTÜNMESİZ: State DEĞİŞMEZ, oyun DURMAZ, kriz paneli AÇILMAZ.
+     HUD yalnızca uyarı gösterir/loglar (§1.2, §5.1 sürtünmesiz tasarım).
+   NOT: Aynı hücreye 3. renk denenirse ThirdColorRejectionSignal ile
+        görsel pulse verilir (§4.2), hamle sessizce reddedilir.
 
-ÇÖZÜM SEÇENEKLERİ (oyuncu seçer):
+B) KURTARMA — Simülasyon Çarpışması / Kayıt Geri Yükleme
+   TETİKLEYİCİ 1 (runtime): İki araç aynı node'a gelir (VehicleSimulator)
+     → bouncy physics + CrashDetectedSignal (Position, ColorA, ColorB)
+     → HUD kurtarma paneli (Undo / Viyadük) gösterir; CEZA YOK.
+   TETİKLEYİCİ 2 (restore): Kayıtlı oyunda çözülmemiş kesişim varsa
+     (GameBootstrapper) → CrashDetectedSignal + GameState → Paused
+     (yalnızca geri yükleme senaryosunda, oyuncu kaldığı yerden çözer).
+
+ÇÖZÜM SEÇENEKLERİ (kurtarma panelinde):
 - Undo: Son hamleyi geri al
-- Viaduct: Viyadük yerleştir (viaductLimit > 0 ise)
+- Viaduct: Viyadük yerleştir (availableViaducts > 0 ise)
 ```
 
 #### 15.4.3 Kazanma Koşulu (CheckWinConditionCommand)
@@ -2031,6 +2100,8 @@ NEXUS CORE'DA DEĞİŞİKLİK GEREKİRSE:
 
 **Dosya:** `Assets/Scripts/PixelFlow/GameContextLifecycle.cs`
 
+> **AI-Ready senkron notu:** Aşağıdaki blok gerçek dosyayla **birebir** eşleşecek şekilde tutulur (tüm `BindService`/`Bind`/`BindReactiveModel`/`BindSignal`/`BindInstance` çağrıları). Yeni bağlama eklendiğinde hem kod hem bu blok güncellenmelidir. Sadece loglama satırları kısalık için çıkarılmıştır.
+
 ```csharp
 using System.Threading;
 using System.Threading.Tasks;
@@ -2072,8 +2143,12 @@ namespace PixelFlow
             builder.BindService<IGameHistoryService, GameHistoryService>();
             builder.BindService<IVehicleSimulator, VehicleSimulator>();
             builder.BindService<ICameraProvider, CameraProvider>();
+            builder.BindService<IGridViewProvider, GridViewProvider>();
+            builder.Bind<IGridInputService, GridInputService>();
             builder.BindService<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
             builder.BindService<IGameplayTimerService, GameplayTimerService>();
+            builder.Bind<LevelVictoryCompositeHandler, LevelVictoryCompositeHandler>();
+            builder.Bind<RewardedAdCommand, RewardedAdCommand>();
             builder.Bind<ITimeProvider, UnityTimeProvider>();
             builder.BindService<ISaveThrottler, SaveThrottler>();
             builder.BindService<IHapticService, HapticService>();
@@ -2120,6 +2195,9 @@ namespace PixelFlow
             builder.BindSignal<PixelFlow.Signals.ActivateRainbowRoadSignal>().To<PixelFlow.Commands.RainbowRoadCommand>();
             builder.BindSignal<PixelFlow.Signals.ClearJamSignal>().To<PixelFlow.Commands.ClearJamCommand>();
             builder.BindSignal<PixelFlow.Signals.ChangeThemeSignal>().To<PixelFlow.Commands.ChangeThemeCommand>();
+            builder.BindSignal<PixelFlow.Signals.ChangeAudioVolumeSignal>().To<PixelFlow.Commands.ChangeAudioVolumeCommand>();
+            builder.BindSignal<PixelFlow.Signals.ChangeColorBlindModeSignal>().To<PixelFlow.Commands.ChangeColorBlindModeCommand>();
+            builder.BindSignal<PixelFlow.Signals.ToggleHapticsSignal>().To<PixelFlow.Commands.ToggleHapticsCommand>();
             builder.BindCommand<PixelFlow.Signals.LevelCompletedSignal, PixelFlow.Commands.SaveProgressCommand>(ExecutionMode.Exclusive, priority: 0);
             builder.BindSignal<PixelFlow.Signals.UndoSignal>().To<PixelFlow.Commands.UndoCommand>();
             builder.BindSignal<PixelFlow.Signals.RedoSignal>().To<PixelFlow.Commands.RedoCommand>();
@@ -2127,6 +2205,7 @@ namespace PixelFlow
             builder.BindSignal<PixelFlow.Signals.RequestInterstitialAdSignal>().To<PixelFlow.Commands.InterstitialAdCommand>();
             builder.BindSignal<PixelFlow.Signals.StartSimulationSignal>().To<PixelFlow.Commands.StartSimulationCommand>();
             builder.BindSignal<PixelFlow.Signals.PauseSimulationSignal>().To<PixelFlow.Commands.PauseSimulationCommand>();
+            builder.BindSignal<PixelFlow.Signals.ShowGarageSignal>();
             builder.BindSignal<PixelFlow.Signals.LoadedInitialLevelSignal>();
             builder.BindSignal<PixelFlow.Signals.FlowScoreUpdatedSignal>();
             builder.BindSignal<PixelFlow.Signals.ProgressUpdatedSignal>();
@@ -2200,6 +2279,18 @@ namespace PixelFlow
 #endif
             }
             builder.BindInstance(levelCatalog);
+
+            // PhaseConfigAsset — faz konfigürasyonu (Configs/PhaseConfig)
+            var phaseConfig = UnityEngine.Resources.Load<PhaseConfigAsset>("Configs/PhaseConfig");
+            if (phaseConfig == null)
+            {
+#if !UNITY_EDITOR
+                throw new DataValidationException("Resources/Configs/PhaseConfig.asset bulunamadı!");
+#else
+                phaseConfig = UnityEngine.ScriptableObject.CreateInstance<PhaseConfigAsset>();
+#endif
+            }
+            builder.BindInstance(phaseConfig);
         }
 
         public ValueTask OnInitializeAsync(CancellationToken ct) => default;
@@ -3445,6 +3536,8 @@ namespace PixelFlow.Views
 
 **Dosya:** `Assets/Scripts/PixelFlow/Commands/ProcessInputCommand.cs`
 
+> **AI-Ready senkron notu:** Bu blok gerçek dosyanın davranışıyla eşleşir; özellikle köprü kapasitesi **`GameConfig.MaxPathsPerBridge`** üzerinden okunur (sabit değil — Zero-Hardcode) ve Gökkuşağı Yolu (Rainbow Road) power-up segmenti işlenir. Loglama satırları kısalık için sadeleştirilmiştir.
+
 ```csharp
 using System;
 using Nexus.Core;
@@ -3471,8 +3564,14 @@ namespace PixelFlow.Commands
         [Inject] public ISaveThrottler SaveThrottler { get; set; }
         [Inject] public IHapticService HapticService { get; set; }
         [Inject] public IObstacleService ObstacleService { get; set; }
+        [Inject, OptionalInject] public IPowerUpService PowerUpService { get; set; }
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject, OptionalInject] public GameConfig Config { get; set; }
+
+        // Köprü başına düşen maksimum path — GameConfig'ten okunur (Zero-Hardcode Policy).
+        private int ConfigMaxPathsPerBridge => Config != null ? Config.MaxPathsPerBridge
+            : throw new DataValidationException("GameConfig.MaxPathsPerBridge erişilemedi!");
 
         private void EnsureHistoryRecorded()
         {
@@ -3608,10 +3707,30 @@ namespace PixelFlow.Commands
                         return;
                 }
 
-                // BOŞ HÜCRE → Path uzat
+                // GÖKKUŞAĞI YOL (Rainbow Road power-up) — aktifse hücreye segment uygula
+                bool isRainbowActive = PowerUpService != null && PowerUpService.HasActiveRainbowRoad;
                 bool isDrawableObstacle = currentCell.State == CellState.Obstacle &&
                     (currentCell.ObstacleType == ObstacleType.Ferry || currentCell.ObstacleType == ObstacleType.NarrowPass);
 
+                if (isRainbowActive && currentCell.State != CellState.Node)
+                {
+                    if (PowerUpService.TryConsumeRainbowRoadSegment())
+                    {
+                        EnsureHistoryRecorded();
+                        currentCell.Color = GridModel.ActiveColor.Value;
+                        currentCell.State = CellState.Path;
+                        if (!currentCell.HasPathColor(GridModel.ActiveColor.Value))
+                            currentCell.AddPathColor(GridModel.ActiveColor.Value);
+                        path.Add(signal.GridPosition);
+                        GridModel.LastPosition.Value = signal.GridPosition;
+                        SignalBus.Fire(new GridUpdatedSignal());
+                        SoundModel?.PlayDrawSound(path.Count);
+                        HapticService?.Vibrate(HapticType.Light);
+                        return;
+                    }
+                }
+
+                // BOŞ HÜCRE → Path uzat
                 if (currentCell.State == CellState.Empty || (isDrawableObstacle && currentCell.PathColorCount == 0))
                 {
                     EnsureHistoryRecorded();
@@ -3660,14 +3779,14 @@ namespace PixelFlow.Commands
                     }
 
                     // Max 2 path limiti
-                    if (currentCell.PathColorCount >= BridgeValidationUtility.MaxPathsPerBridge)
+                    if (currentCell.PathColorCount >= ConfigMaxPathsPerBridge)
                     {
                         ColorType firstColor = currentCell.FirstPathColor;
                         EnsureHistoryRecorded();
                         PathService.BacktrackPath(firstColor, signal.GridPosition);
                     }
 
-                    if (currentCell.PathColorCount >= BridgeValidationUtility.MaxPathsPerBridge) return;
+                    if (currentCell.PathColorCount >= ConfigMaxPathsPerBridge) return;
 
                     EnsureHistoryRecorded();
                     if (currentCell.PathColorCount == 0)
@@ -3959,6 +4078,71 @@ namespace PixelFlow.Editor.Tests
 4. Mock: InMemoryPlayerPrefsService, StubAudioService, StubCameraProvider
 5. SAHNE YÜKLEME — tüm testler EditMode'da çalışır
 ```
+
+## 19. EK-K: UYGULAMA DURUMU & AI-READY DENETİM (Implementation Status)
+
+> **Amaç:** Bu bölüm, dökümandaki plan ile **gerçek kod tabanı** arasındaki durumu bir yapay zeka geliştiricinin tek bakışta anlayabilmesi için özetler. Kod tabanı doğrulanarak hazırlanmıştır.
+
+**Durum anahtarı:** ✅ = kodda tam çalışır · ⚠️ = kısmi (iskelet/veri var, canlı SDK/entegrasyon bekliyor) · ⏳ = henüz yok (planlı)
+
+### 19.1 Çekirdek Oynanış (Core Gameplay)
+
+| Sistem | Durum | Kanıt / Not |
+|--------|:-----:|-------------|
+| Grid & yol çizimi (drag, backtrack, bridge crossing, OneWay, obstacle) | ✅ | `ProcessInputCommand`, `PathService`, `GridModel` |
+| Kazanma kontrolü | ✅ | `CheckWinConditionCommand` |
+| Araç simülasyonu (auto-run, bouncy collision) | ✅ | `VehicleSimulator`, `VehicleMovementService`, `BouncyCollisionHandler` |
+| GameState machine (geçiş whitelist) | ✅ | `GameStateModel` (§15.2.2) |
+| Undo / Redo | ✅ | `UndoCommand`/`RedoCommand`, `GameHistoryService` |
+| Viyadük / köprü | ✅ | `PlaceViaductCommand`, `BridgeValidationUtility` |
+| Power-up'lar (Rainbow, ClearJam, Hint) | ✅ | `RainbowRoadCommand`, `ClearJamCommand`, `UseHintCommand`, `PowerUpService`/`HintService` |
+| Skor & yıldız | ✅ | `ScoreCalculator`, `GameSessionModel` |
+| Save/Load (AES-256 şifreli) | ✅ | `GridStateSerializer`, `EncryptedStorageService` |
+| Cloud save (conflict resolution) | ⚠️ | `CloudSaveManager` — simülasyon; gerçek Firebase/Firestore entegrasyonu bekliyor |
+
+### 19.2 Meta & LiveOps
+
+| Sistem | Durum | Kanıt / Not |
+|--------|:-----:|-------------|
+| Garaj & skin koleksiyonu | ⚠️ | `GarageView`/`GarageMediator`, `InventoryModel`, `VehicleSkinConfig` (UI+veri var; ekonomi açma akışı tamamlanmalı) |
+| Günlük kriz | ✅ | `DailyCrisisService`/`DailyCrisisModel`/`DailyCrisisView` |
+| Star Pass / Daily Login Streak / Rush Hour Event | ⏳ | Kod yok (GDD §6 planlı) |
+| RemoteConfig (churn zorluk ayarı) | ⏳ | Kod yok (GDD §6/§12 planlı) |
+
+### 19.3 Global Release Servisleri
+
+| Sistem | Durum | Kanıt / Not |
+|--------|:-----:|-------------|
+| Ekonomi (coin/gem) | ✅ | `EconomyService`, `EconomyConfigAsset`, `LocalEconomyValidator` |
+| Reklam (Interstitial/Rewarded) | ⚠️ | `AdService`/`AdManagerService` + command'lar (mediation SDK bağlanmalı) |
+| IAP | ⚠️ | `IapService` (store ürünleri + makbuz doğrulama bağlanmalı) |
+| Analytics | ⚠️ | `AnalyticsService` (canlı backend event şeması bağlanmalı) |
+| Gizlilik/İzin (GDPR-UMP, iOS ATT) | ⚠️ | `PrivacyComplianceService` (UMP/ATT native SDK bekliyor) |
+| Crash diagnostics | ⚠️ | `SilentCrashDiagnosticsService` (Firebase Crashlytics/Sentry bekliyor) |
+| In-App Review | ⚠️ | `InAppReviewService` (StoreKit/Play native bekliyor) |
+| Yerel bildirimler | ⚠️ | `LocalNotificationService` (native scheduling bekliyor) |
+| Yerelleştirme (15 dil + RTL) | ⚠️ | `LocalizationService`, `ResourceLocalizationTableProvider` (tablo/RTL varlıkları tamamlanmalı) |
+
+### 19.4 Editör & Kalite
+
+| Sistem | Durum | Kanıt / Not |
+|--------|:-----:|-------------|
+| Editör kontrol merkezi (11 sekme) | ✅ | `PixelFlowSetupWindow.*` (partial class'lar) |
+| Visual Level Editor | ✅ | `LevelDataEditor` |
+| Pre-Build Validator | ✅ | `PreBuildDataValidator` |
+| NUnit test paketi (30+ dosya) | ✅ | `Editor/Tests/*` (`GameTestContext` + stub'lar) |
+
+### 19.5 AI Product-Ready & AI Development-Ready Denetim Listesi
+
+Bu döküman aşağıdaki kriterleri karşıladığı için **AI-Product-Ready** (ürün kararı alınabilir) ve **AI-Development-Ready** (kod yazılabilir) kabul edilir:
+
+1. **Tek doğruluk kaynağı:** §15 (mimari spec), §17 (gerçek kod referansı) ve §18 (tam kaynak) gerçek dosyalarla senkronize edilmiştir; çelişkiler AI-Ready notlarıyla işaretlenmiştir.
+2. **Sıfır ambiguity:** Tüm namespace, dosya yolu, DI binding, signal→command haritası ve GameState geçişleri kesin listelenmiştir (§15.2.1–§15.2.4).
+3. **Zero-Hardcode doğruluğu:** Köprü kapasitesi gibi değerler `GameConfig`'ten okunur; dökümandaki örnek kod da bunu yansıtır (§18.2 `ConfigMaxPathsPerBridge`).
+4. **Durum şeffaflığı:** §19.1–§19.4 tabloları ✅/⚠️/⏳ ile neyin hazır, neyin SDK/entegrasyon beklediğini ve neyin planlı olduğunu net ayırır.
+5. **Nexus Core dokunulmazlığı:** Altyapı spec'i (`implementationPlan.md`) HARD FREEZE'dir; oyun katmanı sapmaları yalnızca bu dökümanda notlanmıştır (§15.1.1 GameState notu).
+
+**Sonraki adım (⚠️/⏳ kalemler için):** Canlı SDK entegrasyonları (Ad mediation, IAP store, UMP/ATT, Crashlytics, Cloud) ve LiveOps sistemleri (Star Pass, Daily Login, RemoteConfig) ayrı uygulama fazları olarak planlanmalıdır.
 
 ---
 

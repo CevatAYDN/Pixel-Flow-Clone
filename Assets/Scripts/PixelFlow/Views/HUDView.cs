@@ -55,9 +55,22 @@ namespace PixelFlow.Views
         [SerializeField] private Button _clearJamButton;
         [SerializeField] private TMP_Text _clearJamCountText;
 
+        // b4: Kalıcı Viyadük power-up göstergesi (gameplay-hud.html — 🌉 Viyadük).
+        // Viyadükler grid'e dokunarak yerleştirilir; bu buton kalan hakkı gösterir
+        // ve tıklanınca yönlendirici toast açar.
+        [SerializeField] private Button _viaductButton;
+        [SerializeField] private TMP_Text _viaductCountText;
+
+        // b2: Frictionless çarpışma toast'ı (gameplay-hud.html — bouncy-toast).
+        // Oyunu durdurmaz, kısa süre sonra otomatik kapanır.
+        [SerializeField] private GameObject _crashToast;
+        [SerializeField] private TMP_Text _crashToastText;
+        [SerializeField] private float _crashToastDuration = 1.5f;
+
         public event Action OnGarageClicked;
         public event Action OnRainbowRoadClicked;
         public event Action OnClearJamClicked;
+        public event Action OnViaductClicked;
 
         public event Action OnHintClicked;
         public event Action OnNextLevelClicked;
@@ -76,6 +89,7 @@ namespace PixelFlow.Views
 
         private Button _crisisViaductButton;
         private Button _crisisUndoButton;
+        private Coroutine _crashToastCoroutine;
 
         [Inject] public ILoggerService LoggerService { get; set; }
 
@@ -101,6 +115,8 @@ namespace PixelFlow.Views
                 if (_completionScoreText == null && name.Contains("finalscore")) _completionScoreText = t;
                 if (_levelFailedText == null && name.Contains("failed")) _levelFailedText = t;
                 if (_levelTitleText == null && name.Contains("leveltitle")) _levelTitleText = t;
+                if (_viaductCountText == null && name.Contains("viaductcount")) _viaductCountText = t;
+                if (_crashToastText == null && name.Contains("toastmessage")) _crashToastText = t;
             }
 
             foreach (var b in buttons)
@@ -124,6 +140,7 @@ namespace PixelFlow.Views
                 if (_garageButton == null && (name.Contains("garage") || name.Contains("garaj") || txt.Contains("garaj") || txt.Contains("garage"))) _garageButton = b;
                 if (_rainbowRoadButton == null && (name.Contains("rainbow") || name.Contains("gokkusagi") || name.Contains("gökkuşağı") || txt.Contains("gökkuşağı") || txt.Contains("gokkusagi") || txt.Contains("rainbow"))) _rainbowRoadButton = b;
                 if (_clearJamButton == null && (name.Contains("clearjam") || name.Contains("temizle") || txt.Contains("temizle") || txt.Contains("clear"))) _clearJamButton = b;
+                if (_viaductButton == null && (name.Contains("viaduct") || name.Contains("viyaduk") || name.Contains("viyadük") || txt.Contains("viyadük") || txt.Contains("viyaduk") || txt.Contains("viaduct"))) _viaductButton = b;
             }
 
             var transforms = GetComponentsInChildren<Transform>(true);
@@ -133,6 +150,7 @@ namespace PixelFlow.Views
                 if (_completionPanel == null && (name.Contains("completion") || name.Contains("victory"))) _completionPanel = tr.gameObject;
                 if (_levelFailedPanel == null && (name.Contains("fail") || name.Contains("gameover"))) _levelFailedPanel = tr.gameObject;
                 if (_starsContainer == null && name.Contains("star")) _starsContainer = tr.gameObject;
+                if (_crashToast == null && name.Contains("crashtoast")) _crashToast = tr.gameObject;
             }
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
             LoggerService?.Log($"[PixelFlow.HUDView] AutoWire: hintBtn={(bool)_hintButton}, undoBtn={(bool)_undoButton}, redoBtn={(bool)_redoButton}, " +
@@ -159,6 +177,7 @@ namespace PixelFlow.Views
             if (_garageButton != null) _garageButton.onClick.RemoveAllListeners();
             if (_rainbowRoadButton != null) _rainbowRoadButton.onClick.RemoveAllListeners();
             if (_clearJamButton != null) _clearJamButton.onClick.RemoveAllListeners();
+            if (_viaductButton != null) _viaductButton.onClick.RemoveAllListeners();
         }
 
         protected override void OnBind(IContext context)
@@ -203,6 +222,8 @@ namespace PixelFlow.Views
                 _rainbowRoadButton.onClick.AddListener(() => OnRainbowRoadClicked?.Invoke());
             if (_clearJamButton != null)
                 _clearJamButton.onClick.AddListener(() => OnClearJamClicked?.Invoke());
+            if (_viaductButton != null)
+                _viaductButton.onClick.AddListener(() => OnViaductClicked?.Invoke());
 
             if (_completionPanel != null)
                 _completionPanel.SetActive(false);
@@ -243,6 +264,8 @@ namespace PixelFlow.Views
                 _rainbowRoadButton.onClick.RemoveAllListeners();
             if (_clearJamButton != null)
                 _clearJamButton.onClick.RemoveAllListeners();
+            if (_viaductButton != null)
+                _viaductButton.onClick.RemoveAllListeners();
 
             if (_crisisViaductButton != null)
             {
@@ -294,6 +317,46 @@ namespace PixelFlow.Views
                 _clearJamButton.interactable = interactable;
                 // Görsel feedback Unity Button ColorTint transition tarafından otomatik yönetilir
             }
+        }
+
+        // b4: Kalıcı Viyadük göstergesi — kalan viyadük hakkını gösterir.
+        public void UpdateViaductCount(int remaining)
+        {
+            if (_viaductCountText != null)
+                _viaductCountText.text = remaining > 0 ? remaining.ToString() : "0";
+            if (_viaductButton != null)
+                _viaductButton.interactable = remaining > 0;
+        }
+
+        // b2: Frictionless çarpışma toast'ı — oyunu durdurmadan kısa süre gösterilir.
+        public void ShowCrashToast(string message)
+        {
+            if (_crashToast == null) return;
+            if (_crashToastText != null) _crashToastText.text = message;
+            _crashToast.SetActive(true);
+            _crashToast.transform.SetAsLastSibling();
+            if (_crashToastCoroutine != null) StopCoroutine(_crashToastCoroutine);
+            _crashToastCoroutine = StartCoroutine(CrashToastRoutine());
+        }
+
+        private System.Collections.IEnumerator CrashToastRoutine()
+        {
+            var rect = _crashToast.GetComponent<RectTransform>();
+            Vector2 basePos = rect != null ? rect.anchoredPosition : Vector2.zero;
+            float elapsed = 0f;
+            while (elapsed < _crashToastDuration)
+            {
+                elapsed += Time.deltaTime;
+                if (rect != null)
+                {
+                    float bounce = Mathf.Sin(elapsed * Mathf.PI * 4f) * 6f;
+                    rect.anchoredPosition = basePos + new Vector2(0f, bounce);
+                }
+                yield return null;
+            }
+            if (rect != null) rect.anchoredPosition = basePos;
+            _crashToast.SetActive(false);
+            _crashToastCoroutine = null;
         }
 
         /// <summary>

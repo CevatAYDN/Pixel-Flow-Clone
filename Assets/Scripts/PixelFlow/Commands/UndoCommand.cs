@@ -47,7 +47,7 @@ namespace PixelFlow.Commands
                 }
                 SignalBus.Fire(new GridUpdatedSignal());
                 SaveHelper.TrySave(SaveThrottler, GridModel, GameSessionModel, LevelModel, PlayerPrefsService);
-                HapticService.Vibrate(HapticType.Light);
+                HapticService?.Vibrate(HapticType.Light);
             }
             else
             {

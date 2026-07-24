@@ -5,6 +5,7 @@ using PixelFlow.Models;
 using PixelFlow.Signals;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace PixelFlow.Services
 {
@@ -40,6 +41,21 @@ namespace PixelFlow.Services
 
         public ValueTask InitializeAsync(CancellationToken ct) => default;
         public void OnDispose() { }
+
+        // game_plan.md §2.2: config zorunludur. Build'de erişilemezse DataValidationException;
+        // editor/testte SO varsayılan instance'ı (cache'li).
+        private EconomyConfigAsset _resolvedEconomyConfig;
+        private EconomyConfigAsset ResolveEconomyConfig()
+        {
+            if (EconomyConfig != null) return EconomyConfig;
+            if (_resolvedEconomyConfig != null) return _resolvedEconomyConfig;
+#if !UNITY_EDITOR
+            throw new DataValidationException("EconomyConfigAsset erişilemedi! LevelLoaderService viyadük bonusu hesaplanamıyor.");
+#else
+            _resolvedEconomyConfig = ScriptableObject.CreateInstance<EconomyConfigAsset>();
+            return _resolvedEconomyConfig;
+#endif
+        }
 
         public void LoadLevel(LoadLevelSignal signal)
         {
@@ -149,9 +165,8 @@ namespace PixelFlow.Services
             HistoryService.Clear();
 
             // Session setup with viaduct bonus (GDD §9 — EconomyConfigAsset)
-            int viaductBonus = EconomyConfig != null
-                ? EconomyConfig.CalculateViaductBonus(ld.levelIndex)
-                : ld.levelIndex / 10;
+            // game_plan.md §2.2 (Zero-Silent-Fallback): viyadük bonusu EconomyConfig'ten gelir.
+            int viaductBonus = ResolveEconomyConfig().CalculateViaductBonus(ld.levelIndex);
             int totalViaducts = ld.viaductLimit + viaductBonus;
             LoggerService?.Log($"[PixelFlow.LevelLoaderService] Starting session: levelIndex={ld.levelIndex}, viaducts={totalViaducts} (base: {ld.viaductLimit}, bonus: {viaductBonus}), targetFlowScore={ld.flowScoreThreshold}");
             GameSessionModel.StartSession(ld.levelIndex, totalViaducts, ld.flowScoreThreshold, true);

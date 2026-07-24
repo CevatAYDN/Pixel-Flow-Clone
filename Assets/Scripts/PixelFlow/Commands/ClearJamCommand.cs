@@ -1,8 +1,10 @@
 using Nexus.Core;
 using Nexus.Core.Services;
+using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Services;
 using PixelFlow.Signals;
+using UnityEngine;
 
 namespace PixelFlow.Commands
 {
@@ -20,6 +22,18 @@ namespace PixelFlow.Commands
         [Inject] public PixelFlow.Services.IAudioService AudioService { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject, OptionalInject] public GameConfig Config { get; set; }
+
+        // game_plan.md §2.2: Clear Jam hak sayısı GameConfig'ten gelir. Build'de config yoksa fail-loud.
+        private GameConfig ResolveConfig()
+        {
+            if (Config != null) return Config;
+#if !UNITY_EDITOR
+            throw new DataValidationException("GameConfig erişilemedi! ClearJamCommand hak sayısı belirleyemiyor.");
+#else
+            return ScriptableObject.CreateInstance<GameConfig>();
+#endif
+        }
 
         public void Execute(ClearJamSignal signal)
         {
@@ -32,7 +46,7 @@ namespace PixelFlow.Commands
 
             if (PowerUpService != null && PowerUpService.ClearJamUsesRemaining <= 0)
             {
-                PowerUpService.AddClearJamUse(3);
+                PowerUpService.AddClearJamUse(ResolveConfig().ClearJamUsesPerLevel);
             }
 
             if (PowerUpService == null || !PowerUpService.TryUseClearJam())

@@ -1,4 +1,3 @@
-using System;
 using Nexus.Core;
 using Nexus.Core.Services;
 using PixelFlow.Models;
@@ -37,14 +36,13 @@ namespace PixelFlow.Commands
             HistoryService.Record(GridModel, GameSessionModel);
         }
 
-        // Önbelleğe alınmış save Action — her RequestSave()'de yeni closure alloc'u önler
-        private Action _cachedSaveAction;
-
         private void RequestSave()
         {
-            if (_cachedSaveAction == null)
-                _cachedSaveAction = () => GridStateSerializer.Save(GridModel, GameSessionModel, LevelModel, PlayerPrefsService);
-            SaveThrottler?.TryRequestSave(_cachedSaveAction);
+            // Command pool'a döndükten sonra Nexus DI [Inject] property'leri null'lar; bu yüzden
+            // 'this'i yakalayan cached closure yerine model referanslarını çağrı anında yakalayan
+            // SaveHelper kullanılır (UndoCommand/PlaceViaductCommand ile tutarlı). Aksi halde
+            // gecikmeli (throttled) save null grid ile çalışıp ilerlemeyi sessizce kaybeder.
+            SaveHelper.TrySave(SaveThrottler, GridModel, GameSessionModel, LevelModel, PlayerPrefsService);
         }
 
         public void Execute(InputInteractionSignal signal)
@@ -240,7 +238,7 @@ namespace PixelFlow.Commands
                     path.Add(signal.GridPosition);
                     GridModel.LastPosition.Value = signal.GridPosition;
                     SignalBus.Fire(new GridUpdatedSignal());
-                    SoundModel.PlayDrawSound(path.Count);
+                    SoundModel?.PlayDrawSound(path.Count);
                 }
                 else if (currentCell.State == CellState.Node && currentCell.Color == GridModel.ActiveColor.Value)
                 {
@@ -295,6 +293,8 @@ namespace PixelFlow.Commands
                     {
                         LoggerService?.LogWarning($"[PixelFlow.ProcessInputCommand] Drag blocked at {signal.GridPosition}: Cell already occupied by max paths.");
                         Nexus.Core.Services.NexusLog.Warn("ProcessInputCommand", "HandleDrag", "?", "Cell already occupied by max paths. Drawing blocked.");
+                        // GDD §4.2: 3. renk reddi görsel geri bildirimi — GridMediator dinleyip pulse çalar.
+                        SignalBus.Fire(new ThirdColorRejectionSignal { Position = signal.GridPosition });
                         return;
                     }
 

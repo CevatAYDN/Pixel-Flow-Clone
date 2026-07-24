@@ -51,6 +51,7 @@ namespace PixelFlow.Views
             View.OnGarageClicked += HandleGarageClicked;
             View.OnRainbowRoadClicked += HandleRainbowRoadClicked;
             View.OnClearJamClicked += HandleClearJamClicked;
+            View.OnViaductClicked += HandleViaductClicked;
 
             HintModel.OnHintCountChanged += HandleHintCountChanged;
             GameSessionModel.OnScoreChanged += HandleScoreChanged;
@@ -71,6 +72,7 @@ namespace PixelFlow.Views
             View.UpdateStars(GameSessionModel.StarsEarned);
             View.HighlightActiveTheme(SettingsModel.CurrentTheme);
             UpdateLevelTitleText();
+            View.UpdateViaductCount(GameSessionModel.AvailableViaducts);
             if (PowerUpService != null)
             {
                 View.UpdateRainbowRoadCount(PowerUpService.RainbowRoadUses);
@@ -110,6 +112,7 @@ namespace PixelFlow.Views
             View.OnGarageClicked -= HandleGarageClicked;
             View.OnRainbowRoadClicked -= HandleRainbowRoadClicked;
             View.OnClearJamClicked -= HandleClearJamClicked;
+            View.OnViaductClicked -= HandleViaductClicked;
 
             if (_themeDarkHandler != null) View.OnThemeDarkClicked -= _themeDarkHandler;
             if (_themeLightHandler != null) View.OnThemeLightClicked -= _themeLightHandler;
@@ -199,6 +202,9 @@ namespace PixelFlow.Views
         private void HandleIntersectionWarning(PathIntersectionWarningSignal signal)
         {
             LoggerService?.Log($"[HUDMediator] Intersection warning at {signal.Position} — viaduct may be needed.");
+            // b2: game_plan §15.4.2 Layer A — sürtünmesiz uyarı. Oyun durmaz, kısa toast gösterilir.
+            string msg = LocalizationService?.GetString("crash_toast_msg") ?? "Araçlar Zıpladı! Parmağınla Yolu Düzelt";
+            View.ShowCrashToast(msg);
         }
 
         private void HandleSimulationTimerChanged(float remaining)
@@ -209,11 +215,21 @@ namespace PixelFlow.Views
 
         private void HandleViaductsChanged(int count)
         {
+            // b4: kalıcı Viyadük göstergesini güncelle
+            View.UpdateViaductCount(count);
             if (count <= 0)
             {
                 string msg = LocalizationService?.GetString("crisis_exhausted_msg") ?? "Viyadük hakkınız bitti!";
                 View.ShowViaductLimitReached(msg);
             }
+        }
+
+        // b4: Kalıcı Viyadük butonu — viyadükler grid'e dokunarak yerleştirildiği için
+        // buton, oyuncuya nasıl kullanacağını hatırlatan yönlendirici toast açar.
+        private void HandleViaductClicked()
+        {
+            string msg = LocalizationService?.GetString("viaduct_hint_msg") ?? "Kesişen yollara dokunarak viyadük yerleştir";
+            View.ShowCrashToast(msg);
         }
 
         private void HandleCrisisViaductClicked()

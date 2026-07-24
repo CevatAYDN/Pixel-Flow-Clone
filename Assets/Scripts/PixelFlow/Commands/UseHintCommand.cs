@@ -23,14 +23,27 @@ namespace PixelFlow.Commands
         [Inject] public IHapticService HapticService { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
+        [Inject, OptionalInject] public GameConfig Config { get; set; }
+
+        // game_plan.md §2.2: hint sayısı GameConfig'ten gelir. Build'de config yoksa fail-loud.
+        private GameConfig ResolveConfig()
+        {
+            if (Config != null) return Config;
+#if !UNITY_EDITOR
+            throw new DataValidationException("GameConfig erişilemedi! UseHintCommand ipucu sayısı belirleyemiyor.");
+#else
+            return ScriptableObject.CreateInstance<GameConfig>();
+#endif
+        }
 
         public void Execute(RequestHintSignal signal)
         {
             LoggerService?.Log($"[PixelFlow.UseHintCommand] RequestHintSignal received. Hints remaining: {HintModel?.HintsRemaining}");
             if (HintModel != null && HintModel.HintsRemaining <= 0)
             {
-                LoggerService?.Log("[PixelFlow.UseHintCommand] Hints count is 0. Auto-granting 3 hints for gameplay assistance.");
-                HintModel.AddHints(3);
+                int grant = ResolveConfig().DefaultHintCount;
+                LoggerService?.Log($"[PixelFlow.UseHintCommand] Hints count is 0. Auto-granting {grant} hints for gameplay assistance.");
+                HintModel.AddHints(grant);
             }
 
             var level = LevelModel.CurrentLevel;

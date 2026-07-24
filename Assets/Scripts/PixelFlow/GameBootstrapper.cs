@@ -42,9 +42,10 @@ namespace PixelFlow
         private IPlayerPrefsService _prefs;
         private ILevelProgressionService _progressionService;
 
-        // Save format version — GameConfig ScriptableObject'ten okunur (Zero-Hardcode Policy)
-        private int SaveFormatVersion => _gameConfig != null ? _gameConfig.SaveFormatVersion : 2;
-        private string SaveVersionKey => _gameConfig != null ? _gameConfig.SaveVersionKey : "PF_SaveFormat_Version";
+        // Save format version — GameConfig ScriptableObject'ten okunur (§2.2 Zero-Silent-Fallback).
+        // _gameConfig, ResolveServices'te container.Resolve ile çözülür; null ise orada fail-loud edilir.
+        private int SaveFormatVersion => _gameConfig.SaveFormatVersion;
+        private string SaveVersionKey => _gameConfig.SaveVersionKey;
         private Data.GameConfig _gameConfig;
 
         private IEnumerator Start()
@@ -115,6 +116,15 @@ namespace PixelFlow
                 _prefs = container.Resolve<IPlayerPrefsService>();
                 _progressionService = container.Resolve<ILevelProgressionService>();
                 _gameConfig = container.Resolve<Data.GameConfig>();
+                // game_plan.md §2.2: config zorunludur. Sessizce hardcode'a düşmek yerine fail-loud.
+                if (_gameConfig == null)
+                {
+#if !UNITY_EDITOR
+                    throw new Data.DataValidationException("GameConfig çözülemedi! Bootstrapper devam edemez.");
+#else
+                    _gameConfig = ScriptableObject.CreateInstance<Data.GameConfig>();
+#endif
+                }
 
                 // Trigger lazy init for services that need to be alive at boot
                 container.Resolve<IVehicleSimulator>();

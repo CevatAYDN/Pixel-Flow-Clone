@@ -56,6 +56,9 @@ namespace PixelFlow.Data
         [Tooltip("Level başına varsayılan ipucu sayısı")]
         public int DefaultHintCount = 3;
 
+        [Tooltip("2 yıldızlı seviye sonunda ipucu ödülü verme olasılığı (0-1)")]
+        [Range(0f, 1f)] public float TwoStarHintChance = 0.5f;
+
         [Header("=== Crisis / Ad Service (game_plan.md §2.1.B2) ===")]
         [Tooltip("Interstitial reklam öncesi maksimum kriz deneme sayısı")]
         public int MaxRetriesBeforeInterstitial = 3;
@@ -123,6 +126,19 @@ namespace PixelFlow.Data
 
         [Tooltip("Seviye tamamlama bonus coin")]
         public int LevelCompleteCoinBonus = 50;
+
+        [Header("=== Premium Economy (game_plan.md §9.1) ===")]
+        [Tooltip("3 yıldızlı seviye tamamlamada kazanılan Gem (sert para) miktarı")]
+        public int GemsPerThreeStarLevel = 5;
+
+        [Tooltip("Star Pass aktifken 3 yıldız başına ek Gem bonusu (premium track)")]
+        public int StarPassGemBonus = 3;
+
+        [Tooltip("Oyun başlangıcındaki varsayılan Gem bakiyesi")]
+        public int DefaultGems = 0;
+
+        [Tooltip("Oyun başlangıcındaki varsayılan etkinlik Ticket bakiyesi")]
+        public int DefaultTickets = 0;
 
         [Header("=== Vehicle Simulation (Advanced) ===")]
         [Tooltip("Sabit zaman adımı (saniye) — fizik tutarlılığı için")]
@@ -223,5 +239,8 @@ namespace PixelFlow.Data
 
         [Tooltip("Zor günlük kriz (crisisIndex 2+) zorluk parametreleri")]
         public DifficultyParams DailyCrisisHard = new DifficultyParams(10, 10, 4, 4, true, true, true, true);
+
+        [Tooltip("Günlük kriz hedef skorları (crisisIndex 0=Easy, 1=Medium, 2=Hard)")]
+        public int[] DailyCrisisTargetScores = { 20, 35, 55 };
     }
 }

@@ -11,6 +11,10 @@ namespace PixelFlow.Models
     {
         int UnlockedLevels { get; }
         void UnlockLevel(int levelIndex);
+        /// <summary>Belirtilen seviye için kaydedilmiş en yüksek yıldız sayısını döner (0-3). Kayıt yoksa 0.</summary>
+        int GetStars(int levelIndex);
+        /// <summary>Seviye için kazanılan yıldızı kalıcı saklar; sadece önceki kayıttan yüksekse günceller.</summary>
+        void RecordStars(int levelIndex, int stars);
     }
 
     /// <summary>
@@ -49,6 +53,29 @@ namespace PixelFlow.Models
             {
                 UnlockedLevels = requiredUnlocked;
                 _prefs.SetInt(Key, UnlockedLevels);
+            }
+        }
+
+        // Seviye başına yıldız kalıcılığı (settings-levels.html ⭐ göstergesi için).
+        private static string StarsKey(int levelIndex) => $"LevelStars_{levelIndex}";
+
+        public int GetStars(int levelIndex)
+        {
+            if (levelIndex < 0) return 0;
+            return _prefs.GetInt(StarsKey(levelIndex), 0);
+        }
+
+        public void RecordStars(int levelIndex, int stars)
+        {
+            if (levelIndex < 0) return;
+            // 0-3 aralığına sıkıştır
+            if (stars < 0) stars = 0;
+            if (stars > 3) stars = 3;
+            int existing = _prefs.GetInt(StarsKey(levelIndex), 0);
+            if (stars > existing)
+            {
+                _prefs.SetInt(StarsKey(levelIndex), stars);
+                _prefs.Save();
             }
         }
 

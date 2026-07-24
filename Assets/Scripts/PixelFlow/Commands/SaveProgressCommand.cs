@@ -4,6 +4,7 @@ using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Services;
 using PixelFlow.Data;
+using UnityEngine;
 
 namespace PixelFlow.Commands
 {
@@ -18,6 +19,7 @@ namespace PixelFlow.Commands
         [Inject] public IHintModel HintModel { get; set; }
         [Inject] public IGameSessionModel GameSessionModel { get; set; }
         [Inject] public IEconomyService EconomyService { get; set; }
+        [Inject] public IInventoryModel InventoryModel { get; set; }
         [Inject, OptionalInject] public GameConfig Config { get; set; }
 
         public void Execute(LevelCompletedSignal signal)
@@ -27,6 +29,9 @@ namespace PixelFlow.Commands
             if (currentLevel != null)
             {
                 ProgressModel.UnlockLevel(currentLevel.levelIndex);
+
+                // Seviye başına en yüksek yıldız sayısını kalıcı sakla (LevelSelect ⭐ göstergesi).
+                ProgressModel.RecordStars(currentLevel.levelIndex, GameSessionModel.StarsEarned);
 
                 // Tamamlanan seviye sayısını kaydet
                 int completed = PlayerPrefsService != null ? PlayerPrefsService.GetInt("PF_CompletedLevelsCount", 0) : 0;
@@ -44,11 +49,26 @@ namespace PixelFlow.Commands
             LoggerService?.Log($"[SaveProgressCommand] Awarded hint for {stars} stars.");
 
             // Coin ödülü: flow score başına coin + seviye tamamlama bonusu
-            int coinPerFlow = Config != null ? Config.CoinPerFlowScore : 5;
-            int levelBonus = Config != null ? Config.LevelCompleteCoinBonus : 50;
+            // game_plan.md §2.2 (Zero-Silent-Fallback): sabitler GameConfig'ten gelir.
+            var cfg = ResolveConfig();
+            int coinPerFlow = cfg.CoinPerFlowScore;
+            int levelBonus = cfg.LevelCompleteCoinBonus;
             int totalCoins = (GameSessionModel.CurrentFlowScore * coinPerFlow) + levelBonus;
             EconomyService?.Earn("coins", totalCoins, "level_complete");
             LoggerService?.Log($"[SaveProgressCommand] Awarded {totalCoins} coins (flow: {GameSessionModel.CurrentFlowScore}x{coinPerFlow} + bonus: {levelBonus}).");
+
+            // Gem ödülü: game_plan.md §9.1 — 3 yıldızlı seviye tamamlamada sert para kazanılır.
+            // Star Pass aktifse premium track ek bonusu eklenir (§9.3).
+            if (stars >= 3 && InventoryModel != null)
+            {
+                int gemReward = cfg.GemsPerThreeStarLevel
+                    + (InventoryModel.IsStarPassActive ? cfg.StarPassGemBonus : 0);
+                if (gemReward > 0)
+                {
+                    InventoryModel.AddGems(gemReward);
+                    LoggerService?.Log($"[SaveProgressCommand] Awarded {gemReward} gems for 3-star completion (StarPass={InventoryModel.IsStarPassActive}).");
+                }
+            }
 
             // Seviye tamamlandığı için yarım kalan bulmaca kaydını sil
             GridStateSerializer.ClearSave(PlayerPrefsService);
@@ -57,6 +77,19 @@ namespace PixelFlow.Commands
             {
                 UnlockedLevels = ProgressModel.UnlockedLevels
             });
+        }
+
+        // game_plan.md §2.2: config zorunludur. Build'de erişilemezse sessizce hardcode
+        // değere düşmek yerine DataValidationException fırlatılır; editor/testte SO
+        // varsayılanlarını taşıyan bir instance kullanılır (ScoreCalculator ile tutarlı desen).
+        private GameConfig ResolveConfig()
+        {
+            if (Config != null) return Config;
+#if !UNITY_EDITOR
+            throw new DataValidationException("GameConfig erişilemedi! SaveProgressCommand coin ödülü hesaplanamıyor.");
+#else
+            return ScriptableObject.CreateInstance<GameConfig>();
+#endif
         }
 
         public void Reset()

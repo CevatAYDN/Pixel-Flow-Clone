@@ -99,10 +99,17 @@ namespace PixelFlow.Editor.Tests
             };
 
             bool solved = _solver.SolvePartial(level, ColorType.Red, steps: 3, out var hintPath);
+            // Contract: çözülebilirlikten bağımsız olarak çıktı sözleşmesi doğrulanır.
             if (solved)
             {
-                Assert.IsNotNull(hintPath);
-                Assert.Greater(hintPath.Count, 0);
+                Assert.IsNotNull(hintPath, "solved ise hintPath null olmamalı");
+                Assert.Greater(hintPath.Count, 0, "solved ise en az 1 adım dönmeli");
+                Assert.LessOrEqual(hintPath.Count, 3, "SolvePartial steps=3 üst sınırını aşmamalı");
+            }
+            else
+            {
+                Assert.IsTrue(hintPath == null || hintPath.Count == 0,
+                    "solved değilse hintPath boş/null olmalı");
             }
         }
 
@@ -126,15 +133,20 @@ namespace PixelFlow.Editor.Tests
             solver1.Solve(level, out var sol1);
             solver2.Solve(level, out var sol2);
 
-            if (sol1 != null && sol2 != null && sol1.Count == sol2.Count)
+            // Determinizm sözleşmesi: aynı input → iki solver aynı sonucu vermeli
+            // (çözülebilirlik varsayılmaz; sadece iki çalışmanın tutarlılığı doğrulanır).
+            Assert.AreEqual(sol1 == null, sol2 == null,
+                "İki solver de aynı çözülebilirlik sonucunu vermeli");
+            if (sol1 != null && sol2 != null)
             {
+                Assert.AreEqual(sol1.Count, sol2.Count,
+                    "Çözüm renk sayısı deterministik olmalı");
                 foreach (var kvp in sol1)
                 {
-                    if (sol2.ContainsKey(kvp.Key))
-                    {
-                        Assert.AreEqual(kvp.Value.Count, sol2[kvp.Key].Count,
-                            $"Path length for {kvp.Key} should be deterministic");
-                    }
+                    Assert.IsTrue(sol2.ContainsKey(kvp.Key),
+                        $"{kvp.Key} her iki çözümde de bulunmalı");
+                    Assert.AreEqual(kvp.Value.Count, sol2[kvp.Key].Count,
+                        $"Path length for {kvp.Key} should be deterministic");
                 }
             }
         }

@@ -7,7 +7,9 @@ using Nexus.Core.Services;
 
 namespace PixelFlow.Models
 {
-    public enum GameState { Boot, Loading, MainMenu, Playing, Simulating, Paused, LevelCompleted, LevelFailed }
+    // NOT: LevelSelect en sona eklendi; int değerleri kaymaması için sıra korunur.
+    // GameState runtime-only (persist edilmez), yine de güvenli davranış için sona eklendi.
+    public enum GameState { Boot, Loading, MainMenu, Playing, Simulating, Paused, LevelCompleted, LevelFailed, LevelSelect }
 
     public interface IGameStateModel
     {
@@ -37,6 +39,7 @@ namespace PixelFlow.Models
             (GameState.Paused, GameState.Paused),
             (GameState.LevelCompleted, GameState.LevelCompleted),
             (GameState.LevelFailed, GameState.LevelFailed),
+            (GameState.LevelSelect, GameState.LevelSelect),
             // Boot → Loading → MainMenu
             (GameState.Boot, GameState.Loading),
             (GameState.Loading, GameState.MainMenu),
@@ -45,6 +48,11 @@ namespace PixelFlow.Models
             (GameState.Boot, GameState.Playing),
             // Hub → Gameplay
             (GameState.MainMenu, GameState.Playing),
+            // Hub ↔ LevelSelect (seviye seçim ekranı)
+            (GameState.MainMenu, GameState.LevelSelect),
+            (GameState.LevelSelect, GameState.MainMenu),
+            // LevelSelect → Gameplay (bir seviye seçildiğinde)
+            (GameState.LevelSelect, GameState.Playing),
             // Playing ↔ Paused
             (GameState.Playing, GameState.Paused),
             (GameState.Paused, GameState.Playing),

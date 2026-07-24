@@ -42,7 +42,25 @@ namespace PixelFlow.Services
         private readonly Dictionary<Vector2Int, bool> _ferryBlocked = new Dictionary<Vector2Int, bool>();
         private readonly Dictionary<Vector2Int, ColorType> _narrowPassOccupants = new Dictionary<Vector2Int, ColorType>();
         private float _ferryTimer;
-        private float ConfigFerryPeriod => Config != null ? Config.FerryPeriod : 10f;
+
+        // game_plan.md §2.2: config zorunludur. Build'de erişilemezse DataValidationException;
+        // editor/testte SO varsayılan instance'ı (cache'li — Tick her frame çağrıldığı için alloc yok).
+        private Data.GameConfig _resolvedConfig;
+        private Data.GameConfig ResolvedConfig
+        {
+            get
+            {
+                if (Config != null) return Config;
+                if (_resolvedConfig != null) return _resolvedConfig;
+#if !UNITY_EDITOR
+                throw new Data.DataValidationException("GameConfig erişilemedi! ObstacleService feribot periyodu yüklenemiyor.");
+#else
+                _resolvedConfig = ScriptableObject.CreateInstance<Data.GameConfig>();
+                return _resolvedConfig;
+#endif
+            }
+        }
+        private float ConfigFerryPeriod => ResolvedConfig.FerryPeriod;
 
         public ValueTask InitializeAsync(CancellationToken ct) => default;
         public void OnDispose()

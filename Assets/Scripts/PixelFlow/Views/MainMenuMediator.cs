@@ -31,6 +31,7 @@ namespace PixelFlow.Views
         {
             View.OnPlayClicked += HandlePlayClicked;
             View.OnGarageClicked += HandleGarageClicked;
+            View.OnLevelSelectClicked += HandleLevelSelectClicked;
             View.OnSettingsClicked += HandleSettingsClicked;
 
             GameStateModel.OnStateChanged += HandleStateChanged;
@@ -43,6 +44,7 @@ namespace PixelFlow.Views
         {
             View.OnPlayClicked -= HandlePlayClicked;
             View.OnGarageClicked -= HandleGarageClicked;
+            View.OnLevelSelectClicked -= HandleLevelSelectClicked;
             View.OnSettingsClicked -= HandleSettingsClicked;
 
             if (GameStateModel != null)
@@ -121,6 +123,12 @@ namespace PixelFlow.Views
         private void HandleGarageClicked()
         {
             LoggerService?.Log("[MainMenuMediator] 'Garaj' button clicked from Hub.");
+        }
+
+        private void HandleLevelSelectClicked()
+        {
+            LoggerService?.Log("[MainMenuMediator] 'Seviye Seçimi' button clicked from Hub. Transitioning -> LevelSelect.");
+            GameStateModel?.SetState(GameState.LevelSelect);
         }
 
         private void HandleSettingsClicked()

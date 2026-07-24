@@ -30,6 +30,7 @@ namespace PixelFlow.Models
         private const string Key = "HintCount";
 
         private readonly IPlayerPrefsService _prefs;
+        private readonly float _twoStarHintChance;
         private int _hintsRemaining;
         private int _totalHintsUsed;
 
@@ -41,14 +42,16 @@ namespace PixelFlow.Models
         public HintModel(IPlayerPrefsService prefs, GameConfig config)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
-            int defaultHints = config != null ? config.DefaultHintCount : throw new DataValidationException("GameConfig.DefaultHintCount erişilemedi!");
-            _hintsRemaining = _prefs.GetInt(Key, defaultHints);
+            if (config == null) throw new DataValidationException("GameConfig erişilemedi! HintModel başlatılamıyor.");
+            _twoStarHintChance = config.TwoStarHintChance;
+            _hintsRemaining = _prefs.GetInt(Key, config.DefaultHintCount);
         }
 
-        // Test amaçlı constructor (config olmadan)
+        // Test amaçlı constructor (config olmadan) — SO varsayılanını yansıtır
         internal HintModel(IPlayerPrefsService prefs, int defaultHints)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
+            _twoStarHintChance = 0.5f;
             _hintsRemaining = _prefs.GetInt(Key, defaultHints);
         }
 
@@ -86,7 +89,7 @@ namespace PixelFlow.Models
             }
             else if (stars == 2)
             {
-                if (UnityEngine.Random.value < 0.5f)
+                if (UnityEngine.Random.value < _twoStarHintChance)
                 {
                     AddHint();
                 }

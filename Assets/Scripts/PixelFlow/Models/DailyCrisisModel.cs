@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.Services;
+using PixelFlow.Data;
 using PixelFlow.Services;
 using UnityEngine;
 
@@ -22,11 +23,28 @@ namespace PixelFlow.Models
     public class DailyCrisisModel : IDailyCrisisModel, IReactiveModel
     {
         private readonly IPlayerPrefsService _prefs;
+        private readonly GameConfig _config;
 
-        public DailyCrisisModel(IPlayerPrefsService prefs)
+        public DailyCrisisModel(IPlayerPrefsService prefs, GameConfig config = null)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
+            _config = config;
             LoadState();
+        }
+
+        // game_plan.md §2.2: kriz hedef skorları GameConfig'ten gelir. Build'de config yoksa fail-loud;
+        // editor/testte SO varsayılan instance'ı (cache'li).
+        private GameConfig _resolvedConfig;
+        private GameConfig ResolveConfig()
+        {
+            if (_config != null) return _config;
+            if (_resolvedConfig != null) return _resolvedConfig;
+#if !UNITY_EDITOR
+            throw new DataValidationException("GameConfig erişilemedi! DailyCrisisModel kriz skorları yüklenemiyor.");
+#else
+            _resolvedConfig = ScriptableObject.CreateInstance<GameConfig>();
+            return _resolvedConfig;
+#endif
         }
 
         public ValueTask OnBind(CancellationToken ct) => default;
@@ -107,13 +125,10 @@ namespace PixelFlow.Models
 
         public int GetCrisisScore(int crisisIndex)
         {
-            switch (crisisIndex)
-            {
-                case 0: return 20; // Easy crisis
-                case 1: return 35; // Medium crisis
-                case 2: return 55; // Hard crisis
-                default: return 20;
-            }
+            var scores = ResolveConfig().DailyCrisisTargetScores;
+            if (scores != null && crisisIndex >= 0 && crisisIndex < scores.Length)
+                return scores[crisisIndex];
+            return scores != null && scores.Length > 0 ? scores[0] : 0;
         }
 
         private static int GetTodayUtcSeed()

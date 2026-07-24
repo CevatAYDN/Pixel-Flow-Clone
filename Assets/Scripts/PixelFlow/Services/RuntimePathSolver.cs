@@ -24,8 +24,26 @@ namespace PixelFlow.Services
     {
         [Inject, OptionalInject] public GameConfig Config { get; set; }
 
-        private int MinIterations => Config != null ? Config.PathSolverMaxIterations : 200000;
-        private int MaxIterationsCap => Config != null ? Config.PathSolverMaxIterationsCap : 1000000;
+        // game_plan.md §2.2: config zorunludur. Build'de erişilemezse DataValidationException;
+        // editor/testte SO varsayılan instance'ı (cache'li).
+        private GameConfig _resolvedConfig;
+        private GameConfig ResolvedConfig
+        {
+            get
+            {
+                if (Config != null) return Config;
+                if (_resolvedConfig != null) return _resolvedConfig;
+#if !UNITY_EDITOR
+                throw new DataValidationException("GameConfig erişilemedi! RuntimePathSolver iterasyon limitleri yüklenemiyor.");
+#else
+                _resolvedConfig = ScriptableObject.CreateInstance<GameConfig>();
+                return _resolvedConfig;
+#endif
+            }
+        }
+
+        private int MinIterations => ResolvedConfig.PathSolverMaxIterations;
+        private int MaxIterationsCap => ResolvedConfig.PathSolverMaxIterationsCap;
 
         private int _perSolveMaxIterations;
         private CancellationToken _cancellationToken;

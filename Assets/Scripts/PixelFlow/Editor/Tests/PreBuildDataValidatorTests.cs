@@ -14,7 +14,12 @@ namespace PixelFlow.Editor.Tests
             // Should either be valid or return a non-null error message explaining what config is missing
             if (!isValid)
             {
-                Assert.IsNotEmpty(errorMessage);
+                Assert.IsNotEmpty(errorMessage, "Geçersizse hata mesajı hangi config'in eksik olduğunu açıklamalı");
+            }
+            else
+            {
+                Assert.IsTrue(string.IsNullOrEmpty(errorMessage),
+                    "Geçerliyse hata mesajı boş olmalı (yanıltıcı hata metni bırakılmamalı)");
             }
         }
     }

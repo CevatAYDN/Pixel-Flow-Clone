@@ -128,6 +128,13 @@ namespace PixelFlow.Services
                 else
                 {
                     // Touch drag devam ediyor
+                    if (_touchscreen == null)
+                    {
+                        // Cihaz kaybı (disconnect): takılı pointer-down durumunu sıfırla ki
+                        // her frame yakalanan exception ile oyuncu kilitlenmesin.
+                        _isPointerDown = false;
+                        return false;
+                    }
                     try
                     {
                         var touches = _touchscreen.touches;
@@ -139,6 +146,7 @@ namespace PixelFlow.Services
                     }
                     catch
                     {
+                        _isPointerDown = false;
                         return false;
                     }
                     isMouse = false;

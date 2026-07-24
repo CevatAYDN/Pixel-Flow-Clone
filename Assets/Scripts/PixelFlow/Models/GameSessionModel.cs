@@ -50,7 +50,7 @@ namespace PixelFlow.Models
         void SetLevelId(int levelId);
         void IncrementFlowScore();
         void SetTargetFlowScore(int target);
-        void ApplySave(int availableViaducts, int maxViaducts, float elapsedTime, int score, int stars, int levelId, int targetFlowScore = 5);
+        void ApplySave(int availableViaducts, int maxViaducts, float elapsedTime, int score, int stars, int levelId, int targetFlowScore = 5, int currentFlowScore = 0);
     }
 
     public class GameSessionModel : IGameSessionModel, IReactiveModel
@@ -264,7 +264,7 @@ namespace PixelFlow.Models
         /// <summary>
         /// Save dosyasından state'i geri yükle.
         /// </summary>
-        public void ApplySave(int availableViaducts, int maxViaducts, float elapsedTime, int score, int stars, int levelId, int targetFlowScore = 5)
+        public void ApplySave(int availableViaducts, int maxViaducts, float elapsedTime, int score, int stars, int levelId, int targetFlowScore = 5, int currentFlowScore = 0)
         {
             CurrentLevelId = levelId;
             MaxViaducts = System.Math.Max(0, maxViaducts);
@@ -276,8 +276,10 @@ namespace PixelFlow.Models
             RetryCount = 0;
             CrisisAttemptCount = 0;
             HasUsedCrisisUndo = false;
-            CurrentFlowScore = 0;
             TargetFlowScore = System.Math.Max(1, targetFlowScore);
+            // Undo/redo geri yüklemesinde biriken akış skoru korunur; taze yükleme/kayıt
+            // çağrıları varsayılan 0 ile çağırır (geriye dönük uyumlu).
+            CurrentFlowScore = System.Math.Clamp(currentFlowScore, 0, TargetFlowScore);
             OnViaductsChanged?.Invoke(AvailableViaducts);
             OnTimeChanged?.Invoke(ElapsedTime);
             OnScoreChanged?.Invoke(Score);

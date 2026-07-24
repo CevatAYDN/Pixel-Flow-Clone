@@ -32,8 +32,26 @@ namespace PixelFlow.Services
         [Inject] public ILevelModel LevelModel { get; set; }
         [Inject, OptionalInject] public Data.GameConfig Config { get; set; }
 
-        private int ConfigMaxRetries => Config != null ? Config.MaxRetriesBeforeInterstitial : 3;
-        private int ConfigMinLevel => Config != null ? Config.MinLevelForInterstitial : 5;
+        // game_plan.md §2.2: config zorunludur. Build'de erişilemezse DataValidationException;
+        // editor/testte SO varsayılan instance'ı (cache'li — tekrar alloc yok).
+        private Data.GameConfig _resolvedConfig;
+        private Data.GameConfig ResolvedConfig
+        {
+            get
+            {
+                if (Config != null) return Config;
+                if (_resolvedConfig != null) return _resolvedConfig;
+#if !UNITY_EDITOR
+                throw new Data.DataValidationException("GameConfig erişilemedi! CrisisAdService reklam eşikleri yüklenemiyor.");
+#else
+                _resolvedConfig = ScriptableObject.CreateInstance<Data.GameConfig>();
+                return _resolvedConfig;
+#endif
+            }
+        }
+
+        private int ConfigMaxRetries => ResolvedConfig.MaxRetriesBeforeInterstitial;
+        protected int ConfigMinLevel => ResolvedConfig.MinLevelForInterstitial;
 
         public int RetryCount => GameSessionModel?.RetryCount ?? 0;
         public bool IsViaductExhausted => GameSessionModel != null && GameSessionModel.AvailableViaducts <= 0;

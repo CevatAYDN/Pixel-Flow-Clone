@@ -153,14 +153,55 @@ namespace PixelFlow.Editor.Tests
         }
 
         [Test]
-        public void SetState_SimulatingToPlaying_Blocked()
+        public void SetState_SimulatingToPlaying_Allowed()
         {
             _state.SetState(GameState.Playing);
             _state.SetState(GameState.Simulating);
             // Simulating → Playing IS allowed in transition table (line 44 of GameStateModel)
             _state.SetState(GameState.Playing);
             Assert.AreEqual(GameState.Playing, _state.CurrentState,
-                "Simulating \u2192 Playing is allowed by transition table");
+                "Simulating → Playing is allowed by transition table");
+        }
+
+        // === LevelSelect geçişleri (settings-levels.html "SEVİYE SEÇİMİ") ===
+
+        [Test]
+        public void SetState_MainMenuToLevelSelect_Allowed()
+        {
+            GoToMainMenu();
+            _state.SetState(GameState.LevelSelect);
+            Assert.AreEqual(GameState.LevelSelect, _state.CurrentState);
+        }
+
+        [Test]
+        public void SetState_LevelSelectToPlaying_Allowed()
+        {
+            GoToMainMenu();
+            _state.SetState(GameState.LevelSelect);
+            _state.SetState(GameState.Playing);
+            Assert.AreEqual(GameState.Playing, _state.CurrentState,
+                "Bir seviye seçilince LevelSelect → Playing izinli olmalı");
+        }
+
+        [Test]
+        public void SetState_LevelSelectToMainMenu_Allowed()
+        {
+            GoToMainMenu();
+            _state.SetState(GameState.LevelSelect);
+            _state.SetState(GameState.MainMenu);
+            Assert.AreEqual(GameState.MainMenu, _state.CurrentState,
+                "Geri butonu LevelSelect → MainMenu izinli olmalı");
+        }
+
+        [Test]
+        public void SetState_LevelSelectToPaused_Blocked()
+        {
+            GoToMainMenu();
+            _state.SetState(GameState.LevelSelect);
+            LogAssert.Expect(LogType.Error, "[GameStateModel] Illegal transition: LevelSelect \u2192 Paused. Blocked.");
+            _state.SetState(GameState.Paused);
+            Assert.AreEqual(GameState.LevelSelect, _state.CurrentState,
+                "LevelSelect → Paused transition tablosunda yok, bloklanmalı");
         }
     }
 }

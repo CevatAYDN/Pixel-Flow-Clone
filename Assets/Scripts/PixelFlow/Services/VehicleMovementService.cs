@@ -92,9 +92,21 @@ namespace PixelFlow.Services
             _audioService = audioService;
             _obstacleService = obstacleService;
             _config = config;
+
+            // game_plan.md §2.2 (Zero-Silent-Fallback): config zorunludur. Build'de erişilemezse
+            // sessizce hardcode değere düşmek yerine DataValidationException fırlatılır; editor/testte
+            // SO varsayılanlarını taşıyan bir instance kullanılır (ScoreCalculator ile tutarlı desen).
+            if (_config == null)
+            {
+#if !UNITY_EDITOR
+                throw new Data.DataValidationException("GameConfig erişilemedi! VehicleMovementService başlatılamıyor.");
+#else
+                _config = ScriptableObject.CreateInstance<GameConfig>();
+#endif
+            }
         }
 
-        private float ConfigMaxProgressPerFrame => _config != null ? _config.MaxProgressPerFrame : 0.25f;
+        private float ConfigMaxProgressPerFrame => _config.MaxProgressPerFrame;
 
         public void UpdateMovement(List<VehicleInstance> activeVehicles, float deltaTime)
         {
@@ -433,11 +445,11 @@ namespace PixelFlow.Services
             {
                 var cell = _gridModel.Grid[gridPos.x, gridPos.y];
                 if (cell.HasViaduct && cell.OverColor == color)
-                    return -0.4f; // Over: Yükseltilmiş yol (GDD §4.4)
+                    return _config.ViaductOverZOffset; // Over: Yükseltilmiş yol (GDD §4.4)
                 if (cell.HasViaduct && cell.UnderColor == color)
-                    return -0.1f; // Under: Alçaltılmış yol (GDD §4.4)
+                    return _config.ViaductUnderZOffset; // Under: Alçaltılmış yol (GDD §4.4)
             }
-            return -0.2f; // Normal yol
+            return _config.NormalZOffset; // Normal yol
         }
 
         private Vector3 GetSplineControlPoint(List<Vector2Int> path, int index, ColorType color)

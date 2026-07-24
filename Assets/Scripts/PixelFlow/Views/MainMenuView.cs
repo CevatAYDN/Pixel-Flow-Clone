@@ -27,10 +27,12 @@ namespace PixelFlow.Views
         [Header("=== Actions ===")]
         [SerializeField] private Button _playButton;
         [SerializeField] private TMP_Text _playButtonText;
+        [SerializeField] private Button _levelSelectButton;
         [SerializeField] private Button _settingsButton;
 
         public event Action OnPlayClicked;
         public event Action OnGarageClicked;
+        public event Action OnLevelSelectClicked;
         public event Action OnSettingsClicked;
 
         [Inject] public ILoggerService LoggerService { get; set; }
@@ -77,6 +79,8 @@ namespace PixelFlow.Views
                 _playButton.onClick.AddListener(() => OnPlayClicked?.Invoke());
             if (_openGarageButton != null)
                 _openGarageButton.onClick.AddListener(() => OnGarageClicked?.Invoke());
+            if (_levelSelectButton != null)
+                _levelSelectButton.onClick.AddListener(() => OnLevelSelectClicked?.Invoke());
             if (_settingsButton != null)
                 _settingsButton.onClick.AddListener(() => OnSettingsClicked?.Invoke());
         }
@@ -98,9 +102,11 @@ namespace PixelFlow.Views
             foreach (var b in buttons)
             {
                 string name = b.gameObject.name.ToLower();
-                if (_playButton == null && (name.Contains("play") || name.Contains("start"))) _playButton = b;
                 if (_openGarageButton == null && name.Contains("garage")) _openGarageButton = b;
+                if (_levelSelectButton == null && (name.Contains("levelselect") || name.Contains("levelsbutton"))) _levelSelectButton = b;
                 if (_settingsButton == null && name.Contains("setting")) _settingsButton = b;
+                // Play eşleşmesi en sona: "levelselect" gibi adları yanlışlıkla yakalamamak için
+                if (_playButton == null && b != _levelSelectButton && (name.Contains("play") || name.Contains("start"))) _playButton = b;
             }
 
             var transforms = GetComponentsInChildren<Transform>(true);
@@ -116,6 +122,7 @@ namespace PixelFlow.Views
             base.OnUnbind();
             if (_playButton != null) _playButton.onClick.RemoveAllListeners();
             if (_openGarageButton != null) _openGarageButton.onClick.RemoveAllListeners();
+            if (_levelSelectButton != null) _levelSelectButton.onClick.RemoveAllListeners();
             if (_settingsButton != null) _settingsButton.onClick.RemoveAllListeners();
         }
 

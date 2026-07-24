@@ -456,8 +456,8 @@ namespace PixelFlow.Editor
             var playRect = playBtn.GetComponent<RectTransform>();
             if (playRect != null)
             {
-                playRect.anchorMin = new Vector2(0.06f, 0.14f);
-                playRect.anchorMax = new Vector2(0.94f, 0.24f);
+                playRect.anchorMin = new Vector2(0.06f, 0.185f);
+                playRect.anchorMax = new Vector2(0.94f, 0.275f);
                 playRect.sizeDelta = Vector2.zero;
             }
 
@@ -470,6 +470,26 @@ namespace PixelFlow.Editor
             var pTextRect = playButtonText.GetComponent<RectTransform>();
             if (pTextRect != null) { pTextRect.anchorMin = Vector2.zero; pTextRect.anchorMax = Vector2.one; pTextRect.sizeDelta = Vector2.zero; }
 
+            // 3b. LevelSelect Button (Indigo) — settings-levels.html "SEVİYE SEÇİMİ" girişi
+            var levelSelectBtn = EnsureButton(menuObj, "LevelSelectButton");
+            var lsImg = levelSelectBtn.GetComponent<UnityEngine.UI.Image>();
+            if (lsImg != null) lsImg.color = new Color(0.31f, 0.27f, 0.90f); // #4F46E5 Indigo
+            var lsRect = levelSelectBtn.GetComponent<RectTransform>();
+            if (lsRect != null)
+            {
+                lsRect.anchorMin = new Vector2(0.06f, 0.125f);
+                lsRect.anchorMax = new Vector2(0.94f, 0.18f);
+                lsRect.sizeDelta = Vector2.zero;
+            }
+            var lsText = EnsureTMPText(levelSelectBtn.gameObject, "Text");
+            lsText.text = "SEVİYE SEÇİMİ";
+            lsText.fontSize = 22;
+            lsText.fontStyle = TMPro.FontStyles.Bold;
+            lsText.color = Color.white;
+            lsText.alignment = TMPro.TextAlignmentOptions.Center;
+            var lsTextRect = lsText.GetComponent<RectTransform>();
+            if (lsTextRect != null) { lsTextRect.anchorMin = Vector2.zero; lsTextRect.anchorMax = Vector2.one; lsTextRect.sizeDelta = Vector2.zero; }
+
             // 4. Settings Button
             var settingsBtn = EnsureButton(menuObj, "SettingsButton");
             var sImg = settingsBtn.GetComponent<UnityEngine.UI.Image>();
@@ -477,8 +497,8 @@ namespace PixelFlow.Editor
             var sRect = settingsBtn.GetComponent<RectTransform>();
             if (sRect != null)
             {
-                sRect.anchorMin = new Vector2(0.06f, 0.05f);
-                sRect.anchorMax = new Vector2(0.94f, 0.12f);
+                sRect.anchorMin = new Vector2(0.06f, 0.055f);
+                sRect.anchorMax = new Vector2(0.94f, 0.11f);
                 sRect.sizeDelta = Vector2.zero;
             }
 
@@ -501,6 +521,7 @@ namespace PixelFlow.Editor
             SetProp(so, "_openGarageButton", garageBtn);
             SetProp(so, "_playButton", playBtn);
             SetProp(so, "_playButtonText", playButtonText);
+            SetProp(so, "_levelSelectButton", levelSelectBtn);
             SetProp(so, "_settingsButton", settingsBtn);
 
             so.ApplyModifiedPropertiesWithoutUndo();
@@ -705,7 +726,7 @@ namespace PixelFlow.Editor
             if (gaRect != null)
             {
                 gaRect.anchorMin = new Vector2(0.01f, 0.1f);
-                gaRect.anchorMax = new Vector2(0.32f, 0.9f);
+                gaRect.anchorMax = new Vector2(0.245f, 0.9f);
                 gaRect.sizeDelta = Vector2.zero;
             }
             var gaText = EnsureTMPText(garageBtn.gameObject, "Text");
@@ -724,8 +745,8 @@ namespace PixelFlow.Editor
             var rrRect = rainbowBtn.GetComponent<RectTransform>();
             if (rrRect != null)
             {
-                rrRect.anchorMin = new Vector2(0.35f, 0.1f);
-                rrRect.anchorMax = new Vector2(0.65f, 0.9f);
+                rrRect.anchorMin = new Vector2(0.265f, 0.1f);
+                rrRect.anchorMax = new Vector2(0.495f, 0.9f);
                 rrRect.sizeDelta = Vector2.zero;
             }
             var rrText = EnsureTMPText(rainbowBtn.gameObject, "Text");
@@ -759,8 +780,8 @@ namespace PixelFlow.Editor
             var cjRect = clearJamBtn.GetComponent<RectTransform>();
             if (cjRect != null)
             {
-                cjRect.anchorMin = new Vector2(0.68f, 0.1f);
-                cjRect.anchorMax = new Vector2(0.99f, 0.9f);
+                cjRect.anchorMin = new Vector2(0.515f, 0.1f);
+                cjRect.anchorMax = new Vector2(0.745f, 0.9f);
                 cjRect.sizeDelta = Vector2.zero;
             }
             var cjText = EnsureTMPText(clearJamBtn.gameObject, "Text");
@@ -785,6 +806,41 @@ namespace PixelFlow.Editor
                 cjCountRect.anchorMin = new Vector2(0.75f, 0.65f);
                 cjCountRect.anchorMax = new Vector2(0.98f, 0.92f);
                 cjCountRect.sizeDelta = Vector2.zero;
+            }
+
+            // Viaduct Button (Purple) — b4: kalıcı Viyadük power-up göstergesi (gameplay-hud.html 🌉)
+            var viaductBtn = EnsureButton(secondaryBarObj, "ViaductButton");
+            var vdImg = viaductBtn.GetComponent<UnityEngine.UI.Image>();
+            if (vdImg != null) vdImg.color = new Color(0.55f, 0.36f, 0.96f); // #8B5CF6 Purple
+            var vdRect = viaductBtn.GetComponent<RectTransform>();
+            if (vdRect != null)
+            {
+                vdRect.anchorMin = new Vector2(0.765f, 0.1f);
+                vdRect.anchorMax = new Vector2(0.99f, 0.9f);
+                vdRect.sizeDelta = Vector2.zero;
+            }
+            var vdText = EnsureTMPText(viaductBtn.gameObject, "Text");
+            vdText.text = "VİYADÜK";
+            vdText.fontSize = 18;
+            vdText.fontStyle = TMPro.FontStyles.Bold;
+            vdText.color = Color.white;
+            vdText.alignment = TMPro.TextAlignmentOptions.Center;
+            var vdTRect = vdText.GetComponent<RectTransform>();
+            if (vdTRect != null) { vdTRect.anchorMin = Vector2.zero; vdTRect.anchorMax = Vector2.one; vdTRect.sizeDelta = Vector2.zero; }
+
+            // Viyadük kalan hak sayısı (sağ üst köşede küçük rozet)
+            var vdCountText = EnsureTMPText(viaductBtn.gameObject, "ViaductCountText");
+            vdCountText.text = "";
+            vdCountText.fontSize = 14;
+            vdCountText.fontStyle = TMPro.FontStyles.Bold;
+            vdCountText.color = Color.white;
+            vdCountText.alignment = TMPro.TextAlignmentOptions.Center;
+            var vdCountRect = vdCountText.GetComponent<RectTransform>();
+            if (vdCountRect != null)
+            {
+                vdCountRect.anchorMin = new Vector2(0.75f, 0.65f);
+                vdCountRect.anchorMax = new Vector2(0.98f, 0.92f);
+                vdCountRect.sizeDelta = Vector2.zero;
             }
 
             // 3. COMPLETION PANEL (Victory Modal)
@@ -895,6 +951,29 @@ namespace PixelFlow.Editor
             var rtryTextRect = retryText.GetComponent<RectTransform>();
             if (rtryTextRect != null) { rtryTextRect.anchorMin = Vector2.zero; rtryTextRect.anchorMax = Vector2.one; rtryTextRect.sizeDelta = Vector2.zero; }
 
+            // 5. CRASH TOAST (frictionless bouncy warning per gameplay-hud.html) — b2
+            var crashToastObj = FindOrCreateChild(hudObj.transform, "CrashToast");
+            var ctImg = crashToastObj.GetComponent<UnityEngine.UI.Image>();
+            if (ctImg == null) ctImg = crashToastObj.AddComponent<UnityEngine.UI.Image>();
+            ctImg.color = new Color(1f, 0.28f, 0.34f); // #FF4757 Red
+            var crashToastRect = crashToastObj.GetComponent<RectTransform>();
+            if (crashToastRect != null)
+            {
+                crashToastRect.anchorMin = new Vector2(0.1f, 0.82f);
+                crashToastRect.anchorMax = new Vector2(0.9f, 0.88f);
+                crashToastRect.sizeDelta = Vector2.zero;
+                crashToastRect.anchoredPosition = Vector2.zero;
+            }
+            var crashToastText = EnsureTMPText(crashToastObj, "ToastMessageText");
+            crashToastText.text = "Araçlar Zıpladı! Parmağınla Yolu Düzelt";
+            crashToastText.fontSize = 18;
+            crashToastText.fontStyle = TMPro.FontStyles.Bold;
+            crashToastText.color = Color.white;
+            crashToastText.alignment = TMPro.TextAlignmentOptions.Center;
+            var ctTextRect = crashToastText.GetComponent<RectTransform>();
+            if (ctTextRect != null) { ctTextRect.anchorMin = Vector2.zero; ctTextRect.anchorMax = Vector2.one; ctTextRect.sizeDelta = Vector2.zero; }
+            crashToastObj.SetActive(false);
+
             compPanelObj.SetActive(false);
             failPanelObj.SetActive(false);
 
@@ -911,6 +990,10 @@ namespace PixelFlow.Editor
             SetProp(so, "_rainbowRoadCountText", rrCountText);
             SetProp(so, "_clearJamButton", clearJamBtn);
             SetProp(so, "_clearJamCountText", cjCountText);
+            SetProp(so, "_viaductButton", viaductBtn);
+            SetProp(so, "_viaductCountText", vdCountText);
+            SetProp(so, "_crashToast", crashToastObj);
+            SetProp(so, "_crashToastText", crashToastText);
 
             SetProp(so, "_completionPanel", compPanelObj);
             SetProp(so, "_completionText", compText);
@@ -1065,7 +1148,108 @@ namespace PixelFlow.Editor
             var crisisView = Object.FindAnyObjectByType<DailyCrisisView>(FindObjectsInactive.Include);
             if (crisisView != null) EnsureDailyCrisisBindings(crisisView);
 
+            EnsureViewUnderCanvas<LevelSelectView>(canvas, "LevelSelectView");
+            var levelSelectView = Object.FindAnyObjectByType<LevelSelectView>(FindObjectsInactive.Include);
+            if (levelSelectView != null) EnsureLevelSelectBindings(levelSelectView);
+
             EnsureViewUnderCanvas<TutorialView>(canvas, "TutorialView");
+        }
+
+        // settings-levels.html "SEVİYE SEÇİMİ" ekranı — tam ekran panel, başlık, geri butonu
+        // ve GridLayoutGroup'lı seviye ızgarası konteyneri. Kutular runtime'da Mediator tarafından
+        // PopulateLevels ile üretilir (sayı değişken olduğu için editörde pre-build yapılmaz).
+        private void EnsureLevelSelectBindings(LevelSelectView levelSelectView)
+        {
+            if (levelSelectView == null) return;
+            var lsObj = levelSelectView.gameObject;
+
+            var cg = lsObj.GetComponent<CanvasGroup>();
+            if (cg == null) cg = lsObj.AddComponent<CanvasGroup>();
+
+            var lsRect = lsObj.GetComponent<RectTransform>();
+            if (lsRect != null)
+            {
+                lsRect.anchorMin = Vector2.zero;
+                lsRect.anchorMax = Vector2.one;
+                lsRect.sizeDelta = Vector2.zero;
+                lsRect.anchoredPosition = Vector2.zero;
+            }
+
+            var bgImg = lsObj.GetComponent<UnityEngine.UI.Image>();
+            if (bgImg == null) bgImg = lsObj.AddComponent<UnityEngine.UI.Image>();
+            bgImg.color = new Color(0.94f, 0.96f, 0.98f, 1f); // #EFF6FF açık mavi zemin
+
+            // Temiz yeniden kurulum için eski çocukları temizle
+            for (int i = lsObj.transform.childCount - 1; i >= 0; i--)
+            {
+                Object.DestroyImmediate(lsObj.transform.GetChild(i).gameObject);
+            }
+
+            // Başlık
+            var titleText = EnsureTMPText(lsObj, "LevelSelectTitleText");
+            titleText.text = "SEVİYE SEÇİMİ";
+            titleText.fontSize = 40;
+            titleText.fontStyle = TMPro.FontStyles.Bold;
+            titleText.color = new Color(0.12f, 0.23f, 0.54f); // #1E3A8A koyu indigo
+            titleText.alignment = TMPro.TextAlignmentOptions.Center;
+            var tRect = titleText.GetComponent<RectTransform>();
+            if (tRect != null)
+            {
+                tRect.anchorMin = new Vector2(0.05f, 0.90f);
+                tRect.anchorMax = new Vector2(0.95f, 0.98f);
+                tRect.sizeDelta = Vector2.zero;
+                tRect.anchoredPosition = Vector2.zero;
+            }
+
+            // Seviye ızgarası konteyneri (GridLayoutGroup, 4 sütun)
+            var gridObj = FindOrCreateChild(lsObj.transform, "LevelGrid");
+            var gridRect = gridObj.GetComponent<RectTransform>();
+            if (gridRect != null)
+            {
+                gridRect.anchorMin = new Vector2(0.06f, 0.14f);
+                gridRect.anchorMax = new Vector2(0.94f, 0.88f);
+                gridRect.sizeDelta = Vector2.zero;
+                gridRect.anchoredPosition = Vector2.zero;
+            }
+            var grid = gridObj.GetComponent<UnityEngine.UI.GridLayoutGroup>();
+            if (grid == null) grid = gridObj.AddComponent<UnityEngine.UI.GridLayoutGroup>();
+            grid.cellSize = new Vector2(150f, 150f);
+            grid.spacing = new Vector2(16f, 16f);
+            grid.padding = new RectOffset(8, 8, 8, 8);
+            grid.constraint = UnityEngine.UI.GridLayoutGroup.Constraint.FixedColumnCount;
+            grid.constraintCount = 4;
+            grid.childAlignment = TextAnchor.UpperCenter;
+            // İçerikteki Image raycast'i kutu tıklamalarını bloklamasın diye konteyner görseli yok.
+
+            // Geri butonu
+            var backBtn = EnsureButton(lsObj, "BackButton");
+            var backImg = backBtn.GetComponent<UnityEngine.UI.Image>();
+            if (backImg != null) backImg.color = new Color(0.20f, 0.25f, 0.33f); // #334155 slate
+            var backRect = backBtn.GetComponent<RectTransform>();
+            if (backRect != null)
+            {
+                backRect.anchorMin = new Vector2(0.06f, 0.04f);
+                backRect.anchorMax = new Vector2(0.94f, 0.11f);
+                backRect.sizeDelta = Vector2.zero;
+                backRect.anchoredPosition = Vector2.zero;
+            }
+            var backText = EnsureTMPText(backBtn.gameObject, "Text");
+            backText.text = "← GERİ";
+            backText.fontSize = 24;
+            backText.fontStyle = TMPro.FontStyles.Bold;
+            backText.color = Color.white;
+            backText.alignment = TMPro.TextAlignmentOptions.Center;
+            var backTextRect = backText.GetComponent<RectTransform>();
+            if (backTextRect != null) { backTextRect.anchorMin = Vector2.zero; backTextRect.anchorMax = Vector2.one; backTextRect.sizeDelta = Vector2.zero; }
+
+            var so = new SerializedObject(levelSelectView);
+            SetProp(so, "_titleText", titleText);
+            SetProp(so, "_backButton", backBtn);
+            SetProp(so, "_gridContainer", gridObj.transform);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(levelSelectView);
+
+            levelSelectView.SetVisible(false);
         }
 
         private void EnsureSplashBindings(SplashView splashView)

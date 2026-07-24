@@ -33,7 +33,11 @@ public enum ColorType { None, Red, Green, Blue, Yellow, Purple }
     /// <summary>GDD §8: Tutorial olay tipleri.</summary>
     public enum TutorialEvent { None, CrashIntro, ViaductIntro, OneWayIntro, ObstacleIntro }
 
-    /// <summary>GDD §3.5: Yıldız kriterleri (string ifadeler).</summary>
+    /// <summary>
+    /// Yıldız kriterleri (editörde yazar tarafından görüntülenen string ifadeler).
+    /// NOT: Runtime yıldız hesabı EconomyConfig.CalculateStars(viaductsUsed) ile yapılır
+    /// (bkz. ScoreCalculator); bu alan sahne/editör dokümantasyonu içindir.
+    /// </summary>
     [System.Serializable]
     public struct StarCriteria
     {

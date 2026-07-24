@@ -36,6 +36,45 @@ namespace PixelFlow.Editor.Tests
         }
 
         // ---------------------------------------------------------------
+        // Flow Score (game_plan.md §15.4.3) — kazanma eşiği model mantığı
+        // ---------------------------------------------------------------
+
+        [Test]
+        public void FlowScore_IncrementsUpToTarget()
+        {
+            var session = _ctx.GetModel<IGameSessionModel>();
+            session.StartSession(1, 5, 3, true);
+
+            Assert.AreEqual(3, session.TargetFlowScore, "TargetFlowScore StartSession'dan gelmeli");
+            Assert.AreEqual(0, session.CurrentFlowScore, "Başlangıçta akış skoru 0 olmalı");
+
+            session.IncrementFlowScore();
+            session.IncrementFlowScore();
+            Assert.AreEqual(2, session.CurrentFlowScore, "İki araç hedefe ulaşınca akış skoru 2 olmalı");
+            Assert.Less(session.CurrentFlowScore, session.TargetFlowScore,
+                "Henüz eşiğe ulaşılmadı (kazanılmamalı)");
+
+            session.IncrementFlowScore();
+            Assert.AreEqual(session.TargetFlowScore, session.CurrentFlowScore,
+                "Eşiğe ulaşıldı — flowScoreThreshold kazanma koşulu (§15.4.3)");
+        }
+
+        [Test]
+        public void FlowScore_RestoredByApplySave_PreservesProgress()
+        {
+            var session = _ctx.GetModel<IGameSessionModel>();
+            session.StartSession(1, 5, 10, true);
+
+            // Undo/redo veya kayıt geri yüklemesi: biriken akış skoru ve hedef korunmalı.
+            session.ApplySave(5, 5, 0f, 0, 0, 1, targetFlowScore: 10, currentFlowScore: 7);
+
+            Assert.AreEqual(10, session.TargetFlowScore,
+                "ApplySave hedef akış skorunu geri yüklemeli (varsayılana düşürmemeli)");
+            Assert.AreEqual(7, session.CurrentFlowScore,
+                "ApplySave biriken akış skorunu geri yüklemeli");
+        }
+
+        // ---------------------------------------------------------------
         // LoadLevelCommand tests
         // ---------------------------------------------------------------
 
