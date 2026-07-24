@@ -137,12 +137,33 @@ namespace PixelFlow.Views
                 $"completionPanel={(bool)_completionPanel}, levelFailedPanel={(bool)_levelFailedPanel}, starsContainer={(bool)_starsContainer}");
         }
 
+        private void RemoveAllHUDButtonListeners()
+        {
+            if (_hintButton != null) _hintButton.onClick.RemoveAllListeners();
+            if (_nextLevelButton != null) _nextLevelButton.onClick.RemoveAllListeners();
+            if (_continueButton != null) _continueButton.onClick.RemoveAllListeners();
+            if (_undoButton != null) _undoButton.onClick.RemoveAllListeners();
+            if (_redoButton != null) _redoButton.onClick.RemoveAllListeners();
+            if (_themeDarkButton != null) _themeDarkButton.onClick.RemoveAllListeners();
+            if (_themeLightButton != null) _themeLightButton.onClick.RemoveAllListeners();
+            if (_themeNeonButton != null) _themeNeonButton.onClick.RemoveAllListeners();
+            if (_pauseButton != null) _pauseButton.onClick.RemoveAllListeners();
+            if (_retryButton != null) _retryButton.onClick.RemoveAllListeners();
+            if (_levelFailedContinueButton != null) _levelFailedContinueButton.onClick.RemoveAllListeners();
+            if (_garageButton != null) _garageButton.onClick.RemoveAllListeners();
+            if (_rainbowRoadButton != null) _rainbowRoadButton.onClick.RemoveAllListeners();
+            if (_clearJamButton != null) _clearJamButton.onClick.RemoveAllListeners();
+        }
+
         protected override void OnBind(IContext context)
         {
             base.OnBind(context);
             AutoWireUIReferences();
             LogHUDButtonDiagnostics();
             LogCanvasState("OnBind");
+
+            RemoveAllHUDButtonListeners();
+
             if (_hintButton != null)
                 _hintButton.onClick.AddListener(() => OnHintClicked?.Invoke());
             if (_nextLevelButton != null)

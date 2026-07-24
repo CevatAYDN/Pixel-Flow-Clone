@@ -422,12 +422,16 @@ namespace PixelFlow.Views
 
         private void HandleRainbowRoadClicked()
         {
+            var state = GameStateModel?.CurrentState ?? GameState.Playing;
+            if (state != GameState.Playing && state != GameState.Simulating) return;
             LoggerService?.Log("[PixelFlow.HUDMediator] 'Rainbow Road' power-up button clicked. Firing ActivateRainbowRoadSignal.");
             SignalBus.Fire(new PixelFlow.Signals.ActivateRainbowRoadSignal());
         }
 
         private void HandleClearJamClicked()
         {
+            var state = GameStateModel?.CurrentState ?? GameState.Playing;
+            if (state != GameState.Playing && state != GameState.Simulating) return;
             LoggerService?.Log("[PixelFlow.HUDMediator] 'Clear Jam' power-up button clicked. Firing ClearJamSignal.");
             SignalBus.Fire(new PixelFlow.Signals.ClearJamSignal());
         }
@@ -441,13 +445,21 @@ namespace PixelFlow.Views
         private void HandleRetryClicked()
         {
             LoggerService?.Log("[PixelFlow.HUDMediator] 'Retry' button clicked.");
-            if (GameStateModel.CurrentState != GameState.LevelFailed) return;
-            var currentLevel = LevelModel.CurrentLevel;
+            var state = GameStateModel?.CurrentState ?? GameState.Playing;
+            if (state != GameState.Playing && state != GameState.Paused && state != GameState.Simulating && state != GameState.LevelFailed) return;
+            
+            var currentLevel = LevelModel?.CurrentLevel;
             if (currentLevel != null)
             {
                 SignalBus.Fire(new LoadLevelSignal { LevelToLoad = currentLevel });
             }
             View.HideLevelFailed();
+            View.HideCompletion();
+            View.HideCrisis();
+            if (state == GameState.Paused)
+            {
+                GameStateModel?.SetState(GameState.Playing);
+            }
         }
 
         private void HandleLevelFailed(LevelFailedSignal signal)

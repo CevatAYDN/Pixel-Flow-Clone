@@ -10,7 +10,6 @@ namespace PixelFlow.Views
     {
         [Inject] public ISettingsModel SettingsModel { get; set; }
         [Inject] public IGameStateModel GameStateModel { get; set; }
-        [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
 
         protected override void OnBind()

@@ -94,6 +94,14 @@ namespace Nexus.Generated
             {
                 instance.AssetProvider = null;
             });
+            NexusDI.RegisterInjector<PixelFlow.Views.BloomFlashMediator>((instance, di) =>
+            {
+                instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
+            });
+            NexusDI.RegisterClearer<PixelFlow.Views.BloomFlashMediator>(instance =>
+            {
+                instance.SignalBus = null;
+            });
             NexusDI.RegisterInjector<PixelFlow.Views.CellView>((instance, di) =>
             {
                 instance.ThemePalette = di.Resolve<PixelFlow.Data.ThemePaletteAsset>();
@@ -106,27 +114,39 @@ namespace Nexus.Generated
                 instance.ObstacleService = null;
                 instance.Config = null;
             });
+            NexusDI.RegisterInjector<PixelFlow.Views.ConfettiMediator>((instance, di) =>
+            {
+                instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
+            });
+            NexusDI.RegisterClearer<PixelFlow.Views.ConfettiMediator>(instance =>
+            {
+                instance.SignalBus = null;
+            });
             NexusDI.RegisterInjector<PixelFlow.Views.DailyCrisisMediator>((instance, di) =>
             {
                 instance.DailyCrisisModel = di.Resolve<PixelFlow.Models.IDailyCrisisModel>();
                 instance.DailyCrisisService = di.Resolve<PixelFlow.Services.IDailyCrisisService>();
                 instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
+                instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
             });
             NexusDI.RegisterClearer<PixelFlow.Views.DailyCrisisMediator>(instance =>
             {
                 instance.DailyCrisisModel = null;
                 instance.DailyCrisisService = null;
                 instance.LoggerService = null;
+                instance.SignalBus = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Views.GarageMediator>((instance, di) =>
             {
                 instance.InventoryModel = di.Resolve<PixelFlow.Models.IInventoryModel>();
                 instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
+                instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
             });
             NexusDI.RegisterClearer<PixelFlow.Views.GarageMediator>(instance =>
             {
                 instance.InventoryModel = null;
                 instance.LoggerService = null;
+                instance.SignalBus = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Views.GarageView>((instance, di) =>
             {
@@ -142,6 +162,7 @@ namespace Nexus.Generated
                 instance.SettingsModel = di.Resolve<PixelFlow.Models.ISettingsModel>();
                 instance.Logger = di.Resolve<Nexus.Core.Services.ILoggerService>();
                 instance.AudioService = di.Resolve<PixelFlow.Services.IAudioService>();
+                instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
             });
             NexusDI.RegisterClearer<PixelFlow.Views.GridMediator>(instance =>
             {
@@ -149,6 +170,7 @@ namespace Nexus.Generated
                 instance.SettingsModel = null;
                 instance.Logger = null;
                 instance.AudioService = null;
+                instance.SignalBus = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Views.GridView>((instance, di) =>
             {
@@ -178,6 +200,7 @@ namespace Nexus.Generated
                 instance.ProgressionService = di.Resolve<PixelFlow.Services.ILevelProgressionService>();
                 instance.LocalizationService = di.Resolve<Nexus.Core.Services.ILocalizationService>();
                 instance.PowerUpService = di.Resolve<PixelFlow.Services.IPowerUpService>();
+                instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
             });
             NexusDI.RegisterClearer<PixelFlow.Views.HUDMediator>(instance =>
             {
@@ -191,6 +214,7 @@ namespace Nexus.Generated
                 instance.ProgressionService = null;
                 instance.LocalizationService = null;
                 instance.PowerUpService = null;
+                instance.SignalBus = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Views.HUDView>((instance, di) =>
             {
@@ -244,15 +268,15 @@ namespace Nexus.Generated
             {
                 instance.SettingsModel = di.Resolve<PixelFlow.Models.ISettingsModel>();
                 instance.GameStateModel = di.Resolve<PixelFlow.Models.IGameStateModel>();
-                instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
                 instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
+                instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
             });
             NexusDI.RegisterClearer<PixelFlow.Views.SettingsMediator>(instance =>
             {
                 instance.SettingsModel = null;
                 instance.GameStateModel = null;
-                instance.SignalBus = null;
                 instance.LoggerService = null;
+                instance.SignalBus = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Views.SettingsView>((instance, di) =>
             {
@@ -265,18 +289,22 @@ namespace Nexus.Generated
             NexusDI.RegisterInjector<PixelFlow.Views.SoundHandlerMediator>((instance, di) =>
             {
                 instance.SoundModel = di.Resolve<PixelFlow.Models.ISoundModel>();
+                instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
             });
             NexusDI.RegisterClearer<PixelFlow.Views.SoundHandlerMediator>(instance =>
             {
                 instance.SoundModel = null;
+                instance.SignalBus = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Views.SplashMediator>((instance, di) =>
             {
                 instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
+                instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
             });
             NexusDI.RegisterClearer<PixelFlow.Views.SplashMediator>(instance =>
             {
                 instance.LoggerService = null;
+                instance.SignalBus = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Views.SplashView>((instance, di) =>
             {
@@ -292,6 +320,7 @@ namespace Nexus.Generated
                 instance.CameraProvider = di.Resolve<PixelFlow.Services.ICameraProvider>();
                 instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
                 instance.ThemePalette = di.Resolve<PixelFlow.Data.ThemePaletteAsset>();
+                instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
             });
             NexusDI.RegisterClearer<PixelFlow.Views.ThemeHandlerMediator>(instance =>
             {
@@ -299,6 +328,7 @@ namespace Nexus.Generated
                 instance.CameraProvider = null;
                 instance.LoggerService = null;
                 instance.ThemePalette = null;
+                instance.SignalBus = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Views.TutorialView>((instance, di) =>
             {
@@ -312,11 +342,13 @@ namespace Nexus.Generated
             {
                 instance.TutorialModel = di.Resolve<PixelFlow.Models.ITutorialModel>();
                 instance.TutorialDriver = di.Resolve<PixelFlow.Services.ITutorialDriver>();
+                instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
             });
             NexusDI.RegisterClearer<PixelFlow.Views.TutorialMediator>(instance =>
             {
                 instance.TutorialModel = null;
                 instance.TutorialDriver = null;
+                instance.SignalBus = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Services.AdManagerService>((instance, di) =>
             {
@@ -363,10 +395,12 @@ namespace Nexus.Generated
             NexusDI.RegisterInjector<PixelFlow.Services.CameraControllerMediator>((instance, di) =>
             {
                 instance.GameStateModel = di.Resolve<PixelFlow.Models.IGameStateModel>();
+                instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
             });
             NexusDI.RegisterClearer<PixelFlow.Services.CameraControllerMediator>(instance =>
             {
                 instance.GameStateModel = null;
+                instance.SignalBus = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Services.CrisisAdService>((instance, di) =>
             {
@@ -918,22 +952,30 @@ namespace Nexus.Generated
                 _ = _p_SaveThrottler_TimeProvider; // Suppress CS0219 warning
                 var _p_WindowManager_AssetProvider = default(Nexus.Core.Services.WindowManager).AssetProvider;
                 _ = _p_WindowManager_AssetProvider; // Suppress CS0219 warning
+                var _p_BloomFlashMediator_SignalBus = default(PixelFlow.Views.BloomFlashMediator).SignalBus;
+                _ = _p_BloomFlashMediator_SignalBus; // Suppress CS0219 warning
                 var _p_CellView_ThemePalette = default(PixelFlow.Views.CellView).ThemePalette;
                 _ = _p_CellView_ThemePalette; // Suppress CS0219 warning
                 var _p_CellView_ObstacleService = default(PixelFlow.Views.CellView).ObstacleService;
                 _ = _p_CellView_ObstacleService; // Suppress CS0219 warning
                 var _p_CellView_Config = default(PixelFlow.Views.CellView).Config;
                 _ = _p_CellView_Config; // Suppress CS0219 warning
+                var _p_ConfettiMediator_SignalBus = default(PixelFlow.Views.ConfettiMediator).SignalBus;
+                _ = _p_ConfettiMediator_SignalBus; // Suppress CS0219 warning
                 var _p_DailyCrisisMediator_DailyCrisisModel = default(PixelFlow.Views.DailyCrisisMediator).DailyCrisisModel;
                 _ = _p_DailyCrisisMediator_DailyCrisisModel; // Suppress CS0219 warning
                 var _p_DailyCrisisMediator_DailyCrisisService = default(PixelFlow.Views.DailyCrisisMediator).DailyCrisisService;
                 _ = _p_DailyCrisisMediator_DailyCrisisService; // Suppress CS0219 warning
                 var _p_DailyCrisisMediator_LoggerService = default(PixelFlow.Views.DailyCrisisMediator).LoggerService;
                 _ = _p_DailyCrisisMediator_LoggerService; // Suppress CS0219 warning
+                var _p_DailyCrisisMediator_SignalBus = default(PixelFlow.Views.DailyCrisisMediator).SignalBus;
+                _ = _p_DailyCrisisMediator_SignalBus; // Suppress CS0219 warning
                 var _p_GarageMediator_InventoryModel = default(PixelFlow.Views.GarageMediator).InventoryModel;
                 _ = _p_GarageMediator_InventoryModel; // Suppress CS0219 warning
                 var _p_GarageMediator_LoggerService = default(PixelFlow.Views.GarageMediator).LoggerService;
                 _ = _p_GarageMediator_LoggerService; // Suppress CS0219 warning
+                var _p_GarageMediator_SignalBus = default(PixelFlow.Views.GarageMediator).SignalBus;
+                _ = _p_GarageMediator_SignalBus; // Suppress CS0219 warning
                 var _p_GarageView_LoggerService = default(PixelFlow.Views.GarageView).LoggerService;
                 _ = _p_GarageView_LoggerService; // Suppress CS0219 warning
                 var _p_GridMediator_GridModel = default(PixelFlow.Views.GridMediator).GridModel;
@@ -944,6 +986,8 @@ namespace Nexus.Generated
                 _ = _p_GridMediator_Logger; // Suppress CS0219 warning
                 var _p_GridMediator_AudioService = default(PixelFlow.Views.GridMediator).AudioService;
                 _ = _p_GridMediator_AudioService; // Suppress CS0219 warning
+                var _p_GridMediator_SignalBus = default(PixelFlow.Views.GridMediator).SignalBus;
+                _ = _p_GridMediator_SignalBus; // Suppress CS0219 warning
                 var _p_GridView_CameraProvider = default(PixelFlow.Views.GridView).CameraProvider;
                 _ = _p_GridView_CameraProvider; // Suppress CS0219 warning
                 var _p_GridView_LoggerService = default(PixelFlow.Views.GridView).LoggerService;
@@ -974,6 +1018,8 @@ namespace Nexus.Generated
                 _ = _p_HUDMediator_LocalizationService; // Suppress CS0219 warning
                 var _p_HUDMediator_PowerUpService = default(PixelFlow.Views.HUDMediator).PowerUpService;
                 _ = _p_HUDMediator_PowerUpService; // Suppress CS0219 warning
+                var _p_HUDMediator_SignalBus = default(PixelFlow.Views.HUDMediator).SignalBus;
+                _ = _p_HUDMediator_SignalBus; // Suppress CS0219 warning
                 var _p_HUDView_LoggerService = default(PixelFlow.Views.HUDView).LoggerService;
                 _ = _p_HUDView_LoggerService; // Suppress CS0219 warning
                 var _p_HUDView_TickService = default(PixelFlow.Views.HUDView).TickService;
@@ -1008,16 +1054,20 @@ namespace Nexus.Generated
                 _ = _p_SettingsMediator_SettingsModel; // Suppress CS0219 warning
                 var _p_SettingsMediator_GameStateModel = default(PixelFlow.Views.SettingsMediator).GameStateModel;
                 _ = _p_SettingsMediator_GameStateModel; // Suppress CS0219 warning
-                var _p_SettingsMediator_SignalBus = default(PixelFlow.Views.SettingsMediator).SignalBus;
-                _ = _p_SettingsMediator_SignalBus; // Suppress CS0219 warning
                 var _p_SettingsMediator_LoggerService = default(PixelFlow.Views.SettingsMediator).LoggerService;
                 _ = _p_SettingsMediator_LoggerService; // Suppress CS0219 warning
+                var _p_SettingsMediator_SignalBus = default(PixelFlow.Views.SettingsMediator).SignalBus;
+                _ = _p_SettingsMediator_SignalBus; // Suppress CS0219 warning
                 var _p_SettingsView_LoggerService = default(PixelFlow.Views.SettingsView).LoggerService;
                 _ = _p_SettingsView_LoggerService; // Suppress CS0219 warning
                 var _p_SoundHandlerMediator_SoundModel = default(PixelFlow.Views.SoundHandlerMediator).SoundModel;
                 _ = _p_SoundHandlerMediator_SoundModel; // Suppress CS0219 warning
+                var _p_SoundHandlerMediator_SignalBus = default(PixelFlow.Views.SoundHandlerMediator).SignalBus;
+                _ = _p_SoundHandlerMediator_SignalBus; // Suppress CS0219 warning
                 var _p_SplashMediator_LoggerService = default(PixelFlow.Views.SplashMediator).LoggerService;
                 _ = _p_SplashMediator_LoggerService; // Suppress CS0219 warning
+                var _p_SplashMediator_SignalBus = default(PixelFlow.Views.SplashMediator).SignalBus;
+                _ = _p_SplashMediator_SignalBus; // Suppress CS0219 warning
                 var _p_SplashView_LoggerService = default(PixelFlow.Views.SplashView).LoggerService;
                 _ = _p_SplashView_LoggerService; // Suppress CS0219 warning
                 var _p_ThemeHandlerMediator_SettingsModel = default(PixelFlow.Views.ThemeHandlerMediator).SettingsModel;
@@ -1028,12 +1078,16 @@ namespace Nexus.Generated
                 _ = _p_ThemeHandlerMediator_LoggerService; // Suppress CS0219 warning
                 var _p_ThemeHandlerMediator_ThemePalette = default(PixelFlow.Views.ThemeHandlerMediator).ThemePalette;
                 _ = _p_ThemeHandlerMediator_ThemePalette; // Suppress CS0219 warning
+                var _p_ThemeHandlerMediator_SignalBus = default(PixelFlow.Views.ThemeHandlerMediator).SignalBus;
+                _ = _p_ThemeHandlerMediator_SignalBus; // Suppress CS0219 warning
                 var _p_TutorialView_TickService = default(PixelFlow.Views.TutorialView).TickService;
                 _ = _p_TutorialView_TickService; // Suppress CS0219 warning
                 var _p_TutorialMediator_TutorialModel = default(PixelFlow.Views.TutorialMediator).TutorialModel;
                 _ = _p_TutorialMediator_TutorialModel; // Suppress CS0219 warning
                 var _p_TutorialMediator_TutorialDriver = default(PixelFlow.Views.TutorialMediator).TutorialDriver;
                 _ = _p_TutorialMediator_TutorialDriver; // Suppress CS0219 warning
+                var _p_TutorialMediator_SignalBus = default(PixelFlow.Views.TutorialMediator).SignalBus;
+                _ = _p_TutorialMediator_SignalBus; // Suppress CS0219 warning
                 var _p_AdManagerService_InventoryModel = default(PixelFlow.Services.AdManagerService).InventoryModel;
                 _ = _p_AdManagerService_InventoryModel; // Suppress CS0219 warning
                 var _p_AdManagerService_LoggerService = default(PixelFlow.Services.AdManagerService).LoggerService;
@@ -1060,6 +1114,8 @@ namespace Nexus.Generated
                 _ = _p_CameraController_Config; // Suppress CS0219 warning
                 var _p_CameraControllerMediator_GameStateModel = default(PixelFlow.Services.CameraControllerMediator).GameStateModel;
                 _ = _p_CameraControllerMediator_GameStateModel; // Suppress CS0219 warning
+                var _p_CameraControllerMediator_SignalBus = default(PixelFlow.Services.CameraControllerMediator).SignalBus;
+                _ = _p_CameraControllerMediator_SignalBus; // Suppress CS0219 warning
                 var _p_CrisisAdService_GameSessionModel = default(PixelFlow.Services.CrisisAdService).GameSessionModel;
                 _ = _p_CrisisAdService_GameSessionModel; // Suppress CS0219 warning
                 var _p_CrisisAdService_SignalBus = default(PixelFlow.Services.CrisisAdService).SignalBus;

@@ -48,22 +48,36 @@ namespace PixelFlow.Views
             View.OnGlobalPointerUp -= HandleGlobalPointerUp;
         }
 
+        private bool IsPointerOverUI()
+        {
+            var es = UnityEngine.EventSystems.EventSystem.current;
+            if (es == null) return false;
+
+#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
+            if (Input.touchCount > 0)
+            {
+                return es.IsPointerOverGameObject(Input.GetTouch(0).fingerId);
+            }
+#endif
+            return es.IsPointerOverGameObject();
+        }
+
         private void HandleGlobalPointerDown(Vector2Int pos)
         {
-            if (UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject()) return;
+            if (IsPointerOverUI()) return;
             NexusLog.Info("GridMediator", "PointerDown", "?", $"Firing InputInteractionSignal at {pos}");
             SignalBus.Fire(new InputInteractionSignal { Type = InputType.PointerDown, GridPosition = pos });
         }
 
         private void HandleGlobalPointerDrag(Vector2Int pos)
         {
-            if (UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject()) return;
+            if (IsPointerOverUI()) return;
             SignalBus.Fire(new InputInteractionSignal { Type = InputType.Drag, GridPosition = pos });
         }
 
         private void HandleGlobalPointerUp(Vector2Int pos)
         {
-            if (UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject()) return;
+            if (IsPointerOverUI()) return;
             NexusLog.Info("GridMediator", "PointerUp", "?", $"Firing InputInteractionSignal at {pos}");
             SignalBus.Fire(new InputInteractionSignal { Type = InputType.PointerUp, GridPosition = pos });
         }

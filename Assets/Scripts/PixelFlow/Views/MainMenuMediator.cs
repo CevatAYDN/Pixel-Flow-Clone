@@ -26,7 +26,6 @@ namespace PixelFlow.Views
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
         [Inject] public IObstacleService ObstacleService { get; set; }
         [Inject] public ITutorialDriver TutorialDriver { get; set; }
-        [Inject] public ISignalBus SignalBus { get; set; }
 
         protected override void OnBind()
         {
