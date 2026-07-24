@@ -3,6 +3,11 @@ using PixelFlow.Models;
 namespace PixelFlow.Signals
 {
     /// <summary>
+    /// Ayarlar panelini gösterir.
+    /// </summary>
+    public struct ShowSettingsSignal { }
+
+    /// <summary>
     /// Ayar mutasyonları için signal'lar. MVCS §15.3 KURAL 3 & §15.9 KURAL 5:
     /// View/Mediator doğrudan Model'e yazmaz; Signal → Command → Model akışı kullanılır.
     /// (Tema değişimi zaten ChangeThemeSignal/ChangeThemeCommand ile bu akışı kullanır.)

@@ -28,6 +28,12 @@ namespace PixelFlow.Views
                 GameStateModel.OnStateChanged += HandleStateChanged;
             }
 
+            Subscribe<ShowSettingsSignal>(_ =>
+            {
+                LoggerService?.Log("[PixelFlow.SettingsMediator] ShowSettingsSignal received -> Opening Settings panel.");
+                View?.SetVisible(true);
+            });
+
             View.PopulateSettings(
                 SettingsModel.MasterVolume,
                 SettingsModel.SfxVolume,
@@ -93,11 +99,13 @@ namespace PixelFlow.Views
 
         private void HandleClose()
         {
-            LoggerService?.Log("[PixelFlow.SettingsMediator] Closing Settings panel and resuming game...");
+            LoggerService?.Log("[PixelFlow.SettingsMediator] Closing Settings panel...");
             View.SetVisible(false);
             if (GameStateModel != null && GameStateModel.CurrentState == GameState.Paused)
             {
-                GameStateModel.SetState(GameState.Playing);
+                var targetState = GameStateModel.PreviousState != GameState.Paused ? GameStateModel.PreviousState : GameState.Playing;
+                LoggerService?.Log($"[PixelFlow.SettingsMediator] Restoring PreviousState: {targetState}");
+                GameStateModel.SetState(targetState);
             }
         }
     }

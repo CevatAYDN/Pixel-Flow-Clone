@@ -134,7 +134,8 @@ namespace PixelFlow.Views
 
         private void HandleSettingsClicked()
         {
-            LoggerService?.Log("[MainMenuMediator] 'Ayarlar' button clicked from Hub. Transitioning -> Paused.");
+            LoggerService?.Log("[MainMenuMediator] 'Ayarlar' button clicked from Hub. Firing ShowSettingsSignal & transitioning -> Paused.");
+            SignalBus?.Fire(new ShowSettingsSignal());
             GameStateModel?.SetState(GameState.Paused);
         }
 

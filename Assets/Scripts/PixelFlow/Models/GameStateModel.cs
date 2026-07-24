@@ -48,6 +48,7 @@ namespace PixelFlow.Models
             (GameState.Boot, GameState.Playing),
             // Hub → Gameplay
             (GameState.MainMenu, GameState.Playing),
+            (GameState.MainMenu, GameState.Paused),
             // Hub ↔ LevelSelect (seviye seçim ekranı)
             (GameState.MainMenu, GameState.LevelSelect),
             (GameState.LevelSelect, GameState.MainMenu),

@@ -152,7 +152,7 @@ namespace PixelFlow.Views
 
             // Seviye numarası / kilit ikonu
             var numText = CreateChildText(go.transform, "Number",
-                info.Unlocked ? info.DisplayNumber.ToString() : "\U0001F512");
+                info.DisplayNumber.ToString());
             numText.fontSize = 30;
             numText.fontStyle = FontStyles.Bold;
             numText.color = !info.Unlocked ? LockedTextColor : (completed ? CompletedTextColor : UnlockedTextColor);

@@ -423,13 +423,26 @@ namespace PixelFlow.Services
             if (gridPos.x >= 0 && gridPos.x < GridModel.Width && gridPos.y >= 0 && gridPos.y < GridModel.Height)
             {
                 var cell = GridModel.Grid[gridPos.x, gridPos.y];
-                if (cell.HasViaduct && cell.OverColor == color)
+                if (cell.HasViaduct)
                 {
-                    return Config.ViaductOverZOffset;
-                }
-                if (cell.HasViaduct && cell.UnderColor == color)
-                {
-                    return Config.ViaductUnderZOffset;
+                    if (cell.OverColor == color)
+                    {
+                        return Config.ViaductOverZOffset;
+                    }
+                    if (cell.UnderColor == color)
+                    {
+                        return Config.ViaductUnderZOffset;
+                    }
+                    if (cell.UnderColor == ColorType.None)
+                    {
+                        cell.UnderColor = color;
+                        return Config.ViaductUnderZOffset;
+                    }
+                    else
+                    {
+                        cell.OverColor = color;
+                        return Config.ViaductOverZOffset;
+                    }
                 }
             }
             return Config.NormalZOffset;
@@ -542,8 +555,7 @@ namespace PixelFlow.Services
 
             if (cell.HasViaduct)
             {
-                float zDiff = Mathf.Abs(v1.CurrentPosition.z - v2.CurrentPosition.z);
-                if (zDiff >= Config.ViaductZDiffThreshold) return false;
+                return false; // Viaduct separates vehicle paths in 3D (Over/Under) so crossing vehicles never collide
             }
 
             TriggerCrash(cellPos, v1.Color, v2.Color);
