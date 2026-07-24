@@ -562,7 +562,10 @@ namespace PixelFlow.Services
                     Vector2Int vPos = new Vector2Int(Mathf.RoundToInt(v.CurrentPosition.x), Mathf.RoundToInt(v.CurrentPosition.y));
                     if (vPos == crashPos && v.Visual != null)
                     {
-                        BouncyCollisionHandler.ApplyBouncyBounce(v.Visual, Vector3.up);
+                        var physics = LevelModel?.CurrentLevel != null
+                            ? LevelModel.CurrentLevel.bouncyPhysics
+                            : PixelFlow.Data.BouncyPhysicsConfig.Default;
+                        BouncyCollisionHandler.ApplyBouncyBounce(v.Visual, Vector3.up, physics);
                     }
                 }
             }

@@ -117,6 +117,44 @@ namespace PixelFlow.Editor
             Debug.Log($"[PixelFlow] GameConfig.asset oluşturuldu: {path}");
         }
 
+        /// <summary>
+        /// game_plan.md §2.2: Tüm ScriptableObject config asset'lerini oluşturur.
+        /// Resources/Configs/ altında 6 asset: GameConfig, ThemePalette, ColorBlindPalette,
+        /// VehicleMaterialConfig, EconomyConfig, LevelCatalog.
+        /// </summary>
+        [MenuItem("PixelFlow/Create All Config Assets")]
+        private static void CreateAllConfigAssets()
+        {
+            System.IO.Directory.CreateDirectory("Assets/Resources/Configs");
+            int created = 0;
+
+            created += CreateAssetIfMissing<PixelFlow.Data.GameConfig>("Configs/GameConfig");
+            created += CreateAssetIfMissing<PixelFlow.Data.ThemePaletteAsset>("Configs/ThemePalette");
+            created += CreateAssetIfMissing<PixelFlow.Data.ColorBlindPaletteAsset>("Configs/ColorBlindPalette");
+            created += CreateAssetIfMissing<PixelFlow.Data.VehicleMaterialConfigAsset>("Configs/VehicleMaterialConfig");
+            created += CreateAssetIfMissing<PixelFlow.Data.EconomyConfigAsset>("Configs/EconomyConfig");
+            created += CreateAssetIfMissing<PixelFlow.Data.LevelCatalogAsset>("Configs/LevelCatalog");
+
+            UnityEditor.AssetDatabase.SaveAssets();
+            UnityEditor.AssetDatabase.Refresh();
+            Debug.Log($"[PixelFlow] {created} config asset oluşturuldu. Toplam 6 asset Resources/Configs/ altında.");
+        }
+
+        private static int CreateAssetIfMissing<T>(string resourcePath) where T : ScriptableObject
+        {
+            var existing = UnityEngine.Resources.Load<T>(resourcePath);
+            if (existing != null)
+            {
+                Debug.Log($"[PixelFlow] Zaten mevcut: {resourcePath}");
+                return 0;
+            }
+            var asset = ScriptableObject.CreateInstance<T>();
+            string fullPath = $"Assets/Resources/{resourcePath}.asset";
+            UnityEditor.AssetDatabase.CreateAsset(asset, fullPath);
+            Debug.Log($"[PixelFlow] Oluşturuldu: {fullPath}");
+            return 1;
+        }
+
         private float _lastDiagnosticTime = -10f;
         private const float DiagnosticCooldown = 0.5f;
         private bool _wasPlaying;
@@ -428,6 +466,15 @@ namespace PixelFlow.Editor
             _dailyCrisisOk = Object.FindAnyObjectByType<DailyCrisisView>(FindObjectsInactive.Include) != null;
             _confettiOk = Object.FindAnyObjectByType<ConfettiView>(FindObjectsInactive.Include) != null;
             _bloomFlashOk = Object.FindAnyObjectByType<BloomFlashView>(FindObjectsInactive.Include) != null;
+
+            // Daha önce hiç atanmayan bayraklar (tanılama daima kırmızı gösteriyordu):
+            _tutorialOk = Object.FindAnyObjectByType<TutorialView>(FindObjectsInactive.Include) != null;
+            _settingsViewOk = Object.FindAnyObjectByType<SettingsView>(FindObjectsInactive.Include) != null;
+            // URP Volume tipi PixelFlow assembly'sinden erişilemez; SetupGlobalVolume ile aynı isim
+            // temelli kontrol kullanılır (kurulum sonrası tanılamanın yeşile dönmesi için tutarlı).
+            _globalVolumeOk = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include)
+                .Any(go => go.name.Contains("Volume"));
+            _cameraControllerOk = Object.FindAnyObjectByType<CameraController>(FindObjectsInactive.Include) != null;
         }
 
         private void RefreshLevelsCache()
@@ -492,6 +539,31 @@ namespace PixelFlow.Editor
             _sidebarActiveBtnStyle.normal.textColor = Color.white;
             if (_activeBtnTex == null) _activeBtnTex = MakeColorTexture(new Color(0.23f, 0.51f, 0.96f));
             _sidebarActiveBtnStyle.normal.background = _activeBtnTex;
+        }
+
+        // GUIStyle'lar EditorStyles'a bağlı olduğundan yalnızca bir IMGUI/OnGUI bağlamı içinde
+        // güvenle kurulabilir. Pencere CreateGUI (UI Toolkit) kullandığı için OnGUI Unity
+        // tarafından çağrılmaz; ayrıca IMGUIContainer'lar layout ölçüm (measure) geçişinde de
+        // çizim yapar. Bu nedenle her IMGUI host çizimi öncesinde stilleri tembel olarak kurarız.
+        private void EnsureStyles()
+        {
+            if (_cardStyle == null || _sectionHeaderStyle == null ||
+                _sidebarBtnStyle == null || _sidebarActiveBtnStyle == null ||
+                _cardStyle.normal.background == null)
+            {
+                InitStyles();
+            }
+        }
+
+        // IMGUIContainer geri çağrımlarını stil güvencesiyle sarmalar; ölçüm geçişinde bile
+        // _cardStyle vb. null olmaz (NullReferenceException / dengesiz GUIClip hatası fix).
+        private IMGUIContainer MakeIMGUIHost(System.Action drawMethod)
+        {
+            return new IMGUIContainer(() =>
+            {
+                EnsureStyles();
+                drawMethod();
+            });
         }
 
         private void OnGUI()

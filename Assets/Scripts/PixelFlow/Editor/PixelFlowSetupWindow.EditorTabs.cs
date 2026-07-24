@@ -146,7 +146,7 @@ namespace PixelFlow.Editor
 
             // 2. Procedural & Database Card
             var dbCard = BuildCard("📁 PROJE SEVİYE LİSTESİ");
-            var imguiHost = new IMGUIContainer(DrawLevelStudioTab);
+            var imguiHost = MakeIMGUIHost(DrawLevelStudioTab);
             dbCard.Add(imguiHost);
             root.Add(dbCard);
 
@@ -186,30 +186,10 @@ namespace PixelFlow.Editor
             }
         }
 
-        private VisualElement BuildGameControllerUIToolkitView()
-        {
-            var card = BuildCard("🕹️ OYUN KONTROL & CANLI BROADCASTER");
-            var row = new VisualElement();
-            row.style.flexDirection = FlexDirection.Row;
-
-            var btn1 = new Button(() => CompleteCurrentLevel()) { text = "🏆 Seviyeyi Tamamla" };
-            btn1.style.backgroundColor = new StyleColor(new Color(0.23f, 0.51f, 0.96f));
-            btn1.style.color = new StyleColor(Color.white);
-            btn1.style.paddingTop = 8; btn1.style.paddingBottom = 8; btn1.style.paddingLeft = 12; btn1.style.paddingRight = 12;
-            btn1.style.borderTopLeftRadius = 8; btn1.style.borderTopRightRadius = 8; btn1.style.borderBottomLeftRadius = 8; btn1.style.borderBottomRightRadius = 8;
-            row.Add(btn1);
-
-            var btn2 = new Button(() => RestartCurrentLevel()) { text = "🔄 Yeniden Başlat" };
-            btn2.style.backgroundColor = new StyleColor(new Color(0.2f, 0.25f, 0.33f));
-            btn2.style.color = new StyleColor(Color.white);
-            btn2.style.paddingTop = 8; btn2.style.paddingBottom = 8; btn2.style.paddingLeft = 12; btn2.style.paddingRight = 12;
-            btn2.style.borderTopLeftRadius = 8; btn2.style.borderTopRightRadius = 8; btn2.style.borderBottomLeftRadius = 8; btn2.style.borderBottomRightRadius = 8;
-            btn2.style.marginLeft = 8;
-            row.Add(btn2);
-
-            card.Add(row);
-            return card;
-        }
+        // Sekme 0: Tam oyun kontrol merkezi (durum kartı, canlı kontroller, araç simülatörü,
+        // frame-step, sinyal tetikleyici, araç stili, hızlı seviye başlatıcı, bootstrapper).
+        // Daha önce yalnızca 2 butonluk bir taslak gösteriliyordu; DrawGameControllerTab bağlandı.
+        private VisualElement BuildGameControllerUIToolkitView() { return BuildHostCard("🕹️ OYUN KONTROL & CANLI BROADCASTER", DrawGameControllerTab); }
 
         private VisualElement BuildDiagnosticsUIToolkitView() { return BuildHostCard("🔍 SAHNE TANILAMA & AUDIT", DrawDiagnosticsTab); }
         private VisualElement BuildBatchSolverUIToolkitView() { return BuildHostCard("🧩 TOPLU ÇÖZÜCÜ BOT", DrawBatchSolverTab); }
@@ -224,7 +204,7 @@ namespace PixelFlow.Editor
         private VisualElement BuildHostCard(string title, System.Action drawMethod)
         {
             var card = BuildCard(title);
-            var host = new IMGUIContainer(drawMethod);
+            var host = MakeIMGUIHost(drawMethod);
             card.Add(host);
             return card;
         }
@@ -392,18 +372,9 @@ namespace PixelFlow.Editor
             }
         }
 
-        private static ShapeType GetDefaultShapeForColor(ColorType color)
-        {
-            switch (color)
-            {
-                case ColorType.Red: return ShapeType.Circle;
-                case ColorType.Green: return ShapeType.Square;
-                case ColorType.Blue: return ShapeType.Triangle;
-                case ColorType.Yellow: return ShapeType.Star;
-                case ColorType.Purple: return ShapeType.Diamond;
-                default: return ShapeType.Circle;
-            }
-        }
+        // Tek kaynak: renk→şekil eşlemesi runtime ProceduralLevelGenerator ile birebir aynı olmalı
+        // (colorblind ipuçlarının seviyeler arası tutarlılığı için). LevelDataEditor kanonik sürümü barındırır.
+        private static ShapeType GetDefaultShapeForColor(ColorType color) => LevelDataEditor.GetDefaultShapeForColor(color);
 
         private void DrawCustomLevelCreator()
         {

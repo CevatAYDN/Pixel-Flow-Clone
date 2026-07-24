@@ -28,6 +28,8 @@ namespace PixelFlow.Commands
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject, OptionalInject] public GameConfig Config { get; set; }
 
+        private int ConfigMaxPathsPerBridge => Config != null ? Config.MaxPathsPerBridge : throw new DataValidationException("GameConfig.MaxPathsPerBridge erişilemedi!");
+
         // Batched history bypass edilerek her adımda snapshot kaydı sağlanır (Testler ve oyun hassasiyeti için)
         private void EnsureHistoryRecorded()
         {
@@ -260,7 +262,7 @@ namespace PixelFlow.Commands
                         }
                     }
 
-                    if (currentCell.PathColorCount >= Config.MaxPathsPerBridge)
+                    if (currentCell.PathColorCount >= ConfigMaxPathsPerBridge)
                     {
                         // If still full, backtrack the conflicting color to make space
                         ColorType firstColor = currentCell.FirstPathColor;
@@ -269,7 +271,7 @@ namespace PixelFlow.Commands
                         PathService.BacktrackPath(firstColor, signal.GridPosition);
                     }
 
-                    if (currentCell.PathColorCount >= Config.MaxPathsPerBridge)
+                    if (currentCell.PathColorCount >= ConfigMaxPathsPerBridge)
                     {
                         LoggerService?.LogWarning($"[PixelFlow.ProcessInputCommand] Drag blocked at {signal.GridPosition}: Cell already occupied by max paths.");
                         Nexus.Core.Services.NexusLog.Warn("ProcessInputCommand", "HandleDrag", "?", "Cell already occupied by max paths. Drawing blocked.");

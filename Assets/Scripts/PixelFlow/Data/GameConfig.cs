@@ -1,5 +1,7 @@
 using UnityEngine;
 using Nexus.Core;
+using PixelFlow.Models;
+using PixelFlow.Services;
 
 namespace PixelFlow.Data
 {
@@ -151,6 +153,28 @@ namespace PixelFlow.Data
         [Tooltip("Kamera geçiş süresi (saniye)")]
         public float CameraTransitionDuration = 0.18f;
 
+        [Header("=== Camera (Hub & Transitions) ===")]
+        [Tooltip("Hub (şehir) kamera dünya pozisyonu — izometrik görünüm")]
+        public Vector3 HubCameraPosition = new Vector3(8f, 12f, -8f);
+
+        [Tooltip("Hub kamera Euler rotasyonu (derece)")]
+        public Vector3 HubCameraEuler = new Vector3(45f, 45f, 0f);
+
+        [Tooltip("Hub/Puzzle state geçiş süresi (saniye) — GDD §5.1: 0.8s ease-in-out")]
+        public float StateTransitionDuration = 0.8f;
+
+        [Tooltip("Puzzle görünümü güvenlik fallback orthographic boyutu")]
+        public float PuzzleFallbackCameraSize = 5f;
+
+        [Tooltip("Kaza anı kamera sarsıntı şiddeti")]
+        public float CrashShakeIntensity = 0.35f;
+
+        [Tooltip("Kaza anı kamera sarsıntı süresi (saniye)")]
+        public float CrashShakeDuration = 0.45f;
+
+        [Tooltip("Kaza anı kamera odak kaydırma mesafesi (birim)")]
+        public float CrashFocusOffset = 0.4f;
+
         [Header("=== Audio ===")]
         [Tooltip("Ses havuzu önceden tahsis boyutu")]
         public int AudioPoolSize = 3;
@@ -173,5 +197,31 @@ namespace PixelFlow.Data
         [Header("=== Bridge Rules ===")]
         [Tooltip("Köprü başına maksimum yol sayısı")]
         public int MaxPathsPerBridge = 2;
+
+        [Header("=== Settings Defaults ===")]
+        [Tooltip("Varsayılan tema")]
+        public AppTheme DefaultTheme = AppTheme.Dark;
+
+        [Tooltip("Varsayılan master ses seviyesi")]
+        [Range(0f, 1f)] public float DefaultMasterVolume = 1f;
+
+        [Tooltip("Varsayılan SFX ses seviyesi")]
+        [Range(0f, 1f)] public float DefaultSfxVolume = 1f;
+
+        [Tooltip("Varsayılan müzik ses seviyesi")]
+        [Range(0f, 1f)] public float DefaultMusicVolume = 0.7f;
+
+        [Tooltip("Varsayılan haptik kapalı mı")]
+        public bool DefaultHapticsDisabled = false;
+
+        [Header("=== Daily Crisis Difficulty (game_plan.md §3.6) ===")]
+        [Tooltip("Kolay günlük kriz (crisisIndex 0) zorluk parametreleri")]
+        public DifficultyParams DailyCrisisEasy = new DifficultyParams(10, 10, 3, 2, false, true);
+
+        [Tooltip("Orta günlük kriz (crisisIndex 1) zorluk parametreleri")]
+        public DifficultyParams DailyCrisisMedium = new DifficultyParams(10, 10, 4, 3, false, true);
+
+        [Tooltip("Zor günlük kriz (crisisIndex 2+) zorluk parametreleri")]
+        public DifficultyParams DailyCrisisHard = new DifficultyParams(10, 10, 4, 4, true, true, true, true);
     }
 }

@@ -1,6 +1,7 @@
 using Nexus.Core;
 using Nexus.Core.Services;
 using PixelFlow.Models;
+using PixelFlow.Signals;
 using UnityEngine;
 
 namespace PixelFlow.Views
@@ -9,6 +10,7 @@ namespace PixelFlow.Views
     {
         [Inject] public ISettingsModel SettingsModel { get; set; }
         [Inject] public IGameStateModel GameStateModel { get; set; }
+        [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
 
         protected override void OnBind()
@@ -63,31 +65,31 @@ namespace PixelFlow.Views
         private void HandleMasterVolume(float v)
         {
             LoggerService?.Log($"[PixelFlow.SettingsMediator] Master Volume changed: {v:F2}");
-            SettingsModel.SetMasterVolume(v);
+            SignalBus.Fire(new ChangeAudioVolumeSignal { Channel = AudioChannel.Master, Value = v });
         }
 
         private void HandleSfxVolume(float v)
         {
             LoggerService?.Log($"[PixelFlow.SettingsMediator] SFX Volume changed: {v:F2}");
-            SettingsModel.SetSfxVolume(v);
+            SignalBus.Fire(new ChangeAudioVolumeSignal { Channel = AudioChannel.Sfx, Value = v });
         }
 
         private void HandleMusicVolume(float v)
         {
             LoggerService?.Log($"[PixelFlow.SettingsMediator] Music Volume changed: {v:F2}");
-            SettingsModel.SetMusicVolume(v);
+            SignalBus.Fire(new ChangeAudioVolumeSignal { Channel = AudioChannel.Music, Value = v });
         }
 
         private void HandleColorBlind(ColorBlindMode mode)
         {
             LoggerService?.Log($"[PixelFlow.SettingsMediator] Colorblind mode changed: {mode}");
-            SettingsModel.SetColorBlindMode(mode);
+            SignalBus.Fire(new ChangeColorBlindModeSignal { Mode = mode });
         }
 
         private void HandleHaptics(bool enabled)
         {
             LoggerService?.Log($"[PixelFlow.SettingsMediator] Haptics toggled: {enabled}");
-            SettingsModel.SetHapticsDisabled(!enabled);
+            SignalBus.Fire(new ToggleHapticsSignal { Disabled = !enabled });
         }
 
         private void HandleClose()

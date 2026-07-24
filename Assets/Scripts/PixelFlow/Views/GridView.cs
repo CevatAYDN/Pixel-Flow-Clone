@@ -21,6 +21,7 @@ namespace PixelFlow.Views
 
         [Inject] public ICameraProvider CameraProvider { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject] public IGridInputService InputService { get; set; }
         [Inject, OptionalInject] public PixelFlow.Data.GameConfig Config { get; set; }
 
         private Camera _cam;
@@ -29,8 +30,7 @@ namespace PixelFlow.Views
         private Queue<CellView> _cellPool = new Queue<CellView>();
         public bool IsInitialized => _cells != null;
 
-        // Input state machine — GridInputService'te yönetilir
-        private IGridInputService _inputService;
+        // Input state machine — DI üzerinden GridInputService'te yönetilir
         private Vector2Int _lastDragPos = new Vector2Int(-1, -1);
 
         private float _targetZoom;
@@ -46,7 +46,6 @@ namespace PixelFlow.Views
         private void Awake()
         {
             UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Enable();
-            _inputService = new GridInputService();
         }
 
         protected override void OnTick(float deltaTime)
@@ -90,10 +89,10 @@ namespace PixelFlow.Views
             {
                 LoggerService?.Log($"[PixelFlow.GridView] EventSystem: current={(bool)es}, " +
                     $"inputModule={(es != null ? es.currentInputModule?.GetType().Name : "null")}, " +
-                    $"overUI={overUI}, inputServiceActive={_inputService != null}");
+                    $"overUI={overUI}, inputServiceActive={InputService != null}");
             }
 
-            var result = _inputService?.ProcessInput(_cam, _cells.GetLength(0), _cells.GetLength(1));
+            var result = InputService?.ProcessInput(_cam, _cells.GetLength(0), _cells.GetLength(1));
 
             if (result == null || !result.Value.HasEvent) return;
 

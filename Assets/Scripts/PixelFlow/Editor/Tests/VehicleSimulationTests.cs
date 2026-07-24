@@ -24,6 +24,11 @@ namespace PixelFlow.Editor.Tests
             _ctx = NexusTestHarness.CreateContext(builder =>
             {
                 builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
+
+                var testConfig = ScriptableObject.CreateInstance<GameConfig>();
+                testConfig.name = "GameConfig (Test)";
+                builder.BindInstance(testConfig);
+
                 builder.Bind<ILevelProgressionService, LevelProgressionService>();
                 builder.BindReactiveModel<IGridModel, GridModel>();
                 builder.BindReactiveModel<ILevelModel, LevelModel>();
@@ -45,6 +50,7 @@ namespace PixelFlow.Editor.Tests
                 builder.Bind<IFeedbackService, FeedbackService>();
                 builder.Bind<Nexus.Core.Services.IAudioService, StubAudioService>();
                 builder.Bind<ICameraProvider, StubCameraProvider>();
+                builder.Bind<IGridViewProvider, StubGridViewProvider>();
                 builder.Bind<ICrisisAdService, StubCrisisAdService>();
             });
 

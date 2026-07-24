@@ -1,10 +1,12 @@
 using NUnit.Framework;
 using Nexus.Core;
 using Nexus.Core.Services;
+using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Services;
 using PixelFlow.Signals;
 using PixelFlow.Commands;
+using UnityEngine;
 
 namespace PixelFlow.Editor.Tests
 {
@@ -21,6 +23,12 @@ namespace PixelFlow.Editor.Tests
             _ctx = NexusTestHarness.CreateContext(builder =>
             {
                 builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
+
+                // game_plan.md §2.2: GameConfig testlerde de mevcut olmalı (SettingsModel varsayılanları buradan gelir)
+                var testConfig = ScriptableObject.CreateInstance<GameConfig>();
+                testConfig.name = "GameConfig (Test)";
+                builder.BindInstance(testConfig);
+
                 builder.BindReactiveModel<ISettingsModel, SettingsModel>();
                 builder.BindReactiveModel<ISoundModel, SoundModel>();
                 builder.Bind<ILoggerService, LoggerService>();

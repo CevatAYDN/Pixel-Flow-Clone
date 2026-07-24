@@ -16,6 +16,7 @@ namespace PixelFlow.Services
     {
         [Inject] public IDailyCrisisModel DailyCrisisModel { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject, OptionalInject] public GameConfig Config { get; set; }
 
         public ValueTask InitializeAsync(CancellationToken ct) => default;
         public void OnDispose() { }
@@ -27,33 +28,22 @@ namespace PixelFlow.Services
             var solver = new RuntimePathSolver();
             var generator = new ProceduralLevelGenerator(solver, seed);
 
+            // game_plan.md §15.9 KURAL 1/4: Zorluk değerleri hardcode edilmez, GameConfig'ten okunur.
+            if (Config == null)
+                throw new DataValidationException("GameConfig erişilemedi! DailyCrisisService zorluk parametrelerini yükleyemiyor.");
+
             DifficultyParams param;
             switch (crisisIndex)
             {
-                case 0: // Easy crisis (10x10, 3 colors, 2 bridges)
-                    param = DifficultyParams.Phase3_Default;
-                    param.gridWidth = 10;
-                    param.gridHeight = 10;
-                    param.colorCount = 3;
-                    param.bridgeCount = 2;
-                    param.requireFullGridCoverage = false;
+                case 0: // Kolay kriz
+                    param = Config.DailyCrisisEasy;
                     break;
-                case 1: // Medium crisis (10x10, 4 colors, 3 bridges)
-                    param = DifficultyParams.Phase3_Default;
-                    param.gridWidth = 10;
-                    param.gridHeight = 10;
-                    param.colorCount = 4;
-                    param.bridgeCount = 3;
-                    param.requireFullGridCoverage = false;
+                case 1: // Orta kriz
+                    param = Config.DailyCrisisMedium;
                     break;
-                case 2: // Hard crisis (10x10, 4 colors, 4 bridges, full coverage)
+                case 2: // Zor kriz
                 default:
-                    param = DifficultyParams.Phase4_Endgame;
-                    param.gridWidth = 10;
-                    param.gridHeight = 10;
-                    param.colorCount = 4;
-                    param.bridgeCount = 4;
-                    param.requireFullGridCoverage = true;
+                    param = Config.DailyCrisisHard;
                     break;
             }
 

@@ -67,8 +67,8 @@ namespace PixelFlow.Editor
                 return false;
             }
 
-            // 2. Seviye Kataloğu Kontrolü
-            var levelCatalog = Resources.Load<LevelCatalogAsset>("LevelCatalog");
+            // 2. Seviye Kataloğu Kontrolü (asset Resources/Configs/LevelCatalog.asset konumunda)
+            var levelCatalog = Resources.Load<LevelCatalogAsset>("Configs/LevelCatalog");
             if (levelCatalog != null && levelCatalog.Levels != null)
             {
                 foreach (var entry in levelCatalog.Levels)

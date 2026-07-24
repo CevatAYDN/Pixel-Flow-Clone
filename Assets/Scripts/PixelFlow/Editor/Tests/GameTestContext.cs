@@ -27,6 +27,12 @@ namespace PixelFlow.Editor.Tests
             return NexusTestHarness.CreateContext(builder =>
             {
                 builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
+
+                // game_plan.md §2.2: GameConfig testlerde de mevcut olmalı
+                var testConfig = ScriptableObject.CreateInstance<GameConfig>();
+                testConfig.name = "GameConfig (Test)";
+                builder.BindInstance(testConfig);
+
                 builder.BindService<IPathService, PathService>();
                 builder.BindService<IGameHistoryService, GameHistoryService>();
                 builder.Bind<IPathSolver, RuntimePathSolver>();
@@ -62,6 +68,7 @@ namespace PixelFlow.Editor.Tests
 
                 builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));
                 builder.Bind<ICameraProvider, StubCameraProvider>();
+                builder.Bind<IGridViewProvider, StubGridViewProvider>();
                 builder.BindService<ILevelLoaderService, LevelLoaderService>();
 
                 builder.BindSignal<InputInteractionSignal>().To<ProcessInputCommand>();

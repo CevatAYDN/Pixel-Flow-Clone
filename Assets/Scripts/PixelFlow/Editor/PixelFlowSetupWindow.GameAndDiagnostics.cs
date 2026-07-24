@@ -155,7 +155,7 @@ namespace PixelFlow.Editor
             if (root?.IsInitialized == true && root.Context != null)
             {
                 try { config = root.Context.Container.Resolve<GameConfig>(); }
-                catch { }
+                catch { /* GameConfig henüz Nexus konteynerine bağlı değil; repaint sırasında beklenen durum */ }
             }
 
             // Initialize cached config values as soon as config is resolved

@@ -1,5 +1,6 @@
 using System;
 using PixelFlow.Services;
+using PixelFlow.Data;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -35,7 +36,7 @@ namespace PixelFlow.Models
 
     /// <summary>
     /// Tema tercihini IPlayerPrefsService üzerinden kalıcı saklar.
-    /// Geçersiz kayıtlı değer gelirse varsayılan (Light) kullanılır.
+    /// Geçersiz kayıtlı değer gelirse GameConfig varsayılanı kullanılır.
     /// </summary>
     public class SettingsModel : ISettingsModel, IReactiveModel
     {
@@ -46,7 +47,6 @@ namespace PixelFlow.Models
         private const string KeySfxVol = "SfxVolume";
         private const string KeyMusicVol = "MusicVolume";
         private const string KeyHaptics = "HapticsDisabled";
-        private const AppTheme DefaultTheme = AppTheme.Light;
 
         private readonly IPlayerPrefsService _prefs;
 
@@ -63,11 +63,14 @@ namespace PixelFlow.Models
         public event Action<VehicleStyle> OnVehicleStyleChanged;
         public event Action<bool> OnHapticsDisabledChanged;
 
-        public SettingsModel(IPlayerPrefsService prefs)
+        [Inject]
+        public SettingsModel(IPlayerPrefsService prefs, GameConfig config)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
-            int raw = _prefs.GetInt(KeyTheme, (int)DefaultTheme);
-            CurrentTheme = IsValidTheme(raw) ? (AppTheme)raw : DefaultTheme;
+            if (config == null) throw new DataValidationException("GameConfig erişilemedi! SettingsModel varsayılanları yüklenemiyor.");
+
+            int raw = _prefs.GetInt(KeyTheme, (int)config.DefaultTheme);
+            CurrentTheme = IsValidTheme(raw) ? (AppTheme)raw : config.DefaultTheme;
 
             int cbRaw = _prefs.GetInt(KeyColorBlind, 0);
             CurrentColorBlindMode = cbRaw >= 0 && cbRaw <= 3 ? (ColorBlindMode)cbRaw : ColorBlindMode.None;
@@ -75,10 +78,10 @@ namespace PixelFlow.Models
             int vsRaw = _prefs.GetInt(KeyVehicleStyle, 0);
             CurrentVehicleStyle = System.Enum.IsDefined(typeof(VehicleStyle), vsRaw) ? (VehicleStyle)vsRaw : VehicleStyle.Car;
 
-            MasterVolume = _prefs.GetFloat(KeyMasterVol, 1f);
-            SfxVolume = _prefs.GetFloat(KeySfxVol, 1f);
-            MusicVolume = _prefs.GetFloat(KeyMusicVol, 0.7f);
-            HapticsDisabled = _prefs.GetBool(KeyHaptics, false);
+            MasterVolume = _prefs.GetFloat(KeyMasterVol, config.DefaultMasterVolume);
+            SfxVolume = _prefs.GetFloat(KeySfxVol, config.DefaultSfxVolume);
+            MusicVolume = _prefs.GetFloat(KeyMusicVol, config.DefaultMusicVolume);
+            HapticsDisabled = _prefs.GetBool(KeyHaptics, config.DefaultHapticsDisabled);
         }
 
         public void SetTheme(AppTheme theme)

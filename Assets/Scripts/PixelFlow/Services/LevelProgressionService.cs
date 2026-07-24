@@ -35,14 +35,17 @@ namespace PixelFlow.Services
         public int LevelsPerDifficulty => 5;
 
         [Inject]
-        public LevelProgressionService(IPathSolver pathSolver)
+        public LevelProgressionService(IPathSolver pathSolver,
+            [OptionalInject] PhaseConfigAsset phaseConfig = null,
+            [OptionalInject] LevelCatalogAsset levelCatalog = null)
         {
             _generator = new ProceduralLevelGenerator(pathSolver);
             _generatedCache = new Dictionary<int, LevelData>();
             _logger = NexusRuntime.Logger;
-            // GDD §3.6: Resources'tan PhaseConfigAsset yükle (editörde oluşturulmuş olmalı)
-            _phaseConfig = UnityEngine.Resources.Load<PhaseConfigAsset>("Configs/PhaseConfig");
-            _levelCatalog = UnityEngine.Resources.Load<LevelCatalogAsset>("Configs/LevelCatalog");
+            // game_plan.md §15.9 KURAL 7: Config asset'ler DI üzerinden gelir,
+            // Resources.Load kullanılmaz. Null ise editörde henüz oluşturulmamış demektir.
+            _phaseConfig = phaseConfig;
+            _levelCatalog = levelCatalog;
         }
 
         // Eski overload — geriye uyumluluk (testler için)

@@ -1,55 +1,48 @@
 using PixelFlow.Data;
 using PixelFlow.Models;
+using UnityEngine;
 
 namespace PixelFlow.Services
 {
     public static class ScoreCalculator
     {
         /// <summary>
-        /// Skor hesaplar. EconomyConfigAsset yoksa hardcoded fallback kullanır.
+        /// Skor hesaplar. game_plan.md §2.2 (Zero-Hardcode): tüm sabitler EconomyConfigAsset'ten gelir.
+        /// config null ise build'de DataValidationException fırlatılır; editor/testte varsayılan
+        /// EconomyConfigAsset instance'ı kullanılır (SO default değerleri).
         /// </summary>
         public static (int finalScore, int stars) Calculate(
             int gridWidth, int gridHeight,
             double elapsedTime, int hintsUsed, int totalHintsAvailable, int viaductsUsed,
             EconomyConfigAsset config = null)
         {
+            if (config == null)
+            {
+#if !UNITY_EDITOR
+                throw new DataValidationException("EconomyConfigAsset erişilemedi! ScoreCalculator sabitleri yüklenemiyor.");
+#else
+                config = ScriptableObject.CreateInstance<EconomyConfigAsset>();
+#endif
+            }
+
             double cellCount = gridWidth * gridHeight;
 
-            // EconomyConfigAsset'ten değerler (fallback'ler orijinal sabitler)
-            double baseScorePerCell = config != null ? config.BaseScorePerCell : 100.0;
-            double idealTimeFactor = config != null ? config.IdealTimeFactor : 0.5;
-            double minTimeMultiplier = config != null ? config.MinTimeMultiplier : 0.25;
-            double hintPenaltyPerUse = config != null ? config.HintPenaltyPerUse : 0.10;
-            double viaductPenaltyPerUse = config != null ? config.ViaductPenaltyPerUse : 0.08;
-
-            double baseScore = cellCount * baseScorePerCell;
-            double idealTime = cellCount * idealTimeFactor;
+            double baseScore = cellCount * config.BaseScorePerCell;
+            double idealTime = cellCount * config.IdealTimeFactor;
             double timeMultiplier = elapsedTime <= idealTime
                 ? 1.0
-                : System.Math.Max(minTimeMultiplier, idealTime / elapsedTime);
+                : System.Math.Max(config.MinTimeMultiplier, idealTime / elapsedTime);
 
-            double hintMultiplier = 1.0 - (hintsUsed * hintPenaltyPerUse);
+            double hintMultiplier = 1.0 - (hintsUsed * config.HintPenaltyPerUse);
             if (hintMultiplier < 0.0) hintMultiplier = 0.0;
 
-            double viaductPenalty = viaductsUsed * viaductPenaltyPerUse;
+            double viaductPenalty = viaductsUsed * config.ViaductPenaltyPerUse;
             if (viaductPenalty > 1.0) viaductPenalty = 1.0;
 
             double finalScore = baseScore * timeMultiplier * hintMultiplier * (1.0 - viaductPenalty);
             int roundedScore = (int)(finalScore + 0.5);
 
-            int stars;
-            if (config != null)
-                stars = config.CalculateStars(viaductsUsed);
-            else
-            {
-                // Fallback (orijinal sabitler)
-                if (viaductsUsed == 0)
-                    stars = 3;
-                else if (viaductsUsed <= 2)
-                    stars = 2;
-                else
-                    stars = 1;
-            }
+            int stars = config.CalculateStars(viaductsUsed);
 
             return (roundedScore, stars);
         }

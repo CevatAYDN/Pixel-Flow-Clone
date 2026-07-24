@@ -25,10 +25,11 @@ namespace PixelFlow.Services
         private Coroutine _transition;
         private ISignalSubscription _gridSub;
 
-        // Hub: izometrik 45° görünüm, tüm şehir görünür.
-        private readonly Vector3 _hubPosition = new Vector3(8f, 12f, -8f);
-        private readonly Quaternion _hubRotation = Quaternion.Euler(45f, 45f, 0f);
+        // Hub: izometrik 45° görünüm, tüm şehir görünür. GameConfig'ten okunur.
+        private Vector3 HubPosition => Config != null ? Config.HubCameraPosition : throw new DataValidationException("GameConfig.HubCameraPosition erişilemedi!");
+        private Quaternion HubRotation => Config != null ? Quaternion.Euler(Config.HubCameraEuler) : throw new DataValidationException("GameConfig.HubCameraEuler erişilemedi!");
         private float HubSize => Config != null ? Config.HubCameraSize : throw new DataValidationException("GameConfig.HubCameraSize erişilemedi!");
+        private float TransitionDuration => Config != null ? Config.StateTransitionDuration : throw new DataValidationException("GameConfig.StateTransitionDuration erişilemedi!");
 
         // Puzzle: top-down 90° görünüm, grid tam ekran.
         private Vector3 _puzzlePosition;
@@ -89,7 +90,7 @@ namespace PixelFlow.Services
         public void TransitionToHub()
         {
             if (_transition != null) StopCoroutine(_transition);
-            _transition = StartCoroutine(LerpCamera(_hubPosition, _hubRotation, HubSize, 0.8f));
+            _transition = StartCoroutine(LerpCamera(HubPosition, HubRotation, HubSize, TransitionDuration));
         }
 
         public void TransitionToPuzzle()
@@ -97,11 +98,11 @@ namespace PixelFlow.Services
             if (_puzzleSize <= 0f)
             {
                 _puzzlePosition = new Vector3(2f, 2f, -10f);
-                _puzzleSize = 5f;
+                _puzzleSize = Config != null ? Config.PuzzleFallbackCameraSize : throw new DataValidationException("GameConfig.PuzzleFallbackCameraSize erişilemedi!");
             }
             _puzzleRotation = Quaternion.Euler(0f, 0f, 0f);
             if (_transition != null) StopCoroutine(_transition);
-            _transition = StartCoroutine(LerpCamera(_puzzlePosition, _puzzleRotation, _puzzleSize, 0.8f));
+            _transition = StartCoroutine(LerpCamera(_puzzlePosition, _puzzleRotation, _puzzleSize, TransitionDuration));
         }
 
         private Coroutine _shakeCoroutine;
@@ -135,8 +136,10 @@ namespace PixelFlow.Services
         /// </summary>
         public void FocusOnCrash(Vector2Int gridPos)
         {
-            TriggerShake(0.35f, 0.45f);
-            // İsteğe bağlı: kamera pozisyonunu gridPos'a doğru 0.3 birim kaydır.
+            float shakeIntensity = Config != null ? Config.CrashShakeIntensity : throw new DataValidationException("GameConfig.CrashShakeIntensity erişilemedi!");
+            float shakeDuration = Config != null ? Config.CrashShakeDuration : throw new DataValidationException("GameConfig.CrashShakeDuration erişilemedi!");
+            TriggerShake(shakeIntensity, shakeDuration);
+            // İsteğe bağlı: kamera pozisyonunu gridPos'a doğru kaydır.
             // Hızlı geri dönüş için kısa bir offset.
             if (_cam == null) return;
             StartCoroutine(DoCrashFocus(gridPos));
@@ -147,7 +150,8 @@ namespace PixelFlow.Services
             if (_cam == null) yield break;
             Vector3 originalPos = _cam.transform.position;
             Vector3 target = new Vector3(gridPos.x, gridPos.y, originalPos.z);
-            Vector3 dir = (target - originalPos).normalized * 0.4f;
+            float focusOffset = Config != null ? Config.CrashFocusOffset : throw new DataValidationException("GameConfig.CrashFocusOffset erişilemedi!");
+            Vector3 dir = (target - originalPos).normalized * focusOffset;
             Vector3 focused = originalPos + dir;
             float t = 0f;
             float dur = Config != null ? Config.CameraTransitionDuration : throw new DataValidationException("GameConfig.CameraTransitionDuration erişilemedi!");

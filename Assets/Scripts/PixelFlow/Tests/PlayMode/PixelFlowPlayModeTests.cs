@@ -53,6 +53,15 @@ namespace PixelFlow.PlayMode.Tests
     }
 
     /// <summary>
+    /// Minimal no-op stub for IGridViewProvider.
+    /// Satisfies DI injection in VehicleSimulator.
+    /// </summary>
+    public sealed class StubGridViewProvider : IGridViewProvider
+    {
+        public Transform GridTransform => null;
+    }
+
+    /// <summary>
     /// In-memory PlayerPrefs substitute for PlayMode tests.
     /// Mirrors the one in EditMode tests; avoids Unity PlayerPrefs dependency.
     /// </summary>
@@ -115,6 +124,11 @@ namespace PixelFlow.PlayMode.Tests
             return NexusTestHarness.CreateContext(builder =>
             {
                 builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
+
+                var testConfig = ScriptableObject.CreateInstance<GameConfig>();
+                testConfig.name = "GameConfig (Test)";
+                builder.BindInstance(testConfig);
+
                 builder.Bind<IPathService, PathService>();
                 builder.Bind<IGameHistoryService, GameHistoryService>();
                 builder.Bind<IPathSolver, RuntimePathSolver>();
@@ -150,6 +164,7 @@ namespace PixelFlow.PlayMode.Tests
 
                 builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));
                 builder.Bind<ICameraProvider, StubCameraProvider>();
+                builder.Bind<IGridViewProvider, StubGridViewProvider>();
 
                 builder.BindSignal<InputInteractionSignal>().To<ProcessInputCommand>();
                 builder.BindSignal<CheckWinConditionSignal>().To<CheckWinConditionCommand>();

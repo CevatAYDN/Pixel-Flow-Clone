@@ -5,6 +5,7 @@ using Nexus.Core.Services;
 using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Services;
+using PixelFlow.Commands;
 
 using UnityEngine;
 
@@ -44,8 +45,13 @@ namespace PixelFlow
             builder.BindService<IVehicleSimulator, VehicleSimulator>();
             builder.BindService<ICameraProvider, CameraProvider>();
             builder.BindService<IGridViewProvider, GridViewProvider>();
+
+            // Bind IGridInputService → GridInputService (input state machine)
+            builder.Bind<IGridInputService, GridInputService>();
             builder.BindService<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
             builder.BindService<IGameplayTimerService, GameplayTimerService>();
+            builder.Bind<LevelVictoryCompositeHandler, LevelVictoryCompositeHandler>();
+            builder.Bind<RewardedAdCommand, RewardedAdCommand>();
             builder.Bind<ITimeProvider, UnityTimeProvider>();
             builder.BindService<ISaveThrottler, SaveThrottler>();
             builder.BindService<IHapticService, HapticService>();
@@ -90,6 +96,9 @@ namespace PixelFlow
             builder.BindSignal<PixelFlow.Signals.ActivateRainbowRoadSignal>().To<PixelFlow.Commands.RainbowRoadCommand>();
             builder.BindSignal<PixelFlow.Signals.ClearJamSignal>().To<PixelFlow.Commands.ClearJamCommand>();
             builder.BindSignal<PixelFlow.Signals.ChangeThemeSignal>().To<PixelFlow.Commands.ChangeThemeCommand>();
+            builder.BindSignal<PixelFlow.Signals.ChangeAudioVolumeSignal>().To<PixelFlow.Commands.ChangeAudioVolumeCommand>();
+            builder.BindSignal<PixelFlow.Signals.ChangeColorBlindModeSignal>().To<PixelFlow.Commands.ChangeColorBlindModeCommand>();
+            builder.BindSignal<PixelFlow.Signals.ToggleHapticsSignal>().To<PixelFlow.Commands.ToggleHapticsCommand>();
             builder.BindCommand<PixelFlow.Signals.LevelCompletedSignal, PixelFlow.Commands.SaveProgressCommand>(ExecutionMode.Exclusive, priority: 0);
             builder.BindSignal<PixelFlow.Signals.UndoSignal>().To<PixelFlow.Commands.UndoCommand>();
             builder.BindSignal<PixelFlow.Signals.RedoSignal>().To<PixelFlow.Commands.RedoCommand>();
@@ -211,6 +220,24 @@ namespace PixelFlow
                 NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] Configs/LevelCatalog asset loaded successfully.");
             }
             builder.BindInstance(levelCatalog);
+
+            // PhaseConfigAsset — phase configuration
+            var phaseConfig = UnityEngine.Resources.Load<PhaseConfigAsset>("Configs/PhaseConfig");
+            if (phaseConfig == null)
+            {
+#if !UNITY_EDITOR
+                throw new DataValidationException("Resources/Configs/PhaseConfig.asset bulunamadı!");
+#else
+                phaseConfig = UnityEngine.ScriptableObject.CreateInstance<PhaseConfigAsset>();
+                phaseConfig.name = "PhaseConfig (Runtime Default)";
+                NexusRuntime.Logger?.LogWarning("[PixelFlow.GameContextLifecycle] PhaseConfig.asset not found in Resources. Using runtime defaults.");
+#endif
+            }
+            else
+            {
+                NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] Configs/PhaseConfig asset loaded successfully.");
+            }
+            builder.BindInstance(phaseConfig);
         }
 
         public ValueTask OnInitializeAsync(CancellationToken ct) => default;

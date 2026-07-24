@@ -23,6 +23,11 @@ namespace PixelFlow.Editor.Tests
             _ctx = NexusTestHarness.CreateContext(builder =>
             {
                 builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
+
+                var testConfig = ScriptableObject.CreateInstance<GameConfig>();
+                testConfig.name = "GameConfig (Test)";
+                builder.BindInstance(testConfig);
+
                 builder.Bind<ILevelProgressionService, LevelProgressionService>();
                 builder.Bind<IPathSolver, RuntimePathSolver>();
                 builder.BindReactiveModel<ILevelModel, LevelModel>();

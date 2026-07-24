@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using PixelFlow.Data;
 using PixelFlow.Services;
 using UnityEngine;
 
@@ -27,7 +28,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void ApplyBouncyBounce_AttachesBouncyVisualEffectComponent()
         {
-            BouncyCollisionHandler.ApplyBouncyBounce(_testVehicle, Vector3.up);
+            BouncyCollisionHandler.ApplyBouncyBounce(_testVehicle, Vector3.up, BouncyPhysicsConfig.Default);
 
             var bouncyComp = _testVehicle.GetComponent<BouncyVisualEffect>();
             Assert.IsNotNull(bouncyComp);
