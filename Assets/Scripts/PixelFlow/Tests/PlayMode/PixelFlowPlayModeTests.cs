@@ -142,8 +142,11 @@ namespace PixelFlow.PlayMode.Tests
                 builder.Bind<ICrisisAdService, CrisisAdService>();
                 builder.Bind<IObstacleService, ObstacleService>();
                 builder.Bind<ITutorialDriver, TutorialDriver>();
+                builder.Bind<IPowerUpService, PowerUpService>();
                 builder.Bind<IFeedbackService, FeedbackService>();
                 builder.Bind<Nexus.Core.Services.IAudioService, StubAudioService>();
+                builder.Bind<Nexus.Core.Services.INetworkEconomyValidator, LocalEconomyValidator>();
+                builder.BindService<IEconomyService, Nexus.Core.Services.EconomyService>();
                 builder.Bind<ITimeProvider, UnityTimeProvider>();
                 builder.BindService<INexusService, TickService>();
                 builder.Bind<ITickService, TickService>();

@@ -80,12 +80,19 @@ namespace PixelFlow.Editor.Tests
                 builder.BindSignal<CheckWinConditionSignal>().To<CheckWinConditionCommand>();
                 builder.BindSignal<LoadLevelSignal>().To<LoadLevelCommand>();
                 builder.BindSignal<RequestHintSignal>().To<UseHintCommand>();
+                builder.BindSignal<ActivateRainbowRoadSignal>().To<RainbowRoadCommand>();
+                builder.BindSignal<ClearJamSignal>().To<ClearJamCommand>();
                 builder.BindSignal<ChangeThemeSignal>().To<ChangeThemeCommand>();
-                builder.BindSignal<LevelCompletedSignal>().To<SaveProgressCommand>();
-                builder.BindSignal<StartSimulationSignal>().To<StartSimulationCommand>();
-                builder.BindSignal<PauseSimulationSignal>().To<PauseSimulationCommand>();
+                builder.BindSignal<ChangeAudioVolumeSignal>().To<ChangeAudioVolumeCommand>();
+                builder.BindSignal<ChangeColorBlindModeSignal>().To<ChangeColorBlindModeCommand>();
+                builder.BindSignal<ToggleHapticsSignal>().To<ToggleHapticsCommand>();
+                builder.BindCommand<LevelCompletedSignal, SaveProgressCommand>(ExecutionMode.Exclusive, priority: 0);
                 builder.BindSignal<UndoSignal>().To<UndoCommand>();
                 builder.BindSignal<RedoSignal>().To<RedoCommand>();
+                builder.BindSignal<PlaceViaductSignal>().To<PlaceViaductCommand>();
+                builder.BindSignal<RequestInterstitialAdSignal>().To<InterstitialAdCommand>();
+                builder.BindSignal<StartSimulationSignal>().To<StartSimulationCommand>();
+                builder.BindSignal<PauseSimulationSignal>().To<PauseSimulationCommand>();
             });
         }
 
