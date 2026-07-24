@@ -554,7 +554,7 @@ namespace PixelFlow.Views
             if (_completionScoreText != null)
                 _completionScoreText.text = string.Format(scoreFormat, score);
             if (_completionStarsText != null)
-                _completionStarsText.text = $"{starsLabel}: {new string('★', stars)}{new string('☆', 3 - stars)}";
+                _completionStarsText.text = $"{starsLabel}: {new string('*', stars)}{new string('-', 3 - stars)}";
             if (_nextLevelButton != null)
                 _nextLevelButton.gameObject.SetActive(true);
             else

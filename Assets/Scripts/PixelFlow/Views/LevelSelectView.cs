@@ -180,8 +180,8 @@ namespace PixelFlow.Views
         {
             if (stars < 0) stars = 0;
             if (stars > 3) stars = 3;
-            // settings-levels.html yalnızca kazanılan dolu yıldızları gösterir (⭐⭐⭐ / ⭐⭐).
-            return new string('\u2605', stars);
+            // LiberationSans SDF unicode \u2605 içermediğinden ASCII '*' kullanılır.
+            return new string('*', stars);
         }
 
         private static TMP_Text CreateChildText(Transform parent, string name, string text)
