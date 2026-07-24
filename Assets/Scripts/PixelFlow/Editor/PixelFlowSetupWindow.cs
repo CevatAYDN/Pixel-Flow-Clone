@@ -69,7 +69,7 @@ namespace PixelFlow.Editor
         private GUIStyle _sidebarActiveBtnStyle;
 
         // ─── Sekme Seçimi ───
-        private int _selectedTab = 1; // Default to Level Studio
+        private int _selectedTab = 0; // Default to Game Control
 
         // ─── Painter State ───
         internal int _painterSelectedLevelIdx = 0;
@@ -377,16 +377,16 @@ namespace PixelFlow.Editor
             switch (_selectedTab)
             {
                 case 0: _contentContainer.Add(BuildGameControllerUIToolkitView()); break;
-                case 1: _contentContainer.Add(BuildLevelStudioUIToolkitView()); break;
-                case 2: _contentContainer.Add(BuildGarageUIToolkitView()); break;
+                case 1: _contentContainer.Add(BuildLevelStudioView()); break;
+                case 2: _contentContainer.Add(BuildGarageSkinUIToolkitView()); break;
                 case 3: _contentContainer.Add(BuildDataManagerUIToolkitView()); break;
-                case 4: _contentContainer.Add(BuildEconomyUIToolkitView()); break;
-                case 5: _contentContainer.Add(BuildAdsUIToolkitView()); break;
+                case 4: _contentContainer.Add(BuildEconomyAnalyticsUIToolkitView()); break;
+                case 5: _contentContainer.Add(BuildAdMonetizationUIToolkitView()); break;
                 case 6: _contentContainer.Add(BuildBatchSolverUIToolkitView()); break;
                 case 7: _contentContainer.Add(BuildDiagnosticsUIToolkitView()); break;
-                case 8: _contentContainer.Add(BuildNexusUIToolkitView()); break;
+                case 8: _contentContainer.Add(BuildNexusInspectorUIToolkitView()); break;
                 case 9: _contentContainer.Add(BuildPerformanceUIToolkitView()); break;
-                case 10: _contentContainer.Add(BuildValidatorUIToolkitView()); break;
+                case 10: _contentContainer.Add(BuildPreBuildValidatorUIToolkitView()); break;
             }
         }
 

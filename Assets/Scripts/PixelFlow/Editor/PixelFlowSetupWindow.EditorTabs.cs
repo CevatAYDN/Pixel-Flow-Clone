@@ -50,6 +50,7 @@ namespace PixelFlow.Editor
         private VisualElement BuildLevelStudioUIToolkitView()
         {
             var root = new VisualElement();
+            root.Add(BuildCard("Seviye stüdyosu ve çizim araçları data odaklı çalışır; burada yalnızca mevcut seviyeleri düzenleyin."));
 
             // 1. Grid Painter Card
             var painterCard = BuildCard("🖌️ CANLI İNTERAKTİF SEVİYE ÇİZİCİ (LIVE GRID PAINTER)");
@@ -189,17 +190,18 @@ namespace PixelFlow.Editor
         // Sekme 0: Tam oyun kontrol merkezi (durum kartı, canlı kontroller, araç simülatörü,
         // frame-step, sinyal tetikleyici, araç stili, hızlı seviye başlatıcı, bootstrapper).
         // Daha önce yalnızca 2 butonluk bir taslak gösteriliyordu; DrawGameControllerTab bağlandı.
-        private VisualElement BuildGameControllerUIToolkitView() { return BuildHostCard("🕹️ OYUN KONTROL & CANLI BROADCASTER", DrawGameControllerTab); }
 
-        private VisualElement BuildDiagnosticsUIToolkitView() { return BuildHostCard("🔍 SAHNE TANILAMA & AUDIT", DrawDiagnosticsTab); }
-        private VisualElement BuildBatchSolverUIToolkitView() { return BuildHostCard("🧩 TOPLU ÇÖZÜCÜ BOT", DrawBatchSolverTab); }
+        private VisualElement BuildGameControllerUIToolkitView() { return BuildHostCard("🕹️ OYUN KONTROL & CANLI BROADCASTER", DrawGameControllerTab); }
+        private VisualElement BuildLevelStudioView() { return BuildHostCard("🎮 SEVİYE STÜDYOSU & ÇİZİCİ", DrawLevelStudioTab); }
+        private VisualElement BuildGarageSkinUIToolkitView() { return BuildHostCard("🎨 GARAJ STÜDYOSU & SKINS", DrawGarageSkinStudioTab); }
         private VisualElement BuildDataManagerUIToolkitView() { return BuildHostCard("📦 SCRIPTABLEOBJECT DATA YÖNETİCİSİ", DrawDataManagerTab); }
-        private VisualElement BuildEconomyUIToolkitView() { return BuildHostCard("💰 EKONOMİ & ISI HARİTASI", DrawEconomyAnalyticsTab); }
-        private VisualElement BuildNexusUIToolkitView() { return BuildHostCard("🔬 NEXUS İZLEYİCİ", DrawNexusInspectorTab); }
-        private VisualElement BuildPerformanceUIToolkitView() { return BuildHostCard("⚡ PERFORMANS İZLEYİCİ", DrawPerformanceTab); }
-        private VisualElement BuildGarageUIToolkitView() { return BuildHostCard("🎨 GARAJ STÜDYOSU", DrawGarageSkinStudioTab); }
-        private VisualElement BuildAdsUIToolkitView() { return BuildHostCard("📺 REKLAM AYARLARI", DrawAdMonetizationTab); }
-        private VisualElement BuildValidatorUIToolkitView() { return BuildHostCard("🛡️ PRE-BUILD VALIDATOR", DrawPreBuildValidatorTab); }
+        private VisualElement BuildEconomyAnalyticsUIToolkitView() { return BuildHostCard("💰 EKONOMİ & ISI HARİTASI", DrawEconomyAnalyticsTab); }
+        private VisualElement BuildAdMonetizationUIToolkitView() { return BuildHostCard("📺 REKLAM AYARLARI", DrawAdMonetizationTab); }
+        private VisualElement BuildBatchSolverUIToolkitView() { return BuildHostCard("🧩 TOPLU ÇÖZÜCÜ BOT", DrawBatchSolverTab); }
+        private VisualElement BuildDiagnosticsUIToolkitView() { return BuildHostCard("🔍 SAHNE TANILAMA & AUDIT", DrawDiagnosticsTab); }
+        private VisualElement BuildNexusInspectorUIToolkitView() { return BuildHostCard("🔬 NEXUS İZLEYİCİ & DI CONTAINER", DrawNexusInspectorTab); }
+        private VisualElement BuildPerformanceUIToolkitView() { return BuildHostCard("⚡ PERFORMANS METRİKLERİ & RUNTIME", DrawPerformanceTab); }
+        private VisualElement BuildPreBuildValidatorUIToolkitView() { return BuildHostCard("🛡️ PRE-BUILD VALIDATOR", DrawPreBuildValidatorTab); }
 
         private VisualElement BuildHostCard(string title, System.Action drawMethod)
         {

@@ -104,7 +104,8 @@ namespace PixelFlow.Editor.Tests
             {
                 Assert.IsNotNull(hintPath, "solved ise hintPath null olmamalı");
                 Assert.Greater(hintPath.Count, 0, "solved ise en az 1 adım dönmeli");
-                Assert.LessOrEqual(hintPath.Count, 3, "SolvePartial steps=3 üst sınırını aşmamalı");
+                // SolvePartial counts steps from start node: steps=3 means start + 3 moves = 4 nodes max
+                Assert.LessOrEqual(hintPath.Count, 4, "SolvePartial steps=3 should return at most 4 nodes (start + 3 steps)");
             }
             else
             {

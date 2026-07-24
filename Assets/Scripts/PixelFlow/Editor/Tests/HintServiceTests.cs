@@ -1,5 +1,7 @@
 using NUnit.Framework;
 using Nexus.Core;
+using Nexus.Core.Services;
+using PixelFlow.Commands;
 using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Services;
@@ -86,16 +88,74 @@ namespace PixelFlow.Editor.Tests
         public void UseHint_WithNoHintsLeft_DoesNothing()
         {
             var level = CreateTestLevel();
-            _ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
-
-            int hintCount = _hintModel.HintsRemaining;
-            for (int i = 0; i < hintCount; i++)
-                _ctx.Dispatch(new RequestHintSignal());
-
-            int hintsAfter = _hintModel.HintsRemaining;
-            _ctx.Dispatch(new RequestHintSignal());
-            Assert.AreEqual(hintsAfter, _hintModel.HintsRemaining,
-                "Hint count should not go below 0");
+            var testConfig = ScriptableObject.CreateInstance<GameConfig>();
+            testConfig.DefaultHintCount = 0;
+            var ctx = NexusTestHarness.CreateContext(builder =>
+            {
+                builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
+                builder.BindInstance(testConfig);
+                builder.BindService<IPathService, PathService>();
+                builder.BindService<IGameHistoryService, GameHistoryService>();
+                builder.Bind<IPathSolver, RuntimePathSolver>();
+                builder.Bind<IHintService, HintService>();
+                builder.BindService<IVehicleSimulator, VehicleSimulator>();
+                builder.BindService<ISaveThrottler, SaveThrottler>();
+                builder.BindService<IHapticService, HapticService>();
+                builder.BindService<INexusService, LoggerService>();
+                builder.Bind<ILoggerService, LoggerService>();
+                builder.BindService<ICrisisAdService, CrisisAdService>();
+                builder.BindService<IObstacleService, ObstacleService>();
+                builder.BindService<ITutorialDriver, TutorialDriver>();
+                builder.BindService<IPowerUpService, PowerUpService>();
+                builder.BindService<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
+                builder.Bind<IFeedbackService, FeedbackService>();
+                builder.Bind<Nexus.Core.Services.IAudioService, StubAudioService>();
+                builder.Bind<Nexus.Core.Services.INetworkEconomyValidator, LocalEconomyValidator>();
+                builder.Bind<ITimeProvider, UnityTimeProvider>();
+                builder.BindService<INexusService, TickService>();
+                builder.Bind<ITickService, TickService>();
+                builder.BindService<Nexus.Core.Services.IEconomyService, Nexus.Core.Services.EconomyService>();
+                builder.BindReactiveModel<IDailyCrisisModel, DailyCrisisModel>();
+                builder.BindReactiveModel<IGridModel, GridModel>();
+                builder.BindReactiveModel<ILevelModel, LevelModel>();
+                builder.BindReactiveModel<IProgressModel, ProgressModel>();
+                builder.BindReactiveModel<IGameStateModel, GameStateModel>();
+                builder.BindReactiveModel<IGameSessionModel, GameSessionModel>();
+                builder.BindReactiveModel<IHintModel, HintModel>();
+                builder.BindReactiveModel<ISettingsModel, SettingsModel>();
+                builder.BindReactiveModel<ISoundModel, SoundModel>();
+                builder.BindReactiveModel<ITutorialModel, TutorialModel>();
+                builder.BindReactiveModel<IInventoryModel, InventoryModel>();
+                builder.Bind<ILevelProgressionService, LevelProgressionService>();
+                builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));
+                builder.Bind<ICameraProvider, StubCameraProvider>();
+                builder.Bind<IGridViewProvider, StubGridViewProvider>();
+                builder.BindService<ILevelLoaderService, LevelLoaderService>();
+                builder.BindSignal<InputInteractionSignal>().To<ProcessInputCommand>();
+                builder.BindSignal<CheckWinConditionSignal>().To<CheckWinConditionCommand>();
+                builder.BindSignal<LoadLevelSignal>().To<LoadLevelCommand>();
+                builder.BindSignal<RequestHintSignal>().To<UseHintCommand>();
+                builder.BindSignal<ChangeThemeSignal>().To<ChangeThemeCommand>();
+                builder.BindSignal<LevelCompletedSignal>().To<SaveProgressCommand>();
+                builder.BindSignal<StartSimulationSignal>().To<StartSimulationCommand>();
+                builder.BindSignal<PauseSimulationSignal>().To<PauseSimulationCommand>();
+                builder.BindSignal<UndoSignal>().To<UndoCommand>();
+                builder.BindSignal<RedoSignal>().To<RedoCommand>();
+            });
+            
+            var hintModel = ctx.GetModel<IHintModel>();
+            var grid = ctx.GetModel<IGridModel>();
+            
+            ctx.Dispatch(new LoadLevelSignal { LevelToLoad = level });
+            
+            // Hints should be 0 from config
+            Assert.AreEqual(0, hintModel.HintsRemaining);
+            
+            // Requesting hint when at 0 should not auto-grant and should do nothing
+            ctx.Dispatch(new RequestHintSignal());
+            Assert.AreEqual(0, hintModel.HintsRemaining, "Hint count should stay 0 when DefaultHintCount=0");
+            
+            ctx.Dispose();
         }
     }
 }

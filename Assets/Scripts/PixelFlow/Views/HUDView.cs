@@ -190,40 +190,83 @@ namespace PixelFlow.Views
             RemoveAllHUDButtonListeners();
 
             if (_hintButton != null)
+            {
+                _hintButton.interactable = true;
                 _hintButton.onClick.AddListener(() => OnHintClicked?.Invoke());
+            }
             if (_nextLevelButton != null)
+            {
+                _nextLevelButton.interactable = true;
                 _nextLevelButton.onClick.AddListener(() => OnNextLevelClicked?.Invoke());
+            }
             if (_continueButton != null)
+            {
+                _continueButton.interactable = true;
                 _continueButton.onClick.AddListener(() => OnContinueClicked?.Invoke());
+            }
             if (_undoButton != null)
+            {
+                _undoButton.interactable = true;
                 _undoButton.onClick.AddListener(() => OnUndoClicked?.Invoke());
+            }
             if (_redoButton != null)
+            {
+                _redoButton.interactable = true;
                 _redoButton.onClick.AddListener(() => OnRedoClicked?.Invoke());
+            }
             if (_themeDarkButton != null)
+            {
+                _themeDarkButton.interactable = true;
                 _themeDarkButton.onClick.AddListener(() => OnThemeDarkClicked?.Invoke());
+            }
             if (_themeLightButton != null)
+            {
+                _themeLightButton.interactable = true;
                 _themeLightButton.onClick.AddListener(() => OnThemeLightClicked?.Invoke());
+            }
             if (_themeNeonButton != null)
+            {
+                _themeNeonButton.interactable = true;
                 _themeNeonButton.onClick.AddListener(() => OnThemeNeonClicked?.Invoke());
+            }
 
             // GDD §8: Pause butonu
             if (_pauseButton != null)
+            {
+                _pauseButton.interactable = true;
                 _pauseButton.onClick.AddListener(() => OnPauseClicked?.Invoke());
+            }
 
             // GDD §2.4: LevelFailed paneli
             if (_retryButton != null)
+            {
+                _retryButton.interactable = true;
                 _retryButton.onClick.AddListener(() => OnRetryClicked?.Invoke());
+            }
             if (_levelFailedContinueButton != null)
+            {
+                _levelFailedContinueButton.interactable = true;
                 _levelFailedContinueButton.onClick.AddListener(() => OnLevelFailedContinueClicked?.Invoke());
+            }
             // Color Jam 3D - Gold Coins & Power-Up UI Listeners
             if (_garageButton != null)
+            {
+                _garageButton.interactable = true;
                 _garageButton.onClick.AddListener(() => OnGarageClicked?.Invoke());
+            }
             if (_rainbowRoadButton != null)
+            {
+                _rainbowRoadButton.interactable = true;
                 _rainbowRoadButton.onClick.AddListener(() => OnRainbowRoadClicked?.Invoke());
+            }
             if (_clearJamButton != null)
+            {
                 _clearJamButton.onClick.AddListener(() => OnClearJamClicked?.Invoke());
+            }
             if (_viaductButton != null)
+            {
                 _viaductButton.onClick.AddListener(() => OnViaductClicked?.Invoke());
+            }
 
             if (_completionPanel != null)
                 _completionPanel.SetActive(false);

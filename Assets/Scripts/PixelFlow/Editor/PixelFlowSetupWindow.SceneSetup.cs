@@ -246,9 +246,13 @@ namespace PixelFlow.Editor
         private UnityEngine.UI.Button EnsureButton(GameObject parent, string name)
         {
             var obj = FindOrCreateChild(parent.transform, name);
-            EnsureComponent<UnityEngine.UI.Image>(obj);
+            var img = obj.GetComponent<UnityEngine.UI.Image>();
+            if (img == null) img = obj.AddComponent<UnityEngine.UI.Image>();
+            img.raycastTarget = false;
+
             var btn = obj.GetComponent<UnityEngine.UI.Button>();
             if (btn == null) btn = obj.AddComponent<UnityEngine.UI.Button>();
+            btn.interactable = true;
             return btn;
         }
 
@@ -323,6 +327,7 @@ namespace PixelFlow.Editor
             var bgImg = menuObj.GetComponent<UnityEngine.UI.Image>();
             if (bgImg == null) bgImg = menuObj.AddComponent<UnityEngine.UI.Image>();
             bgImg.color = new Color(0.94f, 0.96f, 0.98f, 1f); // #EFF6FF
+            bgImg.raycastTarget = false;
 
             // 1. Header Container & Controls (Title + Coin Pill + Settings Button)
             var titleText = EnsureTMPText(menuObj, "TitleText");
@@ -1811,12 +1816,12 @@ namespace PixelFlow.Editor
 
         private void SetupGlobalVolume()
         {
-            var hasVolume = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include)
+            var hasVolume = Object.FindObjectsOfType<GameObject>(true)
                 .Any(go => go.name.Contains("Volume"));
-            if (hasVolume) return;
-
-            var volObj = new GameObject("Global Volume (add Volume component)");
-            Debug.Log("[PixelFlow] Global Volume object stub created. Attach a Volume component via Inspector.");
+            if (!hasVolume)
+            {
+                Debug.LogWarning("[PixelFlow] Global Volume bulunamadı. Scene'de gerçek bir Volume nesnesi oluşturun ve Volume component ekleyin.");
+            }
         }
 
         private void SetupCameraController()

@@ -76,13 +76,29 @@ namespace PixelFlow.Views
         private void BindButtonListeners()
         {
             if (_playButton != null)
+            {
+                _playButton.interactable = true;
+                _playButton.onClick.RemoveAllListeners();
                 _playButton.onClick.AddListener(() => OnPlayClicked?.Invoke());
+            }
             if (_openGarageButton != null)
+            {
+                _openGarageButton.interactable = true;
+                _openGarageButton.onClick.RemoveAllListeners();
                 _openGarageButton.onClick.AddListener(() => OnGarageClicked?.Invoke());
+            }
             if (_levelSelectButton != null)
+            {
+                _levelSelectButton.interactable = true;
+                _levelSelectButton.onClick.RemoveAllListeners();
                 _levelSelectButton.onClick.AddListener(() => OnLevelSelectClicked?.Invoke());
+            }
             if (_settingsButton != null)
+            {
+                _settingsButton.interactable = true;
+                _settingsButton.onClick.RemoveAllListeners();
                 _settingsButton.onClick.AddListener(() => OnSettingsClicked?.Invoke());
+            }
         }
 
         public void AutoWireUIReferences()

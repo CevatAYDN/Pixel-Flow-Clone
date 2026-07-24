@@ -39,6 +39,8 @@ namespace PixelFlow.Editor
         {
             if (_dataCacheDirty) RefreshDataCache();
 
+            EditorGUILayout.HelpBox("Bu panel yalnızca projedeki gerçek Resources verilerini gösterir. Eksik config oluşturma akışı kaldırıldı; eksikleri Project doğrulaması üzerinden çözün.", MessageType.Info);
+
             DrawDataManagerToolbar();
             GUILayout.Space(4);
 
@@ -523,18 +525,7 @@ namespace PixelFlow.Editor
 
         private void CreateDefaultConfigAssets()
         {
-            string configDir = "Assets/Resources/Configs";
-            if (!Directory.Exists(configDir)) Directory.CreateDirectory(configDir);
-
-            TryCreateAsset<GameConfig>(configDir + "/GameConfig.asset");
-            TryCreateAsset<ThemePaletteAsset>(configDir + "/ThemePalette.asset");
-            TryCreateAsset<ColorBlindPaletteAsset>(configDir + "/ColorBlindPalette.asset");
-            TryCreateAsset<VehicleMaterialConfigAsset>(configDir + "/VehicleMaterialConfig.asset");
-            TryCreateAsset<EconomyConfigAsset>(configDir + "/EconomyConfig.asset");
-            TryCreateAsset<LevelCatalogAsset>(configDir + "/LevelCatalog.asset");
-
-            AssetDatabase.SaveAssets();
-            Debug.Log("[PixelFlow] Varsayılan konfigürasyon varlıkları oluşturuldu.");
+            Debug.LogWarning("[PixelFlow] Default config oluşturma kaldırıldı. Eksik asset'leri Project doğrulama akışından tespit edin.");
         }
 
         private void TryCreateAsset<T>(string path) where T : ScriptableObject

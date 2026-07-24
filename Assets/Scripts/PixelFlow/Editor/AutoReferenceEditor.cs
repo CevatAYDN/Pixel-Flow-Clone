@@ -155,6 +155,7 @@ namespace PixelFlow.Editor
         private static Object ResolveReference(Transform root, Type fieldType, string fieldName)
         {
             string cleanName = fieldName.TrimStart('_');
+            string normalizedFieldName = Normalize(cleanName);
 
             // GameObject fields
             if (fieldType == typeof(GameObject))
@@ -196,10 +197,8 @@ namespace PixelFlow.Editor
                 foreach (var c in allComps)
                 {
                     if (c == null) continue;
-                    string cName = c.name;
-                    string cClean = cName.TrimStart('_');
-                    if (cClean.Equals(cleanName, StringComparison.OrdinalIgnoreCase) ||
-                        Normalize(cClean).Equals(Normalize(cleanName), StringComparison.OrdinalIgnoreCase))
+                    string cClean = c.name.TrimStart('_');
+                    if (Normalize(cClean).Equals(normalizedFieldName, StringComparison.OrdinalIgnoreCase))
                     {
                         return c;
                     }
@@ -212,6 +211,7 @@ namespace PixelFlow.Editor
         private static GameObject FindGameObjectStrict(Transform parent, string fieldName)
         {
             string cleanName = fieldName.TrimStart('_');
+            string normalizedFieldName = Normalize(cleanName);
 
             // Direct children first (exact match)
             foreach (Transform child in parent)
@@ -225,8 +225,7 @@ namespace PixelFlow.Editor
             foreach (Transform child in parent)
             {
                 string childNorm = Normalize(child.name);
-                string fieldNorm = Normalize(cleanName);
-                if (childNorm.Equals(fieldNorm, StringComparison.OrdinalIgnoreCase))
+                if (childNorm.Equals(normalizedFieldName, StringComparison.OrdinalIgnoreCase))
                     return child.gameObject;
             }
 

@@ -7,6 +7,7 @@ using PixelFlow.Data;
 using PixelFlow.Signals;
 using PixelFlow.Commands;
 using UnityEngine;
+using static PixelFlow.Editor.Tests.GameTestContext;
 
 namespace PixelFlow.Editor.Tests
 {
@@ -20,27 +21,7 @@ namespace PixelFlow.Editor.Tests
         [SetUp]
         public void SetUp()
         {
-            _ctx = NexusTestHarness.CreateContext(builder =>
-            {
-                builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
-
-                var testConfig = ScriptableObject.CreateInstance<GameConfig>();
-                testConfig.name = "GameConfig (Test)";
-                builder.BindInstance(testConfig);
-
-                builder.Bind<ILevelProgressionService, LevelProgressionService>();
-                builder.Bind<IPathSolver, RuntimePathSolver>();
-                builder.BindReactiveModel<ILevelModel, LevelModel>();
-                builder.BindReactiveModel<IProgressModel, ProgressModel>();
-                builder.BindReactiveModel<IGameSessionModel, GameSessionModel>();
-                builder.BindReactiveModel<IHintModel, HintModel>();
-                builder.BindReactiveModel<IInventoryModel, InventoryModel>();
-                builder.Bind<ILoggerService, LoggerService>();
-                builder.Bind<IFeedbackService, FeedbackService>();
-                builder.Bind<Nexus.Core.Services.IAudioService, StubAudioService>();
-
-                builder.BindCommand<LevelCompletedSignal, SaveProgressCommand>();
-            });
+            _ctx = CreateGameContext();
 
             _progressionService = _ctx.Context.Container.Resolve<ILevelProgressionService>();
             _progressModel = _ctx.GetModel<IProgressModel>();

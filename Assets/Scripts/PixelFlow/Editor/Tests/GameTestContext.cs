@@ -33,6 +33,10 @@ namespace PixelFlow.Editor.Tests
                 testConfig.name = "GameConfig (Test)";
                 builder.BindInstance(testConfig);
 
+                // Economy services (required by SaveProgressCommand)
+                builder.BindService<IEconomyService, Nexus.Core.Services.EconomyService>();
+                builder.Bind<Nexus.Core.Services.INetworkEconomyValidator, LocalEconomyValidator>();
+
                 builder.BindService<IPathService, PathService>();
                 builder.BindService<IGameHistoryService, GameHistoryService>();
                 builder.Bind<IPathSolver, RuntimePathSolver>();
@@ -49,6 +53,7 @@ namespace PixelFlow.Editor.Tests
                 builder.BindService<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
                 builder.Bind<IFeedbackService, FeedbackService>();
                 builder.Bind<Nexus.Core.Services.IAudioService, StubAudioService>();
+                builder.Bind<Nexus.Core.Services.INetworkEconomyValidator, LocalEconomyValidator>();
                 builder.Bind<ITimeProvider, UnityTimeProvider>();
                 builder.BindService<INexusService, TickService>();
                 builder.Bind<ITickService, TickService>();

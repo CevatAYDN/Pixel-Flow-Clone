@@ -63,6 +63,9 @@ namespace PixelFlow
             builder.Bind<ILocalizationTableProvider, ResourceLocalizationTableProvider>();
             builder.BindService<IDailyCrisisService, DailyCrisisService>();
             builder.Bind<IPathSolver, RuntimePathSolver>();
+            builder.Bind<ILevelValidator, LevelValidator>();
+            builder.Bind<PathSolverFactory, PathSolverFactory>();
+            builder.Bind<IPathSolverStrategy, StandardDFSPathSolverStrategy>();
             builder.BindService<IHintService, HintService>(); // Fixed: was Bind<> now BindService<> for auto-init
             builder.BindService<IPowerUpService, PowerUpService>();
             builder.Bind<ILevelProgressionService, LevelProgressionService>();
