@@ -140,12 +140,14 @@ namespace Nexus.Generated
             {
                 instance.InventoryModel = di.Resolve<PixelFlow.Models.IInventoryModel>();
                 instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
+                instance.PlayerPrefsService = di.Resolve<Nexus.Core.Services.IPlayerPrefsService>();
                 instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
             });
             NexusDI.RegisterClearer<PixelFlow.Views.GarageMediator>(instance =>
             {
                 instance.InventoryModel = null;
                 instance.LoggerService = null;
+                instance.PlayerPrefsService = null;
                 instance.SignalBus = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Views.GarageView>((instance, di) =>
@@ -1008,6 +1010,8 @@ namespace Nexus.Generated
                 _ = _p_GarageMediator_InventoryModel; // Suppress CS0219 warning
                 var _p_GarageMediator_LoggerService = default(PixelFlow.Views.GarageMediator).LoggerService;
                 _ = _p_GarageMediator_LoggerService; // Suppress CS0219 warning
+                var _p_GarageMediator_PlayerPrefsService = default(PixelFlow.Views.GarageMediator).PlayerPrefsService;
+                _ = _p_GarageMediator_PlayerPrefsService; // Suppress CS0219 warning
                 var _p_GarageMediator_SignalBus = default(PixelFlow.Views.GarageMediator).SignalBus;
                 _ = _p_GarageMediator_SignalBus; // Suppress CS0219 warning
                 var _p_GarageView_LoggerService = default(PixelFlow.Views.GarageView).LoggerService;

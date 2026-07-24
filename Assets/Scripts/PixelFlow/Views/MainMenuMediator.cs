@@ -122,7 +122,8 @@ namespace PixelFlow.Views
 
         private void HandleGarageClicked()
         {
-            LoggerService?.Log("[MainMenuMediator] 'Garaj' button clicked from Hub.");
+            LoggerService?.Log("[MainMenuMediator] 'Garaj' button clicked from Hub. Firing ShowGarageSignal.");
+            SignalBus?.Fire(new ShowGarageSignal());
         }
 
         private void HandleLevelSelectClicked()
@@ -133,7 +134,8 @@ namespace PixelFlow.Views
 
         private void HandleSettingsClicked()
         {
-            LoggerService?.Log("[MainMenuMediator] 'Ayarlar' button clicked from Hub.");
+            LoggerService?.Log("[MainMenuMediator] 'Ayarlar' button clicked from Hub. Transitioning -> Paused.");
+            GameStateModel?.SetState(GameState.Paused);
         }
 
         private void HandleStateChanged(GameState state)
@@ -152,7 +154,9 @@ namespace PixelFlow.Views
 
             View.UpdateCoinBalance(coins);
             View.UpdatePlayButtonText(levelNumber);
-            View.UpdateEquippedVehicle("Dondurma Arabası", "Kuşanılan Sarı Araç");
+
+            string skinId = InventoryModel != null ? InventoryModel.GetEquippedSkin(ColorType.Red) : "skin_default";
+            View.UpdateEquippedVehicle(skinId, "Kuşanılan Araç");
         }
 
         private void UpdateVisibility()

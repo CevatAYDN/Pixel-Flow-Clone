@@ -11,6 +11,7 @@ namespace PixelFlow.Views
     {
         [Inject] public IInventoryModel InventoryModel { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
 
         protected override void OnBind()
         {
@@ -57,12 +58,44 @@ namespace PixelFlow.Views
 
         private void HandleBuySkin(VehicleSkinConfig skin)
         {
-            LoggerService?.Log($"[PixelFlow.GarageMediator] Purchase skin requested: {(skin != null ? skin.DisplayName : "Unknown")}");
+            if (skin == null) return;
+            LoggerService?.Log($"[PixelFlow.GarageMediator] Purchase skin requested: {skin.DisplayName} for {skin.UnlockCoinCost} coins");
+
+            if (InventoryModel == null) return;
+
+            if (InventoryModel.IsSkinUnlocked(skin.SkinId))
+            {
+                LoggerService?.Log($"[PixelFlow.GarageMediator] Skin {skin.SkinId} is already unlocked. Equipping.");
+                InventoryModel.EquipSkin(skin.ColorFamily, skin.SkinId);
+                return;
+            }
+
+            if (InventoryModel.TrySpendCoins(skin.UnlockCoinCost))
+            {
+                InventoryModel.UnlockSkin(skin.SkinId);
+                InventoryModel.EquipSkin(skin.ColorFamily, skin.SkinId);
+                LoggerService?.Log($"[PixelFlow.GarageMediator] Successfully purchased and equipped skin: {skin.SkinId}");
+            }
+            else
+            {
+                LoggerService?.LogWarning($"[PixelFlow.GarageMediator] Failed to purchase skin {skin.SkinId}: Not enough coins!");
+            }
         }
 
         private void HandleEquipSkin(VehicleSkinConfig skin)
         {
-            LoggerService?.Log($"[PixelFlow.GarageMediator] Equip skin requested: {(skin != null ? skin.DisplayName : "Unknown")}");
+            if (skin == null || InventoryModel == null) return;
+            LoggerService?.Log($"[PixelFlow.GarageMediator] Equip skin requested: {skin.DisplayName}");
+
+            if (InventoryModel.IsSkinUnlocked(skin.SkinId))
+            {
+                InventoryModel.EquipSkin(skin.ColorFamily, skin.SkinId);
+                LoggerService?.Log($"[PixelFlow.GarageMediator] Successfully equipped skin: {skin.SkinId}");
+            }
+            else
+            {
+                LoggerService?.LogWarning($"[PixelFlow.GarageMediator] Cannot equip skin {skin.SkinId}: Skin is locked!");
+            }
         }
 
         private void OnClose()
