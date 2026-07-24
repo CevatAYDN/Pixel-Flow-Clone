@@ -19,13 +19,28 @@ namespace PixelFlow.Editor
 {
     public partial class PixelFlowSetupWindow : EditorWindow
     {
-        [MenuItem("Pixel Flow/Kurulum Yardımcısı")]
-        public static void ShowWindow()
+        public static void OpenTab(int tabIndex)
         {
-            var window = GetWindow<PixelFlowSetupWindow>("Pixel Flow Kontrol Merkezi");
+            var window = GetWindow<PixelFlowSetupWindow>("COLOR JAM 3D Master Studio");
             window.minSize = new Vector2(850, 720);
             window.RefreshData();
+            window.SelectTab(tabIndex);
         }
+
+        [MenuItem("Pixel Flow/COLOR JAM 3D Master Studio (v6.0.0)", false, 0)]
+        public static void ShowWindowMaster() => OpenTab(0);
+
+        [MenuItem("Pixel Flow/Seviye Stüdyosu (Level Studio)", false, 1)]
+        public static void ShowWindowLevelStudio() => OpenTab(1);
+
+        [MenuItem("Pixel Flow/Garaj Stüdyosu (Skin Studio)", false, 2)]
+        public static void ShowWindowGarageStudio() => OpenTab(2);
+
+        [MenuItem("Pixel Flow/Sahne Tanılama & Audit", false, 3)]
+        public static void ShowWindowDiagnostics() => OpenTab(7);
+
+        [MenuItem("Pixel Flow/Kurulum Yardımcısı", false, 10)]
+        public static void ShowWindow() => OpenTab(0);
 
         // ─── Tanılama Durumları ───
         private bool _prefabsOk, _cellWarningIconOk;
@@ -100,7 +115,7 @@ namespace PixelFlow.Editor
         private VisualElement _contentContainer;
         private List<Button> _sidebarButtons = new List<Button>();
 
-        [MenuItem("PixelFlow/Create GameConfig Asset")]
+        [MenuItem("Pixel Flow/Araçlar/Create GameConfig Asset", false, 20)]
         private static void CreateGameConfigAsset()
         {
             var existing = UnityEngine.Resources.Load<PixelFlow.Data.GameConfig>("Configs/GameConfig");
@@ -122,7 +137,7 @@ namespace PixelFlow.Editor
         /// Resources/Configs/ altında 6 asset: GameConfig, ThemePalette, ColorBlindPalette,
         /// VehicleMaterialConfig, EconomyConfig, LevelCatalog.
         /// </summary>
-        [MenuItem("PixelFlow/Create All Config Assets")]
+        [MenuItem("Pixel Flow/Araçlar/Proje Config Asset'lerini Oluştur", false, 21)]
         private static void CreateAllConfigAssets()
         {
             System.IO.Directory.CreateDirectory("Assets/Resources/Configs");

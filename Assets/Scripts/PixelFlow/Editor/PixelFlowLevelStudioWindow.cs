@@ -54,12 +54,10 @@ namespace PixelFlow.Editor
         private GUIStyle _cardStyle;
         private GUIStyle _badgeStyle;
 
-        [MenuItem("Pixel Flow/Pixel Flow Level Studio", false, 1)]
+        [MenuItem("Pixel Flow/Seviye Stüdyosu (Level Studio)", false, 1)]
         public static void ShowWindow()
         {
-            var window = GetWindow<PixelFlowLevelStudioWindow>("Pixel Flow Level Studio");
-            window.minSize = new Vector2(900, 650);
-            window.RefreshLevelBank();
+            PixelFlowSetupWindow.OpenTab(1);
         }
 
         private void OnEnable()

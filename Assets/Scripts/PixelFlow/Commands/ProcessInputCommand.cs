@@ -95,6 +95,14 @@ namespace PixelFlow.Commands
 
             if (signal.Type == InputType.PointerDown)
             {
+                if (currentCell.PathColorCount >= 2 && !currentCell.HasViaduct && GameSessionModel != null && GameSessionModel.AvailableViaducts > 0)
+                {
+                    LoggerService?.Log($"[PixelFlow.ProcessInputCommand] PointerDown on crossing cell {signal.GridPosition}. Placing Viaduct.");
+                    SignalBus.Fire(new PlaceViaductSignal { Position = signal.GridPosition });
+                    HapticService?.Vibrate(HapticType.Medium);
+                    return;
+                }
+
                 ColorType clickedColor = currentCell.Color != ColorType.None ? currentCell.Color
                     : currentCell.PathColorCount > 0 ? currentCell.FirstPathColor
                     : ColorType.None;
@@ -210,6 +218,7 @@ namespace PixelFlow.Commands
                     {
                         LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Rainbow Road segment applied at {signal.GridPosition} for color {GridModel.ActiveColor.Value}. Remaining: {PowerUpService.RainbowRoadUses}");
                         EnsureHistoryRecorded();
+                        currentCell.IsRainbowRoad = true;
                         currentCell.Color = GridModel.ActiveColor.Value;
                         currentCell.State = CellState.Path;
                         if (!currentCell.HasPathColor(GridModel.ActiveColor.Value))

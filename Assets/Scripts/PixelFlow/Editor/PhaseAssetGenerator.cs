@@ -14,7 +14,7 @@ namespace PixelFlow.Editor
     {
         private const string PhasesPath = "Assets/Resources/Configs";
 
-        [MenuItem("Tools/PixelFlow/Generate Phase Assets", false, 100)]
+        [MenuItem("Pixel Flow/Araçlar/Generate Phase Assets", false, 31)]
         public static void GeneratePhaseAssets()
         {
             // Ensure Configs folder exists

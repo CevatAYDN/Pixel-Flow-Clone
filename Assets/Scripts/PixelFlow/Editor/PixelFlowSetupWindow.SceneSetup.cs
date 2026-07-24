@@ -1816,7 +1816,7 @@ namespace PixelFlow.Editor
 
         private void SetupGlobalVolume()
         {
-            var hasVolume = Object.FindObjectsOfType<GameObject>(true)
+            var hasVolume = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .Any(go => go.name.Contains("Volume"));
             if (!hasVolume)
             {

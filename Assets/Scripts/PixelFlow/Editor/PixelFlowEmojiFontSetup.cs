@@ -24,7 +24,7 @@ namespace PixelFlow.EditorTools
         private const string EmojiFontAssetPath = "Assets/TextMesh Pro/Resources/Fonts & Materials/Emoji Fallback.asset";
         private const string SystemFontCopyPath = "Assets/TextMesh Pro/Resources/Fonts & Materials/SystemEmoji.ttf";
 
-        [MenuItem("Tools/PixelFlow/Setup Emoji Fallback Font")]
+        [MenuItem("Pixel Flow/Araçlar/Emoji Fallback Font Kurulumu", false, 30)]
         public static void SetupEmojiFallback()
         {
             // Step 1: Ensure emoji support is enabled in TMP Settings (always runs)

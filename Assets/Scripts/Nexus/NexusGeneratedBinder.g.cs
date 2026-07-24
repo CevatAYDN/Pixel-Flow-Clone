@@ -722,11 +722,13 @@ namespace Nexus.Generated
             {
                 instance.LevelLoaderService = di.Resolve<PixelFlow.Services.ILevelLoaderService>();
                 instance.PowerUpService = di.Resolve<PixelFlow.Services.IPowerUpService>();
+                instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
             });
             NexusDI.RegisterClearer<PixelFlow.Commands.LoadLevelCommand>(instance =>
             {
                 instance.LevelLoaderService = null;
                 instance.PowerUpService = null;
+                instance.LoggerService = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.PauseSimulationCommand>((instance, di) =>
             {
@@ -1340,6 +1342,8 @@ namespace Nexus.Generated
                 _ = _p_LoadLevelCommand_LevelLoaderService; // Suppress CS0219 warning
                 var _p_LoadLevelCommand_PowerUpService = default(PixelFlow.Commands.LoadLevelCommand).PowerUpService;
                 _ = _p_LoadLevelCommand_PowerUpService; // Suppress CS0219 warning
+                var _p_LoadLevelCommand_LoggerService = default(PixelFlow.Commands.LoadLevelCommand).LoggerService;
+                _ = _p_LoadLevelCommand_LoggerService; // Suppress CS0219 warning
                 var _p_PauseSimulationCommand_VehicleSimulator = default(PixelFlow.Commands.PauseSimulationCommand).VehicleSimulator;
                 _ = _p_PauseSimulationCommand_VehicleSimulator; // Suppress CS0219 warning
                 var _p_PauseSimulationCommand_GameStateModel = default(PixelFlow.Commands.PauseSimulationCommand).GameStateModel;

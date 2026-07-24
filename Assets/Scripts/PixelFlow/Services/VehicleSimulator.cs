@@ -535,6 +535,11 @@ namespace PixelFlow.Services
                 Mathf.Clamp(cellPos.x, 0, GridModel.Width - 1),
                 Mathf.Clamp(cellPos.y, 0, GridModel.Height - 1)];
 
+            if (cell.IsRainbowRoad)
+            {
+                return false; // Rainbow Road power-up segments allow all vehicles to pass safely
+            }
+
             if (cell.HasViaduct)
             {
                 float zDiff = Mathf.Abs(v1.CurrentPosition.z - v2.CurrentPosition.z);
