@@ -23,7 +23,6 @@ namespace PixelFlow.Services
 
         private Camera _cam;
         private Coroutine _transition;
-        private ISignalSubscription _gridSub;
 
         // Hub: izometrik 45° görünüm, tüm şehir görünür. GameConfig'ten okunur.
         private Vector3 HubPosition => Config != null ? Config.HubCameraPosition : throw new DataValidationException("GameConfig.HubCameraPosition erişilemedi!");
@@ -62,7 +61,6 @@ namespace PixelFlow.Services
             {
                 GameStateModel.OnStateChanged -= HandleStateChanged;
             }
-            _gridSub?.Dispose();
         }
 
         // Public köprü metotlar — Mediator tarafından çağrılır.

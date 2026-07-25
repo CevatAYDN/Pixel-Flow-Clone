@@ -18,12 +18,13 @@ namespace PixelFlow.Services
         [Inject] public ILoggerService Logger { get; set; }
         [Inject] public IFeedbackService FeedbackService { get; set; }
         [Inject, OptionalInject] public GameConfig Config { get; set; }
+        [Inject, OptionalInject] public StorageKeysConfigAsset Keys { get; set; }
 
         private EconomyConfigAsset _economyConfig;
         private bool _productsRegistered;
-        private const string CoinCurrencyId = "coin";
-        private const string GemCurrencyId = "gem";
-        private const string TicketCurrencyId = "ticket";
+        private string CoinCurrencyId => Keys?.CurrencyIdCoin;
+        private string GemCurrencyId => Keys?.CurrencyIdGem;
+        private string TicketCurrencyId => Keys?.CurrencyIdTicket;
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
@@ -80,6 +81,11 @@ namespace PixelFlow.Services
             Logger?.Log($"[PixelFlow.IapIntegrationService] Registered {productDefinitions.Count} IAP products with Nexus IapService.");
         }
 
+        private void EnsureCurrencyIdsConfigured()
+        {
+            if (string.IsNullOrEmpty(CoinCurrencyId) || string.IsNullOrEmpty(GemCurrencyId) || string.IsNullOrEmpty(TicketCurrencyId)) throw new DataValidationException("IapIntegrationService requires configured currency identifiers.");
+        }
+
         public void PurchaseProduct(string productId, Action<bool, string> onComplete)
         {
             if (!_productsRegistered)
@@ -126,6 +132,7 @@ namespace PixelFlow.Services
 
         private void GrantProductRewards(IapProductDefinition product)
         {
+            EnsureCurrencyIdsConfigured();
             if (product.CoinAmount > 0 && EconomyService != null)
             {
                 EconomyService.Earn(CoinCurrencyId, product.CoinAmount, $"iap_reward:{product.ProductId}");

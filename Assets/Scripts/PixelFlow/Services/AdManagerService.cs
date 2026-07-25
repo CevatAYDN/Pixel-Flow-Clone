@@ -6,7 +6,6 @@ using Nexus.Core.Services;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Data;
-using UnityEngine;
 
 namespace PixelFlow.Services
 {
@@ -27,9 +26,20 @@ namespace PixelFlow.Services
         [Inject] public IInventoryModel InventoryModel { get; set; }
         [Inject] public new IGameSessionModel GameSessionModel { get; set; }
         [Inject] public IEconomyService EconomyService { get; set; }
-        [Inject, OptionalInject] public new GameConfig Config { get; set; }
         [Inject, OptionalInject] public ILoggerService LoggerService { get; set; }
         [Inject] public new ISignalBus SignalBus { get; set; }
+        [Inject, OptionalInject] public StorageKeysConfigAsset Keys { get; set; }
+
+        private string CoinCurrencyId => Keys?.CurrencyIdCoin;
+        private string GemCurrencyId => Keys?.CurrencyIdGem;
+
+        private void EnsureCurrencyIdsConfigured()
+        {
+            if (string.IsNullOrEmpty(CoinCurrencyId) || string.IsNullOrEmpty(GemCurrencyId))
+            {
+                throw new DataValidationException("AdManagerService requires configured currency identifiers.");
+            }
+        }
 
         public bool IsRewardedAdReady()
         {
@@ -74,18 +84,19 @@ namespace PixelFlow.Services
 
         private bool GrantRewardedAdReward(string placementId)
         {
+            EnsureCurrencyIdsConfigured();
             switch (placementId)
             {
                 case "double_coins":
                     // 2x Coin reward
                     if (GameSessionModel != null && EconomyService != null)
                     {
-                        int baseCoins = GameSessionModel.CoinsEarnedThisLevel > 0 ? GameSessionModel.CoinsEarnedThisLevel : Config?.RewardedAdCoinReward ?? 100;
-                        EconomyService.Earn("coin", baseCoins, $"rewarded_ad:{placementId}");
+                        int baseCoins = GameSessionModel.CoinsEarnedThisLevel > 0 ? GameSessionModel.CoinsEarnedThisLevel : ResolvedConfig.RewardedAdCoinReward;
+                        EconomyService.Earn(CoinCurrencyId, baseCoins, $"rewarded_ad:{placementId}");
                     }
                     else if (InventoryModel != null)
                     {
-                        int baseCoins = GameSessionModel?.CoinsEarnedThisLevel > 0 ? GameSessionModel.CoinsEarnedThisLevel : Config?.RewardedAdCoinReward ?? 100;
+                        int baseCoins = GameSessionModel?.CoinsEarnedThisLevel > 0 ? GameSessionModel.CoinsEarnedThisLevel : ResolvedConfig.RewardedAdCoinReward;
                         InventoryModel.AddCoins(baseCoins);
                     }
                     return true;
@@ -102,12 +113,12 @@ namespace PixelFlow.Services
                     // Daily Chest 2x
                     if (EconomyService != null)
                     {
-                        int baseCoins = Config?.DailyChestCoins ?? 100;
-                        EconomyService.Earn("coin", baseCoins, $"rewarded_ad:{placementId}");
+                        int baseCoins = ResolvedConfig.DailyChestCoins;
+                        EconomyService.Earn(CoinCurrencyId, baseCoins, $"rewarded_ad:{placementId}");
                     }
                     else if (InventoryModel != null)
                     {
-                        int baseCoins = Config?.DailyChestCoins ?? 100;
+                        int baseCoins = ResolvedConfig.DailyChestCoins;
                         InventoryModel.AddCoins(baseCoins);
                     }
                     return true;
@@ -153,10 +164,10 @@ namespace PixelFlow.Services
                 switch (rewardType)
                 {
                     case 0:
-                        EconomyService.Earn("coin", rng.Next(50, 500), "lucky_wheel");
+                        EconomyService.Earn(CoinCurrencyId, rng.Next(50, 500), "lucky_wheel");
                         break;
                     case 1:
-                        EconomyService.Earn("gem", rng.Next(5, 20), "lucky_wheel");
+                        EconomyService.Earn(GemCurrencyId, rng.Next(5, 20), "lucky_wheel");
                         break;
                     case 2:
                         // Could grant a random common skin

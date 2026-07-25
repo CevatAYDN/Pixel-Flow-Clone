@@ -21,10 +21,11 @@ namespace PixelFlow.Services
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject, OptionalInject] public GameConfig Config { get; set; }
+        [Inject, OptionalInject] public PixelFlow.Data.StorageKeysConfigAsset Keys { get; set; }
 
-        private const string EventActiveKey = "NT_RushHour_Active";
-        private const string EventEndTimeKey = "NT_RushHour_EndTime";
-        private const string EventCooldownKey = "NT_RushHour_Cooldown";
+        private string EventActiveKey => Keys?.KeyRushHour_Active;
+        private string EventEndTimeKey => Keys?.KeyRushHour_EndTime;
+        private string EventCooldownKey => Keys?.KeyRushHour_Cooldown;
 
         private bool _isEventActive = false;
         private DateTime _eventEndTime;
@@ -47,6 +48,7 @@ namespace PixelFlow.Services
         private void LoadEventState()
         {
             if (PlayerPrefsService == null) return;
+            if (string.IsNullOrEmpty(EventActiveKey) || string.IsNullOrEmpty(EventEndTimeKey) || string.IsNullOrEmpty(EventCooldownKey)) throw new DataValidationException("RushHourEventService requires configured storage keys.");
 
             bool wasActive = PlayerPrefsService.GetBool(EventActiveKey, false);
             if (wasActive)
@@ -73,6 +75,7 @@ namespace PixelFlow.Services
         private void CheckAndTriggerEvent()
         {
             if (PlayerPrefsService == null) return;
+            if (string.IsNullOrEmpty(EventActiveKey) || string.IsNullOrEmpty(EventEndTimeKey) || string.IsNullOrEmpty(EventCooldownKey)) throw new DataValidationException("RushHourEventService requires configured storage keys.");
 
             // Check cooldown
             string cooldownStr = PlayerPrefsService.GetString(EventCooldownKey, "");

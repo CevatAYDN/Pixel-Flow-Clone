@@ -41,7 +41,9 @@ transcript*.jsonl
 *.bak
 *.swp
 *.devin
+*.kilo
 *.omo
+
 
 # ==========================================
 # IDE & EDITOR SPECIFIC FILES

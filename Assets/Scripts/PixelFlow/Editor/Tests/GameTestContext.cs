@@ -17,6 +17,114 @@ namespace PixelFlow.Editor.Tests
     /// </summary>
     public static class GameTestContext
     {
+        public static GameConfig CreateTestGameConfig()
+        {
+            var testConfig = ScriptableObject.CreateInstance<GameConfig>();
+            testConfig.name = "GameConfig (Test)";
+            testConfig.VehicleSpeed = 3f;
+            testConfig.SpawnInterval = 1.2f;
+            testConfig.MaxProgressPerFrame = 0.25f;
+            testConfig.MaxSimulationSafetyDuration = 45f;
+            testConfig.FerryPeriod = 10f;
+            testConfig.HistoryMaxDepth = 200;
+            testConfig.HubCameraSize = 7f;
+            testConfig.MinZoom = 8f;
+            testConfig.MaxZoom = 12f;
+            testConfig.DefaultHintCount = 3;
+            testConfig.TwoStarHintChance = 0.5f;
+            testConfig.MaxRetriesBeforeInterstitial = 3;
+            testConfig.MinLevelForInterstitial = 5;
+            testConfig.InterstitialLevelInterval = 3;
+            testConfig.FirstAdLevel = 5;
+            testConfig.RewardedUndoLimit = 3;
+            testConfig.InterstitialFrequency = 3;
+            testConfig.RewardedAdCoinReward = 100;
+            testConfig.RewardedAdHintReward = 2;
+            testConfig.DoubleCoinMultiplier = 2f;
+            testConfig.InterstitialPlacementId = "interstitial_level_end";
+            testConfig.RewardedPlacementId = "rewarded_double_coins";
+            testConfig.BannerPlacementId = "banner_bottom";
+            testConfig.IdleReminderSeconds = 300f;
+            testConfig.MaxGraceSkips = 3;
+            testConfig.PathSolverMaxIterations = 200000;
+            testConfig.AudioSampleRate = 44100;
+            testConfig.DefaultUnlockedLevels = 1;
+            testConfig.RainbowRoadSegmentsPerActivation = 3;
+            testConfig.ClearJamUsesPerLevel = 1;
+            testConfig.SaveFormatVersion = 2;
+            testConfig.SaveVersionKey = "PF_SaveFormat_Version";
+            testConfig.CoinPerFlowScore = 5;
+            testConfig.LevelCompleteCoinBonus = 50;
+            testConfig.DailyChestCoins = 100;
+            testConfig.GemsPerThreeStarLevel = 5;
+            testConfig.StarPassGemBonus = 3;
+            testConfig.DefaultGems = 0;
+            testConfig.DefaultTickets = 0;
+            testConfig.FixedTimeStep = 1f / 60f;
+            testConfig.SpawnCheckInterval = 10;
+            testConfig.SpeedVariationRange = 0.3f;
+            testConfig.CollisionDistance = 0.45f;
+            testConfig.ViaductZDiffThreshold = 0.15f;
+            testConfig.ViaductOverZOffset = -0.4f;
+            testConfig.ViaductUnderZOffset = -0.1f;
+            testConfig.NormalZOffset = -0.2f;
+            testConfig.CameraTransitionDuration = 0.18f;
+            testConfig.HubCameraPosition = new Vector3(8f, 12f, -8f);
+            testConfig.HubCameraEuler = new Vector3(45f, 45f, 0f);
+            testConfig.StateTransitionDuration = 0.8f;
+            testConfig.PuzzleFallbackCameraSize = 5f;
+            testConfig.CrashShakeIntensity = 0.35f;
+            testConfig.CrashShakeDuration = 0.45f;
+            testConfig.CrashFocusOffset = 0.4f;
+            testConfig.AudioPoolSize = 3;
+            testConfig.PathSolverMaxIterationsCap = 1000000;
+            testConfig.VehiclePartPoolCubes = 512;
+            testConfig.VehiclePartPoolCylinders = 256;
+            testConfig.RejectionPulseFrequency = 15f;
+            testConfig.MaxPathsPerBridge = 2;
+            testConfig.DefaultTheme = AppTheme.Dark;
+            testConfig.DefaultMasterVolume = 1f;
+            testConfig.DefaultSfxVolume = 1f;
+            testConfig.DefaultMusicVolume = 0.7f;
+            testConfig.DefaultHapticsDisabled = false;
+            return testConfig;
+        }
+
+        public static StorageKeysConfigAsset CreateTestStorageKeysConfig()
+        {
+            var storageKeys = ScriptableObject.CreateInstance<StorageKeysConfigAsset>();
+            storageKeys.KeyTheme = "AppTheme";
+            storageKeys.KeyColorBlind = "ColorBlindMode";
+            storageKeys.KeyVehicleStyle = "VehicleStyle";
+            storageKeys.KeyMasterVol = "MasterVolume";
+            storageKeys.KeySfxVol = "SfxVolume";
+            storageKeys.KeyMusicVol = "MusicVolume";
+            storageKeys.KeyHaptics = "HapticsDisabled";
+            storageKeys.KeyUnlockedLevels = "UnlockedLevels";
+            storageKeys.KeyHintCount = "HintCount";
+            storageKeys.KeySoundMuted = "SoundMuted";
+            storageKeys.KeyTutorialStep = "TutorialStep";
+            storageKeys.KeyCloudPlayerId = "PF_CloudPlayerId";
+            storageKeys.KeyCloudRecord = "PF_CloudRecord";
+            storageKeys.KeyDailyLogin_LastLogin = "NT_DailyLogin_LastLogin";
+            storageKeys.KeyDailyLogin_Streak = "NT_DailyLogin_Streak";
+            storageKeys.KeyDailyLogin_VipSkinGranted = "NT_DailyLogin_VipSkinGranted";
+            storageKeys.DailyLoginVipSkinId = "skin_vip_golden";
+            storageKeys.KeyRushHour_Active = "NT_RushHour_Active";
+            storageKeys.KeyRushHour_EndTime = "NT_RushHour_EndTime";
+            storageKeys.KeyRushHour_Cooldown = "NT_RushHour_Cooldown";
+            storageKeys.CurrencyIdCoin = "coins";
+            storageKeys.CurrencyIdGem = "gems";
+            storageKeys.CurrencyIdTicket = "tickets";
+            storageKeys.EditorKeyUnlockedLevelsAllOverride = "UnlockedLevels";
+            return storageKeys;
+        }
+
+        public static RuntimePathSolver CreateTestRuntimePathSolver()
+        {
+            return new RuntimePathSolver { Config = CreateTestGameConfig() };
+        }
+
         /// <summary>
         /// Builds a Nexus test context with all PixelFlow game bindings registered.
         /// Uses InMemoryPlayerPrefsService so models can be constructed in EditMode.
@@ -28,10 +136,22 @@ namespace PixelFlow.Editor.Tests
             {
                 builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
 
-                // game_plan.md §2.2: GameConfig testlerde de mevcut olmalı
-                var testConfig = ScriptableObject.CreateInstance<GameConfig>();
-                testConfig.name = "GameConfig (Test)";
-                builder.BindInstance(testConfig);
+                builder.BindInstance(CreateTestGameConfig());
+
+                var storageKeys = CreateTestStorageKeysConfig();
+                builder.BindInstance(storageKeys);
+
+                var economyConfig = ScriptableObject.CreateInstance<EconomyConfigAsset>();
+                builder.BindInstance(economyConfig);
+
+                var phaseConfig = ScriptableObject.CreateInstance<PhaseConfigAsset>();
+                builder.BindInstance(phaseConfig);
+
+                var themeConfig = ScriptableObject.CreateInstance<ThemePaletteAsset>();
+                builder.BindInstance(themeConfig);
+
+                var vehicleMatConfig = ScriptableObject.CreateInstance<VehicleMaterialConfigAsset>();
+                builder.BindInstance(vehicleMatConfig);
 
                 // Economy services (required by SaveProgressCommand)
                 builder.BindService<IEconomyService, Nexus.Core.Services.EconomyService>();
@@ -44,8 +164,8 @@ namespace PixelFlow.Editor.Tests
                 builder.BindService<IVehicleSimulator, VehicleSimulator>();
                 builder.BindService<ISaveThrottler, SaveThrottler>();
                 builder.BindService<IHapticService, HapticService>();
-                builder.BindService<INexusService, LoggerService>();
-                builder.Bind<ILoggerService, LoggerService>();
+                var quietLogger = new LoggerService { IsEnabled = false };
+                builder.BindInstance<ILoggerService>(quietLogger);
                 builder.BindService<ICrisisAdService, CrisisAdService>();
                 builder.BindService<IObstacleService, ObstacleService>();
                 builder.BindService<ITutorialDriver, TutorialDriver>();

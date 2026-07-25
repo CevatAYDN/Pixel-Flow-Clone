@@ -488,8 +488,8 @@ namespace PixelFlow.Editor.Tests
                 builder.BindService<IVehicleSimulator, VehicleSimulator>();
                 builder.BindService<ISaveThrottler, SaveThrottler>();
                 builder.BindService<IHapticService, HapticService>();
-                builder.BindService<INexusService, LoggerService>();
-                builder.Bind<ILoggerService, LoggerService>();
+                var quietLogger = new LoggerService { IsEnabled = false };
+                builder.BindInstance<ILoggerService>(quietLogger);
                 builder.BindService<ICrisisAdService, CrisisAdService>();
                 builder.BindService<IObstacleService, ObstacleService>();
                 builder.BindService<ITutorialDriver, TutorialDriver>();
@@ -967,7 +967,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void ProceduralGenerator_Easy_ProducesSolvableLevel()
         {
-            var solver = new RuntimePathSolver();
+            var solver = CreateTestRuntimePathSolver();
             var generator = new ProceduralLevelGenerator(solver, seed: 42);
             var level = generator.Generate(DifficultyParams.Easy, maxAttempts: 10);
 
@@ -979,7 +979,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void ProceduralGenerator_WithSeed_Deterministic()
         {
-            var solver = new RuntimePathSolver();
+            var solver = CreateTestRuntimePathSolver();
             var gen1 = new ProceduralLevelGenerator(solver, seed: 123);
             var gen2 = new ProceduralLevelGenerator(solver, seed: 123);
 
@@ -1004,7 +1004,7 @@ namespace PixelFlow.Editor.Tests
             emptyLevel.width = 5;
             emptyLevel.height = 5;
 
-            var solver = new RuntimePathSolver();
+            var solver = CreateTestRuntimePathSolver();
             Assert.IsFalse(solver.Solve(emptyLevel, out _), "Empty level should not be solvable");
         }
 
@@ -1020,7 +1020,7 @@ namespace PixelFlow.Editor.Tests
                 new GridNode { position = new Vector2Int(2, 0), color = ColorType.Red },
             };
 
-            var solver = new RuntimePathSolver();
+            var solver = CreateTestRuntimePathSolver();
             Assert.IsTrue(solver.Solve(level, out var solutions), "Simple 2-node path should be solvable");
             Assert.IsTrue(solutions.ContainsKey(ColorType.Red), "Should contain Red solution");
             Assert.GreaterOrEqual(solutions[ColorType.Red].Count, 3, "Path should have at least 3 positions (0->1->2)");
@@ -1041,7 +1041,7 @@ namespace PixelFlow.Editor.Tests
                 new GridNode { position = new Vector2Int(2, 4), color = ColorType.Blue },
             };
 
-            var solver = new RuntimePathSolver();
+            var solver = CreateTestRuntimePathSolver();
             Assert.IsTrue(solver.Solve(level, out var solutions), "Multi-color with bridge should be solvable");
             Assert.IsTrue(solutions.ContainsKey(ColorType.Red), "Red should have a path");
             Assert.IsTrue(solutions.ContainsKey(ColorType.Blue), "Blue should have a path");
@@ -1069,7 +1069,7 @@ namespace PixelFlow.Editor.Tests
                 new GridNode { position = new Vector2Int(1, 2), color = ColorType.Blue },
             };
 
-            var solver = new RuntimePathSolver();
+            var solver = CreateTestRuntimePathSolver();
             bool solved = solver.Solve(level, out var solutions);
 
             if (solved && solutions != null)
@@ -1110,7 +1110,7 @@ namespace PixelFlow.Editor.Tests
                 new GridNode { position = new Vector2Int(4, 4), color = ColorType.Green },
             };
 
-            var solver = new RuntimePathSolver();
+            var solver = CreateTestRuntimePathSolver();
             bool solved = solver.Solve(level, out var solutions);
 
             if (solved && solutions != null)
@@ -1312,7 +1312,7 @@ namespace PixelFlow.Editor.Tests
         public void Solver_SolvePartial_ReturnsLimitedPathSteps()
         {
             var level = CreateTestLevel();
-            var solver = new RuntimePathSolver();
+            var solver = CreateTestRuntimePathSolver();
 
             bool solved = solver.SolvePartial(level, ColorType.Red, steps: 3, out var hintPath);
 
@@ -1379,7 +1379,7 @@ namespace PixelFlow.Editor.Tests
             var impossible = new DifficultyParams(
                 width: 3, height: 3, colors: 6, bridges: 2);
 
-            var solver = new RuntimePathSolver();
+            var solver = CreateTestRuntimePathSolver();
             var generator = new ProceduralLevelGenerator(solver, seed: 999);
             var result = generator.Generate(impossible, maxAttempts: 5);
 

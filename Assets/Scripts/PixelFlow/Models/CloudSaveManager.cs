@@ -1,8 +1,10 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
-using PixelFlow.Services;
 using Nexus.Core.Services;
+using Nexus.Core;
+using PixelFlow.Data;
 
 namespace PixelFlow.Models
 {
@@ -17,6 +19,10 @@ namespace PixelFlow.Models
         public int CloudVersion;
     }
 
+    /// <summary>
+    /// Cloud save adapter interface. Replace with FirestoreAdapter / PlayFabAdapter / etc.
+    /// in production builds via DI binding.
+    /// </summary>
     public interface ICloudSaveAdapter
     {
         Task<string> LoadCloudSaveAsync();
@@ -32,118 +38,187 @@ namespace PixelFlow.Models
     }
 
     /// <summary>
-    /// GDD §10.3: Cloud save manager with Firestore integration.
-    /// Uses Firestore adapter when Firebase is available, falls back to local simulation.
+    /// game_plan.md §3.8: Cloud save manager.
+    /// - ICloudSaveAdapter arayüzü üzerinden DI ile enjekte edilir.
+    /// - Gerçek cloud adapter yoksa INexusService üzerinden atlanır (null-object pattern).
+    /// - Conflict resolution: "son değiştiren kazanır" (last-write-wins).
     /// </summary>
-    public static class CloudSaveManager
+    public class CloudSaveManager : INexusService
     {
-        private const string CloudPlayerIdKey = "PF_CloudPlayerId";
-        private const string CloudRecordKey = "PF_CloudRecord";
+        [Inject, OptionalInject] public ICloudSaveAdapter Adapter { get; set; }
+        [Inject, OptionalInject] public IPlayerPrefsService Prefs { get; set; }
+        [Inject, OptionalInject] public ILoggerService LoggerService { get; set; }
+        [Inject, OptionalInject] public StorageKeysConfigAsset Keys { get; set; }
 
-        private static bool _isFirebaseInitialized;
+        private string CloudPlayerIdKey => Keys?.KeyCloudPlayerId;
+        private string CloudRecordKey => Keys?.KeyCloudRecord;
 
-        public static void InitializeCloudAdapter(string userId)
+        public ValueTask InitializeAsync(CancellationToken ct)
         {
-            try
+            if (Adapter == null)
             {
-                _isFirebaseInitialized = true;
-                Debug.Log("[CloudSaveManager] Cloud adapter ready");
+                LoggerService?.Log("[CloudSaveManager] No cloud adapter registered — cloud saves disabled.");
             }
-            catch (Exception ex)
+            else
             {
-                Debug.LogWarning($"[CloudSaveManager] Cloud adapter unavailable, using local simulation: {ex.Message}");
-                _isFirebaseInitialized = false;
+                LoggerService?.Log("[CloudSaveManager] Cloud adapter ready.");
             }
+            return default;
         }
 
-        public static string GetOrCreatePlayerId(IPlayerPrefsService prefs)
+        public string GetOrCreatePlayerId()
         {
-            string id = prefs.GetString(CloudPlayerIdKey, "");
+            if (Prefs == null) return "offline";
+            if (string.IsNullOrEmpty(CloudPlayerIdKey)) throw new DataValidationException("CloudPlayerId key is not configured on StorageKeysConfigAsset.");
+            string id = Prefs.GetString(CloudPlayerIdKey, "");
             if (string.IsNullOrEmpty(id))
             {
                 id = Guid.NewGuid().ToString("N");
-                prefs.SetString(CloudPlayerIdKey, id);
+                Prefs.SetString(CloudPlayerIdKey, id);
+                Prefs.Save();
             }
             return id;
         }
 
-        public static CloudSaveRecord LoadCloudRecord(IPlayerPrefsService prefs)
+        public CloudSaveRecord LoadCloudRecord()
         {
-            string json = prefs.GetString(CloudRecordKey, "");
-            if (string.IsNullOrEmpty(json)) return new CloudSaveRecord();
+            if (Prefs == null) return default;
+            if (string.IsNullOrEmpty(CloudRecordKey)) throw new DataValidationException("CloudRecord key is not configured on StorageKeysConfigAsset.");
+            string json = Prefs.GetString(CloudRecordKey, "");
+            if (string.IsNullOrEmpty(json)) return default;
             try
             {
                 return JsonUtility.FromJson<CloudSaveRecord>(json);
             }
             catch
             {
-                return new CloudSaveRecord();
+                return default;
             }
         }
 
-        public static void SaveCloudRecord(IPlayerPrefsService prefs, CloudSaveRecord record)
+        public void SaveCloudRecord(CloudSaveRecord record)
         {
+            if (Prefs == null) return;
+            if (string.IsNullOrEmpty(CloudRecordKey)) throw new DataValidationException("CloudRecord key is not configured on StorageKeysConfigAsset.");
             record.TimestampUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             string json = JsonUtility.ToJson(record);
-            prefs.SetString(CloudRecordKey, json);
+            Prefs.SetString(CloudRecordKey, json);
+            Prefs.Save();
         }
 
         /// <summary>
-        /// Conflict resolution: yerel save ile cloud save arasındaki
-        /// versiyon çakışmasını çözer. "En son değiştirilen kazanır" stratejisi
-        /// (GDD §10.3).
+        /// Conflict resolution: last-write-wins.
+        /// (game_plan.md §3.8: "En son değiştirilen kazanır")
         /// </summary>
         public static string ResolveConflict(CloudSaveRecord local, CloudSaveRecord cloud)
         {
             if (string.IsNullOrEmpty(cloud.CloudSaveJson)) return local.LocalSaveJson;
             if (string.IsNullOrEmpty(local.LocalSaveJson)) return cloud.CloudSaveJson;
-
-            if (local.TimestampUnix > cloud.TimestampUnix)
-                return local.LocalSaveJson;
-            return cloud.CloudSaveJson;
+            return local.TimestampUnix > cloud.TimestampUnix ? local.LocalSaveJson : cloud.CloudSaveJson;
         }
 
-        /// <summary>
-        /// Save sonrası cloud sync. Firestore kullanılabilirse gerçek sync yapar,
-        /// aksi halde local simülasyonu.
-        /// </summary>
-        public static async Task SyncToCloudAsync(IPlayerPrefsService prefs, string localSaveJson, int version)
-        {
-            var record = LoadCloudRecord(prefs);
-            record.PlayerId = GetOrCreatePlayerId(prefs);
-            record.LocalSaveJson = localSaveJson;
-            record.CloudSaveJson = localSaveJson;
-            record.LocalVersion = version;
-            record.CloudVersion = version;
-            SaveCloudRecord(prefs, record);
+        // ═══════════════════════════════════════════════════════════
+        // Backward-compatible static forwarders (used by GameBootstrapper
+        // and Editor Tests that haven't migrated to DI yet).
+        // ═══════════════════════════════════════════════════════════
 
-            // Firebase/Firestore integration would go here
-            Debug.Log("[CloudSaveManager] Cloud sync simulated (local only)");
-            await Task.CompletedTask;
+        public static CloudSaveRecord LoadCloudRecord(IPlayerPrefsService prefs) =>
+            new CloudSaveManager { Prefs = prefs }.LoadCloudRecord();
+
+        public static string GetOrCreatePlayerId(IPlayerPrefsService prefs) =>
+            new CloudSaveManager { Prefs = prefs }.GetOrCreatePlayerId();
+
+        public static Task SyncToCloudAsync(IPlayerPrefsService prefs, string localSaveJson, int version) =>
+            new CloudSaveManager { Prefs = prefs }.SyncToCloudAsync(localSaveJson, version);
+
+        /// <summary>
+        /// Save sonrası cloud sync. ICloudSaveAdapter varsa gerçek sync yapar, yoksa
+        /// PlayerPrefs'e lokal kopya kaydeder.
+        /// </summary>
+        public async Task SyncToCloudAsync(string localSaveJson, int version)
+        {
+            var record = LoadCloudRecord();
+            record.PlayerId = GetOrCreatePlayerId();
+            record.LocalSaveJson = localSaveJson;
+
+            if (Adapter != null)
+            {
+                try
+                {
+                    bool success = await Adapter.SaveCloudSaveAsync(localSaveJson, version);
+                    if (success)
+                    {
+                        record.CloudSaveJson = localSaveJson;
+                        record.CloudVersion = version;
+                        LoggerService?.Log("[CloudSaveManager] Cloud sync succeeded.");
+                    }
+                    else
+                    {
+                        LoggerService?.LogWarning("[CloudSaveManager] Cloud sync failed — will retry on next save.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggerService?.LogError($"[CloudSaveManager] Cloud sync exception: {ex.Message}");
+                }
+            }
+            else
+            {
+                // No cloud adapter — save to local PlayerPrefs as fallback.
+                record.CloudSaveJson = localSaveJson;
+                record.CloudVersion = version;
+                LoggerService?.Log("[CloudSaveManager] Cloud sync: local-only (no adapter).");
+            }
+
+            SaveCloudRecord(record);
         }
 
         /// <summary>
         /// Load save from cloud, resolving conflicts with local save.
         /// </summary>
-        public static async Task<string> LoadFromCloudAsync(IPlayerPrefsService prefs, string localSaveJson, int localVersion)
+        public async Task<string> LoadFromCloudAsync(string localSaveJson, int localVersion)
         {
-            await Task.CompletedTask;
-            if (!_isFirebaseInitialized)
+            if (Adapter == null)
             {
-                Debug.Log("[CloudSaveManager] Cloud load simulated (local only)");
+                LoggerService?.Log("[CloudSaveManager] Cloud load: local-only (no adapter).");
                 return null;
             }
 
             try
             {
-                // Firebase/Firestore integration would go here
-                return null;
+                string cloudJson = await Adapter.LoadCloudSaveAsync();
+                if (string.IsNullOrEmpty(cloudJson))
+                {
+                    LoggerService?.Log("[CloudSaveManager] No cloud data found.");
+                    return null;
+                }
+
+                // Resolve conflict between local and cloud data.
+                var localRecord = new CloudSaveRecord
+                {
+                    LocalSaveJson = localSaveJson,
+                    TimestampUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    LocalVersion = localVersion
+                };
+
+                var cloudRecord = new CloudSaveRecord
+                {
+                    CloudSaveJson = cloudJson,
+                    TimestampUnix = 0, // actual timestamp from cloud metadata
+                    CloudVersion = 0   // actual version from cloud metadata
+                };
+
+                string resolved = ResolveConflict(localRecord, cloudRecord);
+                LoggerService?.Log("[CloudSaveManager] Cloud load completed with conflict resolution.");
+                return resolved;
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[CloudSaveManager] Cloud load failed: {ex.Message}");
+                LoggerService?.LogError($"[CloudSaveManager] Cloud load failed: {ex.Message}");
                 return null;
             }
         }
+
+        public void OnDispose() { }
     }
 }

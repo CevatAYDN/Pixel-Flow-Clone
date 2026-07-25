@@ -27,7 +27,8 @@ namespace PixelFlow.Models
     /// </summary>
     public class HintModel : IHintModel, IReactiveModel
     {
-        private const string Key = "HintCount";
+        private StorageKeysConfigAsset _keys;
+        private string Key => _keys.KeyHintCount;
 
         private readonly IPlayerPrefsService _prefs;
         private readonly float _twoStarHintChance;
@@ -39,18 +40,20 @@ namespace PixelFlow.Models
         public event Action<int> OnHintCountChanged;
 
         [Inject]
-        public HintModel(IPlayerPrefsService prefs, GameConfig config)
+        public HintModel(IPlayerPrefsService prefs, GameConfig config, StorageKeysConfigAsset keys)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
             if (config == null) throw new DataValidationException("GameConfig erişilemedi! HintModel başlatılamıyor.");
+            _keys = keys ?? throw new DataValidationException("StorageKeysConfigAsset erişilemedi!");
             _twoStarHintChance = config.TwoStarHintChance;
             _hintsRemaining = _prefs.GetInt(Key, config.DefaultHintCount);
         }
 
         // Test amaçlı constructor (config olmadan) — SO varsayılanını yansıtır
-        internal HintModel(IPlayerPrefsService prefs, int defaultHints)
+        internal HintModel(IPlayerPrefsService prefs, int defaultHints, StorageKeysConfigAsset keys = null)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
+            _keys = keys ?? throw new DataValidationException("StorageKeysConfigAsset erişilemedi!");
             _twoStarHintChance = 0.5f;
             _hintsRemaining = _prefs.GetInt(Key, defaultHints);
         }

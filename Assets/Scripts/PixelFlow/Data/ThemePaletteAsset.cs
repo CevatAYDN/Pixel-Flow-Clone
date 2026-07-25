@@ -48,6 +48,16 @@ namespace PixelFlow.Data
             CameraBackground = new Color(0.03f, 0.01f, 0.06f),
             AmbientLight = new Color(0.6f, 0.2f, 0.8f)
         };
+        public ThemeColors Candy = new ThemeColors
+        {
+            CameraBackground = new Color(0.98f, 0.90f, 0.95f),
+            AmbientLight = new Color(0.95f, 0.85f, 0.90f)
+        };
+        public ThemeColors Forest = new ThemeColors
+        {
+            CameraBackground = new Color(0.12f, 0.22f, 0.15f),
+            AmbientLight = new Color(0.30f, 0.50f, 0.35f)
+        };
 
         [Header("=== Cell Background (per theme) ===")]
         [Tooltip("Arka plan hücre rengi — Dark tema")]
@@ -56,6 +66,10 @@ namespace PixelFlow.Data
         public Color CellBgLight = new Color(0.92f, 0.92f, 0.94f, 1f);
         [Tooltip("Arka plan hücre rengi — Neon tema")]
         public Color CellBgNeon = new Color(0.078f, 0.055f, 0.157f, 1f);
+        [Tooltip("Arka plan hücre rengi — Candy tema")]
+        public Color CellBgCandy = new Color(0.98f, 0.90f, 0.95f, 1f);
+        [Tooltip("Arka plan hücre rengi — Forest tema")]
+        public Color CellBgForest = new Color(0.12f, 0.22f, 0.15f, 1f);
 
         [Header("=== Crash & Feedback ===")]
         [Tooltip("Kaza pulse animasyonu — parlak kırmızı")]

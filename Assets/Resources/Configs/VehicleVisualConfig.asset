@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_InstanceID: 0
+  serializedVersion: 6
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c40fef49d1a25042886a92d41619d8d, type: 3}
+  m_Name: VehicleVisualConfig
+  m_EditorClassIdentifier: PixelFlow::PixelFlow.Data.VehicleVisualConfigAsset
+  TrainBodySize: {x: 0.38, y: 0.22, z: 0.18}
+  TrainCabinSize: {x: 0.18, y: 0.2, z: 0.16}
+  TrainCabinOffset: {x: -0.06, y: 0, z: -0.1}
+  TrainWindshieldSize: {x: 0.04, y: 0.18, z: 0.08}
+  TrainWindshieldOffset: {x: 0.19, y: 0, z: -0.06}
+  TrainHeadlightSize: {x: 0.05, y: 0.08, z: 0.06}
+  TrainHeadlightOffset: {x: 0.2, y: 0, z: 0.02}
+  TrainStripeSize: {x: 0.36, y: 0.06, z: 0.04}
+  TrainStripeOffset: {x: 0, y: 0, z: -0.19}
+  TrainWheelSize: {x: 0.07, y: 0.02, z: 0.07}
+  TrainWheelYOffset: 0.09
+  TrainWheelZOffset: 0.05
+  TrainLocoWheelPositions:
+  - {x: 10, y: 0}
+  - {x: -10, y: 0}
+  TrainCouplerSize: {x: 0.1, y: 0.06, z: 0.06}
+  TrainWagon1BodySize: {x: 0.34, y: 0.2, z: 0.16}
+  TrainWagon1WindowSize: {x: 0.24, y: 0.02, z: 0.06}
+  TrainWagon1WindowOffsets:
+  - {x: 0, y: 10, z: -3}
+  TrainWagon1WheelPositions:
+  - {x: 10, y: 0}
+  - {x: -10, y: 0}
+  TrainWagon2BodySize: {x: 0.32, y: 0.2, z: 0.16}
+  TrainWagon2WheelPositions:
+  - {x: 10, y: 0}
+  - {x: -10, y: 0}
+  TrainTrailTime: 0.55
+  TrainTrailStartWidth: 0.22
+  CarBodySize: {x: 0.44, y: 0.26, z: 0.16}
+  CarCabinSize: {x: 0.24, y: 0.2, z: 0.12}
+  CarCabinOffset: {x: -0.03, y: 0, z: -0.12}
+  CarHeadlightSize: {x: 0.04, y: 0.2, z: 0.06}
+  CarHeadlightOffset: {x: 0.22, y: 0, z: -0.02}
+  CarTaillightSize: {x: 0.04, y: 0.2, z: 0.05}
+  CarTaillightOffset: {x: -0.22, y: 0, z: -0.02}
+  CarWheelSize: {x: 0.09, y: 0.02, z: 0.09}
+  CarWheelXPositions:
+  - -0.14
+  - 0.14
+  CarWheelYPositions:
+  - -0.12
+  - 0.12
+  CarWheelZOffset: 0.06
+  CarTrailTime: 0.45
+  CarTrailStartWidth: 0.18

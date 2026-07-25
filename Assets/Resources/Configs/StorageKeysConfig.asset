@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e99c508699eba04b92045762404b0c6, type: 3}
+  m_Name: StorageKeysConfig
+  m_EditorClassIdentifier: PixelFlow::PixelFlow.Data.StorageKeysConfigAsset
+  KeyTheme: AppTheme
+  KeyColorBlind: ColorBlindMode
+  KeyVehicleStyle: VehicleStyle
+  KeyMasterVol: MasterVolume
+  KeySfxVol: SfxVolume
+  KeyMusicVol: MusicVolume
+  KeyHaptics: HapticsDisabled
+  KeyUnlockedLevels: UnlockedLevels
+  KeyHintCount: HintCount
+  KeySoundMuted: SoundMuted
+  KeyTutorialStep: TutorialStep
+  KeyCloudPlayerId: PF_CloudPlayerId
+  KeyCloudRecord: PF_CloudRecord
+  KeyDailyLogin_LastLogin: NT_DailyLogin_LastLogin
+  KeyDailyLogin_Streak: NT_DailyLogin_Streak
+  KeyDailyLogin_VipSkinGranted: NT_DailyLogin_VipSkinGranted
+  DailyLoginVipSkinId: skin_vip_golden
+  KeyRushHour_Active: NT_RushHour_Active
+  KeyRushHour_EndTime: NT_RushHour_EndTime
+  KeyRushHour_Cooldown: NT_RushHour_Cooldown
+  CurrencyIdCoin: coin
+  CurrencyIdGem: gem
+  CurrencyIdTicket: ticket
+  EditorKeyUnlockedLevelsAllOverride: UnlockedLevels

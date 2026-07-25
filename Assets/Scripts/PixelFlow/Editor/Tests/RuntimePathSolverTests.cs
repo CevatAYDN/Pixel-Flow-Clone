@@ -3,6 +3,7 @@ using PixelFlow.Data;
 using PixelFlow.Services;
 using System.Collections.Generic;
 using UnityEngine;
+using static PixelFlow.Editor.Tests.GameTestContext;
 
 namespace PixelFlow.Editor.Tests
 {
@@ -14,7 +15,7 @@ namespace PixelFlow.Editor.Tests
         [SetUp]
         public void SetUp()
         {
-            _solver = new RuntimePathSolver();
+            _solver = CreateTestRuntimePathSolver();
         }
 
         [Test]
@@ -117,8 +118,8 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void Solve_Deterministic_WithSameSeed()
         {
-            var solver1 = new RuntimePathSolver();
-            var solver2 = new RuntimePathSolver();
+            var solver1 = CreateTestRuntimePathSolver();
+            var solver2 = CreateTestRuntimePathSolver();
 
             var level = ScriptableObject.CreateInstance<LevelData>();
             level.width = 5;

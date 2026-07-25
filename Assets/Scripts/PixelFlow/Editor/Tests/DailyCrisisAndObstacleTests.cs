@@ -5,6 +5,8 @@ using PixelFlow.Services;
 using Nexus.Core.Services;
 using UnityEngine;
 
+using static PixelFlow.Editor.Tests.GameTestContext;
+
 namespace PixelFlow.Editor.Tests
 {
     [TestFixture]
@@ -32,7 +34,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void ProceduralLevelGenerator_GeneratesMultiCellObstacles()
         {
-            var solver = new RuntimePathSolver();
+            var solver = CreateTestRuntimePathSolver();
             var generator = new ProceduralLevelGenerator(solver, 42);
 
             var param = DifficultyParams.Phase3_Default;

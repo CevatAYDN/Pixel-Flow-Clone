@@ -69,6 +69,7 @@ namespace PixelFlow.Editor.Tests
         {
             using var ctx = GameTestContext.CreateGameContext();
             var prefs = ctx.GetModel<IPlayerPrefsService>();
+            var keys = ctx.Context.Container.Resolve<StorageKeysConfigAsset>();
 
             string id1 = CloudSaveManager.GetOrCreatePlayerId(prefs);
             Assert.IsFalse(string.IsNullOrEmpty(id1));
@@ -104,6 +105,7 @@ namespace PixelFlow.Editor.Tests
         {
             using var ctx = GameTestContext.CreateGameContext();
             var prefs = ctx.GetModel<IPlayerPrefsService>();
+            var keys = ctx.Context.Container.Resolve<StorageKeysConfigAsset>();
 
             CloudSaveManager.SyncToCloudAsync(prefs, "{\"score\":100}", 1).Wait();
 

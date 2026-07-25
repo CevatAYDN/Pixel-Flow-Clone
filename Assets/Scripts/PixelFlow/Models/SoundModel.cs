@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.Services;
+using PixelFlow.Data;
 
 namespace PixelFlow.Models
 {
@@ -23,17 +24,18 @@ namespace PixelFlow.Models
     /// </summary>
     public class SoundModel : ISoundModel, IReactiveModel
     {
-        private const string MuteKey = "IsMuted";
-
+        private StorageKeysConfigAsset _keys;
+        private string MuteKey => _keys.KeySoundMuted;
         private readonly IPlayerPrefsService _prefs;
 
         public bool IsMuted { get; private set; }
         public event Action<bool> OnMuteChanged;
         public event Action<int> OnPlayDrawSound;
 
-        public SoundModel(IPlayerPrefsService prefs)
+        public SoundModel(IPlayerPrefsService prefs, StorageKeysConfigAsset keys)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
+            _keys = keys ?? throw new DataValidationException("StorageKeysConfigAsset erişilemedi!");
             IsMuted = _prefs.GetBool(MuteKey, false);
         }
 

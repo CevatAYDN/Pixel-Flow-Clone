@@ -25,9 +25,8 @@ namespace PixelFlow.Editor.Tests
             {
                 builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
 
-                var testConfig = ScriptableObject.CreateInstance<GameConfig>();
-                testConfig.name = "GameConfig (Test)";
-                builder.BindInstance(testConfig);
+                builder.BindInstance(GameTestContext.CreateTestGameConfig());
+                builder.BindInstance(GameTestContext.CreateTestStorageKeysConfig());
 
                 builder.Bind<ILevelProgressionService, LevelProgressionService>();
                 builder.BindReactiveModel<IGridModel, GridModel>();
@@ -43,8 +42,8 @@ namespace PixelFlow.Editor.Tests
                 builder.BindService<IVehicleSimulator, VehicleSimulator>();
                 builder.BindService<INexusService, HapticService>();
                 builder.Bind<IHapticService, HapticService>();
-                builder.BindService<INexusService, LoggerService>();
-                builder.Bind<ILoggerService, LoggerService>();
+                var quietLogger = new LoggerService { IsEnabled = false };
+                builder.BindInstance<ILoggerService>(quietLogger);
                 builder.BindService<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
                 builder.BindService<ISaveThrottler, SaveThrottler>();
                 builder.Bind<IFeedbackService, FeedbackService>();

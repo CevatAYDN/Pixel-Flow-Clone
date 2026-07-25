@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.Services;
 using PixelFlow.Models;
-using PixelFlow.Signals;
 using PixelFlow.Data;
 using UnityEngine;
 
@@ -21,10 +20,15 @@ namespace PixelFlow.Services
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
         [Inject, OptionalInject] public GameConfig Config { get; set; }
+        [Inject, OptionalInject] public StorageKeysConfigAsset Keys { get; set; }
+        [Inject, OptionalInject] public ISkinCatalogService SkinCatalog { get; set; }
 
-        private const string LastLoginKey = "NT_DailyLogin_LastLogin";
-        private const string StreakKey = "NT_DailyLogin_Streak";
-        private const string VipSkinGrantedKey = "NT_DailyLogin_VipSkinGranted";
+        private string CoinCurrencyId => Keys?.CurrencyIdCoin;
+
+        private string LastLoginKey => Keys?.KeyDailyLogin_LastLogin;
+        private string StreakKey => Keys?.KeyDailyLogin_Streak;
+        private string VipSkinGrantedKey => Keys?.KeyDailyLogin_VipSkinGranted;
+        private string VipSkinId => Keys?.DailyLoginVipSkinId;
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
@@ -39,6 +43,7 @@ namespace PixelFlow.Services
         public void CheckDailyLogin()
         {
             if (PlayerPrefsService == null) return;
+            if (string.IsNullOrEmpty(LastLoginKey) || string.IsNullOrEmpty(StreakKey) || string.IsNullOrEmpty(VipSkinGrantedKey) || string.IsNullOrEmpty(VipSkinId)) throw new DataValidationException("DailyLoginStreakService requires configured storage keys.");
 
             string lastLoginStr = PlayerPrefsService.GetString(LastLoginKey, "");
             DateTime lastLogin;
@@ -87,9 +92,11 @@ namespace PixelFlow.Services
             int streakBonus = Mathf.Min(streakDay * 20, 500); // Max 500 bonus
             int totalCoins = baseCoins + streakBonus;
 
+            if (string.IsNullOrEmpty(CoinCurrencyId)) throw new DataValidationException("DailyLoginStreakService requires configured currency identifiers.");
+
             if (EconomyService != null)
             {
-                EconomyService.Earn("coin", totalCoins, $"daily_login:streak_{streakDay}");
+                EconomyService.Earn(CoinCurrencyId, totalCoins, $"daily_login:streak_{streakDay}");
             }
             else if (InventoryModel != null)
             {
@@ -101,12 +108,11 @@ namespace PixelFlow.Services
 
         private void GrantVipSkin()
         {
-            const string vipSkinId = "skin_vip_golden";
-            
-            // VIP Skin'i kilidi aç
-            var allSkins = Resources.LoadAll<VehicleSkinConfig>("Configs/Skins");
-            var vipSkin = Array.Find(allSkins, s => s.SkinId == vipSkinId);
-            
+            string vipSkinId = VipSkinId;
+            VehicleSkinConfig vipSkin = SkinCatalog != null
+                ? SkinCatalog.GetVehicleSkinById(vipSkinId)
+                : null;
+
             if (vipSkin != null)
             {
                 InventoryModel?.UnlockSkin(vipSkin.SkinId);

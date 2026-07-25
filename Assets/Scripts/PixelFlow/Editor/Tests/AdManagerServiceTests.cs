@@ -1,4 +1,6 @@
 using NUnit.Framework;
+using Nexus.Core.Services;
+using PixelFlow.Data;
 using PixelFlow.Services;
 using UnityEngine;
 
@@ -13,6 +15,9 @@ namespace PixelFlow.Editor.Tests
         public void SetUp()
         {
             _adManager = new AdManagerService();
+            _adManager.Keys = ScriptableObject.CreateInstance<StorageKeysConfigAsset>();
+            _adManager.Keys.CurrencyIdCoin = "coins";
+            _adManager.Keys.CurrencyIdGem = "gems";
         }
 
         [Test]
@@ -25,7 +30,7 @@ namespace PixelFlow.Editor.Tests
         public void ShowRewardedAd_TriggersCompletionCallback()
         {
             bool rewardGranted = false;
-            _adManager.ShowRewardedAd("2x_coins", success => rewardGranted = success);
+            _adManager.ShowRewardedAd("double_coins", success => rewardGranted = success);
 
             Assert.IsTrue(rewardGranted);
         }

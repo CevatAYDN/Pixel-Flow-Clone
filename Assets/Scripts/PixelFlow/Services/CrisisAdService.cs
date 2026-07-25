@@ -35,7 +35,7 @@ namespace PixelFlow.Services
         // game_plan.md §2.2: config zorunludur. Build'de erişilemezse DataValidationException;
         // editor/testte SO varsayılan instance'ı (cache'li — tekrar alloc yok).
         private Data.GameConfig _resolvedConfig;
-        private Data.GameConfig ResolvedConfig
+        protected Data.GameConfig ResolvedConfig
         {
             get
             {
@@ -53,7 +53,15 @@ namespace PixelFlow.Services
         private int ConfigMaxRetries => ResolvedConfig.MaxRetriesBeforeInterstitial;
         protected int ConfigMinLevel => ResolvedConfig.MinLevelForInterstitial;
 
-        public int RetryCount => GameSessionModel?.RetryCount ?? 0;
+        public int RetryCount
+        {
+            get
+            {
+                if (GameSessionModel == null)
+                    throw new Data.DataValidationException("CrisisAdService: GameSessionModel is not injected. RetryCount cannot be resolved.");
+                return GameSessionModel.RetryCount;
+            }
+        }
         public bool IsViaductExhausted => GameSessionModel != null && GameSessionModel.AvailableViaducts <= 0;
 
         public ValueTask InitializeAsync(CancellationToken ct) => default;

@@ -92,7 +92,9 @@ namespace PixelFlow.Editor.Tests
         {
             using var ctx = GameTestContext.CreateGameContext();
             var prefs = ctx.GetModel<IPlayerPrefsService>();
-            var sound = new SoundModel(prefs);
+            var keys = ScriptableObject.CreateInstance<StorageKeysConfigAsset>();
+            keys.KeySoundMuted = "SoundMuted";
+            var sound = new SoundModel(prefs, keys);
 
             bool initialMute = sound.IsMuted;
             sound.ToggleMute();
@@ -107,7 +109,9 @@ namespace PixelFlow.Editor.Tests
         {
             using var ctx = GameTestContext.CreateGameContext();
             var prefs = ctx.GetModel<IPlayerPrefsService>();
-            var tutorial = new TutorialModel(prefs);
+            var keys = ScriptableObject.CreateInstance<StorageKeysConfigAsset>();
+            keys.KeyTutorialStep = "TutorialStep";
+            var tutorial = new TutorialModel(prefs, keys);
 
             Assert.IsFalse(tutorial.IsActive);
 

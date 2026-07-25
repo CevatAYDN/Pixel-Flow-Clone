@@ -8,6 +8,7 @@ using PixelFlow.Services;
 using PixelFlow.Signals;
 using System.Collections.Generic;
 using UnityEngine;
+using static PixelFlow.Editor.Tests.GameTestContext;
 
 namespace PixelFlow.Editor.Tests
 {
@@ -23,9 +24,8 @@ namespace PixelFlow.Editor.Tests
             {
                 builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
 
-                var testConfig = ScriptableObject.CreateInstance<GameConfig>();
-                testConfig.name = "GameConfig (Test)";
-                builder.BindInstance(testConfig);
+                builder.BindInstance(GameTestContext.CreateTestGameConfig());
+                builder.BindInstance(GameTestContext.CreateTestStorageKeysConfig());
 
                 builder.Bind<IPathService, PathService>();
                 builder.Bind<IGameHistoryService, GameHistoryService>();
@@ -35,8 +35,8 @@ namespace PixelFlow.Editor.Tests
                 builder.BindService<ISaveThrottler, SaveThrottler>();
                 builder.BindService<INexusService, HapticService>();
                 builder.Bind<IHapticService, HapticService>();
-                builder.BindService<INexusService, LoggerService>();
-                builder.Bind<ILoggerService, LoggerService>();
+                var quietLogger = new LoggerService { IsEnabled = false };
+                builder.BindInstance<ILoggerService>(quietLogger);
                 builder.BindService<IObstacleService, ObstacleService>();
                 builder.BindService<ICrisisAdService, CrisisAdService>();
                 builder.BindService<ITutorialDriver, TutorialDriver>();
@@ -185,7 +185,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void ProceduralGenerator_SolutionFirst_AllPathsConnect()
         {
-            var solver = new RuntimePathSolver();
+            var solver = CreateTestRuntimePathSolver();
             var gen = new ProceduralLevelGenerator(solver, seed: 99);
             var param = new DifficultyParams(5, 5, 1, 0, false);
             var level = gen.Generate(param, maxAttempts: 30);
@@ -203,7 +203,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void ProceduralGenerator_WithBridges_GeneratesBridgeCount()
         {
-            var solver = new RuntimePathSolver();
+            var solver = CreateTestRuntimePathSolver();
             var gen = new ProceduralLevelGenerator(solver, seed: 7);
             var param = new DifficultyParams(7, 7, 3, 2, false, true);
             var level = gen.Generate(param, maxAttempts: 50);

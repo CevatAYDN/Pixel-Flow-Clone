@@ -35,27 +35,42 @@ namespace PixelFlow.Views
         private static bool _initialized;
         private static readonly List<GameObject> _recycleList = new List<GameObject>(128);
 
+        private static PixelFlow.Data.GameConfig _config;
+
+        /// <summary>
+        /// Bootstrap'ta GameContextLifecycle tarafından çağrılır.
+        /// Config null ise varsayılan değerler kullanılır.
+        /// </summary>
+        public static void SetConfig(PixelFlow.Data.GameConfig config)
+        {
+            _config = config;
+        }
+
         /// <summary>
         /// Ensures the pool is initialized with pre-allocated primitives.
         /// Safe to call multiple times — only allocates once.
         /// game_plan.md §2.2: Pool boyutları GameConfig'den gelir.
         /// </summary>
-        public static void Initialize(int preAllocCubes = 512, int preAllocCylinders = 256)
+        public static void Initialize(int? preAllocCubes = null, int? preAllocCylinders = null)
         {
             if (_initialized) return;
+
+            // Config-driven defaults
+            int cubes = preAllocCubes ?? (_config != null ? _config.VehiclePartPoolCubes : 512);
+            int cylinders = preAllocCylinders ?? (_config != null ? _config.VehiclePartPoolCylinders : 256);
             _initialized = true;
 
             var rootObj = new GameObject("[VehiclePartPool]");
             rootObj.hideFlags = HideFlags.DontSave;
             _poolRoot = rootObj.transform;
 
-            for (int i = 0; i < preAllocCubes; i++)
+            for (int i = 0; i < cubes; i++)
                 _cubes.Push(CreatePart(PrimitiveType.Cube));
 
-            for (int i = 0; i < preAllocCylinders; i++)
+            for (int i = 0; i < cylinders; i++)
                 _cylinders.Push(CreatePart(PrimitiveType.Cylinder));
 
-            Nexus.Core.Services.NexusLog.Info("VehiclePartPool", "Initialize", "?", "Initialized pool with " + preAllocCubes + " cubes and " + preAllocCylinders + " cylinders.");
+            Nexus.Core.Services.NexusLog.Info("VehiclePartPool", "Initialize", "?", "Initialized pool with " + cubes + " cubes and " + cylinders + " cylinders.");
         }
 
         private static GameObject CreatePart(PrimitiveType type)

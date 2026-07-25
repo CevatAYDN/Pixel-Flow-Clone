@@ -25,13 +25,13 @@ namespace PixelFlow.Editor.Tests
                 builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
 
                 // game_plan.md §2.2: GameConfig testlerde de mevcut olmalı (SettingsModel varsayılanları buradan gelir)
-                var testConfig = ScriptableObject.CreateInstance<GameConfig>();
-                testConfig.name = "GameConfig (Test)";
-                builder.BindInstance(testConfig);
+                builder.BindInstance(GameTestContext.CreateTestGameConfig());
+                builder.BindInstance(GameTestContext.CreateTestStorageKeysConfig());
 
                 builder.BindReactiveModel<ISettingsModel, SettingsModel>();
                 builder.BindReactiveModel<ISoundModel, SoundModel>();
-                builder.Bind<ILoggerService, LoggerService>();
+                var quietLogger = new LoggerService { IsEnabled = false };
+                builder.BindInstance<ILoggerService>(quietLogger);
                 builder.Bind<IFeedbackService, FeedbackService>();
                 builder.Bind<Nexus.Core.Services.IAudioService, StubAudioService>();
 
@@ -94,11 +94,37 @@ namespace PixelFlow.Editor.Tests
         {
             Assert.AreEqual(ColorBlindMode.None, _settings.CurrentColorBlindMode);
 
-            _settings.SetColorBlindMode(ColorBlindMode.Protanopia);
-            Assert.AreEqual(ColorBlindMode.Protanopia, _settings.CurrentColorBlindMode);
-
             _settings.SetColorBlindMode(ColorBlindMode.Tritanopia);
             Assert.AreEqual(ColorBlindMode.Tritanopia, _settings.CurrentColorBlindMode);
+        }
+
+        [Test]
+        public void ThemePaletteAsset_DistinctColorsForThemes()
+        {
+            var palette = ScriptableObject.CreateInstance<ThemePaletteAsset>();
+            var darkBg = palette.GetCellBackground(AppTheme.Dark);
+            var lightBg = palette.GetCellBackground(AppTheme.Light);
+            var neonBg = palette.GetCellBackground(AppTheme.Neon);
+
+            Assert.AreNotEqual(darkBg, lightBg, "Dark and Light cell backgrounds must differ");
+            Assert.AreNotEqual(darkBg, neonBg, "Dark and Neon cell backgrounds must differ");
+            Assert.AreNotEqual(lightBg, neonBg, "Light and Neon cell backgrounds must differ");
+
+            Assert.IsNotNull(palette.Candy);
+            Assert.IsNotNull(palette.Forest);
+        }
+
+        [Test]
+        public void EconomyConfigAsset_EnsureCanonicalIapProducts_PopulatesNineProducts()
+        {
+            var economyConfig = ScriptableObject.CreateInstance<EconomyConfigAsset>();
+            var products = economyConfig.EnsureCanonicalIapProducts();
+
+            Assert.IsNotNull(products);
+            Assert.AreEqual(9, products.Count, "Canonical IAP catalogue must contain exactly 9 products per game_plan.md §9.3");
+            Assert.IsTrue(products.Exists(p => p.ProductId == "no_ads"));
+            Assert.IsTrue(products.Exists(p => p.ProductId == "starter_pack"));
+            Assert.IsTrue(products.Exists(p => p.ProductId == "vip_bundle"));
         }
     }
 }

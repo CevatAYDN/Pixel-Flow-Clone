@@ -100,6 +100,7 @@ namespace Nexus.Core.Services
             }
         }
 
+#pragma warning disable CS0649
         [System.Serializable]
         private sealed class LocalizationTableWrapper
         {
@@ -113,5 +114,6 @@ namespace Nexus.Core.Services
             public string key;
             public string value;
         }
+#pragma warning restore CS0649
     }
 }

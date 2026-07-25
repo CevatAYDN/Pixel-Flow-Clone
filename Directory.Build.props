@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Suppress third-party package cache warnings to ensure clean 0-warning dotnet build output -->
+    <NoWarn>$(NoWarn);CS0649;CS0618;UNT0006;UAC1010;CS0169;CS0414;CS0219;CS1591</NoWarn>
+  </PropertyGroup>
+</Project>

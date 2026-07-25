@@ -189,16 +189,26 @@ namespace PixelFlow.Editor
             boot.nexusRoot = root;
             if (boot.initialLevel == null)
             {
-                RefreshLevelsCache();
-                if (_cachedLevels.Count == 0)
+                var levelGuids = AssetDatabase.FindAssets("t:LevelData");
+                var levels = levelGuids
+                    .Select(g => AssetDatabase.LoadAssetAtPath<LevelData>(AssetDatabase.GUIDToAssetPath(g)))
+                    .Where(l => l != null)
+                    .OrderBy(l => l.levelIndex)
+                    .ToList();
+                if (levels.Count == 0)
                 {
                     CreatePhase1And2HandCraftedPack();
-                    RefreshLevelsCache();
+                    levelGuids = AssetDatabase.FindAssets("t:LevelData");
+                    levels = levelGuids
+                        .Select(g => AssetDatabase.LoadAssetAtPath<LevelData>(AssetDatabase.GUIDToAssetPath(g)))
+                        .Where(l => l != null)
+                        .OrderBy(l => l.levelIndex)
+                        .ToList();
                 }
-                if (_cachedLevels.Count > 0)
+                if (levels.Count > 0)
                 {
                     Undo.RecordObject(boot, "Başlangıç Seviyesi Ata");
-                    boot.initialLevel = _cachedLevels[0];
+                    boot.initialLevel = levels[0];
                     EditorUtility.SetDirty(boot);
                 }
             }
@@ -1843,7 +1853,7 @@ namespace PixelFlow.Editor
 
         private void SetupGlobalVolume()
         {
-            var hasVolume = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            var hasVolume = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include)
                 .Any(go => go.name.Contains("Volume"));
             if (!hasVolume)
             {
@@ -1959,7 +1969,12 @@ namespace PixelFlow.Editor
         private void DuplicateLevel(int sourceIndex, int targetIndex)
         {
             // Kaynak seviyeyi bul
-            var source = _cachedLevels.FirstOrDefault(l => l != null && l.levelIndex == sourceIndex);
+            var allLevelGuids = AssetDatabase.FindAssets("t:LevelData");
+            var allLevels = allLevelGuids
+                .Select(g => AssetDatabase.LoadAssetAtPath<LevelData>(AssetDatabase.GUIDToAssetPath(g)))
+                .Where(l => l != null)
+                .ToList();
+            var source = allLevels.FirstOrDefault(l => l.levelIndex == sourceIndex);
             if (source == null)
             {
                 Debug.LogWarning($"[PixelFlow] Duplicate: Source level {sourceIndex} bulunamadı!");
@@ -2004,7 +2019,7 @@ namespace PixelFlow.Editor
                 DuplicateLevel(sourceIndex, startTargetIndex + i);
             }
             AssetDatabase.SaveAssets();
-            RefreshData();
+            AssetDatabase.Refresh();
             Debug.Log($"[PixelFlow] Batch duplicate: Level {sourceIndex} → {startTargetIndex}-{startTargetIndex + count - 1} ({count} adet)");
         }
     }

@@ -37,20 +37,10 @@ namespace PixelFlow.Services
         [Inject] public ISaveThrottler SaveThrottler { get; set; }
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
-        [Inject, OptionalInject] public EconomyConfigAsset EconomyConfig { get; set; }
+        [Inject] public EconomyConfigAsset EconomyConfig { get; set; }
 
         public ValueTask InitializeAsync(CancellationToken ct) => default;
         public void OnDispose() { }
-
-        // game_plan.md §2.2: config zorunludur. Build'de erişilemezse DataValidationException;
-        // EconomyConfig is now required via GameContextLifecycle binding
-        private EconomyConfigAsset _resolvedEconomyConfig;
-        private EconomyConfigAsset ResolveEconomyConfig()
-        {
-            if (EconomyConfig != null) return EconomyConfig;
-            if (_resolvedEconomyConfig != null) return _resolvedEconomyConfig;
-            throw new DataValidationException("EconomyConfigAsset erişilemedi! LevelLoaderService viyadük bonusu hesaplanamıyor. GameContextLifecycle'da EconomyConfig yüklü olmalı.");
-        }
 
         public void LoadLevel(LoadLevelSignal signal)
         {
@@ -161,7 +151,8 @@ namespace PixelFlow.Services
 
             // Session setup with viaduct bonus (GDD §9 — EconomyConfigAsset)
             // game_plan.md §2.2 (Zero-Silent-Fallback): viyadük bonusu EconomyConfig'ten gelir.
-            int viaductBonus = ResolveEconomyConfig().CalculateViaductBonus(ld.levelIndex);
+            int viaductBonus = (EconomyConfig ?? throw new DataValidationException("EconomyConfigAsset inject edilmedi! Build'de yoksa DataValidationException fırlatılır."))
+                .CalculateViaductBonus(ld.levelIndex);
             int totalViaducts = ld.viaductLimit + viaductBonus;
             LoggerService?.Log($"[PixelFlow.LevelLoaderService] Starting session: levelIndex={ld.levelIndex}, viaducts={totalViaducts} (base: {ld.viaductLimit}, bonus: {viaductBonus}), targetFlowScore={ld.flowScoreThreshold}");
             GameSessionModel.StartSession(ld.levelIndex, totalViaducts, ld.flowScoreThreshold, true);

@@ -13,6 +13,17 @@ namespace PixelFlow
 {
     public class GameContextLifecycle : MonoBehaviour, IContextLifecycle
     {
+        [Header("Bootstrap Config Assets")]
+        [SerializeField] private GameConfig gameConfig;
+        [SerializeField] private StorageKeysConfigAsset storageKeysConfig;
+        [SerializeField] private ThemePaletteAsset themePalette;
+        [SerializeField] private ColorBlindPaletteAsset colorBlindPalette;
+        [SerializeField] private VehicleMaterialConfigAsset vehicleMaterialConfig;
+        [SerializeField] private VehicleVisualConfigAsset vehicleVisualConfig;
+        [SerializeField] private EconomyConfigAsset economyConfig;
+        [SerializeField] private LevelCatalogAsset levelCatalog;
+        [SerializeField] private PhaseConfigAsset phaseConfig;
+
         public void OnConfigure(IContextBuilder builder)
         {
             NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] OnConfigure: Initializing framework dependency injection bindings...");
@@ -122,69 +133,77 @@ namespace PixelFlow
             builder.BindSignal<PixelFlow.Signals.FlowScoreUpdatedSignal>();
             builder.BindSignal<PixelFlow.Signals.ProgressUpdatedSignal>();
 
-            // GameConfig ScriptableObject — Resources'tan yüklenir (game_plan.md §2.2: Zero Silent Fallback Policy)
-            var config = UnityEngine.Resources.Load<GameConfig>("Configs/GameConfig");
-            if (config == null)
+            if (gameConfig == null)
             {
-                throw new DataValidationException("Resources/Configs/GameConfig.asset bulunamadı! Lütfen 'Pixel Flow Kontrol Merkezi' > 'Data Yöneticisi' sekmesinden oluşturun.");
+                throw new DataValidationException("GameConfig referansı GameContextLifecycle üzerinde atanmadı. Lütfen Bootstrap Config Assets alanlarını doldurun.");
             }
-            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] Configs/GameConfig asset loaded successfully.");
-            builder.BindInstance(config);
+            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] GameConfig reference bound successfully.");
+            builder.BindInstance(gameConfig);
+
+            // VehiclePartPool'u config ile başlat (pool boyutları data-driven)
+            Views.VehiclePartPool.SetConfig(gameConfig);
+
+            // StorageKeysConfigAsset — zero-hardcode PlayerPrefs anahtarları
+            if (storageKeysConfig == null)
+            {
+                throw new DataValidationException("StorageKeysConfig referansı GameContextLifecycle üzerinde atanmadı. Lütfen Bootstrap Config Assets alanlarını doldurun.");
+            }
+            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] StorageKeysConfig reference bound successfully.");
+            builder.BindInstance(storageKeysConfig);
 
             // ThemePaletteAsset
-            var palette = UnityEngine.Resources.Load<ThemePaletteAsset>("Configs/ThemePalette");
-            if (palette == null)
+            if (themePalette == null)
             {
-                throw new DataValidationException("Resources/Configs/ThemePalette.asset bulunamadı! Lütfen 'Pixel Flow Kontrol Merkezi' > 'Data Yöneticisi' sekmesinden oluşturun.");
+                throw new DataValidationException("ThemePalette referansı GameContextLifecycle üzerinde atanmadı. Lütfen Bootstrap Config Assets alanlarını doldurun.");
             }
-            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] Configs/ThemePalette asset loaded successfully.");
-            builder.BindInstance(palette);
+            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] ThemePalette reference bound successfully.");
+            builder.BindInstance(themePalette);
 
             // ColorBlindPaletteAsset — GDD §11.1: Renk körlüğü paleti
-            var colorBlindPalette = UnityEngine.Resources.Load<ColorBlindPaletteAsset>("Configs/ColorBlindPalette");
             if (colorBlindPalette == null)
             {
-                throw new DataValidationException("Resources/Configs/ColorBlindPalette.asset bulunamadı! Lütfen 'Pixel Flow Kontrol Merkezi' > 'Data Yöneticisi' sekmesinden oluşturun.");
+                throw new DataValidationException("ColorBlindPalette referansı GameContextLifecycle üzerinde atanmadı. Lütfen Bootstrap Config Assets alanlarını doldurun.");
             }
-            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] Configs/ColorBlindPalette asset loaded successfully.");
+            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] ColorBlindPalette reference bound successfully.");
             builder.BindInstance(colorBlindPalette);
             Models.ColorBlindPalette.Initialize(colorBlindPalette);
 
             // VehicleMaterialConfigAsset — araç görsel malzeme renkleri
-            var vehicleMatConfig = UnityEngine.Resources.Load<VehicleMaterialConfigAsset>("Configs/VehicleMaterialConfig");
-            if (vehicleMatConfig == null)
+            if (vehicleMaterialConfig == null)
             {
-                throw new DataValidationException("Resources/Configs/VehicleMaterialConfig.asset bulunamadı! Lütfen 'Pixel Flow Kontrol Merkezi' > 'Data Yöneticisi' sekmesinden oluşturun.");
+                throw new DataValidationException("VehicleMaterialConfig referansı GameContextLifecycle üzerinde atanmadı. Lütfen Bootstrap Config Assets alanlarını doldurun.");
             }
-            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] Configs/VehicleMaterialConfig asset loaded successfully.");
-            builder.BindInstance(vehicleMatConfig);
-            Views.VehicleVisualFactory.Initialize(vehicleMatConfig);
+            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] VehicleMaterialConfig reference bound successfully.");
+            builder.BindInstance(vehicleMaterialConfig);
+            // VehicleVisualConfigAsset — araç görsel parametreleri (config-driven)
+            if (vehicleVisualConfig == null)
+            {
+                throw new DataValidationException("VehicleVisualConfig referansı GameContextLifecycle üzerinde atanmadı. Lütfen Bootstrap Config Assets alanlarını doldurun.");
+            }
+            Views.VehicleVisualFactory.Initialize(vehicleMaterialConfig, vehicleVisualConfig);
 
             // EconomyConfigAsset — GDD §9: Ekonomi/balance konfigürasyonu
-            var economyConfig = UnityEngine.Resources.Load<EconomyConfigAsset>("Configs/EconomyConfig");
             if (economyConfig == null)
             {
-                throw new DataValidationException("Resources/Configs/EconomyConfig.asset bulunamadı! Lütfen 'Pixel Flow Kontrol Merkezi' > 'Data Yöneticisi' sekmesinden oluşturun.");
+                throw new DataValidationException("EconomyConfig referansı GameContextLifecycle üzerinde atanmadı. Lütfen Bootstrap Config Assets alanlarını doldurun.");
             }
-            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] Configs/EconomyConfig asset loaded successfully.");
+            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] EconomyConfig reference bound successfully.");
             builder.BindInstance(economyConfig);
 
             // LevelCatalogAsset — GDD §3.6: Merkezi level kataloğu
-            var levelCatalog = UnityEngine.Resources.Load<LevelCatalogAsset>("Configs/LevelCatalog");
             if (levelCatalog == null)
             {
-                throw new DataValidationException("Resources/Configs/LevelCatalog.asset bulunamadı! Lütfen 'Pixel Flow Kontrol Merkezi' > 'Data Yöneticisi' sekmesinden oluşturun.");
+                throw new DataValidationException("LevelCatalog referansı GameContextLifecycle üzerinde atanmadı. Lütfen Bootstrap Config Assets alanlarını doldurun.");
             }
-            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] Configs/LevelCatalog asset loaded successfully.");
+            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] LevelCatalog reference bound successfully.");
             builder.BindInstance(levelCatalog);
 
             // PhaseConfigAsset — phase configuration
-            var phaseConfig = UnityEngine.Resources.Load<PhaseConfigAsset>("Configs/PhaseConfig");
             if (phaseConfig == null)
             {
-                throw new DataValidationException("Resources/Configs/PhaseConfig.asset bulunamadı! Lütfen 'Pixel Flow Kontrol Merkezi' > 'Data Yöneticisi' sekmesinden oluşturun.");
+                throw new DataValidationException("PhaseConfig referansı GameContextLifecycle üzerinde atanmadı. Lütfen Bootstrap Config Assets alanlarını doldurun.");
             }
-            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] Configs/PhaseConfig asset loaded successfully.");
+            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] PhaseConfig reference bound successfully.");
             builder.BindInstance(phaseConfig);
             
             }

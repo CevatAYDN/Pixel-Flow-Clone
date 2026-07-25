@@ -1,5 +1,4 @@
 using UnityEngine;
-using Nexus.Core;
 using PixelFlow.Models;
 using PixelFlow.Services;
 
@@ -68,6 +67,16 @@ namespace PixelFlow.Data
 
         [Tooltip("Kaç seviyede bir Interstitial reklam gösterileceği (baraj)")]
         public int InterstitialLevelInterval = 3;
+
+        [Header("=== Remote Config (game_plan.md §13.2) ===")]
+        [Tooltip("RemoteConfig: İlk reklamın gösterileceği seviye (1-indexed)")]
+        public int FirstAdLevel = 5;
+
+        [Tooltip("RemoteConfig: Level başına rewarded undo limiti")]
+        public int RewardedUndoLimit = 3;
+
+        [Tooltip("RemoteConfig: Interstitial reklam sıklığı (her N seviyede bir)")]
+        public int InterstitialFrequency = 3;
 
         [Tooltip("Rewarded Ad izlenince kazanılan altın miktarı")]
         public int RewardedAdCoinReward = 100;

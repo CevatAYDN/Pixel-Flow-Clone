@@ -7,6 +7,7 @@ using PixelFlow.Signals;
 using UnityEngine;
 using UnityEngine.TestTools;
 using static PixelFlow.Editor.Tests.GameTestContext;
+using PixelFlow.Commands;
 
 namespace PixelFlow.Editor.Tests
 {

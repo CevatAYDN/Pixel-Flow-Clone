@@ -3,6 +3,7 @@ using Nexus.Core.Services;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Data;
+using PixelFlow.Services;
 using UnityEngine;
 
 namespace PixelFlow.Commands
@@ -14,6 +15,8 @@ namespace PixelFlow.Commands
         [Inject] public ILoggerService Logger { get; set; }
         [Inject] public IFeedbackService FeedbackService { get; set; }
         [Inject, OptionalInject] public GameConfig Config { get; set; }
+        [Inject, OptionalInject] public ISkinCatalogService SkinCatalog { get; set; }
+        [Inject, OptionalInject] public PixelFlow.Data.StorageKeysConfigAsset Keys { get; set; }
 
         public void Execute(SkinUnlockedSignal signal)
         {
@@ -38,8 +41,14 @@ namespace PixelFlow.Commands
                 return;
             }
 
-            const string coinCurrencyId = "coin";
-            
+            if (string.IsNullOrEmpty(Keys?.CurrencyIdCoin))
+            {
+                Logger?.LogError("[PixelFlow.SkinUnlockCommand] CurrencyIdCoin is not configured.");
+                FeedbackService?.Play(FeedbackPreset.ErrorFailure);
+                return;
+            }
+            string coinCurrencyId = Keys.CurrencyIdCoin;
+
             if (EconomyService != null)
             {
                 if (!EconomyService.CanAfford(coinCurrencyId, skinConfig.UnlockCoinCost))
@@ -81,14 +90,12 @@ namespace PixelFlow.Commands
 
         private VehicleSkinConfig GetSkinConfig(string skinId)
         {
-            // Try to load from Resources first (for editor/runtime)
-            var allSkins = Resources.LoadAll<VehicleSkinConfig>("Configs/Skins");
-            foreach (var skin in allSkins)
+            if (SkinCatalog == null)
             {
-                if (skin.SkinId == skinId)
-                    return skin;
+                Logger?.LogError("[SkinUnlockCommand] ISkinCatalogService not injected — skin lookup failed.");
+                return null;
             }
-            return null;
+            return SkinCatalog.GetVehicleSkinById(skinId);
         }
 
         public void Reset()

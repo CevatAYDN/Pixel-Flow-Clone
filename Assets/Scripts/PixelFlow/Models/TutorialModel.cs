@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.Services;
+using PixelFlow.Data;
 
 namespace PixelFlow.Models
 {
@@ -41,7 +42,8 @@ namespace PixelFlow.Models
     /// </summary>
     public class TutorialModel : ITutorialModel, IReactiveModel
     {
-        private const string PrefKeyCompletedSteps = "NT_TutorialCompleted";
+        private StorageKeysConfigAsset _keys;
+        private string PrefKeyCompletedSteps => _keys.KeyTutorialStep;
         private readonly IPlayerPrefsService _prefs;
         private long _completedStepsMask; // long (64-bit) for TutorialStep values up to 35
 
@@ -50,9 +52,10 @@ namespace PixelFlow.Models
         public event Action<TutorialStep> OnStepStarted;
         public event Action<TutorialStep> OnStepCompleted;
 
-        public TutorialModel(IPlayerPrefsService prefs)
+        public TutorialModel(IPlayerPrefsService prefs, StorageKeysConfigAsset keys)
         {
             _prefs = prefs ?? throw new ArgumentNullException(nameof(prefs));
+            _keys = keys ?? throw new DataValidationException("StorageKeysConfigAsset erişilemedi!");
             _completedStepsMask = _prefs.GetLong(PrefKeyCompletedSteps, 0L);
         }
 

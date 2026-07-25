@@ -22,6 +22,9 @@ namespace PixelFlow.Commands
         [Inject] public IInventoryModel InventoryModel { get; set; }
         [Inject, OptionalInject] public IRushHourEventService RushHourEventService { get; set; }
         [Inject, OptionalInject] public GameConfig Config { get; set; }
+        [Inject, OptionalInject] public StorageKeysConfigAsset Keys { get; set; }
+
+        private string CoinCurrencyId => Keys?.CurrencyIdCoin;
 
         public void Execute(LevelCompletedSignal signal)
         {
@@ -51,11 +54,12 @@ namespace PixelFlow.Commands
 
             // Coin ödülü: flow score başına coin + seviye tamamlama bonusu (Rush Hour 2x çarpanı destekli)
             var cfg = ResolveConfig();
+            if (string.IsNullOrEmpty(CoinCurrencyId)) throw new DataValidationException("SaveProgressCommand requires configured currency identifiers.");
             int coinPerFlow = cfg.CoinPerFlowScore;
             int levelBonus = cfg.LevelCompleteCoinBonus;
             float rushMultiplier = RushHourEventService != null && RushHourEventService.IsEventActive ? RushHourEventService.CoinMultiplier : 1.0f;
             int totalCoins = Mathf.RoundToInt(((GameSessionModel.CurrentFlowScore * coinPerFlow) + levelBonus) * rushMultiplier);
-            EconomyService?.Earn("coins", totalCoins, "level_complete");
+            EconomyService?.Earn(CoinCurrencyId, totalCoins, "level_complete");
             LoggerService?.Log($"[SaveProgressCommand] Awarded {totalCoins} coins (base: {(GameSessionModel.CurrentFlowScore * coinPerFlow) + levelBonus}, RushHour 2x={RushHourEventService?.IsEventActive}).");
 
             // Gem ödülü: game_plan.md §9.1 — 3 yıldızlı seviye tamamlamada sert para kazanılır.

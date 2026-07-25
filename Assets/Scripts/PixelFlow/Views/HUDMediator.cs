@@ -1,6 +1,5 @@
 using Nexus.Core;
 using Nexus.Core.Services;
-using PixelFlow.Commands;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Data;
@@ -52,6 +51,9 @@ namespace PixelFlow.Views
             View.OnRainbowRoadClicked += HandleRainbowRoadClicked;
             View.OnClearJamClicked += HandleClearJamClicked;
             View.OnViaductClicked += HandleViaductClicked;
+
+            if (LocalizationService == null)
+                throw new DataValidationException("HUDMediator: ILocalizationService must be injected. All UI texts depend on it.");
 
             HintModel.OnHintCountChanged += HandleHintCountChanged;
             GameSessionModel.OnScoreChanged += HandleScoreChanged;
@@ -190,11 +192,11 @@ namespace PixelFlow.Views
         {
             _lastCrashPosition = signal.Position;
             
-            string title = LocalizationService?.GetString("crisis_title") ?? "TRAFİK KRİZİ!";
-            string desc = LocalizationService?.GetString("crisis_desc") ?? "Çarpışmayı çözmek için viyadük yerleştirin!";
-            string format = LocalizationService?.GetString("crisis_viaducts_format") ?? "Kalan Viyadük: {0}";
-            string viaductBtn = LocalizationService?.GetString("crisis_viaduct_btn") ?? "Viyadük Kullan";
-            string undoBtn = LocalizationService?.GetString("crisis_undo_btn") ?? "Geri Al / Vazgeç";
+            string title = LocalizationService.GetString("crisis_title");
+            string desc = LocalizationService.GetString("crisis_desc");
+            string format = LocalizationService.GetString("crisis_viaducts_format");
+            string viaductBtn = LocalizationService.GetString("crisis_viaduct_btn");
+            string undoBtn = LocalizationService.GetString("crisis_undo_btn");
 
             View.ShowCrisis(GameSessionModel.AvailableViaducts, title, desc, format, viaductBtn, undoBtn);
         }
@@ -203,13 +205,13 @@ namespace PixelFlow.Views
         {
             LoggerService?.Log($"[HUDMediator] Intersection warning at {signal.Position} — viaduct may be needed.");
             // b2: game_plan §15.4.2 Layer A — sürtünmesiz uyarı. Oyun durmaz, kısa toast gösterilir.
-            string msg = LocalizationService?.GetString("crash_toast_msg") ?? "Araçlar Zıpladı! Parmağınla Yolu Düzelt";
+            string msg = LocalizationService.GetString("crash_toast_msg");
             View.ShowCrashToast(msg);
         }
 
         private void HandleSimulationTimerChanged(float remaining)
         {
-            string format = LocalizationService?.GetString("hud_simulation_timer_format") ?? "Simülasyon: {0:F1}s";
+            string format = LocalizationService.GetString("hud_simulation_timer_format");
             View.UpdateSimulationTimer(remaining, format);
         }
 
@@ -219,7 +221,7 @@ namespace PixelFlow.Views
             View.UpdateViaductCount(count);
             if (count <= 0)
             {
-                string msg = LocalizationService?.GetString("crisis_exhausted_msg") ?? "Viyadük hakkınız bitti!";
+                string msg = LocalizationService.GetString("crisis_exhausted_msg");
                 View.ShowViaductLimitReached(msg);
             }
         }
@@ -228,7 +230,7 @@ namespace PixelFlow.Views
         // buton, oyuncuya nasıl kullanacağını hatırlatan yönlendirici toast açar.
         private void HandleViaductClicked()
         {
-            string msg = LocalizationService?.GetString("viaduct_hint_msg") ?? "Kesişen yollara dokunarak viyadük yerleştir";
+            string msg = LocalizationService.GetString("viaduct_hint_msg");
             View.ShowCrashToast(msg);
         }
 
@@ -325,21 +327,13 @@ namespace PixelFlow.Views
 
         private void UpdateHintCountText(int count)
         {
-            string format = LocalizationService?.GetString("hud_hint_count_format");
-            if (string.IsNullOrEmpty(format) || !format.Contains("{0}") || format == "hud_hint_count_format")
-            {
-                format = "TEMİZLE ({0})";
-            }
+            string format = LocalizationService.GetString("hud_hint_count_format");
             View.UpdateHintCount(count, format);
         }
 
         private void UpdateScoreText(int score)
         {
-            string format = LocalizationService?.GetString("hud_score_format");
-            if (string.IsNullOrEmpty(format) || !format.Contains("{0}") || format == "hud_score_format")
-            {
-                format = "SKOR: {0:N0}";
-            }
+            string format = LocalizationService.GetString("hud_score_format");
             View.UpdateScore(score, format);
         }
 
@@ -360,9 +354,9 @@ namespace PixelFlow.Views
             if (!Application.isPlaying) return;
             if (View == null || GameSessionModel == null) return;
 
-            string title = LocalizationService?.GetString("level_completed_title") ?? "Tebrikler! Seviye Tamamlandı!";
-            string scoreFormat = LocalizationService?.GetString("level_completed_score_format") ?? "Skor: {0}";
-            string starsLabel = LocalizationService?.GetString("level_completed_stars_label") ?? "Yıldız";
+            string title = LocalizationService.GetString("level_completed_title");
+            string scoreFormat = LocalizationService.GetString("level_completed_score_format");
+            string starsLabel = LocalizationService.GetString("level_completed_stars_label");
 
             View.ShowCompletion(GameSessionModel.Score, GameSessionModel.StarsEarned, title, scoreFormat, starsLabel);
 
@@ -405,11 +399,7 @@ namespace PixelFlow.Views
         {
             var currentLevel = LevelModel?.CurrentLevel;
             int levelNumber = currentLevel != null ? currentLevel.levelIndex + 1 : 1;
-            string format = LocalizationService?.GetString("hud_level_title_format");
-            if (string.IsNullOrEmpty(format) || !format.Contains("{0}") || format == "hud_level_title_format")
-            {
-                format = "SEVİYE {0}";
-            }
+            string format = LocalizationService.GetString("hud_level_title_format");
             View?.UpdateLevelTitle(levelNumber, format);
         }
 
@@ -485,10 +475,10 @@ namespace PixelFlow.Views
 
             LoggerService?.Log($"[PixelFlow.HUDMediator] Level failed popup displayed! Reason: {signal.Reason}");
 
-            string title = LocalizationService?.GetString("level_failed_title") ?? "Seviye Başarısız!";
-            string retryLabel = LocalizationService?.GetString("level_failed_retry") ?? "Tekrar Dene";
-            string hubLabel = LocalizationService?.GetString("level_failed_hub") ?? "Hub'a Dön";
-            string scoreFormat = LocalizationService?.GetString("level_failed_score_format") ?? "Retry: {0}/3";
+            string title = LocalizationService.GetString("level_failed_title");
+            string retryLabel = LocalizationService.GetString("level_failed_retry");
+            string hubLabel = LocalizationService.GetString("level_failed_hub");
+            string scoreFormat = LocalizationService.GetString("level_failed_score_format");
 
             View.ShowLevelFailed($"{title} ({signal.Reason})", scoreFormat, retryLabel, hubLabel);
         }

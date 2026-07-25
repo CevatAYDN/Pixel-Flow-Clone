@@ -2,6 +2,7 @@ using NUnit.Framework;
 using PixelFlow.Data;
 using PixelFlow.Services;
 using UnityEngine;
+using static PixelFlow.Editor.Tests.GameTestContext;
 
 namespace PixelFlow.Editor.Tests
 {
@@ -11,7 +12,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void ProceduralLevelGenerator_Generate_ProducesSolvableLevel()
         {
-            var solver = new RuntimePathSolver();
+            var solver = CreateTestRuntimePathSolver();
             var generator = new ProceduralLevelGenerator(solver, seed: 12345);
 
             var diffParams = new DifficultyParams

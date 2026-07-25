@@ -596,6 +596,8 @@ public interface ISignalBus
 }
 
 // ─── GAME STATE MACHINE ───
+// PixelFlow GameState enum: Boot, Loading, MainMenu, Playing, Simulating, Paused, LevelCompleted, LevelFailed, LevelSelect
+// Transition Whitelist: (MainMenu ↔ LevelSelect), (LevelSelect → Playing), (Boot ↔ Loading ↔ MainMenu ↔ Playing ↔ Simulating ↔ Paused/Completed/Failed)
 public interface IGameState
 {
     ValueTask OnEnterAsync(object args, CancellationToken ct);
@@ -611,7 +613,7 @@ public interface IGameStateMachine
 }
 ```
 
-> **⚠️ Kod gerçeği (AI-Ready Not):** Yukarıdaki `IGameState` / `IGameStateMachine` arayüzleri Nexus Core'un sunduğu **soyut, opsiyonel** durum-makinesi API'sidir. **PixelFlow bu API'yi KULLANMAZ.** Gerçek oyun, hafif bir `enum GameState` + reaktif `IGameStateModel` (`GameStateModel.SetState(GameState)`) + geçiş beyaz-listesi (transition whitelist) deseniyle çalışır. Durum akışı ve izinli geçişler için tek doğru kaynak **§15.2.2 GameState Machine (Kesin Tanım)** bölümüdür. Yeni durum eklerken `ChangeStateAsync<TState>` değil, `IGameStateModel.SetState()` + geçiş tablosu güncellenir.
+> **⚠️ Kod gerçeği (AI-Ready Not):** Yukarıdaki `IGameState` / `IGameStateMachine` arayüzleri Nexus Core'un sunduğu **soyut, opsiyonel** durum-makinesi API'sidir. **PixelFlow bu API'yi KULLANMAZ.** Gerçek oyun, hafif bir `enum GameState` (`Boot, Loading, MainMenu, Playing, Simulating, Paused, LevelCompleted, LevelFailed, LevelSelect`) + reaktif `IGameStateModel` (`GameStateModel.SetState(GameState)`) + geçiş beyaz-listesi (transition whitelist) deseniyle çalışır. Durum akışı ve izinli geçişler için tek doğru kaynak **§15.2.2 GameState Machine (Kesin Tanım)** bölümüdür (`MainMenu ↔ LevelSelect`, `LevelSelect → Playing`). Yeni durum eklerken `ChangeStateAsync<TState>` değil, `IGameStateModel.SetState()` + geçiş tablosu güncellenir.
 
 #### 15.1.2 DI Registration Kuralları (IContextBuilder)
 

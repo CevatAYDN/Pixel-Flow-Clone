@@ -23,24 +23,28 @@ namespace PixelFlow.Models
     /// </summary>
     public class ProgressModel : IProgressModel, IReactiveModel
     {
-        private const string Key = "UnlockedLevels";
+        private StorageKeysConfigAsset _keys;
+        private string Key => _keys.KeyUnlockedLevels;
+        private string StarsKeyPrefix => _keys.KeyUnlockedLevels + "_Stars_";
 
         private readonly IPlayerPrefsService _prefs;
 
         public int UnlockedLevels { get; private set; }
 
         [Inject]
-        public ProgressModel(IPlayerPrefsService prefs, GameConfig config)
+        public ProgressModel(IPlayerPrefsService prefs, GameConfig config, StorageKeysConfigAsset keys)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
+            _keys = keys ?? throw new DataValidationException("StorageKeysConfigAsset erişilemedi!");
             int defaultUnlocked = config != null ? config.DefaultUnlockedLevels : throw new DataValidationException("GameConfig.DefaultUnlockedLevels erişilemedi!");
             UnlockedLevels = _prefs.GetInt(Key, defaultUnlocked);
         }
 
         // Test amaçlı constructor (config olmadan)
-        internal ProgressModel(IPlayerPrefsService prefs, int defaultUnlocked)
+        internal ProgressModel(IPlayerPrefsService prefs, int defaultUnlocked, StorageKeysConfigAsset keys = null)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
+            _keys = keys ?? throw new DataValidationException("StorageKeysConfigAsset erişilemedi!");
             UnlockedLevels = _prefs.GetInt(Key, defaultUnlocked);
         }
 
@@ -57,7 +61,7 @@ namespace PixelFlow.Models
         }
 
         // Seviye başına yıldız kalıcılığı (settings-levels.html ⭐ göstergesi için).
-        private static string StarsKey(int levelIndex) => $"LevelStars_{levelIndex}";
+        private string StarsKey(int levelIndex) => $"{StarsKeyPrefix}{levelIndex}";
 
         public int GetStars(int levelIndex)
         {

@@ -40,13 +40,15 @@ namespace PixelFlow.Models
     /// </summary>
     public class SettingsModel : ISettingsModel, IReactiveModel
     {
-        private const string KeyTheme = "AppTheme";
-        private const string KeyColorBlind = "ColorBlindMode";
-        private const string KeyVehicleStyle = "VehicleStyle";
-        private const string KeyMasterVol = "MasterVolume";
-        private const string KeySfxVol = "SfxVolume";
-        private const string KeyMusicVol = "MusicVolume";
-        private const string KeyHaptics = "HapticsDisabled";
+        private StorageKeysConfigAsset _keys;
+
+        private string KeyTheme => _keys.KeyTheme;
+        private string KeyColorBlind => _keys.KeyColorBlind;
+        private string KeyVehicleStyle => _keys.KeyVehicleStyle;
+        private string KeyMasterVol => _keys.KeyMasterVol;
+        private string KeySfxVol => _keys.KeySfxVol;
+        private string KeyMusicVol => _keys.KeyMusicVol;
+        private string KeyHaptics => _keys.KeyHaptics;
 
         private readonly IPlayerPrefsService _prefs;
 
@@ -64,10 +66,11 @@ namespace PixelFlow.Models
         public event Action<bool> OnHapticsDisabledChanged;
 
         [Inject]
-        public SettingsModel(IPlayerPrefsService prefs, GameConfig config)
+        public SettingsModel(IPlayerPrefsService prefs, GameConfig config, StorageKeysConfigAsset keys)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
             if (config == null) throw new DataValidationException("GameConfig erişilemedi! SettingsModel varsayılanları yüklenemiyor.");
+            _keys = keys ?? throw new DataValidationException("StorageKeysConfigAsset erişilemedi! (game_plan.md §2.2 Zero-Hardcode ihlalini önlemek için zorunlu.)");
 
             int raw = _prefs.GetInt(KeyTheme, (int)config.DefaultTheme);
             CurrentTheme = IsValidTheme(raw) ? (AppTheme)raw : config.DefaultTheme;

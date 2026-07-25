@@ -4,7 +4,7 @@ using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 using PixelFlow.Data;
-using System.IO;
+using System.Reflection;
 
 namespace PixelFlow.Editor
 {
@@ -23,6 +23,22 @@ namespace PixelFlow.Editor
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
 
+        private static bool IsRunningTests()
+        {
+            if (Application.isBatchMode) return true;
+            string stackTrace = System.Environment.StackTrace;
+            if (stackTrace.Contains("TestRunner") || stackTrace.Contains("NUnit") || stackTrace.Contains("UnitTestRunner"))
+            {
+                return true;
+            }
+            string cmd = System.Environment.CommandLine;
+            if (cmd.Contains("-runTests") || cmd.Contains("-testPlatform"))
+            {
+                return true;
+            }
+            return false;
+        }
+
         private static void OnPlayModeStateChanged(PlayModeStateChange state)
         {
             if (state == PlayModeStateChange.ExitingEditMode)
@@ -31,7 +47,7 @@ namespace PixelFlow.Editor
                 {
                     EditorApplication.isPlaying = false;
                     Debug.LogError($"[Zero-Hardcode Validator] Play Mode Engellendi! Nedeni: {errorMessage}");
-                    if (!Application.isBatchMode)
+                    if (!Application.isBatchMode && !IsRunningTests())
                     {
                         EditorUtility.DisplayDialog("Veri Doğrulama Hatası", $"Play Mode başlatılamadı:\n\n{errorMessage}", "Tamam");
                     }
@@ -53,7 +69,6 @@ namespace PixelFlow.Editor
             var gameConfig = Resources.Load<GameConfig>("Configs/GameConfig");
             if (gameConfig == null)
             {
-                // Fallback yok: GameConfig Resources klasöründe bulunmak zorunda!
                 errorMessage = "Resources/Configs/GameConfig.asset bulunamadı! Lütfen 'Pixel Flow Kontrol Merkezi'nden oluşturun.";
                 return false;
             }
@@ -70,7 +85,25 @@ namespace PixelFlow.Editor
                 return false;
             }
 
-            // 2. PhaseConfig Kontrolü
+            var storageKeys = Resources.Load<StorageKeysConfigAsset>("Configs/StorageKeysConfig");
+            if (storageKeys == null)
+            {
+                errorMessage = "Resources/Configs/StorageKeysConfig.asset bulunamadı! Zero-hardcode policy için zorunludur.";
+                return false;
+            }
+
+            foreach (var field in typeof(StorageKeysConfigAsset).GetFields(BindingFlags.Instance | BindingFlags.Public))
+            {
+                if (field.FieldType != typeof(string)) continue;
+                var value = field.GetValue(storageKeys) as string;
+                if (string.IsNullOrEmpty(value))
+                {
+                    errorMessage = $"StorageKeysConfigAsset alanı boş: {field.Name}. Zero-hardcode policy gereği tüm anahtarlar doldurulmalı.";
+                    return false;
+                }
+            }
+
+            // 2. PhaseConfig & EconomyConfig Kontrolü
             var phaseConfig = Resources.Load<PhaseConfigAsset>("Configs/PhaseConfig");
             if (phaseConfig == null)
             {
@@ -78,18 +111,56 @@ namespace PixelFlow.Editor
                 return false;
             }
 
+            var economyConfig = Resources.Load<EconomyConfigAsset>("Configs/EconomyConfig");
+            if (economyConfig != null)
+            {
+                economyConfig.EnsureCanonicalIapProducts();
+            }
+
             // 3. Seviye Kataloğu Kontrolü (asset Resources/Configs/LevelCatalog.asset konumunda)
             var levelCatalog = Resources.Load<LevelCatalogAsset>("Configs/LevelCatalog");
             if (levelCatalog != null && levelCatalog.Levels != null)
             {
+                int levelIndex = 0;
                 foreach (var entry in levelCatalog.Levels)
                 {
                     if (entry == null) continue;
+
+                    // 3a. AuthoredLevel null kontrolü
                     if (!entry.UseProceduralFallback && entry.AuthoredLevel == null)
                     {
                         errorMessage = $"LevelCatalog içindeki LevelIndex {entry.LevelIndex} için AuthoredLevel NULL!";
                         return false;
                     }
+
+                    // 3b. Prosedürel seviyeler için parametre doğrulama (game_plan.md §2.1.B3)
+                    if (entry.UseProceduralFallback)
+                    {
+                        if (entry.ProceduralDifficulty.gridWidth < 3 || entry.ProceduralDifficulty.gridHeight < 3)
+                        {
+                            errorMessage = $"LevelCatalog LevelIndex {entry.LevelIndex} UseProceduralFallback=true " +
+                                $"için grid boyutu ({entry.ProceduralDifficulty.gridWidth}x{entry.ProceduralDifficulty.gridHeight}) geçersiz! Minimum 3x3 olmalıdır.";
+                            return false;
+                        }
+                    }
+
+                    if (entry.AuthoredLevel != null && entry.AuthoredLevel is PixelFlow.Data.LevelData levelData)
+                    {
+                        if (levelData.width < 3 || levelData.height < 3)
+                        {
+                            errorMessage = $"LevelCatalog LevelIndex {entry.LevelIndex} (AuthoredLevel) için grid boyutu " +
+                                $"({levelData.width}x{levelData.height}) çok küçük! Minimum 3x3 olmalıdır.";
+                            return false;
+                        }
+                        if (levelData.flowScoreThreshold <= 0)
+                        {
+                            errorMessage = $"LevelCatalog LevelIndex {entry.LevelIndex} (AuthoredLevel) için flowScoreThreshold " +
+                                $"{levelData.flowScoreThreshold} — pozitif olmalıdır.";
+                            return false;
+                        }
+                    }
+
+                    levelIndex++;
                 }
             }
 

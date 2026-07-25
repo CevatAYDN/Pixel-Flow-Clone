@@ -1,15 +1,16 @@
-using UnityEngine;
-using TMPro;
-using UnityEngine.UI;
 using System;
 using Nexus.Core;
 using Nexus.Core.Services;
-using PixelFlow.Core;
+using PixelFlow.Data;
+using PixelFlow.Models;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 
 namespace PixelFlow.Views
 {
     [Mediator(typeof(HUDMediator))]
-    public class HUDView : TickableView
+    public class HUDView : MonoBehaviour
     {
         [SerializeField] private Button _hintButton;
         [SerializeField] private TMP_Text _hintCountText;
@@ -27,51 +28,39 @@ namespace PixelFlow.Views
         [SerializeField] private Button _nextLevelButton;
         [SerializeField] private Button _continueButton;
         [SerializeField] private GameObject _bloomFlashOverlay;
-
-        // Undo/Redo butonları
         [SerializeField] private Button _undoButton;
         [SerializeField] private Button _redoButton;
-
-        // Tema değiştirme butonları (Dark/Light/Neon). Inspector'dan atanır;
-        // biri null olsa bile UI çökmez (OnBind'de null-check var).
         [SerializeField] private Button _themeDarkButton;
         [SerializeField] private Button _themeLightButton;
         [SerializeField] private Button _themeNeonButton;
-
-        // GDD §8: Pause butonu
         [SerializeField] private Button _pauseButton;
-
-        // GDD §2.4: LevelFailed paneli
         [SerializeField] private GameObject _levelFailedPanel;
         [SerializeField] private TMP_Text _levelFailedText;
         [SerializeField] private Button _retryButton;
         [SerializeField] private Button _levelFailedContinueButton;
-
-        // Color Jam 3D - Gold Coins & Power-Up UI
         [SerializeField] private TMP_Text _coinsText;
         [SerializeField] private Button _garageButton;
         [SerializeField] private Button _rainbowRoadButton;
         [SerializeField] private TMP_Text _rainbowRoadCountText;
         [SerializeField] private Button _clearJamButton;
         [SerializeField] private TMP_Text _clearJamCountText;
-
-        // b4: Kalıcı Viyadük power-up göstergesi (gameplay-hud.html — 🌉 Viyadük).
-        // Viyadükler grid'e dokunarak yerleştirilir; bu buton kalan hakkı gösterir
-        // ve tıklanınca yönlendirici toast açar.
         [SerializeField] private Button _viaductButton;
         [SerializeField] private TMP_Text _viaductCountText;
-
-        // b2: Frictionless çarpışma toast'ı (gameplay-hud.html — bouncy-toast).
-        // Oyunu durdurmaz, kısa süre sonra otomatik kapanır.
         [SerializeField] private GameObject _crashToast;
         [SerializeField] private TMP_Text _crashToastText;
         [SerializeField] private float _crashToastDuration = 1.5f;
+
+        [SerializeField] private GameObject _crisisPanel;
+        [SerializeField] private TMP_Text _crisisTitleText;
+        [SerializeField] private TMP_Text _crisisDescriptionText;
+        [SerializeField] private TMP_Text _crisisViaductCountText;
+        [SerializeField] private Button _crisisViaductButton;
+        [SerializeField] private Button _crisisUndoButton;
 
         public event Action OnGarageClicked;
         public event Action OnRainbowRoadClicked;
         public event Action OnClearJamClicked;
         public event Action OnViaductClicked;
-
         public event Action OnHintClicked;
         public event Action OnNextLevelClicked;
         public event Action OnContinueClicked;
@@ -80,681 +69,274 @@ namespace PixelFlow.Views
         public event Action OnThemeDarkClicked;
         public event Action OnThemeLightClicked;
         public event Action OnThemeNeonClicked;
+#pragma warning disable CS0067
         public event Action OnSimulateDebugPressed;
+#pragma warning restore CS0067
         public event Action OnCrisisViaductClicked;
         public event Action OnCrisisUndoClicked;
         public event Action OnPauseClicked;
         public event Action OnRetryClicked;
         public event Action OnLevelFailedContinueClicked;
 
-        private Button _crisisViaductButton;
-        private Button _crisisUndoButton;
         private Coroutine _crashToastCoroutine;
 
         [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject, OptionalInject] public ThemePaletteAsset ThemePalette { get; set; }
+        [Inject, OptionalInject] public ISettingsModel SettingsModel { get; set; }
+        [Inject, OptionalInject] public ITickService TickService { get; set; }
 
-        private void Awake()
+        private readonly Color _goldPillBg = new Color(0.99f, 0.95f, 0.78f, 1f);
+        private readonly Color _goldText = new Color(0.71f, 0.33f, 0.04f, 1f);
+        private readonly Color _emeraldGreen = new Color(0.06f, 0.72f, 0.51f, 1f);
+        private readonly Color _indigoBlue = new Color(0.31f, 0.27f, 0.90f, 1f);
+        private readonly Color _darkSlate = new Color(0.20f, 0.25f, 0.33f, 1f);
+        private readonly Color _slateBg = new Color(0.85f, 0.87f, 0.92f, 0.5f);
+        private readonly Color _whiteGlass = new Color(1f, 1f, 1f, 0.95f);
+
+        public void SetupHUD()
         {
             AutoWireUIReferences();
+            BindHUDButtons();
+            ApplyDesignTokens();
         }
 
         public void AutoWireUIReferences()
         {
-            var texts = GetComponentsInChildren<TMP_Text>(true);
-            var buttons = GetComponentsInChildren<Button>(true);
+            if (_hintButton == null) _hintButton = FindButton("hint");
+            if (_nextLevelButton == null) _nextLevelButton = FindButton("next");
+            if (_continueButton == null) _continueButton = FindButton("continue");
+            if (_undoButton == null) _undoButton = FindButton("undo");
+            if (_redoButton == null) _redoButton = FindButton("redo");
+            if (_themeDarkButton == null) _themeDarkButton = FindButton("dark");
+            if (_themeLightButton == null) _themeLightButton = FindButton("light");
+            if (_themeNeonButton == null) _themeNeonButton = FindButton("neon");
+            if (_pauseButton == null) _pauseButton = FindButton("pause");
+            if (_retryButton == null) _retryButton = FindButton("retry");
+            if (_levelFailedContinueButton == null) _levelFailedContinueButton = FindButton("continue");
+            if (_garageButton == null) _garageButton = FindButton("garage");
+            if (_rainbowRoadButton == null) _rainbowRoadButton = FindButton("rainbow");
+            if (_clearJamButton == null) _clearJamButton = FindButton("clear");
+            if (_viaductButton == null) _viaductButton = FindButton("viaduct");
 
-            foreach (var t in texts)
-            {
-                string name = t.gameObject.name.ToLower();
-                if (_scoreText == null && (name.Contains("score") || name.Contains("puan"))) _scoreText = t;
-                if (_timerText == null && (name.Contains("timer") || name.Contains("time") || name.Contains("sure"))) _timerText = t;
-                if (_hintCountText == null && name.Contains("hint")) _hintCountText = t;
-                if (_rainbowRoadCountText == null && name.Contains("rainbowcount")) _rainbowRoadCountText = t;
-                if (_clearJamCountText == null && name.Contains("clearjamcount")) _clearJamCountText = t;
-                if (_completionText == null && name.Contains("complet")) _completionText = t;
-                if (_completionScoreText == null && name.Contains("finalscore")) _completionScoreText = t;
-                if (_levelFailedText == null && name.Contains("failed")) _levelFailedText = t;
-                if (_levelTitleText == null && name.Contains("leveltitle")) _levelTitleText = t;
-                if (_viaductCountText == null && name.Contains("viaductcount")) _viaductCountText = t;
-                if (_crashToastText == null && name.Contains("toastmessage")) _crashToastText = t;
-            }
+            if (_hintCountText == null) _hintCountText = FindText("hint");
+            if (_scoreText == null) _scoreText = FindText("score");
+            if (_timerText == null) _timerText = FindText("timer");
+            if (_levelTitleText == null) _levelTitleText = FindText("title");
+            if (_completionText == null) _completionText = FindText("completion");
+            if (_completionScoreText == null) _completionScoreText = FindText("score");
+            if (_completionStarsText == null) _completionStarsText = FindText("stars");
+            if (_levelFailedText == null) _levelFailedText = FindText("failed");
+            if (_coinsText == null) _coinsText = FindText("coin");
+            if (_rainbowRoadCountText == null) _rainbowRoadCountText = FindText("rainbow");
+            if (_clearJamCountText == null) _clearJamCountText = FindText("clear");
+            if (_viaductCountText == null) _viaductCountText = FindText("viaduct");
+            if (_crashToastText == null) _crashToastText = FindText("toast");
+            if (_crisisTitleText == null) _crisisTitleText = FindText("crisis");
+            if (_crisisDescriptionText == null) _crisisDescriptionText = FindText("crisis");
+            if (_crisisViaductCountText == null) _crisisViaductCountText = FindText("crisis");
 
-            foreach (var b in buttons)
-            {
-                ButtonJuice.AttachTo(b);
-                string name = b.gameObject.name.ToLower();
-                string txt = "";
-                var tmp = b.GetComponentInChildren<TMPro.TMP_Text>();
-                if (tmp != null) txt = tmp.text.ToLower();
+            if (_starsContainer == null) _starsContainer = FindObject("stars");
+            if (_completionPanel == null) _completionPanel = FindObject("completion");
+            if (_levelFailedPanel == null) _levelFailedPanel = FindObject("failed");
+            if (_crashToast == null) _crashToast = FindObject("toast");
+            if (_crisisPanel == null) _crisisPanel = FindObject("crisis");
 
-                if (_hintButton == null && (name.Contains("hint") || name.Contains("ipucu") || txt.Contains("hint") || txt.Contains("ipucu"))) _hintButton = b;
-                if (_undoButton == null && (name.Contains("undo") || name.Contains("geri") || txt.Contains("geri"))) _undoButton = b;
-                if (_redoButton == null && (name.Contains("redo") || name.Contains("ileri") || txt.Contains("ileri"))) _redoButton = b;
-                if (_nextLevelButton == null && (name.Contains("next") || name.Contains("sonraki"))) _nextLevelButton = b;
-                if (_continueButton == null && (name.Contains("continue") || name.Contains("devam"))) _continueButton = b;
-                if (_pauseButton == null && (name.Contains("pause") || name.Contains("duraklat"))) _pauseButton = b;
-                if (_retryButton == null && (name.Contains("retry") || name.Contains("tekrar"))) _retryButton = b;
-                if (_themeDarkButton == null && name.Contains("dark")) _themeDarkButton = b;
-                if (_themeLightButton == null && name.Contains("light")) _themeLightButton = b;
-                if (_themeNeonButton == null && name.Contains("neon")) _themeNeonButton = b;
-                if (_garageButton == null && (name.Contains("garage") || name.Contains("garaj") || txt.Contains("garaj") || txt.Contains("garage"))) _garageButton = b;
-                if (_rainbowRoadButton == null && (name.Contains("rainbow") || name.Contains("gokkusagi") || name.Contains("gökkuşağı") || txt.Contains("gökkuşağı") || txt.Contains("gokkusagi") || txt.Contains("rainbow"))) _rainbowRoadButton = b;
-                if (_clearJamButton == null && (name.Contains("clearjam") || name.Contains("temizle") || txt.Contains("temizle") || txt.Contains("clear"))) _clearJamButton = b;
-                if (_viaductButton == null && (name.Contains("viaduct") || name.Contains("viyaduk") || name.Contains("viyadük") || txt.Contains("viyadük") || txt.Contains("viyaduk") || txt.Contains("viaduct"))) _viaductButton = b;
-            }
-
-            var transforms = GetComponentsInChildren<Transform>(true);
-            foreach (var tr in transforms)
-            {
-                string name = tr.gameObject.name.ToLower();
-                if (_completionPanel == null && (name.Contains("completion") || name.Contains("victory"))) _completionPanel = tr.gameObject;
-                if (_levelFailedPanel == null && (name.Contains("fail") || name.Contains("gameover"))) _levelFailedPanel = tr.gameObject;
-                if (_starsContainer == null && name.Contains("star")) _starsContainer = tr.gameObject;
-                if (_crashToast == null && name.Contains("crashtoast")) _crashToast = tr.gameObject;
-            }
-#if DEVELOPMENT_BUILD || UNITY_EDITOR
-            LoggerService?.Log($"[PixelFlow.HUDView] AutoWire: hintBtn={(bool)_hintButton}, undoBtn={(bool)_undoButton}, redoBtn={(bool)_redoButton}, " +
-                $"nextLvlBtn={(bool)_nextLevelButton}, continueBtn={(bool)_continueButton}, pauseBtn={(bool)_pauseButton}, " +
-                $"retryBtn={(bool)_retryButton}, garageBtn={(bool)_garageButton}, rainbowBtn={(bool)_rainbowRoadButton}, " +
-                $"clearJamBtn={(bool)_clearJamButton}, themeDark={(bool)_themeDarkButton}, themeLight={(bool)_themeLightButton}, themeNeon={(bool)_themeNeonButton}, " +
-                $"completionPanel={(bool)_completionPanel}, levelFailedPanel={(bool)_levelFailedPanel}, starsContainer={(bool)_starsContainer}");
-#endif
+            LoggerService?.Log($"[PixelFlow.HUDView] AutoWire: hintBtn={(bool)_hintButton}, undoBtn={(bool)_undoButton}, redoBtn={(bool)_redoButton}, nextLvlBtn={(bool)_nextLevelButton}, continueBtn={(bool)_continueButton}, pauseBtn={(bool)_pauseButton}, retryBtn={(bool)_retryButton}, garageBtn={(bool)_garageButton}, rainbowBtn={(bool)_rainbowRoadButton}, clearJamBtn={(bool)_clearJamButton}, themeDark={(bool)_themeDarkButton}, themeLight={(bool)_themeLightButton}, themeNeon={(bool)_themeNeonButton}, completionPanel={(bool)_completionPanel}, levelFailedPanel={(bool)_levelFailedPanel}, starsContainer={(bool)_starsContainer}");
         }
 
-        private void RemoveAllHUDButtonListeners()
+        public void BindHUDButtons()
         {
-            if (_hintButton != null) _hintButton.onClick.RemoveAllListeners();
-            if (_nextLevelButton != null) _nextLevelButton.onClick.RemoveAllListeners();
-            if (_continueButton != null) _continueButton.onClick.RemoveAllListeners();
-            if (_undoButton != null) _undoButton.onClick.RemoveAllListeners();
-            if (_redoButton != null) _redoButton.onClick.RemoveAllListeners();
-            if (_themeDarkButton != null) _themeDarkButton.onClick.RemoveAllListeners();
-            if (_themeLightButton != null) _themeLightButton.onClick.RemoveAllListeners();
-            if (_themeNeonButton != null) _themeNeonButton.onClick.RemoveAllListeners();
-            if (_pauseButton != null) _pauseButton.onClick.RemoveAllListeners();
-            if (_retryButton != null) _retryButton.onClick.RemoveAllListeners();
-            if (_levelFailedContinueButton != null) _levelFailedContinueButton.onClick.RemoveAllListeners();
-            if (_garageButton != null) _garageButton.onClick.RemoveAllListeners();
-            if (_rainbowRoadButton != null) _rainbowRoadButton.onClick.RemoveAllListeners();
-            if (_clearJamButton != null) _clearJamButton.onClick.RemoveAllListeners();
-            if (_viaductButton != null) _viaductButton.onClick.RemoveAllListeners();
+            BindButton(_hintButton, () => OnHintClicked?.Invoke());
+            BindButton(_nextLevelButton, () => OnNextLevelClicked?.Invoke());
+            BindButton(_continueButton, () => OnContinueClicked?.Invoke());
+            BindButton(_undoButton, () => OnUndoClicked?.Invoke());
+            BindButton(_redoButton, () => OnRedoClicked?.Invoke());
+            BindButton(_themeDarkButton, () => OnThemeDarkClicked?.Invoke());
+            BindButton(_themeLightButton, () => OnThemeLightClicked?.Invoke());
+            BindButton(_themeNeonButton, () => OnThemeNeonClicked?.Invoke());
+            BindButton(_pauseButton, () => OnPauseClicked?.Invoke());
+            BindButton(_retryButton, () => OnRetryClicked?.Invoke());
+            BindButton(_levelFailedContinueButton, () => OnLevelFailedContinueClicked?.Invoke());
+            BindButton(_garageButton, () => OnGarageClicked?.Invoke());
+            BindButton(_rainbowRoadButton, () => OnRainbowRoadClicked?.Invoke());
+            BindButton(_clearJamButton, () => OnClearJamClicked?.Invoke());
+            BindButton(_viaductButton, () => OnViaductClicked?.Invoke());
+            BindButton(_crisisViaductButton, () => OnCrisisViaductClicked?.Invoke());
+            BindButton(_crisisUndoButton, () => OnCrisisUndoClicked?.Invoke());
         }
 
-        protected override void OnBind(IContext context)
+        private static void BindButton(Button button, Action onClick)
         {
-            base.OnBind(context);
-            AutoWireUIReferences();
-            LogHUDButtonDiagnostics();
-            LogCanvasState("OnBind");
-
-            RemoveAllHUDButtonListeners();
-
-            if (_hintButton != null)
-            {
-                _hintButton.interactable = true;
-                _hintButton.onClick.AddListener(() => OnHintClicked?.Invoke());
-            }
-            if (_nextLevelButton != null)
-            {
-                _nextLevelButton.interactable = true;
-                _nextLevelButton.onClick.AddListener(() => OnNextLevelClicked?.Invoke());
-            }
-            if (_continueButton != null)
-            {
-                _continueButton.interactable = true;
-                _continueButton.onClick.AddListener(() => OnContinueClicked?.Invoke());
-            }
-            if (_undoButton != null)
-            {
-                _undoButton.interactable = true;
-                _undoButton.onClick.AddListener(() => OnUndoClicked?.Invoke());
-            }
-            if (_redoButton != null)
-            {
-                _redoButton.interactable = true;
-                _redoButton.onClick.AddListener(() => OnRedoClicked?.Invoke());
-            }
-            if (_themeDarkButton != null)
-            {
-                _themeDarkButton.interactable = true;
-                _themeDarkButton.onClick.AddListener(() => OnThemeDarkClicked?.Invoke());
-            }
-            if (_themeLightButton != null)
-            {
-                _themeLightButton.interactable = true;
-                _themeLightButton.onClick.AddListener(() => OnThemeLightClicked?.Invoke());
-            }
-            if (_themeNeonButton != null)
-            {
-                _themeNeonButton.interactable = true;
-                _themeNeonButton.onClick.AddListener(() => OnThemeNeonClicked?.Invoke());
-            }
-
-            // GDD §8: Pause butonu
-            if (_pauseButton != null)
-            {
-                _pauseButton.interactable = true;
-                _pauseButton.onClick.AddListener(() => OnPauseClicked?.Invoke());
-            }
-
-            // GDD §2.4: LevelFailed paneli
-            if (_retryButton != null)
-            {
-                _retryButton.interactable = true;
-                _retryButton.onClick.AddListener(() => OnRetryClicked?.Invoke());
-            }
-            if (_levelFailedContinueButton != null)
-            {
-                _levelFailedContinueButton.interactable = true;
-                _levelFailedContinueButton.onClick.AddListener(() => OnLevelFailedContinueClicked?.Invoke());
-            }
-            // Color Jam 3D - Gold Coins & Power-Up UI Listeners
-            if (_garageButton != null)
-            {
-                _garageButton.interactable = true;
-                _garageButton.onClick.AddListener(() => OnGarageClicked?.Invoke());
-            }
-            if (_rainbowRoadButton != null)
-            {
-                _rainbowRoadButton.interactable = true;
-                _rainbowRoadButton.onClick.AddListener(() => OnRainbowRoadClicked?.Invoke());
-            }
-            if (_clearJamButton != null)
-            {
-                _clearJamButton.onClick.AddListener(() => OnClearJamClicked?.Invoke());
-            }
-            if (_viaductButton != null)
-            {
-                _viaductButton.onClick.AddListener(() => OnViaductClicked?.Invoke());
-            }
-
-            if (_completionPanel != null)
-                _completionPanel.SetActive(false);
-            if (_levelFailedPanel != null)
-                _levelFailedPanel.SetActive(false);
-
-            LogCanvasState("AfterOnBind");
-        }
-
-        protected override void OnUnbind()
-        {
-            base.OnUnbind();
-            if (_hintButton != null)
-                _hintButton.onClick.RemoveAllListeners();
-            if (_nextLevelButton != null)
-                _nextLevelButton.onClick.RemoveAllListeners();
-            if (_continueButton != null)
-                _continueButton.onClick.RemoveAllListeners();
-            if (_undoButton != null)
-                _undoButton.onClick.RemoveAllListeners();
-            if (_redoButton != null)
-                _redoButton.onClick.RemoveAllListeners();
-            if (_themeDarkButton != null)
-                _themeDarkButton.onClick.RemoveAllListeners();
-            if (_themeLightButton != null)
-                _themeLightButton.onClick.RemoveAllListeners();
-            if (_themeNeonButton != null)
-                _themeNeonButton.onClick.RemoveAllListeners();
-            if (_pauseButton != null)
-                _pauseButton.onClick.RemoveAllListeners();
-            if (_retryButton != null)
-                _retryButton.onClick.RemoveAllListeners();
-            if (_levelFailedContinueButton != null)
-                _levelFailedContinueButton.onClick.RemoveAllListeners();
-            if (_garageButton != null)
-                _garageButton.onClick.RemoveAllListeners();
-            if (_rainbowRoadButton != null)
-                _rainbowRoadButton.onClick.RemoveAllListeners();
-            if (_clearJamButton != null)
-                _clearJamButton.onClick.RemoveAllListeners();
-            if (_viaductButton != null)
-                _viaductButton.onClick.RemoveAllListeners();
-
-            if (_crisisViaductButton != null)
-            {
-                _crisisViaductButton.onClick.RemoveAllListeners();
-                Destroy(_crisisViaductButton.gameObject);
-                _crisisViaductButton = null;
-            }
-            if (_crisisUndoButton != null)
-            {
-                _crisisUndoButton.onClick.RemoveAllListeners();
-                Destroy(_crisisUndoButton.gameObject);
-                _crisisUndoButton = null;
-            }
-        }
-
-        public void SetUndoInteractable(bool interactable)
-        {
-            if (_undoButton != null)
-                _undoButton.interactable = interactable;
-        }
-
-        public void SetRedoInteractable(bool interactable)
-        {
-            if (_redoButton != null)
-                _redoButton.interactable = interactable;
-        }
-
-        public void UpdateRainbowRoadCount(int remaining)
-        {
-            if (_rainbowRoadCountText != null)
-                _rainbowRoadCountText.text = remaining > 0 ? remaining.ToString() : "";
-            // Buton etkileşimi: kullanım varsa veya henüz aktif edilmemişse aktif
-            if (_rainbowRoadButton != null)
-                _rainbowRoadButton.interactable = true; // Her zaman tıklanabilir (activate etmek için)
-        }
-
-        public void UpdateClearJamCount(int remaining)
-        {
-            if (_clearJamCountText != null)
-                _clearJamCountText.text = remaining > 0 ? remaining.ToString() : "";
-            // Clear Jam sadece kullanım hakkı varsa tıklanabilir
-            SetClearJamInteractable(remaining > 0);
-        }
-
-        public void SetClearJamInteractable(bool interactable)
-        {
-            if (_clearJamButton != null)
-            {
-                _clearJamButton.interactable = interactable;
-                // Görsel feedback Unity Button ColorTint transition tarafından otomatik yönetilir
-            }
-        }
-
-        // b4: Kalıcı Viyadük göstergesi — kalan viyadük hakkını gösterir.
-        public void UpdateViaductCount(int remaining)
-        {
-            if (_viaductCountText != null)
-                _viaductCountText.text = remaining > 0 ? remaining.ToString() : "0";
-            if (_viaductButton != null)
-                _viaductButton.interactable = remaining > 0;
-        }
-
-        // b2: Frictionless çarpışma toast'ı — oyunu durdurmadan kısa süre gösterilir.
-        public void ShowCrashToast(string message)
-        {
-            if (_crashToast == null) return;
-            if (_crashToastText != null) _crashToastText.text = message;
-            _crashToast.SetActive(true);
-            _crashToast.transform.SetAsLastSibling();
-            if (_crashToastCoroutine != null) StopCoroutine(_crashToastCoroutine);
-            _crashToastCoroutine = StartCoroutine(CrashToastRoutine());
-        }
-
-        private System.Collections.IEnumerator CrashToastRoutine()
-        {
-            var rect = _crashToast.GetComponent<RectTransform>();
-            Vector2 basePos = rect != null ? rect.anchoredPosition : Vector2.zero;
-            float elapsed = 0f;
-            while (elapsed < _crashToastDuration)
-            {
-                elapsed += Time.deltaTime;
-                if (rect != null)
-                {
-                    float bounce = Mathf.Sin(elapsed * Mathf.PI * 4f) * 6f;
-                    rect.anchoredPosition = basePos + new Vector2(0f, bounce);
-                }
-                yield return null;
-            }
-            if (rect != null) rect.anchoredPosition = basePos;
-            _crashToast.SetActive(false);
-            _crashToastCoroutine = null;
-        }
-
-        /// <summary>
-        /// Power-up butonlarının tümünü etkileşime aç/kapa.
-        /// Simülasyon modunda tüm power-up'lar devre dışı bırakılır.
-        /// </summary>
-        public void SetPowerUpButtonsInteractable(bool interactable)
-        {
-            if (_rainbowRoadButton != null)
-                _rainbowRoadButton.interactable = interactable;
-            if (_clearJamButton != null)
-                _clearJamButton.interactable = interactable;
+            if (button == null || onClick == null) return;
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(() => onClick());
         }
 
         public void UpdateHintCount(int count, string format)
         {
-            if (_hintCountText != null)
-                _hintCountText.text = string.Format(format, count);
+            if (_hintCountText != null) _hintCountText.text = string.Format(format, count);
         }
 
         public void UpdateScore(int score, string format)
         {
-            if (_scoreText != null)
-                _scoreText.text = string.Format(format, score);
+            if (_scoreText != null) _scoreText.text = string.Format(format, score);
         }
 
-        public void UpdateLevelTitle(int levelNumber, string format)
+        public void UpdateTimer(float time)
         {
-            if (_levelTitleText != null)
-                _levelTitleText.text = string.Format(format, levelNumber);
-        }
-
-        public void UpdateCoins(int coins)
-        {
-            if (_coinsText != null)
-                _coinsText.text = coins.ToString("N0");
-        }
-
-        public void UpdateTimer(float elapsedTime)
-        {
-            if (_timerText != null)
-            {
-                int minutes = Mathf.FloorToInt(elapsedTime / 60f);
-                int seconds = Mathf.FloorToInt(elapsedTime % 60f);
-                _timerText.text = $"{minutes:00}:{seconds:00}";
-                _timerText.color = Color.white;
-            }
+            if (_timerText != null) _timerText.text = time.ToString("F1");
         }
 
         public void UpdateSimulationTimer(float remaining, string format)
         {
-            if (_timerText != null)
-            {
-                _timerText.text = string.Format(format, remaining);
-                _timerText.color = remaining > 3f ? Color.green : Color.Lerp(Color.red, Color.yellow, remaining / 3f);
-            }
+            if (_timerText != null) _timerText.text = string.Format(format, remaining);
         }
 
         public void UpdateStars(int stars)
         {
-            if (_starsContainer != null)
-            {
-                if (_star1 != null) _star1.SetActive(stars >= 1);
-                if (_star2 != null) _star2.SetActive(stars >= 2);
-                if (_star3 != null) _star3.SetActive(stars >= 3);
-            }
+            SetStarActive(_star1, stars >= 1);
+            SetStarActive(_star2, stars >= 2);
+            SetStarActive(_star3, stars >= 3);
+            if (_completionStarsText != null) _completionStarsText.text = new string('★', Mathf.Clamp(stars, 0, 3));
+        }
+
+        public void UpdateLevelTitle(int levelNumber, string format)
+        {
+            if (_levelTitleText != null) _levelTitleText.text = string.Format(format, levelNumber);
+        }
+
+        public void UpdateViaductCount(int count)
+        {
+            if (_viaductCountText != null) _viaductCountText.text = count.ToString();
+            if (_crisisViaductCountText != null) _crisisViaductCountText.text = count.ToString();
+        }
+
+        public void UpdateRainbowRoadCount(int count)
+        {
+            if (_rainbowRoadCountText != null) _rainbowRoadCountText.text = count.ToString();
+        }
+
+        public void UpdateClearJamCount(int count)
+        {
+            if (_clearJamCountText != null) _clearJamCountText.text = count.ToString();
+        }
+
+        public void HighlightActiveTheme(AppTheme theme)
+        {
+            SetThemeButtonColor(_themeDarkButton, theme == AppTheme.Dark);
+            SetThemeButtonColor(_themeLightButton, theme == AppTheme.Light);
+            SetThemeButtonColor(_themeNeonButton, theme == AppTheme.Neon);
+        }
+
+        public void SetUndoInteractable(bool interactable)
+        {
+            if (_undoButton != null) _undoButton.interactable = interactable;
+        }
+
+        public void SetRedoInteractable(bool interactable)
+        {
+            if (_redoButton != null) _redoButton.interactable = interactable;
+        }
+
+        public void SetPowerUpButtonsInteractable(bool interactable)
+        {
+            if (_rainbowRoadButton != null) _rainbowRoadButton.interactable = interactable;
+            if (_clearJamButton != null) _clearJamButton.interactable = interactable;
+            if (_viaductButton != null) _viaductButton.interactable = interactable;
         }
 
         public void ShowCompletion(int score, int stars, string title, string scoreFormat, string starsLabel)
         {
-            if (_crisisViaductButton != null)
-                _crisisViaductButton.gameObject.SetActive(false);
-            if (_crisisUndoButton != null)
-                _crisisUndoButton.gameObject.SetActive(false);
-
-            if (_completionPanel == null)
-            {
-                _completionPanel = new GameObject("CompletionPanel");
-                _completionPanel.transform.SetParent(transform, false);
-                var rect = _completionPanel.AddComponent<RectTransform>();
-                rect.anchorMin = Vector2.zero;
-                rect.anchorMax = Vector2.one;
-                rect.sizeDelta = Vector2.zero;
-                var img = _completionPanel.AddComponent<Image>();
-                img.color = new Color(0.1f, 0.12f, 0.18f, 0.95f);
-
-                if (_nextLevelButton == null)
-                {
-                    var btnObj = new GameObject("NextLevelButton");
-                    btnObj.transform.SetParent(_completionPanel.transform, false);
-                    var btnRect = btnObj.AddComponent<RectTransform>();
-                    btnRect.sizeDelta = new Vector2(240, 60);
-                    btnObj.AddComponent<Image>().color = new Color(0.1f, 0.7f, 0.3f);
-                    _nextLevelButton = btnObj.AddComponent<Button>();
-                    _nextLevelButton.onClick.AddListener(() => OnNextLevelClicked?.Invoke());
-
-                    var btnTextObj = new GameObject("Text");
-                    btnTextObj.transform.SetParent(btnObj.transform, false);
-                    var tmp = btnTextObj.AddComponent<TextMeshProUGUI>();
-                    tmp.text = "SONRAKİ SEVİYE";
-                    tmp.alignment = TextAlignmentOptions.Center;
-                    tmp.color = Color.white;
-                }
-            }
-
-            _completionPanel.SetActive(true);
-            _completionPanel.transform.SetAsLastSibling();
-            _completionPanel.transform.localScale = Vector3.zero;
-            StartCoroutine(AnimateCompletion(score, stars, title, scoreFormat, starsLabel));
-
-            if (_bloomFlashOverlay != null)
-            {
-                StartCoroutine(DoBloomFlash());
-            }
+            SetPanelVisible(_completionPanel, true);
+            if (_completionText != null) _completionText.text = title;
+            if (_completionScoreText != null) _completionScoreText.text = string.Format(scoreFormat, score);
+            if (_completionStarsText != null) _completionStarsText.text = string.Format(starsLabel, stars);
         }
 
-        private System.Collections.IEnumerator DoBloomFlash()
-        {
-            _bloomFlashOverlay.SetActive(true);
-            var img = _bloomFlashOverlay.GetComponent<UnityEngine.UI.Image>();
-            if (img == null) yield break;
-            float duration = 0.6f;
-            float t = 0f;
-            while (t < duration)
-            {
-                t += Time.deltaTime;
-                img.color = new Color(1f, 0.95f, 0.6f, Mathf.Lerp(0.8f, 0f, t / duration));
-                yield return null;
-            }
-            _bloomFlashOverlay.SetActive(false);
-        }
+        public void HideCompletion() => SetPanelVisible(_completionPanel, false);
 
-        private System.Collections.IEnumerator AnimateCompletion(int score, int stars, string title, string scoreFormat, string starsLabel)
-        {
-            float duration = 0.5f;
-            float elapsed = 0f;
-            RectTransform panelRect = _completionPanel.GetComponent<RectTransform>();
-
-            while (elapsed < duration)
-            {
-                elapsed += Time.deltaTime;
-                float t = Mathf.Min(elapsed / duration, 1f);
-                float bounce = 1f + Mathf.Sin(t * Mathf.PI) * (1f - t) * 0.4f;
-                if (panelRect != null) panelRect.localScale = Vector3.one * Mathf.Lerp(0f, bounce, t * 1.5f);
-                yield return null;
-            }
-
-            if (panelRect != null) panelRect.localScale = Vector3.one;
-
-            if (_completionText != null)
-                _completionText.text = title;
-            if (_completionScoreText != null)
-                _completionScoreText.text = string.Format(scoreFormat, score);
-            if (_completionStarsText != null)
-                _completionStarsText.text = $"{starsLabel}: {new string('*', stars)}{new string('-', 3 - stars)}";
-            if (_nextLevelButton != null)
-                _nextLevelButton.gameObject.SetActive(true);
-            else
-                LoggerService?.LogWarning("[HUDView] _nextLevelButton is null in Inspector!");
-        }
-
-        public void HideCompletion()
-        {
-            if (_completionPanel != null)
-                _completionPanel.SetActive(false);
-        }
-
-        private void CreateCrisisButtonsIfNeeded(string viaductBtnText, string undoBtnText)
-        {
-            if (_nextLevelButton == null || _completionPanel == null) return;
-
-            if (_crisisViaductButton == null)
-            {
-                _crisisViaductButton = Instantiate(_nextLevelButton, _completionPanel.transform);
-                _crisisViaductButton.name = "CrisisViaductButton";
-                
-                RectTransform rt = _crisisViaductButton.GetComponent<RectTransform>();
-                if (rt != null)
-                {
-                    rt.anchoredPosition = new Vector2(-120f, -120f);
-                    rt.sizeDelta = new Vector2(200f, 50f);
-                }
-                
-                TMP_Text btnText = _crisisViaductButton.GetComponentInChildren<TMP_Text>();
-                if (btnText != null) btnText.text = viaductBtnText;
-
-                _crisisViaductButton.onClick.AddListener(() => OnCrisisViaductClicked?.Invoke());
-            }
-            else
-            {
-                TMP_Text btnText = _crisisViaductButton.GetComponentInChildren<TMP_Text>();
-                if (btnText != null) btnText.text = viaductBtnText;
-            }
-
-            if (_crisisUndoButton == null)
-            {
-                _crisisUndoButton = Instantiate(_nextLevelButton, _completionPanel.transform);
-                _crisisUndoButton.name = "CrisisUndoButton";
-                
-                RectTransform rt = _crisisUndoButton.GetComponent<RectTransform>();
-                if (rt != null)
-                {
-                    rt.anchoredPosition = new Vector2(120f, -120f);
-                    rt.sizeDelta = new Vector2(200f, 50f);
-                }
-                
-                TMP_Text btnText = _crisisUndoButton.GetComponentInChildren<TMP_Text>();
-                if (btnText != null) btnText.text = undoBtnText;
-
-                _crisisUndoButton.onClick.AddListener(() => OnCrisisUndoClicked?.Invoke());
-            }
-            else
-            {
-                TMP_Text btnText = _crisisUndoButton.GetComponentInChildren<TMP_Text>();
-                if (btnText != null) btnText.text = undoBtnText;
-            }
-        }
-
-        public void ShowCrisis(int availableViaducts, string title, string desc, string viaductLabelFormat, string viaductBtnText, string undoBtnText)
-        {
-            if (_completionPanel != null)
-            {
-                _completionPanel.SetActive(true);
-                if (_completionText != null)
-                    _completionText.text = title;
-                if (_completionScoreText != null)
-                    _completionScoreText.text = desc;
-                if (_completionStarsText != null)
-                {
-                    _completionStarsText.text = string.Format(viaductLabelFormat, availableViaducts);
-                    _completionStarsText.color = Color.white;
-                }
-                if (_nextLevelButton != null)
-                    _nextLevelButton.gameObject.SetActive(false);
-
-                CreateCrisisButtonsIfNeeded(viaductBtnText, undoBtnText);
-
-                if (_crisisViaductButton != null)
-                {
-                    _crisisViaductButton.gameObject.SetActive(true);
-                    _crisisViaductButton.interactable = availableViaducts > 0;
-                }
-                if (_crisisUndoButton != null)
-                {
-                    _crisisUndoButton.gameObject.SetActive(true);
-                }
-            }
-        }
-
-        public void HideCrisis()
-        {
-            if (_crisisViaductButton != null)
-                _crisisViaductButton.gameObject.SetActive(false);
-            if (_crisisUndoButton != null)
-                _crisisUndoButton.gameObject.SetActive(false);
-
-            if (_completionPanel != null)
-            {
-                _completionPanel.SetActive(false);
-                if (_nextLevelButton != null)
-                    _nextLevelButton.gameObject.SetActive(true);
-            }
-        }
-
-        // GDD §2.4: LevelFailed paneli
         public void ShowLevelFailed(string title, string scoreFormat, string retryLabel, string hubLabel)
         {
-            if (_levelFailedPanel != null)
+            SetPanelVisible(_levelFailedPanel, true);
+            if (_levelFailedText != null) _levelFailedText.text = title;
+            if (_levelFailedContinueButton != null)
             {
-                _levelFailedPanel.SetActive(true);
-                if (_levelFailedText != null)
-                    _levelFailedText.text = title;
-                if (_retryButton != null)
-                {
-                    var btnText = _retryButton.GetComponentInChildren<TMP_Text>();
-                    if (btnText != null) btnText.text = retryLabel;
-                }
-                if (_levelFailedContinueButton != null)
-                {
-                    var btnText = _levelFailedContinueButton.GetComponentInChildren<TMP_Text>();
-                    if (btnText != null) btnText.text = hubLabel;
-                }
+                var txt = _levelFailedContinueButton.GetComponentInChildren<TMP_Text>(true);
+                if (txt != null) txt.text = hubLabel;
+            }
+            if (_retryButton != null)
+            {
+                var txt = _retryButton.GetComponentInChildren<TMP_Text>(true);
+                if (txt != null) txt.text = retryLabel;
             }
         }
 
-        public void HideLevelFailed()
+        public void HideLevelFailed() => SetPanelVisible(_levelFailedPanel, false);
+
+        public void ShowCrisis(int viaductCount, string title, string desc, string viaductFormat, string viaductBtn, string undoBtn)
         {
-            if (_levelFailedPanel != null)
-                _levelFailedPanel.SetActive(false);
+            SetPanelVisible(_crisisPanel, true);
+            if (_crisisTitleText != null) _crisisTitleText.text = title;
+            if (_crisisDescriptionText != null) _crisisDescriptionText.text = desc;
+            if (_crisisViaductCountText != null) _crisisViaductCountText.text = string.Format(viaductFormat, viaductCount);
+            if (_crisisViaductButton != null)
+            {
+                var txt = _crisisViaductButton.GetComponentInChildren<TMP_Text>(true);
+                if (txt != null) txt.text = viaductBtn;
+            }
+            if (_crisisUndoButton != null)
+            {
+                var txt = _crisisUndoButton.GetComponentInChildren<TMP_Text>(true);
+                if (txt != null) txt.text = undoBtn;
+            }
         }
 
-        public void SetPauseButtonVisible(bool visible)
+        public void HideCrisis() => SetPanelVisible(_crisisPanel, false);
+
+        public void ShowCrashToast(string message)
         {
-            if (_pauseButton != null)
-                _pauseButton.gameObject.SetActive(visible);
+            if (_crashToastText != null) _crashToastText.text = message;
+            SetPanelVisible(_crashToast, true);
+            if (_crashToastCoroutine != null) StopCoroutine(_crashToastCoroutine);
+            _crashToastCoroutine = StartCoroutine(HideToastAfterDelay());
         }
 
         public void ShowViaductLimitReached(string message)
         {
-            if (_completionStarsText != null)
-            {
-                _completionStarsText.text = message;
-                _completionStarsText.color = Color.red;
-            }
+            ShowCrashToast(message);
         }
 
         public void ShowCrisisRetryExhausted(int retryCount)
         {
-            if (_completionStarsText != null)
+            ShowCrashToast($"Retry exhausted: {retryCount}");
+        }
+
+        private System.Collections.IEnumerator HideToastAfterDelay()
+        {
+            yield return new WaitForSeconds(_crashToastDuration);
+            SetPanelVisible(_crashToast, false);
+            _crashToastCoroutine = null;
+        }
+
+        private void ApplyDesignTokens()
+        {
+            var theme = SettingsModel != null ? SettingsModel.CurrentTheme : AppTheme.Dark;
+            if (ThemePalette != null)
             {
-                _completionStarsText.text = $"Retries exhausted ({retryCount})";
-                _completionStarsText.color = Color.red;
+                var colors = ThemePalette.GetThemeColors(theme);
+                if (_levelTitleText != null)
+                    _levelTitleText.color = colors.CameraBackground;
+                if (_hintButton != null && _hintButton.GetComponent<Image>() != null)
+                    _hintButton.GetComponent<Image>().color = _goldPillBg;
             }
+
+            HighlightActiveTheme(theme);
         }
 
-        public void HighlightActiveTheme(PixelFlow.Models.AppTheme theme)
+        private void UpdateTimerColor(float remaining)
         {
-            SetThemeButtonColor(_themeDarkButton, theme == PixelFlow.Models.AppTheme.Dark);
-            SetThemeButtonColor(_themeLightButton, theme == PixelFlow.Models.AppTheme.Light);
-            SetThemeButtonColor(_themeNeonButton, theme == PixelFlow.Models.AppTheme.Neon);
-        }
-
-        private void LogHUDButtonDiagnostics()
-        {
-#if DEVELOPMENT_BUILD || UNITY_EDITOR
-            LoggerService?.Log($"[PixelFlow.HUDView] Button Interactable States: " +
-                $"hint={(bool)_hintButton && _hintButton.interactable}, " +
-                $"undo={(bool)_undoButton && _undoButton.interactable}, " +
-                $"redo={(bool)_redoButton && _redoButton.interactable}, " +
-                $"pause={(bool)_pauseButton && _pauseButton.interactable}, " +
-                $"nextLvl={(bool)_nextLevelButton && _nextLevelButton.interactable}, " +
-                $"continue={(bool)_continueButton && _continueButton.interactable}, " +
-                $"retry={(bool)_retryButton && _retryButton.interactable}, " +
-                $"garage={(bool)_garageButton && _garageButton.interactable}");
-#endif
-        }
-
-        private void LogCanvasState(string context)
-        {
-#if DEVELOPMENT_BUILD || UNITY_EDITOR
-            var canvas = GetComponent<Canvas>();
-            var cg = GetComponent<CanvasGroup>();
-            LoggerService?.Log($"[PixelFlow.HUDView] Canvas state [{context}]: " +
-                $"canvasEnabled={(canvas != null ? canvas.enabled.ToString() : "null")}, " +
-                $"cgAlpha={(cg != null ? cg.alpha.ToString("F2") : "null")}, " +
-                $"cgBlocksRaycasts={(cg != null ? cg.blocksRaycasts.ToString() : "null")}, " +
-                $"cgInteractable={(cg != null ? cg.interactable.ToString() : "null")}, " +
-                $"activeInHierarchy={gameObject.activeInHierarchy}");
-
-            var es = UnityEngine.EventSystems.EventSystem.current;
-            LoggerService?.Log($"[PixelFlow.HUDView] EventSystem [{context}]: " +
-                $"current={(bool)es}, " +
-                $"inputModule={(es != null ? es.currentInputModule?.GetType().Name : "null")}, " +
-                $"firstSelected={(es != null && es.firstSelectedGameObject != null ? es.firstSelectedGameObject.name : "null")}");
-#endif
+            if (_timerText == null) return;
+            _timerText.color = remaining > 3f ? Color.white : Color.Lerp(Color.red, Color.yellow, remaining / 3f);
         }
 
         private static void SetThemeButtonColor(Button button, bool isActive)
@@ -762,33 +344,51 @@ namespace PixelFlow.Views
             if (button == null) return;
             var image = button.GetComponent<Image>();
             if (image == null) return;
-            image.color = isActive
-                ? new Color(0.35f, 0.7f, 0.45f, 1f)   // aktif: açık yeşil
-                : new Color(0.15f, 0.15f, 0.18f, 1f);  // pasif: koyu gri
+            image.color = isActive ? new Color(0.35f, 0.7f, 0.45f, 1f) : new Color(0.15f, 0.15f, 0.18f, 1f);
         }
 
-        protected override void OnTick(float deltaTime)
+        private static void SetPanelVisible(GameObject panel, bool visible)
         {
-            var keyboard = UnityEngine.InputSystem.Keyboard.current;
-            if (keyboard != null)
-            {
-                if (keyboard.sKey.wasPressedThisFrame)
-                {
-                    if (Debug.isDebugBuild)
-                    {
-                        OnSimulateDebugPressed?.Invoke();
-                    }
-                }
+            if (panel == null) return;
+            panel.SetActive(visible);
+        }
 
-                if (_completionPanel != null && _completionPanel.activeSelf)
-                {
-                    if (keyboard.spaceKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame || keyboard.nKey.wasPressedThisFrame)
-                    {
-                        LoggerService?.Log("[HUDView] Next level keyboard shortcut triggered (Space/Enter/N).");
-                        OnNextLevelClicked?.Invoke();
-                    }
-                }
+        private static void SetStarActive(GameObject star, bool active)
+        {
+            if (star != null) star.SetActive(active);
+        }
+
+        private Button FindButton(string token)
+        {
+            var buttons = GetComponentsInChildren<Button>(true);
+            foreach (var button in buttons)
+            {
+                string name = button.gameObject.name.ToLowerInvariant();
+                if (name.Contains(token)) return button;
             }
+            return null;
+        }
+
+        private TMP_Text FindText(string token)
+        {
+            var texts = GetComponentsInChildren<TMP_Text>(true);
+            foreach (var text in texts)
+            {
+                string name = text.gameObject.name.ToLowerInvariant();
+                if (name.Contains(token)) return text;
+            }
+            return null;
+        }
+
+        private GameObject FindObject(string token)
+        {
+            var transforms = GetComponentsInChildren<Transform>(true);
+            foreach (var tr in transforms)
+            {
+                string name = tr.gameObject.name.ToLowerInvariant();
+                if (name.Contains(token)) return tr.gameObject;
+            }
+            return null;
         }
     }
 }

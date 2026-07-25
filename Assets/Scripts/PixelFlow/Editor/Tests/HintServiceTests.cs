@@ -88,12 +88,13 @@ namespace PixelFlow.Editor.Tests
         public void UseHint_WithNoHintsLeft_DoesNothing()
         {
             var level = CreateTestLevel();
-            var testConfig = ScriptableObject.CreateInstance<GameConfig>();
+            var testConfig = GameTestContext.CreateTestGameConfig();
             testConfig.DefaultHintCount = 0;
             var ctx = NexusTestHarness.CreateContext(builder =>
             {
                 builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
                 builder.BindInstance(testConfig);
+                builder.BindInstance(GameTestContext.CreateTestStorageKeysConfig());
                 builder.BindService<IPathService, PathService>();
                 builder.BindService<IGameHistoryService, GameHistoryService>();
                 builder.Bind<IPathSolver, RuntimePathSolver>();
@@ -101,8 +102,8 @@ namespace PixelFlow.Editor.Tests
                 builder.BindService<IVehicleSimulator, VehicleSimulator>();
                 builder.BindService<ISaveThrottler, SaveThrottler>();
                 builder.BindService<IHapticService, HapticService>();
-                builder.BindService<INexusService, LoggerService>();
-                builder.Bind<ILoggerService, LoggerService>();
+                var quietLogger = new LoggerService { IsEnabled = false };
+                builder.BindInstance<ILoggerService>(quietLogger);
                 builder.BindService<ICrisisAdService, CrisisAdService>();
                 builder.BindService<IObstacleService, ObstacleService>();
                 builder.BindService<ITutorialDriver, TutorialDriver>();

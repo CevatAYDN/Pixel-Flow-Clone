@@ -3,6 +3,7 @@ using Nexus.Core.Services;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Data;
+using PixelFlow.Services;
 using UnityEngine;
 
 namespace PixelFlow.Commands
@@ -14,6 +15,8 @@ namespace PixelFlow.Commands
         [Inject] public ILoggerService Logger { get; set; }
         [Inject] public IFeedbackService FeedbackService { get; set; }
         [Inject, OptionalInject] public GameConfig Config { get; set; }
+        [Inject, OptionalInject] public ISkinCatalogService SkinCatalog { get; set; }
+        [Inject, OptionalInject] public PixelFlow.Data.StorageKeysConfigAsset Keys { get; set; }
 
         public void Execute(StopSkinUnlockedSignal signal)
         {
@@ -38,8 +41,14 @@ namespace PixelFlow.Commands
                 return;
             }
 
-            const string coinCurrencyId = "coin";
-            
+            if (string.IsNullOrEmpty(Keys?.CurrencyIdCoin))
+            {
+                Logger?.LogError("[PixelFlow.StopSkinUnlockCommand] CurrencyIdCoin is not configured.");
+                FeedbackService?.Play(FeedbackPreset.ErrorFailure);
+                return;
+            }
+            string coinCurrencyId = Keys.CurrencyIdCoin;
+
             if (EconomyService != null)
             {
                 if (!EconomyService.CanAfford(coinCurrencyId, skinConfig.UnlockCoinCost))
@@ -80,13 +89,12 @@ namespace PixelFlow.Commands
 
         private StopSkinConfig GetSkinConfig(string skinId)
         {
-            var allSkins = Resources.LoadAll<StopSkinConfig>("Configs/Skins");
-            foreach (var skin in allSkins)
+            if (SkinCatalog == null)
             {
-                if (skin.SkinId == skinId)
-                    return skin;
+                Logger?.LogError("[StopSkinUnlockCommand] ISkinCatalogService not injected — skin lookup failed.");
+                return null;
             }
-            return null;
+            return SkinCatalog.GetStopSkinById(skinId);
         }
 
         public void Reset()

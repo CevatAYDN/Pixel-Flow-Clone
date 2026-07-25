@@ -5,6 +5,7 @@ using PixelFlow.Models;
 using PixelFlow.Services;
 using PixelFlow.Signals;
 using UnityEngine;
+using static PixelFlow.Editor.Tests.GameTestContext;
 
 namespace PixelFlow.Editor.Tests
 {
@@ -34,7 +35,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void LevelProgressionService_GetDifficultyForLevel_ReturnsValidParams()
         {
-            var solver = new RuntimePathSolver();
+            var solver = CreateTestRuntimePathSolver();
             var service = new LevelProgressionService(solver);
 
             var diff1 = service.GetDifficultyForLevel(0);
@@ -48,7 +49,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void LevelProgressionService_GetOrGenerateLevel_ReturnsLevelData()
         {
-            var solver = new RuntimePathSolver();
+            var solver = CreateTestRuntimePathSolver();
             var service = new LevelProgressionService(solver);
 
             var level = service.GetOrGenerateLevel(0);
