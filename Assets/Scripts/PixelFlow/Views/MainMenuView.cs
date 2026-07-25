@@ -107,29 +107,33 @@ namespace PixelFlow.Views
             foreach (var t in texts)
             {
                 string name = t.gameObject.name.ToLower();
-                if (_titleText == null && (name.Contains("title") || name.Contains("header"))) _titleText = t;
-                if (_coinText == null && name.Contains("coin")) _coinText = t;
-                if (_equippedVehicleNameText == null && (name.Contains("vehiclename") || name.Contains("name"))) _equippedVehicleNameText = t;
-                if (_equippedVehicleTypeText == null && (name.Contains("vehicletype") || name.Contains("type"))) _equippedVehicleTypeText = t;
-                if (_playButtonText == null && (name.Contains("play") || name.Contains("start"))) _playButtonText = t;
+                if (_titleText == null && (name.Contains("title") || name.Contains("header") || name.Contains("baslik"))) _titleText = t;
+                if (_coinText == null && (name.Contains("coin") || name.Contains("gold") || name.Contains("altin"))) _coinText = t;
+                if (_equippedVehicleNameText == null && (name.Contains("vehiclename") || name.Contains("aracadi") || name.Contains("name"))) _equippedVehicleNameText = t;
+                if (_equippedVehicleTypeText == null && (name.Contains("vehicletype") || name.Contains("aractip") || name.Contains("type"))) _equippedVehicleTypeText = t;
+                if (_playButtonText == null && (name.Contains("play") || name.Contains("start") || name.Contains("basla"))) _playButtonText = t;
             }
 
             var buttons = GetComponentsInChildren<Button>(true);
             foreach (var b in buttons)
             {
                 string name = b.gameObject.name.ToLower();
-                if (_openGarageButton == null && name.Contains("garage")) _openGarageButton = b;
-                if (_levelSelectButton == null && (name.Contains("levelselect") || name.Contains("levelsbutton"))) _levelSelectButton = b;
-                if (_settingsButton == null && name.Contains("setting")) _settingsButton = b;
-                // Play eşleşmesi en sona: "levelselect" gibi adları yanlışlıkla yakalamamak için
-                if (_playButton == null && b != _levelSelectButton && (name.Contains("play") || name.Contains("start"))) _playButton = b;
+                string txt = "";
+                var tmp = b.GetComponentInChildren<TMP_Text>();
+                if (tmp != null) txt = tmp.text.ToLower();
+
+                if (_openGarageButton == null && (name.Contains("garage") || name.Contains("garaj") || name.Contains("shop") || txt.Contains("garaj") || txt.Contains("garage"))) _openGarageButton = b;
+                if (_levelSelectButton == null && (name.Contains("levelselect") || name.Contains("levels") || name.Contains("seviye") || txt.Contains("seviye"))) _levelSelectButton = b;
+                if (_settingsButton == null && (name.Contains("setting") || name.Contains("ayarlar") || name.Contains("ayar") || txt.Contains("ayar"))) _settingsButton = b;
+                if (_playButton == null && b != _levelSelectButton && b != _openGarageButton && b != _settingsButton &&
+                    (name.Contains("play") || name.Contains("start") || name.Contains("basla") || txt.Contains("başla") || txt.Contains("basla") || txt.Contains("play"))) _playButton = b;
             }
 
             var transforms = GetComponentsInChildren<Transform>(true);
             foreach (var tr in transforms)
             {
                 string name = tr.gameObject.name.ToLower();
-                if (_garageCard == null && name.Contains("garagecard")) _garageCard = tr.gameObject;
+                if (_garageCard == null && (name.Contains("garagecard") || name.Contains("garajkart") || name.Contains("card"))) _garageCard = tr.gameObject;
             }
         }
 

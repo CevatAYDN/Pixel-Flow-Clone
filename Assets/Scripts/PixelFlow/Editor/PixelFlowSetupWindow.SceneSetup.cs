@@ -567,8 +567,8 @@ namespace PixelFlow.Editor
             var topBarRect = topBarObj.GetComponent<RectTransform>();
             if (topBarRect != null)
             {
-                topBarRect.anchorMin = new Vector2(0.04f, 0.90f);
-                topBarRect.anchorMax = new Vector2(0.96f, 0.97f);
+                topBarRect.anchorMin = new Vector2(0.04f, 0.915f);
+                topBarRect.anchorMax = new Vector2(0.96f, 0.975f);
                 topBarRect.sizeDelta = Vector2.zero;
             }
 
@@ -1218,13 +1218,12 @@ namespace PixelFlow.Editor
             }
             var grid = gridObj.GetComponent<UnityEngine.UI.GridLayoutGroup>();
             if (grid == null) grid = gridObj.AddComponent<UnityEngine.UI.GridLayoutGroup>();
-            grid.cellSize = new Vector2(150f, 150f);
-            grid.spacing = new Vector2(16f, 16f);
-            grid.padding = new RectOffset(8, 8, 8, 8);
+            grid.cellSize = new Vector2(76f, 76f);
+            grid.spacing = new Vector2(10f, 10f);
+            grid.padding = new RectOffset(10, 10, 10, 10);
             grid.constraint = UnityEngine.UI.GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = 4;
             grid.childAlignment = TextAnchor.UpperCenter;
-            // İçerikteki Image raycast'i kutu tıklamalarını bloklamasın diye konteyner görseli yok.
 
             // Geri butonu
             var backBtn = EnsureButton(lsObj, "BackButton");
@@ -1380,16 +1379,44 @@ namespace PixelFlow.Editor
                 cRect.anchoredPosition = Vector2.zero;
             }
 
-            // Skin Container (Scroll/Grid Area)
-            var skinContainerObj = FindOrCreateChild(cardObj.transform, "Container");
+            // ScrollView Container for Garage Cards (with Mask)
+            var scrollObj = FindOrCreateChild(cardObj.transform, "ScrollView");
+            var scrollRect = scrollObj.GetComponent<ScrollRect>();
+            if (scrollRect == null) scrollRect = scrollObj.AddComponent<ScrollRect>();
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            var sRect = scrollObj.GetComponent<RectTransform>();
+            if (sRect != null)
+            {
+                sRect.anchorMin = new Vector2(0.05f, 0.18f);
+                sRect.anchorMax = new Vector2(0.95f, 0.78f);
+                sRect.sizeDelta = Vector2.zero;
+            }
+
+            var viewportObj = FindOrCreateChild(cardObj.transform, "Viewport");
+            var vpMask = viewportObj.GetComponent<RectMask2D>();
+            if (vpMask == null) vpMask = viewportObj.AddComponent<RectMask2D>();
+            var vpRect = viewportObj.GetComponent<RectTransform>();
+            if (vpRect != null)
+            {
+                vpRect.anchorMin = new Vector2(0.05f, 0.18f);
+                vpRect.anchorMax = new Vector2(0.95f, 0.78f);
+                vpRect.sizeDelta = Vector2.zero;
+            }
+
+            var skinContainerObj = FindOrCreateChild(viewportObj.transform, "Content");
+            scrollRect.content = skinContainerObj.GetComponent<RectTransform>();
             var scRect = skinContainerObj.GetComponent<RectTransform>();
             if (scRect != null)
             {
-                scRect.anchorMin = new Vector2(0.05f, 0.20f);
-                scRect.anchorMax = new Vector2(0.95f, 0.78f);
+                scRect.anchorMin = new Vector2(0f, 1f);
+                scRect.anchorMax = Vector2.one;
+                scRect.pivot = new Vector2(0.5f, 1f);
                 scRect.sizeDelta = Vector2.zero;
-                scRect.anchoredPosition = Vector2.zero;
             }
+            var fitter = skinContainerObj.GetComponent<ContentSizeFitter>();
+            if (fitter == null) fitter = skinContainerObj.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             var closeBtn = EnsureButton(cardObj, "CloseButton");
             var closeImg = closeBtn.GetComponent<UnityEngine.UI.Image>();

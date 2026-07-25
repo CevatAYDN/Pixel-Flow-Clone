@@ -28,11 +28,7 @@ namespace PixelFlow.Commands
         private GameConfig ResolveConfig()
         {
             if (Config != null) return Config;
-#if !UNITY_EDITOR
-            throw new DataValidationException("GameConfig erişilemedi! ClearJamCommand hak sayısı belirleyemiyor.");
-#else
-            return ScriptableObject.CreateInstance<GameConfig>();
-#endif
+            throw new DataValidationException("GameConfig erişilemedi! ClearJamCommand hak sayısı belirleyemiyor. GameContextLifecycle'da GameConfig yüklü olmalı.");
         }
 
         public void Execute(ClearJamSignal signal)

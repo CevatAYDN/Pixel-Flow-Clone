@@ -98,11 +98,7 @@ namespace PixelFlow.Services
             // SO varsayılanlarını taşıyan bir instance kullanılır (ScoreCalculator ile tutarlı desen).
             if (_config == null)
             {
-#if !UNITY_EDITOR
-                throw new Data.DataValidationException("GameConfig erişilemedi! VehicleMovementService başlatılamıyor.");
-#else
-                _config = ScriptableObject.CreateInstance<GameConfig>();
-#endif
+                throw new Data.DataValidationException("GameConfig erişilemedi! VehicleMovementService başlatılamıyor. GameContextLifecycle'da GameConfig yüklü olmalı.");
             }
         }
 

@@ -32,13 +32,7 @@ namespace PixelFlow.Services
             get
             {
                 if (Config != null) return Config;
-                if (_resolvedConfig != null) return _resolvedConfig;
-#if !UNITY_EDITOR
-                throw new DataValidationException("GameConfig erişilemedi! RuntimePathSolver iterasyon limitleri yüklenemiyor.");
-#else
-                _resolvedConfig = ScriptableObject.CreateInstance<GameConfig>();
-                return _resolvedConfig;
-#endif
+                throw new DataValidationException("GameConfig erişilemedi! RuntimePathSolver iterasyon limitleri yüklenemiyor. GameContextLifecycle'da GameConfig yüklü olmalı.");
             }
         }
 

@@ -86,11 +86,7 @@ namespace PixelFlow.Commands
         private GameConfig ResolveConfig()
         {
             if (Config != null) return Config;
-#if !UNITY_EDITOR
-            throw new DataValidationException("GameConfig erişilemedi! SaveProgressCommand coin ödülü hesaplanamıyor.");
-#else
-            return ScriptableObject.CreateInstance<GameConfig>();
-#endif
+            throw new DataValidationException("GameConfig erişilemedi! SaveProgressCommand coin ödülü hesaplanamıyor. GameContextLifecycle'da GameConfig yüklü olmalı.");
         }
 
         public void Reset()

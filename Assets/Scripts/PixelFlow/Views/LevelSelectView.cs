@@ -103,6 +103,21 @@ namespace PixelFlow.Views
             if (canvas != null) canvas.enabled = visible;
         }
 
+        private void EnsureGridContainerLayout()
+        {
+            if (_gridContainer == null) return;
+            var grid = _gridContainer.GetComponent<GridLayoutGroup>();
+            if (grid == null)
+            {
+                grid = _gridContainer.gameObject.AddComponent<GridLayoutGroup>();
+                grid.cellSize = new Vector2(76, 76);
+                grid.spacing = new Vector2(10, 10);
+                grid.padding = new RectOffset(10, 10, 10, 10);
+                grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+                grid.constraintCount = 4;
+            }
+        }
+
         /// <summary>Grid'i temizleyip verilen seviye listesine göre kutuları yeniden üretir.</summary>
         public void PopulateLevels(IReadOnlyList<LevelButtonInfo> levels)
         {
@@ -112,6 +127,7 @@ namespace PixelFlow.Views
                 return;
             }
 
+            EnsureGridContainerLayout();
             ClearGrid();
             if (levels == null) return;
 

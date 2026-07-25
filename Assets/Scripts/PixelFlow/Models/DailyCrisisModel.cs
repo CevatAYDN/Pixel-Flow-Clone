@@ -38,13 +38,7 @@ namespace PixelFlow.Models
         private GameConfig ResolveConfig()
         {
             if (_config != null) return _config;
-            if (_resolvedConfig != null) return _resolvedConfig;
-#if !UNITY_EDITOR
-            throw new DataValidationException("GameConfig erişilemedi! DailyCrisisModel kriz skorları yüklenemiyor.");
-#else
-            _resolvedConfig = ScriptableObject.CreateInstance<GameConfig>();
-            return _resolvedConfig;
-#endif
+            throw new DataValidationException("GameConfig erişilemedi! DailyCrisisModel kriz skorları yüklenemiyor. GameContextLifecycle'da GameConfig yüklü olmalı.");
         }
 
         public ValueTask OnBind(CancellationToken ct) => default;

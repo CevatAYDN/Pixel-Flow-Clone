@@ -30,6 +30,13 @@ namespace PixelFlow.Views
         {
             base.OnBind(context);
             AutoWireUIReferences();
+            if (_skinContainer == null)
+            {
+                var content = transform.Find("GarageCard/ScrollView/Viewport/Content");
+                if (content == null) content = transform.Find("GarageCard/Container");
+                if (content == null) content = transform.Find("Container");
+                _skinContainer = content != null ? content : transform;
+            }
             if (_closeButton != null)
             {
                 _closeButton.onClick.RemoveAllListeners();
@@ -49,7 +56,13 @@ namespace PixelFlow.Views
             if (_panel == null) _panel = gameObject;
             if (_closeButton == null) _closeButton = GetComponentInChildren<Button>(true);
             if (_coinsText == null) _coinsText = GetComponentInChildren<TMP_Text>(true);
-            if (_skinContainer == null) _skinContainer = transform.Find("Container") ?? transform;
+            if (_skinContainer == null)
+            {
+                var content = transform.Find("GarageCard/ScrollView/Viewport/Content");
+                if (content == null) content = transform.Find("GarageCard/Container");
+                if (content == null) content = transform.Find("Container");
+                _skinContainer = content != null ? content : transform;
+            }
             if (_stopSkinContainer == null) _stopSkinContainer = transform.Find("StopSkinContainer") ?? _skinContainer;
         }
 
@@ -73,12 +86,57 @@ namespace PixelFlow.Views
                 _coinsText.text = $"{coins:N0} GOLD";
         }
 
+        private static string SanitizeText(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return string.Empty;
+            var sb = new System.Text.StringBuilder(text.Length);
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (char.IsHighSurrogate(c) || char.IsLowSurrogate(c)) continue;
+                sb.Append(c);
+            }
+            return sb.ToString().Trim();
+        }
+
+        private static Color GetColorFamilyBg(ColorType color)
+        {
+            return color switch
+            {
+                ColorType.Red => new Color(0.99f, 0.88f, 0.88f),
+                ColorType.Blue => new Color(0.88f, 0.94f, 0.99f),
+                ColorType.Green => new Color(0.88f, 0.99f, 0.92f),
+                ColorType.Yellow => new Color(0.99f, 0.97f, 0.82f),
+                ColorType.Purple => new Color(0.94f, 0.88f, 0.99f),
+                _ => new Color(0.92f, 0.95f, 0.98f)
+            };
+        }
+
+        private void EnsureLayoutGroup(Transform container)
+        {
+            if (container == null) return;
+            if (container.parent != null && container.parent.GetComponent<RectMask2D>() == null)
+            {
+                container.parent.gameObject.AddComponent<RectMask2D>();
+            }
+            var grid = container.GetComponent<GridLayoutGroup>();
+            if (grid == null)
+            {
+                grid = container.gameObject.AddComponent<GridLayoutGroup>();
+                grid.cellSize = new Vector2(92, 100);
+                grid.spacing = new Vector2(8, 8);
+                grid.padding = new RectOffset(6, 6, 6, 6);
+                grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+                grid.constraintCount = 3;
+            }
+        }
+
         public void PopulateSkins(IReadOnlyList<VehicleSkinConfig> skins, Func<string, bool> isUnlocked, Func<ColorType, string, bool> isEquipped)
         {
             if (_skinContainer == null) return;
+            EnsureLayoutGroup(_skinContainer);
             LoggerService?.Log($"[PixelFlow.GarageView] Populating {skins?.Count ?? 0} vehicle skins in Garage UI...");
 
-            // Clear existing children
             for (int i = _skinContainer.childCount - 1; i >= 0; i--)
             {
                 var child = _skinContainer.GetChild(i).gameObject;
@@ -94,11 +152,12 @@ namespace PixelFlow.Views
                 bool unlocked = isUnlocked != null && isUnlocked(skin.SkinId);
                 bool equipped = isEquipped != null && isEquipped(skin.ColorFamily, skin.SkinId);
 
+                // Main Rounded White Card (index.html style)
                 var itemObj = new GameObject($"SkinCard_{skin.SkinId}", typeof(RectTransform), typeof(Image), typeof(Button));
                 itemObj.transform.SetParent(_skinContainer, false);
 
                 var img = itemObj.GetComponent<Image>();
-                img.color = equipped ? new Color(0.2f, 0.6f, 0.3f, 0.9f) : (unlocked ? new Color(0.2f, 0.2f, 0.3f, 0.9f) : new Color(0.12f, 0.12f, 0.15f, 0.9f));
+                img.color = Color.white;
 
                 var btn = itemObj.GetComponent<Button>();
                 var capturedSkin = skin;
@@ -117,15 +176,52 @@ namespace PixelFlow.Views
                     }
                 });
 
-                var textObj = new GameObject("Label", typeof(RectTransform));
-                textObj.transform.SetParent(itemObj.transform, false);
-                var tmp = textObj.AddComponent<TextMeshProUGUI>();
-                tmp.fontSize = 20;
-                tmp.alignment = TextAlignmentOptions.Center;
-                tmp.color = Color.white;
+                // Top Preview Panel
+                var prevObj = new GameObject("PreviewPanel", typeof(RectTransform), typeof(Image));
+                prevObj.transform.SetParent(itemObj.transform, false);
+                var prevImg = prevObj.GetComponent<Image>();
+                prevImg.color = GetColorFamilyBg(skin.ColorFamily);
+                var prevRect = prevObj.GetComponent<RectTransform>();
+                prevRect.anchorMin = new Vector2(0.06f, 0.44f);
+                prevRect.anchorMax = new Vector2(0.94f, 0.94f);
+                prevRect.sizeDelta = Vector2.zero;
 
-                string statusStr = equipped ? "[KUŞANILDI]" : (unlocked ? "[KUŞAN]" : $"[{skin.UnlockCoinCost} GOLD]");
-                tmp.text = $"{skin.DisplayName}\n{statusStr}";
+                // Skin Display Name
+                var nameObj = new GameObject("SkinName", typeof(RectTransform));
+                nameObj.transform.SetParent(itemObj.transform, false);
+                var nameTmp = nameObj.AddComponent<TextMeshProUGUI>();
+                nameTmp.fontSize = 11;
+                nameTmp.fontStyle = FontStyles.Bold;
+                nameTmp.alignment = TextAlignmentOptions.Center;
+                nameTmp.color = new Color(0.06f, 0.09f, 0.16f); // #0F172A Dark Slate
+                nameTmp.text = SanitizeText(skin.DisplayName);
+                var nameRect = nameObj.GetComponent<RectTransform>();
+                nameRect.anchorMin = new Vector2(0.04f, 0.22f);
+                nameRect.anchorMax = new Vector2(0.96f, 0.42f);
+                nameRect.sizeDelta = Vector2.zero;
+
+                // Status Badge Panel
+                var badgeObj = new GameObject("StatusBadge", typeof(RectTransform), typeof(Image));
+                badgeObj.transform.SetParent(itemObj.transform, false);
+                var badgeImg = badgeObj.GetComponent<Image>();
+                badgeImg.color = equipped ? new Color(0.92f, 0.99f, 0.95f) : (unlocked ? new Color(0.94f, 0.96f, 1f) : new Color(0.99f, 0.95f, 0.78f));
+                var badgeRect = badgeObj.GetComponent<RectTransform>();
+                badgeRect.anchorMin = new Vector2(0.06f, 0.04f);
+                badgeRect.anchorMax = new Vector2(0.94f, 0.20f);
+                badgeRect.sizeDelta = Vector2.zero;
+
+                var badgeTxtObj = new GameObject("Text", typeof(RectTransform));
+                badgeTxtObj.transform.SetParent(badgeObj.transform, false);
+                var badgeTmp = badgeTxtObj.AddComponent<TextMeshProUGUI>();
+                badgeTmp.fontSize = 10;
+                badgeTmp.fontStyle = FontStyles.Bold;
+                badgeTmp.alignment = TextAlignmentOptions.Center;
+                badgeTmp.color = equipped ? new Color(0.02f, 0.59f, 0.41f) : (unlocked ? new Color(0.14f, 0.38f, 0.92f) : new Color(0.7f, 0.35f, 0.05f));
+                badgeTmp.text = equipped ? "KUŞANILDI" : (unlocked ? "KUŞAN" : $"{skin.UnlockCoinCost} GOLD");
+                var badgeTxtRect = badgeTxtObj.GetComponent<RectTransform>();
+                badgeTxtRect.anchorMin = Vector2.zero;
+                badgeTxtRect.anchorMax = Vector2.one;
+                badgeTxtRect.sizeDelta = Vector2.zero;
             }
         }
 
@@ -133,6 +229,7 @@ namespace PixelFlow.Views
         {
             var container = _stopSkinContainer != null ? _stopSkinContainer : _skinContainer;
             if (container == null) return;
+            EnsureLayoutGroup(container);
             LoggerService?.Log($"[PixelFlow.GarageView] Populating {skins?.Count ?? 0} stop skins in Garage UI...");
 
             if (_stopSkinContainer != null && _stopSkinContainer != _skinContainer)
@@ -157,7 +254,7 @@ namespace PixelFlow.Views
                 itemObj.transform.SetParent(container, false);
 
                 var img = itemObj.GetComponent<Image>();
-                img.color = equipped ? new Color(0.2f, 0.6f, 0.3f, 0.9f) : (unlocked ? new Color(0.2f, 0.2f, 0.3f, 0.9f) : new Color(0.12f, 0.12f, 0.15f, 0.9f));
+                img.color = Color.white;
 
                 var btn = itemObj.GetComponent<Button>();
                 var capturedSkin = skin;
@@ -166,25 +263,59 @@ namespace PixelFlow.Views
                 {
                     if (unlocked)
                     {
-                        LoggerService?.Log($"[PixelFlow.GarageView] Stop Skin Card clicked -> Equip {capturedSkin.DisplayName}");
+                        LoggerService?.Log($"[PixelFlow.GarageView] Card clicked -> Equip Stop {capturedSkin.DisplayName}");
                         TriggerEquipStopSkin(capturedSkin);
                     }
                     else
                     {
-                        LoggerService?.Log($"[PixelFlow.GarageView] Stop Skin Card clicked -> Buy {capturedSkin.DisplayName} for {capturedSkin.UnlockCoinCost}");
+                        LoggerService?.Log($"[PixelFlow.GarageView] Card clicked -> Buy Stop {capturedSkin.DisplayName} for {capturedSkin.UnlockCoinCost}");
                         TriggerBuyStopSkin(capturedSkin);
                     }
                 });
 
-                var textObj = new GameObject("Label", typeof(RectTransform));
-                textObj.transform.SetParent(itemObj.transform, false);
-                var tmp = textObj.AddComponent<TextMeshProUGUI>();
-                tmp.fontSize = 20;
-                tmp.alignment = TextAlignmentOptions.Center;
-                tmp.color = Color.white;
+                var prevObj = new GameObject("PreviewPanel", typeof(RectTransform), typeof(Image));
+                prevObj.transform.SetParent(itemObj.transform, false);
+                var prevImg = prevObj.GetComponent<Image>();
+                prevImg.color = GetColorFamilyBg((ColorType)skin.ThemePalette);
+                var prevRect = prevObj.GetComponent<RectTransform>();
+                prevRect.anchorMin = new Vector2(0.06f, 0.44f);
+                prevRect.anchorMax = new Vector2(0.94f, 0.94f);
+                prevRect.sizeDelta = Vector2.zero;
 
-                string statusStr = equipped ? "[KUŞANILDI]" : (unlocked ? "[KUŞAN]" : $"[{skin.UnlockCoinCost} GOLD]");
-                tmp.text = $"{skin.DisplayName}\n{statusStr}";
+                var nameObj = new GameObject("SkinName", typeof(RectTransform));
+                nameObj.transform.SetParent(itemObj.transform, false);
+                var nameTmp = nameObj.AddComponent<TextMeshProUGUI>();
+                nameTmp.fontSize = 11;
+                nameTmp.fontStyle = FontStyles.Bold;
+                nameTmp.alignment = TextAlignmentOptions.Center;
+                nameTmp.color = new Color(0.06f, 0.09f, 0.16f);
+                nameTmp.text = SanitizeText(skin.DisplayName);
+                var nameRect = nameObj.GetComponent<RectTransform>();
+                nameRect.anchorMin = new Vector2(0.04f, 0.22f);
+                nameRect.anchorMax = new Vector2(0.96f, 0.42f);
+                nameRect.sizeDelta = Vector2.zero;
+
+                var badgeObj = new GameObject("StatusBadge", typeof(RectTransform), typeof(Image));
+                badgeObj.transform.SetParent(itemObj.transform, false);
+                var badgeImg = badgeObj.GetComponent<Image>();
+                badgeImg.color = equipped ? new Color(0.92f, 0.99f, 0.95f) : (unlocked ? new Color(0.94f, 0.96f, 1f) : new Color(0.99f, 0.95f, 0.78f));
+                var badgeRect = badgeObj.GetComponent<RectTransform>();
+                badgeRect.anchorMin = new Vector2(0.06f, 0.04f);
+                badgeRect.anchorMax = new Vector2(0.94f, 0.20f);
+                badgeRect.sizeDelta = Vector2.zero;
+
+                var badgeTxtObj = new GameObject("Text", typeof(RectTransform));
+                badgeTxtObj.transform.SetParent(badgeObj.transform, false);
+                var badgeTmp = badgeTxtObj.AddComponent<TextMeshProUGUI>();
+                badgeTmp.fontSize = 10;
+                badgeTmp.fontStyle = FontStyles.Bold;
+                badgeTmp.alignment = TextAlignmentOptions.Center;
+                badgeTmp.color = equipped ? new Color(0.02f, 0.59f, 0.41f) : (unlocked ? new Color(0.14f, 0.38f, 0.92f) : new Color(0.7f, 0.35f, 0.05f));
+                badgeTmp.text = equipped ? "KUŞANILDI" : (unlocked ? "KUŞAN" : $"{skin.UnlockCoinCost} GOLD");
+                var badgeTxtRect = badgeTxtObj.GetComponent<RectTransform>();
+                badgeTxtRect.anchorMin = Vector2.zero;
+                badgeTxtRect.anchorMax = Vector2.one;
+                badgeTxtRect.sizeDelta = Vector2.zero;
             }
         }
 
