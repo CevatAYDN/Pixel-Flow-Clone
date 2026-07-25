@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62198399df6ab3247ae43b3c70ad5718, type: 3}
+  m_Name: EventTemplate_CollectionFrenzy
+  m_EditorClassIdentifier: PixelFlow::PixelFlow.Data.EventTemplateAsset
+  EventId: collection_frenzy
+  DisplayName: "Koleksiyon Çılgını 🎁"
+  Description: "7 gün boyunca her gün yeni bir skin kazanma şansı!"
+  DurationSeconds: 604800
+  CoinMultiplier: 1.5
+  GemMultiplier: 2.0
+  TicketMultiplier: 1.5
+  MinLevel: 15
+  TriggerAfterHours: 168
+  VisualTheme: "Candy"
+  BannerColor: {r: 1, g: 0.3, b: 0.6, a: 1}
+  IconName: "event_collection"
+  Rewards:
+    - Type: Skin
+      Amount: 1
+      Condition: DailyLogin
+    - Type: Coin
+      Amount: 200
+      Condition: CompleteLevel
+    - Type: Gem
+      Amount: 10
+      Condition: ThreeStar
+    - Type: Ticket
+      Amount: 5
+      Condition: DailyClaim

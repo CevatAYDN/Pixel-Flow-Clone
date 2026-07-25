@@ -54,7 +54,7 @@ namespace PixelFlow.Editor
         private GUIStyle _cardStyle;
         private GUIStyle _badgeStyle;
 
-        [MenuItem("Pixel Flow/Seviye Stüdyosu (Level Studio)", false, 1)]
+        [MenuItem("Pixel Flow/Seviye Stüdyosu Bankası (Level Bank Studio)", false, 10)]
         public static void ShowWindow()
         {
             PixelFlowSetupWindow.OpenTab(1);

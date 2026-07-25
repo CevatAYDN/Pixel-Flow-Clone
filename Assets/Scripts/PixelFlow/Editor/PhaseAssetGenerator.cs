@@ -54,7 +54,6 @@ namespace PixelFlow.Editor
             AssetDatabase.Refresh();
 
             Debug.Log($"[PhaseAssetGenerator] PhaseConfig.asset created at {configPath}");
-            EditorUtility.DisplayDialog("Pixel Flow", "Phase assets generated in Configs/! Seviye Stüdyosu'nu yenileyin.", "OK");
         }
 
         /// <summary>Seviye indeksine göre hangi fazda olduğunu belirler (ScriptableObject yüklemeden)</summary>

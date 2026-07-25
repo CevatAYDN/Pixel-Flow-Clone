@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62198399df6ab3247ae43b3c70ad5718, type: 3}
+  m_Name: EventTemplate_RushHour
+  m_EditorClassIdentifier: PixelFlow::PixelFlow.Data.EventTemplateAsset
+  EventId: rush_hour
+  DisplayName: "Yoğun Trafik 🚗💨"
+  Description: "24 saat boyunca tüm seviyelerde 2x coin kazan!"
+  DurationSeconds: 86400
+  CoinMultiplier: 2.0
+  GemMultiplier: 1.0
+  TicketMultiplier: 1.0
+  MinLevel: 10
+  TriggerAfterHours: 24
+  VisualTheme: "Neon"
+  BannerColor: {r: 1, g: 0.5, b: 0, a: 1}
+  IconName: "event_rushhour"
+  Rewards:
+    - Type: Coin
+      Amount: 100
+      Condition: PlayLevel
+    - Type: Coin
+      Amount: 50
+      Condition: CompleteLevel
+    - Type: Hint
+      Amount: 2
+      Condition: ThreeStar

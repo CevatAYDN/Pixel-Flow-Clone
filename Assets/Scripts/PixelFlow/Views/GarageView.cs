@@ -16,10 +16,13 @@ namespace PixelFlow.Views
         [SerializeField] private Button _closeButton;
         [SerializeField] private TMP_Text _coinsText;
         [SerializeField] private Transform _skinContainer;
+        [SerializeField] private Transform _stopSkinContainer;
 
         public event Action OnCloseClicked;
         public event Action<VehicleSkinConfig> OnBuySkinClicked;
         public event Action<VehicleSkinConfig> OnEquipSkinClicked;
+        public event Action<StopSkinConfig> OnBuyStopSkinClicked;
+        public event Action<StopSkinConfig> OnEquipStopSkinClicked;
 
         [Inject] public ILoggerService LoggerService { get; set; }
 
@@ -47,6 +50,7 @@ namespace PixelFlow.Views
             if (_closeButton == null) _closeButton = GetComponentInChildren<Button>(true);
             if (_coinsText == null) _coinsText = GetComponentInChildren<TMP_Text>(true);
             if (_skinContainer == null) _skinContainer = transform.Find("Container") ?? transform;
+            if (_stopSkinContainer == null) _stopSkinContainer = transform.Find("StopSkinContainer") ?? _skinContainer;
         }
 
         public void SetActive(bool active)
@@ -125,6 +129,65 @@ namespace PixelFlow.Views
             }
         }
 
+        public void PopulateStopSkins(IReadOnlyList<StopSkinConfig> skins, Func<string, bool> isUnlocked, Func<ColorType, string, bool> isEquipped)
+        {
+            var container = _stopSkinContainer != null ? _stopSkinContainer : _skinContainer;
+            if (container == null) return;
+            LoggerService?.Log($"[PixelFlow.GarageView] Populating {skins?.Count ?? 0} stop skins in Garage UI...");
+
+            if (_stopSkinContainer != null && _stopSkinContainer != _skinContainer)
+            {
+                for (int i = _stopSkinContainer.childCount - 1; i >= 0; i--)
+                {
+                    var child = _stopSkinContainer.GetChild(i).gameObject;
+                    if (Application.isPlaying) Destroy(child);
+                    else DestroyImmediate(child);
+                }
+            }
+
+            if (skins == null) return;
+
+            foreach (var skin in skins)
+            {
+                if (skin == null) continue;
+                bool unlocked = isUnlocked != null && isUnlocked(skin.SkinId);
+                bool equipped = isEquipped != null && isEquipped((ColorType)skin.ThemePalette, skin.SkinId);
+
+                var itemObj = new GameObject($"StopSkinCard_{skin.SkinId}", typeof(RectTransform), typeof(Image), typeof(Button));
+                itemObj.transform.SetParent(container, false);
+
+                var img = itemObj.GetComponent<Image>();
+                img.color = equipped ? new Color(0.2f, 0.6f, 0.3f, 0.9f) : (unlocked ? new Color(0.2f, 0.2f, 0.3f, 0.9f) : new Color(0.12f, 0.12f, 0.15f, 0.9f));
+
+                var btn = itemObj.GetComponent<Button>();
+                var capturedSkin = skin;
+
+                btn.onClick.AddListener(() =>
+                {
+                    if (unlocked)
+                    {
+                        LoggerService?.Log($"[PixelFlow.GarageView] Stop Skin Card clicked -> Equip {capturedSkin.DisplayName}");
+                        TriggerEquipStopSkin(capturedSkin);
+                    }
+                    else
+                    {
+                        LoggerService?.Log($"[PixelFlow.GarageView] Stop Skin Card clicked -> Buy {capturedSkin.DisplayName} for {capturedSkin.UnlockCoinCost}");
+                        TriggerBuyStopSkin(capturedSkin);
+                    }
+                });
+
+                var textObj = new GameObject("Label", typeof(RectTransform));
+                textObj.transform.SetParent(itemObj.transform, false);
+                var tmp = textObj.AddComponent<TextMeshProUGUI>();
+                tmp.fontSize = 20;
+                tmp.alignment = TextAlignmentOptions.Center;
+                tmp.color = Color.white;
+
+                string statusStr = equipped ? "[KUŞANILDI]" : (unlocked ? "[KUŞAN]" : $"[{skin.UnlockCoinCost} GOLD]");
+                tmp.text = $"{skin.DisplayName}\n{statusStr}";
+            }
+        }
+
         public void TriggerBuySkin(VehicleSkinConfig skin)
         {
             LoggerService?.Log($"[PixelFlow.GarageView] TriggerBuySkin -> {skin?.SkinId}");
@@ -135,6 +198,18 @@ namespace PixelFlow.Views
         {
             LoggerService?.Log($"[PixelFlow.GarageView] TriggerEquipSkin -> {skin?.SkinId}");
             OnEquipSkinClicked?.Invoke(skin);
+        }
+
+        public void TriggerBuyStopSkin(StopSkinConfig skin)
+        {
+            LoggerService?.Log($"[PixelFlow.GarageView] TriggerBuyStopSkin -> {skin?.SkinId}");
+            OnBuyStopSkinClicked?.Invoke(skin);
+        }
+
+        public void TriggerEquipStopSkin(StopSkinConfig skin)
+        {
+            LoggerService?.Log($"[PixelFlow.GarageView] TriggerEquipStopSkin -> {skin?.SkinId}");
+            OnEquipStopSkinClicked?.Invoke(skin);
         }
     }
 }

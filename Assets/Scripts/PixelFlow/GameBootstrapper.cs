@@ -301,7 +301,7 @@ namespace PixelFlow
             try
             {
                 GridStateSerializer.Save(_gridModel, _sessionModel, _levelModel, _prefs);
-                Models.CloudSaveManager.SyncToCloud(
+                _ = Models.CloudSaveManager.SyncToCloudAsync(
                     _prefs,
                     _prefs.GetString("NT_PuzzleSave_", ""),
                     _sessionModel.Score);

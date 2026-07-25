@@ -43,18 +43,13 @@ namespace PixelFlow.Services
         public void OnDispose() { }
 
         // game_plan.md §2.2: config zorunludur. Build'de erişilemezse DataValidationException;
-        // editor/testte SO varsayılan instance'ı (cache'li).
+        // EconomyConfig is now required via GameContextLifecycle binding
         private EconomyConfigAsset _resolvedEconomyConfig;
         private EconomyConfigAsset ResolveEconomyConfig()
         {
             if (EconomyConfig != null) return EconomyConfig;
             if (_resolvedEconomyConfig != null) return _resolvedEconomyConfig;
-#if !UNITY_EDITOR
-            throw new DataValidationException("EconomyConfigAsset erişilemedi! LevelLoaderService viyadük bonusu hesaplanamıyor.");
-#else
-            _resolvedEconomyConfig = ScriptableObject.CreateInstance<EconomyConfigAsset>();
-            return _resolvedEconomyConfig;
-#endif
+            throw new DataValidationException("EconomyConfigAsset erişilemedi! LevelLoaderService viyadük bonusu hesaplanamıyor. GameContextLifecycle'da EconomyConfig yüklü olmalı.");
         }
 
         public void LoadLevel(LoadLevelSignal signal)

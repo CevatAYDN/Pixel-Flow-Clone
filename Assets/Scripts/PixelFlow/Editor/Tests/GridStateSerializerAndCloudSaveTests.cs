@@ -105,7 +105,7 @@ namespace PixelFlow.Editor.Tests
             using var ctx = GameTestContext.CreateGameContext();
             var prefs = ctx.GetModel<IPlayerPrefsService>();
 
-            CloudSaveManager.SyncToCloud(prefs, "{\"score\":100}", 1);
+            CloudSaveManager.SyncToCloudAsync(prefs, "{\"score\":100}", 1).Wait();
 
             var record = CloudSaveManager.LoadCloudRecord(prefs);
             Assert.AreEqual("{\"score\":100}", record.LocalSaveJson);

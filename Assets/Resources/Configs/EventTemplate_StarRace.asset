@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62198399df6ab3247ae43b3c70ad5718, type: 3}
+  m_Name: EventTemplate_StarRace
+  m_EditorClassIdentifier: PixelFlow::PixelFlow.Data.EventTemplateAsset
+  EventId: star_race
+  DisplayName: "Yıldız Yarışı ⭐"
+  Description: "Sezonluk yarışma! En çok yıldız toplayanlar büyük ödül kazanır."
+  DurationSeconds: 2592000
+  CoinMultiplier: 1.0
+  GemMultiplier: 1.5
+  TicketMultiplier: 2.0
+  MinLevel: 30
+  TriggerAfterHours: 720
+  VisualTheme: "Neon"
+  BannerColor: {r: 0.5, g: 0, b: 1, a: 1}
+  IconName: "event_starrace"
+  Rewards:
+    - Type: Gem
+      Amount: 50
+      Condition: RankTop10
+    - Type: Gem
+      Amount: 20
+      Condition: RankTop50
+    - Type: Coin
+      Amount: 5000
+      Condition: RankTop100
+    - Type: Skin
+      Amount: 1
+      Condition: RankTop10
+      SkinId: skin_legendary_star
+    - Type: Ticket
+      Amount: 50
+      Condition: Participation

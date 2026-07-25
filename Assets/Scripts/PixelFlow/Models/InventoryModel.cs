@@ -21,6 +21,8 @@ namespace PixelFlow.Models
         event Action<bool> OnStarPassChanged;
         event Action<string> OnSkinUnlocked;
         event Action<ColorType, string> OnSkinEquipped;
+        event Action<string> OnStopSkinUnlocked;
+        event Action<ColorType, string> OnStopSkinEquipped;
 
         void AddCoins(int amount);
         bool TrySpendCoins(int amount);
@@ -33,6 +35,10 @@ namespace PixelFlow.Models
         void UnlockSkin(string skinId);
         void EquipSkin(ColorType colorFamily, string skinId);
         string GetEquippedSkin(ColorType colorFamily);
+        bool IsStopSkinUnlocked(string skinId);
+        void UnlockStopSkin(string skinId);
+        void EquipStopSkin(ColorType colorFamily, string skinId);
+        string GetEquippedStopSkin(ColorType colorFamily);
     }
 
     public class InventoryModel : IInventoryModel, IReactiveModel
@@ -184,6 +190,45 @@ namespace PixelFlow.Models
         public string GetEquippedSkin(ColorType colorFamily)
         {
             return _equippedSkins.TryGetValue(colorFamily, out var skinId) ? skinId : "skin_default";
+        }
+
+        private readonly HashSet<string> _unlockedStopSkins = new HashSet<string> { "stop_skin_default" };
+        private readonly Dictionary<ColorType, string> _equippedStopSkins = new Dictionary<ColorType, string>();
+
+        public event Action<string> OnStopSkinUnlocked;
+        public event Action<ColorType, string> OnStopSkinEquipped;
+
+        public bool IsStopSkinUnlocked(string skinId)
+        {
+            if (string.IsNullOrEmpty(skinId)) return false;
+            return _unlockedStopSkins.Contains(skinId);
+        }
+
+        public void UnlockStopSkin(string skinId)
+        {
+            if (string.IsNullOrEmpty(skinId)) return;
+            if (_unlockedStopSkins.Add(skinId))
+            {
+                LoggerService?.Log($"[PixelFlow.InventoryModel] Unlocked new stop skin: {skinId}");
+                OnStopSkinUnlocked?.Invoke(skinId);
+            }
+        }
+
+        public void EquipStopSkin(ColorType colorFamily, string skinId)
+        {
+            if (!IsStopSkinUnlocked(skinId))
+            {
+                LoggerService?.LogWarning($"[PixelFlow.InventoryModel] Cannot equip locked stop skin: {skinId} for color: {colorFamily}");
+                return;
+            }
+            _equippedStopSkins[colorFamily] = skinId;
+            LoggerService?.Log($"[PixelFlow.InventoryModel] Equipped stop skin: {skinId} for color family: {colorFamily}");
+            OnStopSkinEquipped?.Invoke(colorFamily, skinId);
+        }
+
+        public string GetEquippedStopSkin(ColorType colorFamily)
+        {
+            return _equippedStopSkins.TryGetValue(colorFamily, out var skinId) ? skinId : "stop_skin_default";
         }
     }
 }

@@ -20,6 +20,7 @@ namespace PixelFlow.Commands
         [Inject] public IGameSessionModel GameSessionModel { get; set; }
         [Inject] public IEconomyService EconomyService { get; set; }
         [Inject] public IInventoryModel InventoryModel { get; set; }
+        [Inject, OptionalInject] public IRushHourEventService RushHourEventService { get; set; }
         [Inject, OptionalInject] public GameConfig Config { get; set; }
 
         public void Execute(LevelCompletedSignal signal)
@@ -48,14 +49,14 @@ namespace PixelFlow.Commands
             HintModel?.AwardHintForStar(stars);
             LoggerService?.Log($"[SaveProgressCommand] Awarded hint for {stars} stars.");
 
-            // Coin ödülü: flow score başına coin + seviye tamamlama bonusu
-            // game_plan.md §2.2 (Zero-Silent-Fallback): sabitler GameConfig'ten gelir.
+            // Coin ödülü: flow score başına coin + seviye tamamlama bonusu (Rush Hour 2x çarpanı destekli)
             var cfg = ResolveConfig();
             int coinPerFlow = cfg.CoinPerFlowScore;
             int levelBonus = cfg.LevelCompleteCoinBonus;
-            int totalCoins = (GameSessionModel.CurrentFlowScore * coinPerFlow) + levelBonus;
+            float rushMultiplier = RushHourEventService != null && RushHourEventService.IsEventActive ? RushHourEventService.CoinMultiplier : 1.0f;
+            int totalCoins = Mathf.RoundToInt(((GameSessionModel.CurrentFlowScore * coinPerFlow) + levelBonus) * rushMultiplier);
             EconomyService?.Earn("coins", totalCoins, "level_complete");
-            LoggerService?.Log($"[SaveProgressCommand] Awarded {totalCoins} coins (flow: {GameSessionModel.CurrentFlowScore}x{coinPerFlow} + bonus: {levelBonus}).");
+            LoggerService?.Log($"[SaveProgressCommand] Awarded {totalCoins} coins (base: {(GameSessionModel.CurrentFlowScore * coinPerFlow) + levelBonus}, RushHour 2x={RushHourEventService?.IsEventActive}).");
 
             // Gem ödülü: game_plan.md §9.1 — 3 yıldızlı seviye tamamlamada sert para kazanılır.
             // Star Pass aktifse premium track ek bonusu eklenir (§9.3).

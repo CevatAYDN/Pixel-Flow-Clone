@@ -1528,7 +1528,7 @@ namespace PixelFlow.Editor.Tests
         public void CloudSave_SyncToCloud_RoundTrips()
         {
             var prefs = _ctx.Context.Container.Resolve<IPlayerPrefsService>();
-            Models.CloudSaveManager.SyncToCloud(prefs, "save_v1", 1);
+            Models.CloudSaveManager.SyncToCloudAsync(prefs, "save_v1", 1).Wait();
             var loaded = Models.CloudSaveManager.LoadCloudRecord(prefs);
             Assert.AreEqual("save_v1", loaded.CloudSaveJson);
             Assert.AreEqual(1, loaded.CloudVersion);

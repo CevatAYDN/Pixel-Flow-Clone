@@ -22,7 +22,7 @@ namespace PixelFlow.Views
         [Inject] public ICameraProvider CameraProvider { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public IGridInputService InputService { get; set; }
-        [Inject, OptionalInject] public PixelFlow.Data.GameConfig Config { get; set; }
+        [Inject] public PixelFlow.Data.GameConfig Config { get; set; }
 
         private Camera _cam;
         private CellView[,] _cells;
@@ -35,8 +35,25 @@ namespace PixelFlow.Views
 
         private float _targetZoom;
 
-        private float ConfigMinZoom => Config != null ? Config.MinZoom : 8f;
-        private float ConfigMaxZoom => Config != null ? Config.MaxZoom : 12f;
+        private float ConfigMinZoom
+        {
+            get
+            {
+                if (Config == null)
+                    throw new DataValidationException("GameConfig is not injected in GridView. MinZoom cannot be resolved.");
+                return Config.MinZoom;
+            }
+        }
+
+        private float ConfigMaxZoom
+        {
+            get
+            {
+                if (Config == null)
+                    throw new DataValidationException("GameConfig is not injected in GridView. MaxZoom cannot be resolved.");
+                return Config.MaxZoom;
+            }
+        }
 
         // GPU glow pulse: CPU'daki sinüs hesaplaması kalktı, GlowPulse.shader _Time.y ile yönetiyor
         // Eskiden: her 3 frame'de 1 sin(Time.time * 6.5f) + LineRenderer.width set

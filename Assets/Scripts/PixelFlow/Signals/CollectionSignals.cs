@@ -16,11 +16,13 @@ namespace PixelFlow.Signals
 
     public struct SkinUnlockedSignal
     {
-        public readonly string SkinId;
+        public string SkinId;
+        public bool IsPurchase;
 
-        public SkinUnlockedSignal(string skinId)
+        public SkinUnlockedSignal(string skinId, bool isPurchase = false)
         {
             SkinId = skinId;
+            IsPurchase = isPurchase;
         }
     }
 

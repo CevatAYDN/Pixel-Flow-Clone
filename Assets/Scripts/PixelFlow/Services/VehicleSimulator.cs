@@ -68,16 +68,24 @@ namespace PixelFlow.Services
         private CameraController _cachedCameraController;
         private VehicleMovementService _movementService;
 
+        private float _fixedTimeStep;
+        private float _vehicleSpeed;
+        private float _spawnInterval;
+        private int _spawnCheckInterval;
+        private float _maxSimulationSafetyDuration;
+        private float _viaductOverZOffset;
+        private float _viaductUnderZOffset;
+        private float _normalZOffset;
+        private float _collisionDistance;
+        private float _speedVariationRange;
+        
+        private float _fixedAccumulator;
+        private float _simulationPhaseTimer;
+        private int _spawnSkipCounter;
+        
         // Grid-based spatial partitioning collision detection — List pool for GC alloc reduction
         private readonly Dictionary<Vector2Int, List<VehicleInstance>> _cellOccupancy = new Dictionary<Vector2Int, List<VehicleInstance>>();
         private readonly List<List<VehicleInstance>> _occupancyListPool = new List<List<VehicleInstance>>();
-
-        private float _simulationPhaseTimer = 0f;
-        private float _fixedAccumulator = 0f;
-        private float FixedTimeStep => Config != null ? Config.FixedTimeStep : throw new Data.DataValidationException("GameConfig.FixedTimeStep erişilemedi!");
-        private float ConfigVehicleSpeed => Config != null ? Config.VehicleSpeed : throw new Data.DataValidationException("GameConfig.VehicleSpeed erişilemedi!");
-        private float ConfigSpawnInterval => Config != null ? Config.SpawnInterval : throw new Data.DataValidationException("GameConfig.SpawnInterval erişilemedi!");
-        private int ConfigSpawnCheckInterval => Config != null ? Config.SpawnCheckInterval : throw new Data.DataValidationException("GameConfig.SpawnCheckInterval erişilemedi!");
         private ISignalSubscription _undoSubscription;
         private ISignalSubscription _redoSubscription;
         private ISignalSubscription _levelFailedSubscription;
@@ -86,6 +94,21 @@ namespace PixelFlow.Services
         {
             if (Application.isPlaying)
             {
+                if (Config == null)
+                    throw new DataValidationException("GameConfig erişilemedi! VehicleSimulator başlatılamıyor. GameContextLifecycle'da GameConfig yüklü olmalı.");
+                
+                // Cache all Config values at initialization to avoid hot-path access
+                _fixedTimeStep = Config.FixedTimeStep;
+                _vehicleSpeed = Config.VehicleSpeed;
+                _spawnInterval = Config.SpawnInterval;
+                _spawnCheckInterval = Config.SpawnCheckInterval;
+                _maxSimulationSafetyDuration = Config.MaxSimulationSafetyDuration;
+                _viaductOverZOffset = Config.ViaductOverZOffset;
+                _viaductUnderZOffset = Config.ViaductUnderZOffset;
+                _normalZOffset = Config.NormalZOffset;
+                _collisionDistance = Config.CollisionDistance;
+                _speedVariationRange = Config.SpeedVariationRange;
+
                 TickService?.RegisterTickable(this);
 
                 _vehicleContainer = new GameObject("[Vehicles]").transform;
@@ -239,13 +262,13 @@ namespace PixelFlow.Services
             // regardless of frame rate. This ensures consistent simulation
             // behavior on mobile devices with variable FPS.
             _fixedAccumulator += deltaTime;
-            _fixedAccumulator = Mathf.Min(_fixedAccumulator, FixedTimeStep * 5); // Cap: prevent spiral of death
+            _fixedAccumulator = Mathf.Min(_fixedAccumulator, _fixedTimeStep * 5); // Cap: prevent spiral of death
 
-            while (_fixedAccumulator >= FixedTimeStep)
+            while (_fixedAccumulator >= _fixedTimeStep)
             {
-                ObstacleService?.Tick(FixedTimeStep);
-                _movementService?.UpdateMovement(_activeVehicles, FixedTimeStep);
-                _fixedAccumulator -= FixedTimeStep;
+                ObstacleService?.Tick(_fixedTimeStep);
+                _movementService?.UpdateMovement(_activeVehicles, _fixedTimeStep);
+                _fixedAccumulator -= _fixedTimeStep;
             }
 
             // Spawn timing, collision detection, and completion timer use real deltaTime
@@ -275,10 +298,7 @@ namespace PixelFlow.Services
             {
                 UpdateCompletionTimer(deltaTime);
             }
-        }
-
-        // Frame skip counter: boş frame'lerde spawn kontrolünü atla
-        private int _spawnSkipCounter;
+}
 
         private void UpdateSpawning(float deltaTime)
         {
@@ -287,7 +307,7 @@ namespace PixelFlow.Services
             if (_activeVehicles.Count == 0 && !isSimulating)
             {
                 _spawnSkipCounter++;
-                if (_spawnSkipCounter < ConfigSpawnCheckInterval)
+                if (_spawnSkipCounter < _spawnCheckInterval)
                     return;
             }
             _spawnSkipCounter = 0;
@@ -299,7 +319,7 @@ namespace PixelFlow.Services
 
                 if (IsColorConnected(color))
                 {
-                    float spawnInterval = ConfigSpawnInterval;
+                    float spawnInterval = _spawnInterval;
                     if (!_spawnTimers.ContainsKey(color))
                     {
                         _spawnTimers[color] = spawnInterval; // Spawn first vehicle immediately
@@ -397,7 +417,7 @@ namespace PixelFlow.Services
                 Progress = 0f,
                 Visual = visual,
                 CurrentPosition = new Vector3(path[0].x, path[0].y, GetZOffset(path[0], color)),
-                Speed = ConfigVehicleSpeed + UnityEngine.Random.Range(-Config.SpeedVariationRange, Config.SpeedVariationRange),
+                Speed = _vehicleSpeed + UnityEngine.Random.Range(-_speedVariationRange, _speedVariationRange),
                 CachedRenderers = renderers.ToArray(),
                 LocoTransform = loco,
                 Wagon1Transform = wagon1,
@@ -427,25 +447,25 @@ namespace PixelFlow.Services
                 {
                     if (cell.OverColor == color)
                     {
-                        return Config.ViaductOverZOffset;
+                        return _viaductOverZOffset;
                     }
                     if (cell.UnderColor == color)
                     {
-                        return Config.ViaductUnderZOffset;
+                        return _viaductUnderZOffset;
                     }
                     if (cell.UnderColor == ColorType.None)
                     {
                         cell.UnderColor = color;
-                        return Config.ViaductUnderZOffset;
+                        return _viaductUnderZOffset;
                     }
                     else
                     {
                         cell.OverColor = color;
-                        return Config.ViaductOverZOffset;
+                        return _viaductOverZOffset;
                     }
                 }
             }
-            return Config.NormalZOffset;
+            return _normalZOffset;
         }
 
         /// <summary>
@@ -603,7 +623,7 @@ namespace PixelFlow.Services
             _simulationPhaseTimer += deltaTime;
             
             // Maksimum güvenlik limiti (darboğaz durumlarında kilitlenmeyi önlemek için)
-            float maxDuration = Config != null ? Config.MaxSimulationSafetyDuration : throw new Data.DataValidationException("GameConfig.MaxSimulationSafetyDuration erişilemedi!");
+            float maxDuration = _maxSimulationSafetyDuration;
             float remaining = Mathf.Max(0f, maxDuration - _simulationPhaseTimer);
             GameSessionModel.SetSimulationTimer(remaining);
 

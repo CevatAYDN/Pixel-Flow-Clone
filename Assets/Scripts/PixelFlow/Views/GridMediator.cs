@@ -21,6 +21,7 @@ namespace PixelFlow.Views
         private readonly HashSet<Vector2Int> _changedCells = new HashSet<Vector2Int>();
         private readonly HashSet<Vector2Int> _stateChangedCells = new HashSet<Vector2Int>();
         private readonly HashSet<ColorType> _completedColors = new HashSet<ColorType>();
+        private readonly HashSet<ColorType> _currentCompletedColors = new HashSet<ColorType>();
 
         protected override void OnBind()
         {
@@ -109,8 +110,8 @@ namespace PixelFlow.Views
 
             View.UpdatePathVisuals(GridModel.Paths, GridModel.Grid, crashPos, GridModel.CrashColorA.Value, GridModel.CrashColorB.Value);
 
-            // Path connection feedback (juice and chimes)
-            var currentCompletedColors = new HashSet<ColorType>();
+            // Path connection feedback
+            _currentCompletedColors.Clear();
             foreach (var kvp in GridModel.Paths)
             {
                 var color = kvp.Key;
@@ -124,11 +125,11 @@ namespace PixelFlow.Views
                 if (startCell.State == CellState.Node && startCell.Color == color &&
                     endCell.State == CellState.Node && endCell.Color == color)
                 {
-                    currentCompletedColors.Add(color);
+                    _currentCompletedColors.Add(color);
                 }
             }
 
-            foreach (var color in currentCompletedColors)
+            foreach (var color in _currentCompletedColors)
             {
                 if (!_completedColors.Contains(color))
                 {
@@ -141,7 +142,7 @@ namespace PixelFlow.Views
             }
 
             _completedColors.Clear();
-            foreach (var color in currentCompletedColors)
+            foreach (var color in _currentCompletedColors)
             {
                 _completedColors.Add(color);
             }

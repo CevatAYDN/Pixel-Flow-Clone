@@ -2,10 +2,11 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Nexus.Core;
+using Nexus.Core.Services;
 
 namespace PixelFlow.Models
 {
-    public interface IGameSessionModel
+public interface IGameSessionModel
     {
         int Score { get; }
         float ElapsedTime { get; }
@@ -21,6 +22,8 @@ namespace PixelFlow.Models
         bool HasUsedCrisisUndo { get; }
         int CurrentFlowScore { get; }
         int TargetFlowScore { get; }
+        int CoinsEarnedThisLevel { get; }
+        int UndoHintsAvailable { get; }
 
         event Action<int> OnScoreChanged;
         event Action<float> OnTimeChanged;
@@ -28,6 +31,7 @@ namespace PixelFlow.Models
         event Action<int> OnViaductsChanged;
         event Action<float> OnSimulationTimerChanged;
         event Action<int> OnRetryCountChanged;
+        event Action<int> OnCrisisAttemptCountChanged;
         event Action<int, int> OnFlowScoreChanged;
 
         void StartSession();
@@ -51,10 +55,13 @@ namespace PixelFlow.Models
         void IncrementFlowScore();
         void SetTargetFlowScore(int target);
         void ApplySave(int availableViaducts, int maxViaducts, float elapsedTime, int score, int stars, int levelId, int targetFlowScore = 5, int currentFlowScore = 0);
+        void AddUndoHints(int amount);
+        void AddCoinsEarnedThisLevel(int amount);
     }
 
     public class GameSessionModel : IGameSessionModel, IReactiveModel
     {
+        [Inject, OptionalInject] public ILoggerService Logger { get; set; }
         public int Score { get; private set; }
         public float ElapsedTime { get; private set; }
         public int StarsEarned { get; private set; }
@@ -69,6 +76,8 @@ namespace PixelFlow.Models
         public bool HasUsedCrisisUndo { get; private set; }
         public int CurrentFlowScore { get; private set; }
         public int TargetFlowScore { get; private set; }
+        public int CoinsEarnedThisLevel { get; private set; }
+        public int UndoHintsAvailable { get; private set; }
 
         public event Action<int> OnScoreChanged;
         public event Action<float> OnTimeChanged;
@@ -162,6 +171,8 @@ namespace PixelFlow.Models
             HasUsedCrisisUndo = false;
             CurrentFlowScore = 0;
             TargetFlowScore = 0;
+            CoinsEarnedThisLevel = 0;
+            UndoHintsAvailable = 0;
         }
 
         public bool TryUseViaduct()
@@ -280,6 +291,8 @@ namespace PixelFlow.Models
             // Undo/redo geri yüklemesinde biriken akış skoru korunur; taze yükleme/kayıt
             // çağrıları varsayılan 0 ile çağırır (geriye dönük uyumlu).
             CurrentFlowScore = System.Math.Clamp(currentFlowScore, 0, TargetFlowScore);
+            CoinsEarnedThisLevel = 0;
+            UndoHintsAvailable = 0;
             OnViaductsChanged?.Invoke(AvailableViaducts);
             OnTimeChanged?.Invoke(ElapsedTime);
             OnScoreChanged?.Invoke(Score);
@@ -295,5 +308,22 @@ namespace PixelFlow.Models
             SimulationTimeRemaining = remaining;
             OnSimulationTimerChanged?.Invoke(remaining);
         }
+
+        public void AddUndoHints(int amount)
+        {
+            if (amount <= 0) return;
+            _undoHints += amount;
+            Logger?.Log($"[PixelFlow.GameSessionModel] Added {amount} undo hints. Total: {_undoHints}");
+        }
+
+        public void AddCoinsEarnedThisLevel(int amount)
+        {
+            if (amount <= 0) return;
+            _coinsEarnedThisLevel += amount;
+            Logger?.Log($"[PixelFlow.GameSessionModel] Added {amount} coins earned this level. Total: {_coinsEarnedThisLevel}");
+        }
+
+        private int _undoHints = 0;
+        private int _coinsEarnedThisLevel = 0;
     }
 }

@@ -31,7 +31,10 @@ namespace PixelFlow.Editor
                 {
                     EditorApplication.isPlaying = false;
                     Debug.LogError($"[Zero-Hardcode Validator] Play Mode Engellendi! Nedeni: {errorMessage}");
-                    EditorUtility.DisplayDialog("Veri Doğrulama Hatası", $"Play Mode başlatılamadı:\n\n{errorMessage}", "Tamam");
+                    if (!Application.isBatchMode)
+                    {
+                        EditorUtility.DisplayDialog("Veri Doğrulama Hatası", $"Play Mode başlatılamadı:\n\n{errorMessage}", "Tamam");
+                    }
                 }
             }
         }
@@ -67,7 +70,15 @@ namespace PixelFlow.Editor
                 return false;
             }
 
-            // 2. Seviye Kataloğu Kontrolü (asset Resources/Configs/LevelCatalog.asset konumunda)
+            // 2. PhaseConfig Kontrolü
+            var phaseConfig = Resources.Load<PhaseConfigAsset>("Configs/PhaseConfig");
+            if (phaseConfig == null)
+            {
+                errorMessage = "Resources/Configs/PhaseConfig.asset bulunamadı! Lütfen 'Pixel Flow Kontrol Merkezi'nden oluşturun.";
+                return false;
+            }
+
+            // 3. Seviye Kataloğu Kontrolü (asset Resources/Configs/LevelCatalog.asset konumunda)
             var levelCatalog = Resources.Load<LevelCatalogAsset>("Configs/LevelCatalog");
             if (levelCatalog != null && levelCatalog.Levels != null)
             {
@@ -82,7 +93,7 @@ namespace PixelFlow.Editor
                 }
             }
 
-            // 3. VehicleSkinConfig Kontrolü
+            // 4. VehicleSkinConfig Kontrolü
             var skinGuids = AssetDatabase.FindAssets("t:VehicleSkinConfig");
             foreach (var guid in skinGuids)
             {

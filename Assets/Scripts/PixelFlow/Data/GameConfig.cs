@@ -127,6 +127,9 @@ namespace PixelFlow.Data
         [Tooltip("Seviye tamamlama bonus coin")]
         public int LevelCompleteCoinBonus = 50;
 
+        [Tooltip("Günlük sandık coin ödülü")]
+        public int DailyChestCoins = 100;
+
         [Header("=== Premium Economy (game_plan.md §9.1) ===")]
         [Tooltip("3 yıldızlı seviye tamamlamada kazanılan Gem (sert para) miktarı")]
         public int GemsPerThreeStarLevel = 5;

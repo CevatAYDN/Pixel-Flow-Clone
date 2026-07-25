@@ -6,6 +6,7 @@ using PixelFlow.Data;
 using PixelFlow.Services;
 using UnityEngine;
 using System.Collections.Generic;
+using System;
 
 namespace PixelFlow.Commands
 {
@@ -26,9 +27,9 @@ namespace PixelFlow.Commands
         [Inject, OptionalInject] public IPowerUpService PowerUpService { get; set; }
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
-        [Inject, OptionalInject] public GameConfig Config { get; set; }
+        [Inject] public GameConfig Config { get; set; }
 
-        private int ConfigMaxPathsPerBridge => Config != null ? Config.MaxPathsPerBridge : throw new DataValidationException("GameConfig.MaxPathsPerBridge erişilemedi!");
+        private int _configMaxPathsPerBridge;
 
         // Batched history bypass edilerek her adımda snapshot kaydı sağlanır (Testler ve oyun hassasiyeti için)
         private void EnsureHistoryRecorded()
@@ -36,17 +37,24 @@ namespace PixelFlow.Commands
             HistoryService.Record(GridModel, GameSessionModel);
         }
 
+        private Action _cachedSaveAction;
         private void RequestSave()
         {
-            // Command pool'a döndükten sonra Nexus DI [Inject] property'leri null'lar; bu yüzden
-            // 'this'i yakalayan cached closure yerine model referanslarını çağrı anında yakalayan
-            // SaveHelper kullanılır (UndoCommand/PlaceViaductCommand ile tutarlı). Aksi halde
-            // gecikmeli (throttled) save null grid ile çalışıp ilerlemeyi sessizce kaybeder.
-            SaveHelper.TrySave(SaveThrottler, GridModel, GameSessionModel, LevelModel, PlayerPrefsService);
+            if (_cachedSaveAction == null)
+                _cachedSaveAction = () => GridStateSerializer.Save(GridModel, GameSessionModel, LevelModel, PlayerPrefsService);
+            SaveThrottler?.TryRequestSave(_cachedSaveAction);
+        }
+
+        public void Reset()
+        {
+            // Do not reset GridModel singleton values in command Reset, as commands are recycled per signal execution
         }
 
         public void Execute(InputInteractionSignal signal)
         {
+            if (_configMaxPathsPerBridge == 0 && Config != null)
+                _configMaxPathsPerBridge = Config.MaxPathsPerBridge;
+
             var state = GameStateModel.CurrentState;
 
             // HATA FIX: Simülasyon modunda grid tıklamaları state'i değiştirmez.
@@ -274,23 +282,23 @@ namespace PixelFlow.Commands
 
                     Vector2Int entryDir = signal.GridPosition - GridModel.LastPosition.Value;
 
-                    if (currentCell.PathColorCount > 0)
-                    {
-                        ColorType existingColor = currentCell.FirstPathColor;
-                        if (GridModel.Paths.TryGetValue(existingColor, out var otherPath))
+if (currentCell.PathColorCount > 0)
                         {
-                            if (!BridgeValidationUtility.IsValidBridgeCrossing(
-                                otherPath, path, signal.GridPosition, entryDir))
+                            ColorType existingColor = currentCell.FirstPathColor;
+                            if (GridModel.Paths.TryGetValue(existingColor, out var otherPath))
                             {
-                                LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Path crossing conflict at {signal.GridPosition} between {GridModel.ActiveColor.Value} and {existingColor}. Backtracking conflicting path.");
-                                EnsureHistoryRecorded();
-                                PathService.BacktrackPath(existingColor, signal.GridPosition);
+                                if (!BridgeValidationUtility.IsValidBridgeCrossing(
+                                    otherPath, path, signal.GridPosition, entryDir))
+                                {
+                                    LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Path crossing conflict at {signal.GridPosition} between {GridModel.ActiveColor.Value} and {existingColor}. Backtracking conflicting path.");
+                                    EnsureHistoryRecorded();
+                                    PathService.BacktrackPath(existingColor, signal.GridPosition);
+                                }
                             }
                         }
-                    }
 
-                    if (currentCell.PathColorCount >= ConfigMaxPathsPerBridge)
-                    {
+                        if (currentCell.PathColorCount >= _configMaxPathsPerBridge)
+                        {
                         // If still full, backtrack the conflicting color to make space
                         ColorType firstColor = currentCell.FirstPathColor;
                         LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Cell at {signal.GridPosition} remains full after backtrack. Forcing backtrack of {firstColor} color.");
@@ -298,7 +306,7 @@ namespace PixelFlow.Commands
                         PathService.BacktrackPath(firstColor, signal.GridPosition);
                     }
 
-                    if (currentCell.PathColorCount >= ConfigMaxPathsPerBridge)
+                    if (currentCell.PathColorCount >= _configMaxPathsPerBridge)
                     {
                         LoggerService?.LogWarning($"[PixelFlow.ProcessInputCommand] Drag blocked at {signal.GridPosition}: Cell already occupied by max paths.");
                         Nexus.Core.Services.NexusLog.Warn("ProcessInputCommand", "HandleDrag", "?", "Cell already occupied by max paths. Drawing blocked.");
@@ -332,7 +340,7 @@ namespace PixelFlow.Commands
                     // RequestSave();  ← kaldırıldı: bridge crossing intermediate, save gerekmez
                 }
             }
-            else if (signal.Type == InputType.PointerUp)
+else if (signal.Type == InputType.PointerUp)
             {
                 if (GridModel.ActiveColor.Value != ColorType.None)
                 {
@@ -342,15 +350,7 @@ namespace PixelFlow.Commands
                     GridModel.LastPosition.Value = new Vector2Int(-1, -1);
                     RequestSave();
                 }
-                else
-                {
-                }
             }
-        }
-
-        public void Reset()
-        {
-            // Do not reset GridModel singleton values in command Reset, as commands are recycled per signal execution
         }
     }
 }

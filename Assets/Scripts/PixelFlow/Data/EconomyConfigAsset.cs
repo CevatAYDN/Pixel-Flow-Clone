@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace PixelFlow.Data
 {
@@ -8,6 +9,7 @@ namespace PixelFlow.Data
     /// - Viyadük bonus formülü (LevelLoaderService)
     /// - Skor hesaplama sabitleri (ScoreCalculator)
     /// - Yıldız eşik değerleri (ScoreCalculator)
+    /// - IAP Ürün Kataloğu (game_plan.md §9.3)
     /// 
     /// GameContextLifecycle içinde Resources'tan yüklenir
     /// ve [Inject] ile servislere enjekte edilir.
@@ -41,6 +43,10 @@ namespace PixelFlow.Data
         [Tooltip("2 yıldız için maksimum viyadük kullanımı")]
         public int TwoStarsMaxViaducts = 2;
 
+        [Header("=== IAP Ürün Kataloğu (game_plan.md §9.3) ===")]
+        [Tooltip("IAP ürün tanımları - Product ID, fiyat, içerik ve tip")]
+        public List<IapProductDefinition> IapProducts = new List<IapProductDefinition>();
+
         // ─── Helper Methods ───
 
         /// <summary>
@@ -72,5 +78,54 @@ namespace PixelFlow.Data
         {
             return cellCount * IdealTimeFactor;
         }
+    }
+
+    /// <summary>
+    /// IAP ürün tanımı - game_plan.md §9.3'e göre.
+    /// </summary>
+    [System.Serializable]
+    public class IapProductDefinition
+    {
+        [Tooltip("Unity IAP Product ID (örn: no_ads, starter_pack, coin_pack_s)")]
+        public string ProductId;
+
+        [Tooltip("Görünen isim")]
+        public string DisplayName;
+
+        [Tooltip("Fiyat (USD)")]
+        public float PriceUsd;
+
+        [Tooltip("Para birimi kodu (USD, EUR, TRY, etc.)")]
+        public string CurrencyCode = "USD";
+
+        [Tooltip("Ürün tipi")]
+        public IapProductType Type = IapProductType.Consumable;
+
+        [Header("İçerik (Consumable/Non-consumable için)")]
+        [Tooltip("Coin miktarı")]
+        public int CoinAmount;
+
+        [Tooltip("Gem miktarı")]
+        public int GemAmount;
+
+        [Tooltip("Açılacak Skin ID (Non-consumable için)")]
+        public string UnlockSkinId;
+
+        [Tooltip("No Ads özelliği (Non-consumable için)")]
+        public bool RemovesAds;
+
+        [Tooltip("Açıklama")]
+        [TextArea(2, 4)]
+        public string Description;
+    }
+
+    /// <summary>
+    /// IAP ürün tipleri - game_plan.md §9.3'e göre.
+    /// </summary>
+    public enum IapProductType
+    {
+        Consumable,          // Coin/Gem paketleri, tekrar satın alınabilir
+        NonConsumable,       // No Ads, Starter Pack, VIP Bundle - tek seferlik
+        Subscription         // Star Pass - abonelik benzeri
     }
 }

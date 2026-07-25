@@ -9,9 +9,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f60123456789abcdef0123, type: 3}
   m_Name: PhaseConfig
-  m_EditorClassIdentifier: PixelFlow:PixelFlow.Data:PhaseConfigAsset
+  m_EditorClassIdentifier: PixelFlow::PixelFlow.Data.PhaseConfigAsset
   Phase1: {fileID: 11400000, guid: 66a0b18589882904c97def87272957d6, type: 2}
   Phase2: {fileID: 11400000, guid: 59f5a137ac6c64847b0337d498282df1, type: 2}
   Phase3: {fileID: 11400000, guid: 847e40512c01c92459f9ea8db5c4dd16, type: 2}
