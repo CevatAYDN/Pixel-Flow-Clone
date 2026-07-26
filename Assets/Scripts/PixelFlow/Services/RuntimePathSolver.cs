@@ -480,7 +480,8 @@ namespace PixelFlow.Services
 
         private int CalculateMaxIterations(int width, int height, int colorCount)
         {
-            long raw = width * height * colorCount * 2000L;
+            int baseFactor = ResolvedConfig != null && ResolvedConfig.PathSolverMaxIterations > 0 ? ResolvedConfig.PathSolverMaxIterations : 2000;
+            long raw = width * height * colorCount * (long)baseFactor;
             int clamped = (int)Math.Max(MinIterations, Math.Min(MaxIterationsCap, raw));
             return clamped;
         }

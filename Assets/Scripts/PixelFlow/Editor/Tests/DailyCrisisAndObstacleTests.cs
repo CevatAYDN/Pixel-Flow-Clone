@@ -71,8 +71,7 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void LocalizationService_RetrievesKeysAndFormatsRTL()
         {
-            var prefs = new InMemoryPlayerPrefsService();
-            var loc = new LocalizationService { PlayerPrefsService = prefs };
+            var loc = new PixelFlow.Services.LocalizationService();
             loc.InitializeAsync(default);
 
             Assert.AreEqual("Neon Transit", loc.GetString("app_name"));

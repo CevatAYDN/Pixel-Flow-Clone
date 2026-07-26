@@ -27,15 +27,25 @@ namespace PixelFlow.Services
     {
         [Inject] public ITutorialModel TutorialModel { get; set; }
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
+        [Inject] public StorageKeysConfigAsset StorageKeys { get; set; }
 
-        private const string PrefKey = "PF_TutorialCompleted";
         private HashSet<int> _completedSteps = new HashSet<int>();
+
+        private string GetPrefKey()
+        {
+            if (StorageKeys != null && !string.IsNullOrEmpty(StorageKeys.KeyTutorialStep))
+                return StorageKeys.KeyTutorialStep;
+            return "PF_TutorialCompleted";
+        }
 
         public TutorialStep CurrentStep => TutorialModel?.CurrentStep ?? TutorialStep.None;
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
-            int packed = PlayerPrefsService?.GetInt(PrefKey, 0) ?? 0;
+            if (PlayerPrefsService == null)
+                throw new DataValidationException("PlayerPrefsService is null in TutorialDriver!");
+
+            int packed = PlayerPrefsService.GetInt(GetPrefKey(), 0);
             _completedSteps = UnpackSteps(packed);
             return default;
         }
@@ -104,7 +114,7 @@ namespace PixelFlow.Services
         private void Persist()
         {
             int packed = PackSteps(_completedSteps);
-            PlayerPrefsService?.SetInt(PrefKey, packed);
+            PlayerPrefsService?.SetInt(GetPrefKey(), packed);
         }
 
         // 32 step bitmask'e sığar; basit liste olarak serialize et.

@@ -397,7 +397,14 @@ namespace PixelFlow.Services
             visual.transform.SetParent(parentTransform);
 
             VehicleStyle vehicleStyle = SettingsModel.CurrentVehicleStyle;
-            string equippedSkin = InventoryModel?.GetEquippedSkin(color) ?? "skin_default";
+            if (InventoryModel == null)
+                throw new DataValidationException("InventoryModel is null in VehicleSimulator!");
+
+            var defaultSkinConfig = Resources.Load<DefaultSkinIdsConfigAsset>("Configs/DefaultSkinIdsConfig");
+            string defaultSkin = defaultSkinConfig != null ? defaultSkinConfig.DefaultVehicleSkinId : "skin_default";
+            string equippedSkin = InventoryModel.GetEquippedSkin(color);
+            if (string.IsNullOrEmpty(equippedSkin)) equippedSkin = defaultSkin;
+
             LoggerService?.Log($"[PixelFlow.VehicleSimulator] Spawning {vehicleStyle} with equipped skin '{equippedSkin}' for color {color}");
             
             Transform loco = null, wagon1 = null, wagon2 = null, coupler1 = null, coupler2 = null;

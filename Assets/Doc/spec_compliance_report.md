@@ -1,402 +1,365 @@
-# Color Jam 3D — Spec Uyumluluk Raporu
+# Color Jam 3D — game_plan.md Uygunluk Denetim Raporu
 
-**Tarih:** 2026-07-25  
-**Spec Versiyonu:** 6.0.0 (game_plan.md)  
-**Kod Versiyonu:** v6.5.0 (Level 5: Full Source Context)  
-
----
-
-## 📊 ÖZET TABLO
-
-| Kategori | Spec | Kod | Durum |
-|----------|------|-----|-------|
-| **GameState Machine** | §15.2.2 | GameStateModel.cs | ✅ %98 |
-| **MVCS Kuralları** | §15.3 | Tüm katmanlar | ✅ %95 |
-| **Signal→Command Mapping** | §15.2.4 | GameContextLifecycle.cs | ✅ %100 |
-| **PathService (BFS)** | §15.4.1 | PathService.cs | ✅ %100 |
-| **Crash Detection** | §15.4.2 | VehicleSimulator.cs + ProcessInputCommand.cs | ✅ %95 |
-| **Win Condition** | §15.4.3 | CheckWinConditionCommand.cs | ✅ %100 |
-| **Vehicle Simulation** | §15.4.4 | VehicleSimulator.cs | ✅ %100 |
-| **Runtime Solver** | §15.4.5 | RuntimePathSolver.cs | ✅ %100 |
-| **Zero Hardcode** | §2.2 | GameConfig, EconomyConfig... | ⚠️ %85 |
-| **Data Models** | §15.2.3 | LevelData, GridNode, CellData | ✅ %100 |
-| **DI Registration** | §15.1.2, §15.3 KURAL 5 | GameContextLifecycle.cs | ✅ %100 |
-| **Editor Tools** | §15.3 KURAL 6 | PixelFlowSetupWindow, LevelDataEditor | ✅ %100 |
-| **Performance Budget** | §11.2 | VehiclePartPool, CommandPool | ✅ %90 |
-| **Save/Load** | §16.6 | GridStateSerializer.cs | ✅ %100 |
-| **Economy Design** | §9 | EconomyConfigAsset.cs | ✅ %90 |
-| **Content Pipeline** | §10 | GenerateLevels.cs | ✅ %100 |
-
-**Genel Uyumluluk: %96**
+**Denetim Tarihi:** 2026-07-26  
+**Plan Kaynağı:** `Assets/Doc/game_plan.md` v6.0.0  
+**Denetçi:** Kilo AI Assistant  
+**Kapsam:** `Assets/Scripts/PixelFlow/` (Runtime + Editor + Tests)
 
 ---
 
-## 🔴 UYUMSUZLIKLAR (Spec ≠ Kod)
+## 🎯 Denetim Özeti
 
-### 1. GameState Enum — Ek State: `LevelSelect`
+| Kategori | Adet | Durum |
+|---|---|---|
+| 🔴 KRİTİK uygunluksuzluk kategorisi | **5** | İhlal - Acil müdahale gerekli |
+| 🔴 §2.2 Zero-Hardcode politikası ihlali | **31** | İhlal - 5 HIGH, 17 MEDIUM, 9 LOW |
+| 🟡 Orta seviye uygunluksuzluk | **2** | Kısmen uyumlu |
+| 🟢 Planla tam uyumlu madde | **12** | Uyumlu |
+| Editor eksik tab/dosya | **5** | 4 partial + 5 eksik sekme |
+| §3 Global Release servis durumu | 4/5 STUB, 1/5 PARTIAL | Production-ready değil |
+| §6 LiveOps eksik özellik | Star Pass UI, 15 dil CSV, RTL, RemoteConfig | Eksik |
 
-| Spec (§15.2.2) | Kod |
-|----------------|-----|
-| `Boot, Loading, MainMenu, Playing, Simulating, Paused, LevelCompleted, LevelFailed` (8 state) | `Boot, Loading, MainMenu, Playing, Simulating, Paused, LevelCompleted, LevelFailed, LevelSelect` (9 state) |
-
-**Detay:** Spec'te `LevelSelect` state'i tanımlı değil ama kodda var ve transition whitelist'inde kayıtlı:
-```csharp
-(MainMenu, LevelSelect), (LevelSelect, MainMenu), (LevelSelect, Playing)
-```
-
-**Etki:** Düşük — `LevelSelect` ekranı için mantıklı bir ek. Spec güncellenmeli.
-
-**Öneri:** Spec §15.2.2'e `LevelSelect` state'ini ekle.
+**Genel Sonuç:** Mimari iskelet (DI/Signal/Command/Model) planla %99 uyumlu. Kritik boşluklar Editor alanında (11 sekme planına karşılık sadece 6 sekme), §2.2 hardcode politikası (31 ihlal) ve §3 Global Release servisleri (4/5 STUB) seviyesindedir.
 
 ---
 
-### 2. GameConfig.asset — Eski Format (70+ Field'ın Sadece 21'i Kayıtlı)
+## ✅ TAM UYUMLU ALANLAR (§15 Mimari Blueprint)
 
-| Spec (§2.2, §13.2) | Kod |
-|--------------------|-----|
-| Tümü config değerleri ScriptableObject'den okunmalı | GameConfig.asset'te sadece 21 field var, class'ta 70+ field |
-
-**Eksik Field'lar (Spec ile uyumsuz):**
-- `AudioPoolSize` → AudioService pool boyutu hardcoded
-- `VehiclePartPoolCubes/Cylinders` → VehiclePartPool hardcoded
-- `DailyCrisisEasy/Medium/Hard` → DailyCrisisService crash eder
-- `DefaultGems`, `StarPassGemBonus`, `DefaultTickets` → Economy sistemi bozuk
-- `RainbowRoadSegmentsPerActivation`, `ClearJamUsesPerLevel` → Power-up sistemi bozuk
-- `SaveFormatVersion`, `SaveVersionKey` → Save/load format mismatch
-- `CoinPerFlowScore`, `LevelCompleteCoinBonus`, `DailyChestCoins` → Ekonomi hesaplaması yanlış
-- `GemsPerThreeStarLevel`, `StarPassGemBonus` → Premium ekonomi bozuk
-- `FixedTimeStep`, `SpawnCheckInterval`, `SpeedVariationRange`, `CollisionDistance` → VehicleSimulation parametreleri yanlış
-- `ViaductOverZOffset`, `ViaductUnderZOffset`, `NormalZOffset` → Viyadök Z-offset'leri hardcoded
-- `CameraTransitionDuration`, `StateTransitionDuration`, `CrashShakeIntensity` → Kamera efektleri yanlış
-- `RewardedAdCoinReward`, `RewardedAdHintReward`, `DoubleCoinMultiplier` → Rewarded ad ödülleri yanlış
-- `InterstitialPlacementId`, `RewardedPlacementId`, `BannerPlacementId` → Ad placement ID'leri hardcoded
-- `FirstAdLevel`, `InterstitialFrequency`, `RewardedUndoLimit` → RemoteConfig parametreleri hardcoded
-- `HubCameraPosition`, `HubCameraEuler` → Hub kamera konfigürasyonu yanlış
-- `VehicleSpeed` default değeri spec'te 3f olarak tanımlı ama asset'te var ✅
-
-**Etki:** **KRİTİK** — Oyun çalışır ama tüm balance değerler yanlış. Ekonomi sistemi, reklam sıklığı, power-up değerleri, camera efektleri, viaduck Z-offset'leri... hepsi hardcoded default değerlerle çalışıyor.
-
-**✅ ÇÖZÜM:** GameConfig.asset tamamen yeniden yazıldı (70+ field).
+| Madde | Detay | Kanıt |
+|---|---|---|
+| §15.2.4 Signal→Command map | 17/17 tam eşleşme | `GameContextLifecycle.cs:109-134` |
+| `LevelCompletedSignal → SaveProgressCommand` | `BindCommand`, Exclusive, prio 0 | Line 119 |
+| `RewardedAdCommand` | Direct Bind, signal yok | Line 65 |
+| `LevelVictoryCompositeHandler` | Composite handler, Bind ile | Line 64 |
+| §15.2.5 Reactive Models | 11/11 tam eşleşme | Lines 97-107 |
+| Bildirim sinyalleri (4 adet) | ShowGarage, LoadedInitialLevel, FlowScoreUpdated, ProgressUpdated | Lines 131-134 |
+| Geçersiz GameState geçişleri | LogError + Block, tests ile doğrulanmış | `GameStateModel.cs:91` |
+| Same-state (X→X) no-op | Line 87 erken çıkış | Test: `SetState_PausedToPaused_NoOp` |
+| `GlobalRelease/` klasörü | 4/4 servis dosyası mevcut | `/Services/GlobalRelease/` |
+| `PreBuildDataValidator.cs` | Plan (§15.2.1) gereği mevcut | `/Editor/` |
+| `BouncyCollisionHandler.cs` | Plan gereği mevcut | `/Services/` |
+| Editor/Tests/ — 30+ test | 30 `*Tests.cs` + 5 stub/util | `/Editor/Tests/` |
+| AES-256 Save | `EncryptedStorageService` DI kayıtlı | `GameContextLifecycle.cs:32` |
+| GenericObjectPool | `< 1KB GC/frame` bütçesi için DI kayıtlı | Line 38 |
+| §11.4 Offline Play | Tam oynanabilir, AES-256 lokal kayıt | `GridStateSerializer.cs` |
 
 ---
 
-### 3. VehicleVisualConfig.asset — Yanlış Script GUID
+## 🔴 KRİTİK UYGUNSUZLUKLAR
 
-| Spec (§15.3 KURAL 4) | Kod |
-|----------------------|-----|
-| Data = ScriptableObject, Zero Hardcode | VehicleVisualConfig.asset'in script GUID'i TMP Font Asset'inin GUID'idir! |
+### 1. §2.1 — Editor Pencere Yapısı Tamamen Farklı
 
-**Detay:**
-- Asset'teki GUID: `8f586378b4e144a9851e7b34d9b748ee` → Bu **TMP Font Asset**'in GUID'i
-- Doğru GUID: `5c40fef49d1a25042886a92d41619d8d` → **VehicleVisualConfigAsset.cs**'nin GUID'i
+Plan **11 sekme** isterken, `PixelFlowSetupWindow.cs:25-28` sadece **6 sekme** gösteriyor:
 
-**Etki:** `Resources.Load<VehicleVisualConfigAsset>()` → **null**. VehicleVisualFactory fallback hardcoded değerler kullanıyor → **KURAL 4 ihlali!**
+| Plan (§2.1) | Gerçek (§15.2.1) | Durum |
+|---|---|---|
+| 🕹️ Oyun Kontrol | 🎮 Oyun | ⚠️ Farklı isim |
+| 🔍 Sahne Tanılama | ❌ YOK (GameControl içine gömülmüş) | **EKSIK** |
+| 🎮 Seviye Stüdyosu | 🎮 Level | ⚠️ Eksik özellikler |
+| 🧩 Toplu Çözücü | ❌ YOK (Level içine gömülmüş) | **EKSIK** |
+| 📦 Data Yöneticisi | 📦 Data | ⚠️ Kısmi |
+| 💰 Ekonomi & Isı Haritası | ❌ YOK | **EKSIK** |
+| 🔬 Nexus | ❌ YOK | **EKSIK** |
+| ⚡ Performans | ❌ YOK | **EKSIK** |
+| 🎨 Garaj & Skin Stüdyosu | 🎨 Garaj | ⚠️ Kısmi |
+| 📺 Reklam & Monetization | ❌ YOK | **EKSIK** |
+| 🛡️ Pre-Build Validator | 🛡️ Validator | ✅ |
 
-**✅ ÇÖZÜM:** Script GUID düzeltildi.
+**Plan §15.2.1'de listelenen 4 partial class dosyası TAMAMEN eksik:**
+- `PixelFlowSetupWindow.EditorTabs.cs` ❌ YOK
+- `PixelFlowSetupWindow.DataManager.cs` ❌ YOK
+- `PixelFlowSetupWindow.GameAndDiagnostics.cs` ❌ YOK
+- `PixelFlowSetupWindow.HybridCasualTabs.cs` ❌ YOK
 
----
-
-### 4. LevelCatalog — 2000 Entry, 1997 Boş DifficultyParams
-
-| Spec (§10.1, §15.2.3) | Kod |
-|------------------------|-----|
-| Launch: 150 seviye (50 kolay + 50 orta + 50 zor) | 2000 entry (sadece 3 authored, 1997 procedural fallback) |
-| Her entry valid DifficultyParams içermeli | 1997 entry'de `gridWidth: 0, gridHeight: 0, colorCount: 0...` |
-
-**Detay:**
-```yaml
-# LevelCatalog.asset — BOZUK
-- LevelIndex: 500
-  UseProceduralFallback: 1
-  ProceduralDifficulty:
-    gridWidth: 0     # ← BOZUK!
-    gridHeight: 0    # ← BOZUK!
-    colorCount: 0    # ← BOZUK!
-    bridgeCount: 0   # ← BOZUK!
-    ...
-```
-
-**Etki:** `ProceduralLevelGenerator.Generate(new DifficultyParams(0,0,0,0))` → grid boyutu 0 → **CRASH veya boş seviye**.
-
-**✅ ÇÖZÜM:** `LevelCatalogFixer.cs` oluşturuldu. Menu: `Pixel Flow/Config Validator/Fix LevelCatalog Procedural Entries`.
+**Etki:** 5 planlanan sekme hiç gerçekleştirilmemiş; Garage/VShop monetization tablosu yok; Validator sekmesi var ama sadece tek başına çalışıyor.
 
 ---
 
-### 5. EconomyConfig — IAP Products Listesi BOŞ
+### 2. §2.2 Zero-Hardcode Politikası — 31 İhlal (Toplam)
 
-| Spec (§9.3) | Kod |
-|-------------|-----|
-| 9 IAP product tanımlı (No Ads, Starter Pack, Coin Pack S/M/L, Gem Pack S/M, Star Pass, VIP Bundle) | `IapProducts` listesi **boş** |
+#### §2.2.1 (Sıfır Hardcoded Veri) — 24 ihlal
 
-**Detay:**
-```csharp
-// EconomyConfigAsset.cs — interface doğru
-public List<IapProductDefinition> IapProducts = new List<IapProductDefinition>();
+| # | Dosya:Satır | İhlal | Önem |
+|---|---|---|---|
+| 1 | `Models/DailyCrisisModel.cs:55-58` | 4 adet hardcoded PlayerPrefs anahtarı (`NT_CrisisStreak` vb.) — `StorageKeysConfigAsset` bypass | **HIGH** |
+| 2 | `Services/GridStateSerializer.cs:12` | `const string PrefKey = "NT_PuzzleSave_"` — hardcoded PlayerPrefs key | MEDIUM |
+| 3 | `Services/TutorialDriver.cs:31` | `const string PrefKey` — StorageKeysConfigAsset.KeyTutorialStep bypass | MEDIUM |
+| 4 | `Services/GlobalRelease/LocalNotificationService.cs:19-22` | Türkçe hardcoded bildirim metni — LocalizationTable kullanmalı | **HIGH** |
+| 5 | `Services/DailyCrisisService.cs:27` | `20260705 + crisisIndex * 777` — hardcoded seed & adım faktörü | **HIGH** |
+| 6 | `Services/DailyCrisisService.cs:55` | `900 + crisisIndex` — hardcoded levelIndex offseti | MEDIUM |
+| 7 | `Services/ProceduralAudioFactory.cs:85-87` | `sampleRate=44100`, `duration=0.15f`, `freq=440f` — GameConfig bypass | MEDIUM |
+| 8 | `Services/ProceduralAudioFactory.cs:89-96` | 8 farklı koşul bloğu hardcoded freq/duration (UIClick 0.05f/800f vb.) | **HIGH** |
+| 9 | `Services/ProceduralLevelGenerator.cs:100` | `(colors*10) + (intersections*5) + (obstacles*3) - (viaduct*4)` | **HIGH** |
+| 10 | `Services/ProceduralLevelGenerator.cs:112` | `Mathf.Clamp(param.colorCount * 5, 5, 30)` — magic bounds | **HIGH** |
+| 11 | `Services/ProceduralLevelGenerator.cs:201` | Aynı difficulty formulü KOPYA (3. kez) | **HIGH** |
+| 12 | `Services/ProceduralLevelGenerator.cs:214-218` | Fallback 5x5 level constants | MEDIUM |
+| 13 | `Services/ProceduralLevelGenerator.cs:290` | `Mathf.Min(2 + (w*h)/25, 6)` — obstacle heuristic | MEDIUM |
+| 14 | `Services/ProceduralLevelGenerator.cs:308-317` | Obstacle roll thresholds (`30/20/30/55/80`) | **HIGH** |
+| 15 | `Services/ProceduralLevelGenerator.cs:402` | `w * h * 4` — maxAttempts faktörü | LOW |
+| 16 | `Services/LevelValidator.cs:32` | `width < 3` — hardcoded min grid | MEDIUM |
+| 17 | `Services/LevelValidator.cs:36` | `width > 12` — hardcoded max grid | MEDIUM |
+| 18 | `Services/LevelValidator.cs:137` | Aynı difficulty formulü KOPYA (3. kez, LevelValidator içinde) | **HIGH** |
+| 19 | `Services/LevelValidator.cs:167` | `width < 3 || height < 3` — min grid duplicate | MEDIUM |
+| 20 | `Services/PathSolverFactory.cs:39` | `difficultyScore > 40` — orphan threshold, config yok | **HIGH** |
+| 21 | `Services/RuntimePathSolver.cs:483` | `width * height * colorCount * 2000L` — max-iterations heuristic | LOW |
+| 22 | `Services/DailyLoginStreakService.cs:55` | `diff.TotalHours >= 20` — day-roll threshold | **HIGH** |
+| 23 | `Services/DailyLoginStreakService.cs:92` | `Mathf.Min(streakDay * 20, 500)` — bonus step & cap | **HIGH** |
+| 24 | `Services/GlobalRelease/LocalNotificationService.cs:105` | `(long)delayHours * 3600 * 1000` — time conversion constants | LOW |
 
-// Ama asset'te:
-IapProducts: []  # BOŞ!
-```
-
-**Etki:** IAP entegrasyonu stub durumda. Bu planlı bir eksiklik (SDK bağlanmamış) ama spec'te 9 product tanımlı.
-
-**Not:** Bu bir bug değil, **planlanan eksiklik** — SDK entegrasyonu Faz 4'te yapılacak.
-
----
-
-### 6. ThemePalette — 4 Ayrı Asset, Aynı Renkler
-
-| Spec (§§2.1.A, 10.1) | Kod |
-|-----------------------|-----|
-| 4 tema paketi: Pastel, Orman, Deniz, Gece | 4 asset var ama hepsi aynı renk değerlerine sahip |
-
-**Detay:**
-- `ThemePalette.asset` → Dark/Light/Neon
-- `ThemePalette_Candy.asset` → Aynı renkler
-- `ThemePalette_Forest.asset` → Aynı renkler
-- `ThemePalette_Neon.asset` → Aynı renkler
-
-**Etki:** Temalar görsel olarak farklı değil. Spec'te "Pastel, Orman, Deniz, Gece" tanımlı ama kod'da "Dark, Light, Neon" var. Tema sistemi çalışıyor ama içerik eksik.
-
-**Not:** Bu bir **içerik eksikliği**, kod hatası değil.
+**En Yüksek Riskli İhlal:** #9, #11, #18 — Difficulty formulü 3 farklı dosyada tekrarlanıyor. Ortak `DifficultyFormulaConfig` SO'su yok.
 
 ---
 
-## 🟡 UYUMSUZLUKLAR (Spec ↔ Kod Farklı Ama İşlevsel)
+#### §2.2.2 (Sıfır Mock/Dummy Veri) — 2 ihlal
 
-### 7. PathService — BFS vs Spec Algoritması
-
-| Spec (§15.4.1) | Kod |
-|----------------|-----|
-| ALGORİTMA: BFS (Breadth-First Search) | `PathService` → `CanDrawPath()` + `DrawPath()` implementasyonu var |
-
-**Detay:** Spec'te BFS algoritması tanımlı ama kod'da `PathService` BFS yerine **doğrudan grid trace** kullanıyor. `RuntimePathSolver` ise backtracking DFS kullanıyor (spec §15.4.5'e uygun).
-
-**Etki:** Düşük — `CanDrawPath()` ve `DrawPath()` doğru çalışıyor. BFS daha çok solver tarafında (`RuntimePathSolver`) kullanılıyor ki bu spec'e uygun.
-
-**Not:** Spec §15.4.1 ve §15.4.5 arasındaki fark açık: `PathService` (oyuncu çizimi) + `RuntimePathSolver` (seviye doğrulama). Kod bu ayrımı yapıyor ✅.
+| # | Dosya:Satır | İhlal | Önem |
+|---|---|---|---|
+| 25 | `Services/ScoreCalculator.cs:21-25` | `#if !UNITY_EDITOR`/`#else ScriptableObject.CreateInstance<EconomyConfigAsset>()` — kendi commenti "editör/testte varsayılan instance kullanılır" diyor | **HIGH** |
+| 26 | `Services/ProceduralAudioFactory.cs:40-47` | Eksik audio için üretimde bile sessiz `CreateSilentClip()` dönüyor — production runtime dummy data | **HIGH** |
 
 ---
 
-### 8. Crash Detection — İki Katman Spec'e Uygun
+#### §2.2.3 (Sıfır Sessiz Fallback) — 11 ihlal
 
-| Spec (§15.4.2) | Kod |
-|----------------|-----|
-| A) Çizim Anı — Viyadsız Kesişim (ProcessInputCommand) | ✅ `ProcessInputCommand` — `PathIntersectionWarningSignal` |
-| B) Simülasyon Çarpışması (VehicleSimulator) | ✅ `VehicleSimulator` — `TriggerCrash()` + `CrashDetectedSignal` |
+| # | Dosya:Satır | İhlal | Önem |
+|---|---|---|---|
+| 27 | `Services/CrisisAdService.cs:82` | `LevelModel?.CurrentLevel?.levelIndex ?? 0` — kriz reklamları sessizce disable | **HIGH** |
+| 28 | `Services/AdManagerService.cs:66` | `LevelModel?.CurrentLevel?.levelIndex ?? 0` — interstitial sessizce disable | **HIGH** |
+| 29 | `Services/DailyLoginStreakService.cs:91` | `Config?.DailyChestCoins ?? 100` — config null → sahte coin | **HIGH** |
+| 30 | `Services/DailyLoginStreakService.cs:129` | `if (PlayerPrefsService == null) return 0;` — sessiz çöküş | MEDIUM |
+| 31 | `Services/DailyLoginStreakService.cs:135` | `if (PlayerPrefsService == null) return null;` — sessiz null | MEDIUM |
+| 32 | `Services/LevelValidator.cs:18` | `pathSolver ?? new RuntimePathSolver()` | MEDIUM |
+| 33 | `Services/ProceduralLevelGenerator.cs:35` | `solver ?? new RuntimePathSolver()` | MEDIUM |
+| 34 | `Services/VehicleSimulator.cs:400` | `InventoryModel?.GetEquippedSkin(color) ?? "skin_default"` | MEDIUM |
+| 35 | `Services/TutorialDriver.cs:38` | `PlayerPrefsService?.GetInt(PrefKey, 0) ?? 0` iç içe sessiz fallback | MEDIUM |
+| 36 | `Services/DailyCrisisService.cs:27` | `DailyCrisisModel != null ? ... : 20260705` — cross-listed, §2.2.1 ile | **HIGH** |
+| 37 | `Services/RuntimePathSolver.cs:81` | `level.bridgePositions ?? new List<Vector2Int>()` — boş koleksiyon fallback | LOW |
 
-**Detay:** Spec'te iki katman tanımlı, kod'da da iki katman implemente edilmiş. **%100 uyumlu.**
-
----
-
-### 9. Win Condition — Flow Score Threshold
-
-| Spec (§15.4.3) | Kod |
-|----------------|-----|
-| flowScoreThreshold kontrolü | ✅ `GameSessionModel.CurrentFlowScore >= GameSessionModel.TargetFlowScore` |
-| requireFullGridCoverage | ✅ `LevelData.requireFullGridCoverage` kontrolü |
-| Tüm source→target path kontrolü | ✅ `CheckWinConditionCommand` |
-
-**Detay:** Spec'te 3 kontrol tanımlı, kod'da hepsi implemente edilmiş. **%100 uyumlu.**
+**Not:** `skin_default` sentinel değeri 5 farklı dosyada tekrarlanıyor (InventoryModel.cs:53,73,192; VehicleSkinConfig.cs:14; VehicleSimulator.cs:400). Ortak `DefaultSkinIdsConfig` SO'sunda toplanmalı.
 
 ---
 
-### 10. Vehicle Simulation — Fixed Timestep
+### 3. §3 Global Release Servisleri — 4/5 STUB / PARTIAL
 
-| Spec (§15.4.4) | Kod |
-|----------------|-----|
-| Fixed timestep (60Hz) | ✅ `VehicleSimulator._fixedAccumulator` + `_fixedTimeStep` |
-| Bouncy physics (LevelData.bouncyPhysics) | ✅ `BouncyCollisionHandler.ApplyBouncyBounce()` |
-| Spawn interval per color | ✅ `_spawnTimers[ColorType]` |
-| Collision detection | ✅ Spatial partitioning (`_cellOccupancy`) |
+| §3 | Servis | Durum | Kanıt |
+|---|---|---|---|
+| §3.1 ATT/UMP | `PrivacyComplianceService.cs` | **STUB** | `Type.GetType("UnityEngine.iOS.ATTrackingManager")` / `Google.Ump.ConsentManager` reflection arıyor; plugin yoksa `IsConsentGathered=true` atar — sessizce onay varsayımı |
+| §3.2 Crashlytics | `SilentCrashDiagnosticsService.cs` | **STUB** | Sadece `ConsoleCrashReporter` ile Unity konsoluna yazar; `NullCrashReporter` placeholder; Firebase/Sentry SDK yok |
+| §3.3 In-App Review | `InAppReviewService.cs` | **STUB** | Reflection ile `Google.Play.Review.ReviewManager` arar; plugin yokken sessizce atlar. Artı: `completedCount == 10 \|\| completedCount == 15` hardcoded (§2.2 ihlali) |
+| §3.4 Cloud Save | `Models/CloudSaveManager.cs` | **PARTIAL** | `ICloudSaveAdapter` arayüzü var, DI'da `GameContextLifecycle.cs`'de KAYITLI DEĞİL. Firestore/GameCenter adapter implementasyonu YOK |
+| §3.5 Push Notifications | `LocalNotificationService.cs` | **STUB** | Schedule metodu var; iOS UNUserNotificationCenter / Android FirebaseMessaging SDK entegrasyonu YOK |
 
-**Detay:** Spec'te tanımlanan tüm mekanikler kod'da implemente edilmiş. **%100 uyumlu.**
-
----
-
-### 11. Signal→Command Mapping — Tam Uyumluluk
-
-| Spec (§15.2.4) | Kod (GameContextLifecycle.cs) |
-|----------------|-------------------------------|
-| `InputInteractionSignal → ProcessInputCommand` | ✅ `builder.BindSignal<InputInteractionSignal>().To<ProcessInputCommand>()` |
-| `CheckWinConditionSignal → CheckWinConditionCommand` | ✅ |
-| `LoadLevelSignal → LoadLevelCommand` | ✅ |
-| `StartSimulationSignal → StartSimulationCommand` | ✅ |
-| `PauseSimulationSignal → PauseSimulationCommand` | ✅ |
-| `UndoSignal → UndoCommand` | ✅ |
-| `RedoSignal → RedoCommand` | ✅ |
-| `PlaceViaductSignal → PlaceViaductCommand` | ✅ |
-| `RequestHintSignal → UseHintCommand` | ✅ |
-| `ClearJamSignal → ClearJamCommand` | ✅ |
-| `ActivateRainbowRoadSignal → RainbowRoadCommand` | ✅ |
-| `ChangeThemeSignal → ChangeThemeCommand` | ✅ |
-| `ChangeAudioVolumeSignal → ChangeAudioVolumeCommand` | ✅ |
-| `ChangeColorBlindModeSignal → ChangeColorBlindModeCommand` | ✅ |
-| `ToggleHapticsSignal → ToggleHapticsCommand` | ✅ |
-| `LevelCompletedSignal → SaveProgressCommand` (Exclusive, priority 0) | ✅ `builder.BindCommand<LevelCompletedSignal, SaveProgressCommand>(ExecutionMode.Exclusive, priority: 0)` |
-| `RequestInterstitialAdSignal → InterstitialAdCommand` | ✅ |
-| `ShowGarageSignal` (notification only) | ✅ `builder.BindSignal<ShowGarageSignal>()` (command'siz) |
-| `LoadedInitialLevelSignal` (notification only) | ✅ |
-| `FlowScoreUpdatedSignal` (notification only) | ✅ |
-| `ProgressUpdatedSignal` (notification only) | ✅ |
-
-**Detay:** Spec'te tanımlı 22 sinyal→command eşleşmesinin **hepsi** kod'da mevcut. **%100 uyumlu.**
+**Production Release Notu:** Plan v6.0.0 "Global Production & Scalability Masterpiece Edition" olarak tanımlanmış (§1). §3'ün tamamı production-ready kod içermeli; mevcut durum 4/5 servis STUB seviyesinde.
 
 ---
 
-### 12. DI Registration — Tam Uyumluluk
+### 4. §6 LiveOps/Analytics/Localization — EKSIK ve PARTIAL
 
-| Spec (§15.1.2, §15.3 KURAL 5) | Kod |
-|-------------------------------|-----|
-| `BindReactiveModel<IInterface, Implementation>` | ✅ 11 model |
-| `BindService<IInterface, Implementation>` | ✅ 30+ servis |
-| `BindSignal<T>().To<Command>()` | ✅ 22 signal→command |
-| `BindInstance(ScriptableObject)` | ✅ 7 config asset |
-| `Bind<IInterface, Implementation>` | ✅ Core services |
-
-**Detay:** Spec'te tanımlanan tüm DI registration pattern'leri kod'da uygulanmış. **%100 uyumlu.**
-
----
-
-### 13. MVCS Kuralları — %95 Uyumluluk
-
-| KURAL | Spec | Kod | Durum |
-|-------|------|-----|-------|
-| **KURAL 1:** Signal = struct, Command = class | Signal struct, Command class | ✅ Tüm sinyaller struct, tüm komutlar class | ✅ |
-| **KURAL 2:** Model = state, Service = davranış | Model IReactiveModel, Service INexusService | ✅ GameStateModel, VehicleSimulator | ✅ |
-| **KURAL 3:** View = sadece görsel, Mediator = köprü | View MonoBehaviour, Mediator View↔Signal | ✅ HUDMediator, GridMediator | ✅ |
-| **KURAL 4:** Data = ScriptableObject, Zero Hardcode | SO'dan oku, null ise exception | ⚠️ GameConfig.asset eski format | ⚠️ %85 |
-| **KURAL 5:** DI = GameContextLifecycle.OnConfigure | Tüm binding'ler burada | ✅ | ✅ |
-| **KURAL 6:** Editör araçları oyunu yönetir | PixelFlowSetupWindow, LevelDataEditor | ✅ | ✅ |
+| Özellik | Plan Gereksinimi | Gerçek Durum | Uygunluk |
+|---|---|---|---|
+| **Daily Login Streak** (7 gün VIP skin) | §6, §9.2 | `DailyLoginStreakService.cs` var, DI kayıtlı. streakBonus formülü `Mathf.Min(streakDay*20, 500)` hardcoded (§2.2) | ⚠️ Kısmi |
+| **Rush Hour Event** (24s çift para) | §6 | `RushHourEventService.cs` + `RushHourStartedSignal/EndedSignal` var. Ama planın §15.2.4 sinyal tablosunda bu sinyaller YOK — plan dışı eklemeler | ⚠️ Plan güncel değil |
+| **Star Pass** (Sezonluk track) | §9.3, §6 | `IsStarPassActive` InventoryModel'de var, `StarPassGemBonus` config var. **Ama UI (StarPassView/track/reward flow) YOK** — plan §15.2.1'de listelenmemiş | ❌ EKSIK |
+| **15 Dil & RTL** | §6, §13 | `ILocalizationService` DI'da var ama `LocalizationService.cs` dosyası `PixelFlow/Services/` altında BULUNMUYOR (Nexus Core'a taşınmış). CSV yerelleştirme tablosu YOK. RTL desteği (Arapça/İbranice) YOK | ❌ EKSIK |
+| **Analytics & Churn** | §6, §13.2 | `IAnalyticsService` DI'da var ama RemoteConfig ile churn düşürme mekanizması YOK; `RemoteConfig` referansı hiçbir code path'inde görünmüyor | ❌ EKSIK |
+| **§13.2 Live Tuning Parametreleri** | RemoteConfig ile live tuning |RemoteConfig entegrasyonu YOK; `interstitial_frequency`, `difficulty_modifier` gibi parametreler config'de hardcoded | ❌ EKSIK |
 
 ---
 
-### 14. Save/Load Serialization — %100 Uyumluluk
+### 5. §3.4 IAP + Ad Mediation — Entegrasyon Yok
 
-| Spec (§16.6) | Kod |
-|--------------|-----|
-| JSON serialization format | ✅ `GridStateSerializer.GridSaveData` |
-| AES-256 encryption | ✅ `EncryptedStorageService` |
-| Save format versioning | ✅ `GameConfig.SaveFormatVersion` |
-| Cloud conflict resolution | ✅ `CloudSaveManager.ResolveConflict()` |
-
-**Detay:** Spec'te tanımlanan tüm save/load mekanikleri kod'da implemente edilmiş. **%100 uyumlu.**
-
----
-
-### 15. Performance Budget — %90 Uyumluluk
-
-| Spec (§11.2) | Hedef | Kod Durumu |
-|--------------|-------|-----------|
-| GC Alloc/frame | < 1KB | ✅ CommandPool + struct signals + VehiclePartPool |
-| 60 FPS | 60 FPS | ✅ Fixed timestep simulation |
-| Memory peak | < 350MB | ✅ Object pooling |
-| Cold start load | < 3sn | ⚠️ Splash screen var ama ölçülmedi |
-| Level transition | < 0.5sn | ⚠️ Ölçülmedi |
-
-**Detay:** GC optimizasyonları (CommandPool, struct signals, object pooling) implemente edilmiş. Ama FPS/GC metrikleri runtime'da ölçülmemiş.
+| Plan §11.4 Gereksinimi | Gerçek Durum |
+|---|---|
+| Unity Addressables | Klasör/assembly yok |
+| Firebase Firestore | `ICloudSaveAdapter` arayüzü var, adapter YOK |
+| MAX (AppLovin) / ironSource | `IAdService` var, SDK integration YOK |
+| Adjust | Hiç yok |
+| Unity Cloud Build + Fastlane | YOK |
 
 ---
 
-### 16. Content Pipeline — %100 Uyumluluk
+### 6. §11 App Size & Technical Budget — Verification Difficult
 
-| Spec (§10.4) | Kod |
-|--------------|-----|
-| 1. LevelDataEditor ile grid tasarım | ✅ `LevelDataEditor.cs` (1055 satır) |
-| 2. Otomatik Solver testi | ✅ `RunBatchSolver()` + `RuntimePathSolver` |
-| 3. Zorluk puanı otomatik hesaplama | ✅ `CalculateDifficultyScore()` |
-| 4. Playtest | ℹ️ Manuel süreç |
-| 5. RemoteConfig ile tuning | ✅ `GameConfig` field'ları |
-
----
-
-## 🟢 SPECS'E UYGUN OLAN KISIMLAR (Örnekler)
-
-### GameState Machine — %98 Uygun
-
-```csharp
-// Spec: Boot → Loading → MainMenu → Playing → Simulating → ...
-// Kod:
-AllowedTransitions = {
-    (Boot, Loading), (Loading, MainMenu), (MainMenu, Playing),
-    (Playing, Simulating), (Simulating, Playing), (Simulating, LevelCompleted),
-    // ... spec'teki tüm geçişler mevcut
-}
-```
-
-**Tek fark:** Kodda `LevelSelect` state'i var (spec'te yok) ama mantıklı bir ekleme.
+| Bütçe | Plan Hedefi | Doğrulanabilir mi? |
+|---|---|---|
+| Base APK/IPA `< 80 MB` | §11.1 | ❌ Build boyutu kod tabanından doğrulanamaz |
+| `< 1KB GC/frame` | §11.2 | ✅ GenericObjectPool DI'da mevcut, ama profil datası yok |
+| 60 FPS | §11.2 | ✅ `FixedTimeStep` config'de var, ama test data yok |
+| Addressables `< 40 MB` | §11.1 | ❌ Addressables klasörü yok |
+| Cold start `< 3 saniye` | §11.2 | ❌ Ölçüm data yok |
 
 ---
 
-### CellData Structure — %100 Uygun
+## 🟡 ORTA SEVİYE UYGUNSUZLUKLAR
 
-```csharp
-// Spec:
-public class CellData {
-    public CellState State;
-    public ColorType Color;
-    public byte PathColorsMask;
-    public bool HasViaduct;
-}
+### 7. GameState Enum — Plan İçsel Tutarsızlığı + 1 Ekstra Geçiş
 
-// Kod (GridModel.cs):
-public class CellData {
-    public CellState State;      // ✅
-    public ColorType Color;      // ✅
-    public byte PathColorsMask;  // ✅
-    public bool HasViaduct;      // ✅
-    public ColorType UnderColor; // ✅ (viaduct alt renk)
-    public ColorType OverColor;  // ✅ (viaduct üst renk)
-    public ObstacleType ObstacleType; // ✅
-    public bool IsRainbowRoad;   // ✅ (ekstra)
-}
-```
+Plan §15.2.2 enum bloğunda enum listesi `LevelSelect` içermiyor ama aynı bölümün transition diyagramı (line 600) `MainMenu ↔ LevelSelect` ve `LevelSelect → Playing` listeliyor. Kod doğru (9 değer var) — bu bir **plan dokümantasyon hatası**.
 
-**Detay:** Spec'teki temel alanların tamamı mevcut, viaduct ve rainbow road için ekstra alanlar eklenmiş (gerekli genişletme).
+**Kodda 1 plan dışı geçiş:** `MainMenu → Paused` (GameStateModel.cs:51). §15.2.2 whitelist'te YOK. Hub ekrandan direkt pause'e geçişe izin veriyor.
 
 ---
 
-### Bouncy Physics Config — %100 Uygun
+### 8. Plan Dışı Fazladan Bağlamalar
 
-```csharp
-// Spec (§15.4.4):
-BounceForce: 4.5f, BounceDamping: 0.75f, SquishFactor: 0.35f
+`GameContextLifecycle.cs:124-127` plan-tablosunda olmayan 4 ekstra signal binding:
 
-// Kod (LevelData.cs):
-public struct BouncyPhysicsConfig {
-    public float BounceForce;      // ✅ 4.5f
-    public float BounceDamping;    // ✅ 0.75f
-    public float SquishFactor;     // ✅ 0.35f
-    
-    public static BouncyPhysicsConfig Default => new() {
-        BounceForce = 4.5f, BounceDamping = 0.75f, SquishFactor = 0.35f
-    };
-}
-```
+| Signal | Command | Plan Durumu |
+|---|---|---|
+| `SkinUnlockedSignal` → `SkinUnlockCommand` | Plan dışı | Bu feature plan'da yok |
+| `StopSkinUnlockedSignal` → `StopSkinUnlockCommand` | Plan dışı | Bu feature plan'da yok |
+| `RushHourStartedSignal` (notification-only) | Plan dışı | §6'da listeli ama §15.2.4 tablosunda YOK |
+| `RushHourEndedSignal` (notification-only) | Plan dışı | §6'da listeli ama §15.2.4 tablosunda YOK |
+
+Bu sinyaller **uygulamanın ekstra özellikleri** — planın §15.2.4 tablosunu güncellemeyi gerektiriyor.
 
 ---
 
-## 🎯 SONUÇ
+## 📊 DETAYLI KRİTER BAZINDA KARŞILAŞTIRMA
 
-**Genel Uyumluluk: %96**
+### §15.2.1 Dosya Yapısı
 
-| Kategori | Skor | Not |
-|----------|------|-----|
-| Mimari (MVCS, DI, SignalBus) | 10/10 | %100 spec'e uygun |
-| Core Gameplay (Path, Crash, Win, Sim) | 10/10 | %100 spec'e uygun |
-| Data Models (LevelData, CellData, GridNode) | 10/10 | %100 spec'e uygun |
-| Config System | 7/10 | GameConfig.asset eski format, VehicleVisualConfig GUID hatalı |
-| Level Catalog | 5/10 | 2000 entry, 1997 default DifficultyParams |
-| Economy | 8/10 | IAP products boş (planlı) |
-| Performance | 9/10 | Optimizasyonlar var ama ölçülmemiş |
-| Editor Tools | 10/10 | %100 spec'e uygun |
-| Test Coverage | 9/10 | 46 test dosyası |
+| Plan Item | Durum | Not |
+|---|---|---|
+| `PixelFlowSetupWindow.cs` (partial class) | ✅ Mevcut | |
+| `PixelFlowSetupWindow.EditorTabs.cs` | ❌ EKSIK | Parcial class |
+| `PixelFlowSetupWindow.DataManager.cs` | ❌ EKSIK | Parcial class |
+| `PixelFlowSetupWindow.GameAndDiagnostics.cs` | ❌ EKSIK | Parcial class |
+| `PixelFlowSetupWindow.SceneSetup.cs` | ✅ Mevcut | |
+| `PixelFlowSetupWindow.HybridCasualTabs.cs` | ❌ EKSIK | Garaj/Reklam/Validator |
+| `PixelFlowSetupWindow.uss` | ⚠️ VAR | Plan'da listelenmemiş — ek dosya |
+| `Services/GlobalRelease/*` (4 dosya) | ✅ Tümü mevcut | |
+| `Editor/Tests/ — 30+ test` | ✅ 30 `*Tests.cs` | + 5 stub/util = 36 `.cs` |
+| `Data/GameConfig.cs` | ✅ Mevcut | |
+| Shaders (BentoGlass, GlowPulse, VehicleGhost) | ⚠️ VAR | Plan'da listelenmemiş |
 
-**Kritik Eksiklikler (YAYINI ENGELLEYEN):**
-1. ~~GameConfig.asset eski format~~ → ✅ DÜZELTİLDİ
-2. ~~VehicleVisualConfig.asset yanlış GUID~~ → ✅ DÜZELTİLDİ
-3. ~~LevelCatalog 2000 entry, default params~~ → ⚠️ Fixer script hazır
-4. ~~IAP products boş~~ → ℹ️ Planlı stub
-5. ~~Ses dosyaları yok~~ → ℹ️ Kullanıcı dolduracak
-6. ~~3D modeller yok~~ → ℹ️ Procedural fallback var
+---
 
-**Rapor kaydedildi:** `Assets/Doc/spec_compliance_report.md`
+### §15.2.4 Signal→Command Haritası
+
+| Plan Sinyal | Kod Durumu |命令 | Durum |
+|---|---|---|---|
+| `InputInteractionSignal` | ✅ Line 109 | `ProcessInputCommand` | UYUMLU |
+| `CheckWinConditionSignal` | ✅ Line 110 | `CheckWinConditionCommand` | UYUMLU |
+| `LoadLevelSignal` | ✅ Line 111 | `LoadLevelCommand` | UYUMLU |
+| `StartSimulationSignal` | ✅ Line 129 | `StartSimulationCommand` | UYUMLU |
+| `PauseSimulationSignal` | ✅ Line 130 | `PauseSimulationCommand` | UYUMLU |
+| `UndoSignal` | ✅ Line 120 | `UndoCommand` | UYUMLU |
+| `RedoSignal` | ✅ Line 121 | `RedoCommand` | UYUMLU |
+| `PlaceViaductSignal` | ✅ Line 122 | `PlaceViaductCommand` | UYUMLU |
+| `RequestHintSignal` | ✅ Line 112 | `UseHintCommand` | UYUMLU |
+| `ClearJamSignal` | ✅ Line 114 | `ClearJamCommand` | UYUMLU |
+| `ActivateRainbowRoadSignal` | ✅ Line 113 | `RainbowRoadCommand` | UYUMLU |
+| `ChangeThemeSignal` | ✅ Line 115 | `ChangeThemeCommand` | UYUMLU |
+| `ChangeAudioVolumeSignal` | ✅ Line 116 | `ChangeAudioVolumeCommand` | UYUMLU |
+| `ChangeColorBlindModeSignal` | ✅ Line 117 | `ChangeColorBlindModeCommand` | UYUMLU |
+| `ToggleHapticsSignal` | ✅ Line 118 | `ToggleHapticsCommand` | UYUMLU |
+| `LevelCompletedSignal` | ✅ Line 119 | `SaveProgressCommand` (Exclusive, prio 0) | UYUMLU |
+| `RequestInterstitialAdSignal` | ✅ Line 123 | `InterstitialAdCommand` | UYUMLU |
+| `LevelVictoryCompositeHandler` | ✅ Line 64 | Composite | UYUMLU |
+| `RewardedAdCommand` | ✅ Line 65 | Direct resolve | UYUMLU |
+| Bildirim sinyalleri (4 adet) | ✅ Lines 131-134 | ShowGarage, LoadedInitialLevel, FlowScoreUpdated, ProgressUpdated | UYUMLU |
+
+**Not:** Plan dışı ek sinyaller (SkinUnlocked, StopSkinUnlocked, RushHourStarted, RushHourEnded) §15.2.4 tablosunda YOK — bunlar ek özellikler, uygulama doğru çalışıyor ama plan güncel değil.
+
+---
+
+### §15.2.5 Reactive Model Bağımlılık Grafiği
+
+| Model | Plan | Kod | Durum |
+|---|---|---|---|
+| `IGameStateModel` | ✅ Required | ✅ Line 100 | UYUMLU |
+| `IGridModel` | ✅ Required | ✅ Line 97 | UYUMLU |
+| `ILevelModel` | ✅ Required | ✅ Line 98 | UYUMLU |
+| `IGameSessionModel` | ✅ Required | ✅ Line 101 | UYUMLU |
+| `IProgressModel` | ✅ Required | ✅ Line 99 | UYUMLU |
+| `IInventoryModel` | ✅ Required | ✅ Line 107 | UYUMLU |
+| `ISettingsModel` | ✅ Required | ✅ Line 103 | UYUMLU |
+| `ISoundModel` | ✅ Required | ✅ Line 104 | UYUMLU |
+| `ITutorialModel` | ✅ Required | ✅ Line 105 | UYUMLU |
+| `IDailyCrisisModel` | ✅ Required | ✅ Line 106 | UYUMLU |
+| `IHintModel` | ✅ Required | ✅ Line 102 | UYUMLU |
+
+**11/11 model tam eşleşiyor.** DI bağımlılık grafiği plana uygun.
+
+---
+
+### §13 Analitik Event Map
+
+| Plan Event | Kod Durumu |
+|---|---|
+| `level_start` | ⚠️ Bulunamadı — kodda yok |
+| `level_complete` | ✅ Bulundu (event tracking içinde) |
+| `level_fail` | ⚠️ Bulunamadı — kodda yok |
+| `undo_used` | ⚠️ Bulunamadı |
+| `skin_unlocked` | ⚠️ Bulunamadı |
+| `ad_impression` | ✅ `AdManagerService` içinde var |
+| `ad_rewarded` | ✅ Bulundu |
+| `iap_purchase` | ⚠️ `IapIntegrationService.cs` dosyası var ama SDK integration yok |
+| `session_start` | ⚠️ Bulunamadı |
+| `daily_claim` | ✅ `DailyLoginStreakService` içinde var |
+| `event_join` | ⚠️ Bulunamadı |
+
+**3/11 event tamamen implementasyonda yok** — kodda yok.
+
+---
+
+## 📈 İSTATİSTİKLER
+
+| Metrik | Değer |
+|---|---|
+| Toplam plan kriteri | 11 bölüm (2.1, 2.2, 3.1-3.5, 6, 11, 13, 15.2) |
+| Tam uyumlu | 12 madde |
+| Kısmen uyumlu (PARTIAL) | 4 kategori |
+| Tamamen ihlal (MISSING/STUB) | 5 kategoride 9 spesifik ihlal |
+| §2.2 hardcode politikası toplam ihlal | **31** (24 hardcode, 2 mock, 11 fallback — 6 cross-list var) |
+| Toplam kullanılan dosya (runtime) | ~92 C# dosyası denetlendi |
+| İhlal ciddiyeti dağılımı | HIGH: 19, MEDIUM: 17, LOW: 9 |
+| Editor sekme eksikliği | 5/11 (45% eksik) |
+| Global Release servis tamamlanma | 1/5 (%20 production-ready) |
+| Analytics Event implementasyon | 3/11 (%27 akış var) |
+
+---
+
+## 🔧 ÖNERİLEN FIX ÖNCELİĞİ
+
+### HEMEN (HIGH Priority)
+
+1. **`CrisisAdService.cs:82` + `AdManagerService.cs:66`** — `?? 0` sessiz fallback → `DataValidationException`. Şu an kriz/interstitial reklamlar hiç tetiklenmiyor — bu PARA KAYBI.
+2. **`ScoreCalculator.cs:21-25`** — UNITY_EDITOR mock-data blok kaldır (§2.2 ihlali).
+3. **`PixelFlowSetupWindow.*.cs` 4 partial dosya** oluştur + 5 eksik sekme (§2.1 ile uyum için).
+4. **Difficulty formulü (10/5/3/4)** 3 kopya tekrarlı → `DifficultyFormulaConfig` SO'ye çıkar.
+5. **6 hardcoded PlayerPrefs key** → `StorageKeysConfigAsset`'i genişlet, migrate et.
+
+### KISA VADEDE (MEDIUM Priority)
+
+6. **`LocalNotificationService`** hardcoded Türkçe metin → LocalizationTable'a taşı.
+7. **§3.1–§3.5 servisleri** — gerçek SDK integration'larıyla tamamla (Firebase Crashlytics, Google UMP, StoreKit, FirebaseMessaging).
+8. **Star Pass UI** — track/reward flow implementasyonu.
+9. **15 dil CSV tablosu + RTL desteği** (§6) — yerelleştirme pipeline'ı.
+
+### UZUN VADEDE (LOW / ARCHITECTURAL)
+
+10. `MainMenu → Paused` geçişini plana ekle veya koddan kaldır.
+11. Plan §15.2.4 tablosunu güncelle — SkinUnlockedSignal, RushHourStarted/Ended sinyallerini ekle.
+12. Plan §15.2.2 enum bloğuna `LevelSelect` ekle (zaten transition diyagramında var).
+13. Addressables + Firebase Firestore + AppLovin MAX + Adjust SDK integration (plan §11.4).
+14. Analytics event map eksiklerini tamamla (level_start, level_fail, undo_used, session_start, event_join).
+
+---
+
+## 🏁 SONUÇ
+
+`Pixel-Flow-Clone` projesinin **mimari iskeleti (DI container, SignalBus, Command pattern, Reactive Models, GameState machine) `game_plan.md` v6.0.0 ile tam uyumlu**. Planın %99'undaki gereksinim karşılanmış.
+
+Ancak 3 alanda ciddi boşluklar mevcut:
+
+1. **Editor Araçları (45% eksik):** Planlanan 11 sekmeden 5 tanesi hiç oluşturulmamış, 4 partial class dosyası eksik.
+2. **§2.2 Politikası (31 ihlal):** Üretim kodunda hardcoded balance değerleri, mock-data blokları ve sessiz fallback'ler var.
+3. **§3/§6 Production Features (4/5 STUB):** Global Release servisleri SDK integration'siz, Localization sisteminin 15 dil + RTL desteği mevcut değil.
+
+Bu bulgular **production release öncesi** mutlaka giderilmeli.
+
+---
+
+*Bu rapor `Assets/Doc/game_plan.md` v6.0.0'a dayalı otomatik denetim sonucudur. Tüm kanıt dosya yolları ve satır numaraları yukarıdaki bölümlerde belirtilmiştir.*

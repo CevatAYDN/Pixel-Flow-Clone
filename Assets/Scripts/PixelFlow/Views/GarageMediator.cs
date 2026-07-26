@@ -5,6 +5,7 @@ using PixelFlow.Signals;
 using PixelFlow.Data;
 using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace PixelFlow.Views
 {
@@ -52,37 +53,55 @@ namespace PixelFlow.Views
         {
             _availableSkins.Clear();
 
-            // Try loading ScriptableObject assets from Resources/Configs/Skins
             var loadedSkins = Resources.LoadAll<VehicleSkinConfig>("Configs/Skins");
+            if (loadedSkins == null || loadedSkins.Length == 0)
+            {
+                loadedSkins = Resources.LoadAll<VehicleSkinConfig>("Skins");
+            }
+#if UNITY_EDITOR
+            if (loadedSkins == null || loadedSkins.Length == 0)
+            {
+                var guids = UnityEditor.AssetDatabase.FindAssets("t:VehicleSkinConfig");
+                loadedSkins = guids
+                    .Select(g => UnityEditor.AssetDatabase.LoadAssetAtPath<VehicleSkinConfig>(UnityEditor.AssetDatabase.GUIDToAssetPath(g)))
+                    .Where(s => s != null)
+                    .ToArray();
+            }
+#endif
             if (loadedSkins != null && loadedSkins.Length > 0)
             {
                 _availableSkins.AddRange(loadedSkins);
-                LoggerService?.Log($"[PixelFlow.GarageMediator] Loaded {_availableSkins.Count} VehicleSkinConfig assets from Resources.");
+                LoggerService?.Log($"[PixelFlow.GarageMediator] Loaded {_availableSkins.Count} VehicleSkinConfig assets.");
             }
             else
             {
-                // Fallback default skins for each color family (Red, Blue, Green, Yellow, Purple)
-                string[] names = { "Varsayılan Otobüs", "Spor Taksi", "Trafik Polisi", "Kırmızı Yarışçı", "Mor Minibüs" };
-                ColorType[] colors = { ColorType.Red, ColorType.Blue, ColorType.Green, ColorType.Yellow, ColorType.Purple };
-
-                for (int i = 0; i < names.Length; i++)
-                {
-                    var skin = ScriptableObject.CreateInstance<VehicleSkinConfig>();
-                    skin.SkinId = i == 0 ? "skin_default" : $"skin_{colors[i].ToString().ToLower()}";
-                    skin.DisplayName = names[i];
-                    skin.ColorFamily = colors[i];
-                    skin.UnlockCoinCost = i * 200;
-                    _availableSkins.Add(skin);
-                }
-                LoggerService?.Log($"[PixelFlow.GarageMediator] Initialized {_availableSkins.Count} fallback vehicle skin configs for shop.");
+                throw new DataValidationException("No VehicleSkinConfig assets found in Resources/Configs/Skins!");
             }
 
             _availableStopSkins.Clear();
             var loadedStopSkins = Resources.LoadAll<StopSkinConfig>("Configs/Skins");
+            if (loadedStopSkins == null || loadedStopSkins.Length == 0)
+            {
+                loadedStopSkins = Resources.LoadAll<StopSkinConfig>("Skins");
+            }
+#if UNITY_EDITOR
+            if (loadedStopSkins == null || loadedStopSkins.Length == 0)
+            {
+                var guids = UnityEditor.AssetDatabase.FindAssets("t:StopSkinConfig");
+                loadedStopSkins = guids
+                    .Select(g => UnityEditor.AssetDatabase.LoadAssetAtPath<StopSkinConfig>(UnityEditor.AssetDatabase.GUIDToAssetPath(g)))
+                    .Where(s => s != null)
+                    .ToArray();
+            }
+#endif
             if (loadedStopSkins != null && loadedStopSkins.Length > 0)
             {
                 _availableStopSkins.AddRange(loadedStopSkins);
-                LoggerService?.Log($"[PixelFlow.GarageMediator] Loaded {_availableStopSkins.Count} StopSkinConfig assets from Resources.");
+                LoggerService?.Log($"[PixelFlow.GarageMediator] Loaded {_availableStopSkins.Count} StopSkinConfig assets.");
+            }
+            else
+            {
+                throw new DataValidationException("No StopSkinConfig assets found in Resources/Configs/Skins!");
             }
         }
 

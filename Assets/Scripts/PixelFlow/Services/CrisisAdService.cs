@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Nexus.Core;
 using PixelFlow.Models;
 using PixelFlow.Signals;
+using PixelFlow.Data;
 using UnityEngine;
 
 namespace PixelFlow.Services
@@ -34,19 +35,12 @@ namespace PixelFlow.Services
 
         // game_plan.md §2.2: config zorunludur. Build'de erişilemezse DataValidationException;
         // editor/testte SO varsayılan instance'ı (cache'li — tekrar alloc yok).
-        private Data.GameConfig _resolvedConfig;
         protected Data.GameConfig ResolvedConfig
         {
             get
             {
                 if (Config != null) return Config;
-                if (_resolvedConfig != null) return _resolvedConfig;
-#if !UNITY_EDITOR
-                throw new Data.DataValidationException("GameConfig erişilemedi! CrisisAdService reklam eşikleri yüklenemiyor.");
-#else
-                _resolvedConfig = ScriptableObject.CreateInstance<Data.GameConfig>();
-                return _resolvedConfig;
-#endif
+                throw new Data.DataValidationException("GameConfig erişilemedi! CrisisAdService reklam eşikleri yüklenemiyor. GameContextLifecycle'da GameConfig yüklü olmalı.");
             }
         }
 
@@ -79,7 +73,10 @@ namespace PixelFlow.Services
             if (GameSessionModel == null) return;
             GameSessionModel.IncrementRetryCount();
 
-            int level = LevelModel?.CurrentLevel?.levelIndex ?? 0;
+            if (LevelModel == null || LevelModel.CurrentLevel == null)
+                throw new DataValidationException("LevelModel or CurrentLevel is null in CrisisAdService!");
+
+            int level = LevelModel.CurrentLevel.levelIndex;
             if (level + 1 < ConfigMinLevel) return;
             if (RetryCount > 0 && RetryCount % ConfigMaxRetries == 0)
             {

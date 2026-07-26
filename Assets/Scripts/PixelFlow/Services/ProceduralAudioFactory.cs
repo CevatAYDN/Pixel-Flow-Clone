@@ -37,14 +37,12 @@ namespace PixelFlow.Services
             if (clip != null)
                 return clip;
 
-#if UNITY_EDITOR
-            Debug.LogWarning($"[AudioClipProvider] '{path}' bulunamadı! "
-                + $"Resources/Audio/ klasörüne {type}.wav dosyasını koyun. "
-                + $"Geçici sessiz clip kullanılıyor.");
+#if !UNITY_EDITOR
+            throw new DataValidationException($"[AudioClipProvider] Mandatory audio clip missing for {type} at Resources path '{path}'!");
+#else
+            Debug.LogWarning($"[AudioClipProvider] '{path}' not found! Generating temporary editor procedural clip.");
+            return CreateEditorProceduralClip(type.ToString());
 #endif
-
-            // Fallback: 0.01sn sessiz clip (null döndürmez, AudioSource hata vermez)
-            return CreateSilentClip(type.ToString());
         }
 
         /// <summary>
@@ -79,8 +77,8 @@ namespace PixelFlow.Services
             }
         }
 
-        /// <summary>Eksik WAV dosyaları için prosedürel synth ses dalgası üretir.</summary>
-        private static AudioClip CreateSilentClip(string name)
+        /// <summary>Editör önizlemesi için prosedürel synth ses dalgası üretir.</summary>
+        private static AudioClip CreateEditorProceduralClip(string name)
         {
             int sampleRate = 44100;
             float duration = 0.15f;

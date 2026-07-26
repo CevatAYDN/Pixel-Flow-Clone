@@ -119,11 +119,7 @@ namespace PixelFlow
                 // game_plan.md §2.2: config zorunludur. Sessizce hardcode'a düşmek yerine fail-loud.
                 if (_gameConfig == null)
                 {
-#if !UNITY_EDITOR
                     throw new Data.DataValidationException("GameConfig çözülemedi! Bootstrapper devam edemez.");
-#else
-                    _gameConfig = ScriptableObject.CreateInstance<Data.GameConfig>();
-#endif
                 }
 
                 // Trigger lazy init for services that need to be alive at boot
@@ -169,7 +165,8 @@ namespace PixelFlow
             }
 
             var cloud = Models.CloudSaveManager.LoadCloudRecord(_prefs);
-            string localJson = _prefs.GetString("NT_PuzzleSave_", "");
+            string saveKey = GridStateSerializer.GetSaveKey();
+            string localJson = _prefs.GetString(saveKey, "");
             var local = new Models.CloudSaveRecord
             {
                 PlayerId = Models.CloudSaveManager.GetOrCreatePlayerId(_prefs),
@@ -186,7 +183,7 @@ namespace PixelFlow
                     var cloudSnapshot = UnityEngine.JsonUtility.FromJson<GridStateSerializer.GridSaveData>(resolvedJson);
                     if (cloudSnapshot != null && cloudSnapshot.cells != null && cloudSnapshot.cells.Count > 0)
                     {
-                        _prefs.SetString("NT_PuzzleSave_", resolvedJson);
+                        _prefs.SetString(saveKey, resolvedJson);
                         saved = cloudSnapshot;
                     }
                     else
@@ -303,7 +300,7 @@ namespace PixelFlow
                 GridStateSerializer.Save(_gridModel, _sessionModel, _levelModel, _prefs);
                 _ = Models.CloudSaveManager.SyncToCloudAsync(
                     _prefs,
-                    _prefs.GetString("NT_PuzzleSave_", ""),
+                    _prefs.GetString(GridStateSerializer.GetSaveKey(), ""),
                     _sessionModel.Score);
             }
             catch (System.Exception ex)

@@ -211,6 +211,9 @@ namespace PixelFlow.Data
         [Tooltip("Path solver maksimum iterasyon üst sınırı")]
         public int PathSolverMaxIterationsCap = 1000000;
 
+        [Tooltip("Dinamik solver stratejisine geçiş için yüksek zorluk eşiği")]
+        public int HighDifficultySolverThreshold = 40;
+
         [Header("=== Vehicle Visual Pool ===")]
         [Tooltip("Önceden tahsis edilen küp (cube) sayısı")]
         public int VehiclePartPoolCubes = 512;
@@ -242,7 +245,9 @@ namespace PixelFlow.Data
         [Tooltip("Varsayılan haptik kapalı mı")]
         public bool DefaultHapticsDisabled = false;
 
-        [Header("=== Daily Crisis Difficulty (game_plan.md §3.6) ===")]
+        [Header("=== Global Release & Store Review ===")]
+        [Tooltip("In-App Review API'nin tetikleneceği seviye tamamlama sayıları")]
+        public int[] InAppReviewTriggerLevels = new int[] { 10, 15 };
         [Tooltip("Kolay günlük kriz (crisisIndex 0) zorluk parametreleri")]
         public DifficultyParams DailyCrisisEasy = new DifficultyParams(10, 10, 3, 2, false, true);
 
@@ -254,5 +259,14 @@ namespace PixelFlow.Data
 
         [Tooltip("Günlük kriz hedef skorları (crisisIndex 0=Easy, 1=Medium, 2=Hard)")]
         public int[] DailyCrisisTargetScores = { 20, 35, 55 };
+
+        [Tooltip("Günlük kriz seed taban yılı/tarihi faktörü")]
+        public int DailyCrisisSeedBase = 20260705;
+
+        [Tooltip("Günlük kriz seed adım çarpanı")]
+        public int DailyCrisisSeedFactor = 777;
+
+        [Tooltip("Günlük kriz seviye indeks offseti")]
+        public int DailyCrisisLevelIndexOffset = 900;
     }
 }

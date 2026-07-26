@@ -6,7 +6,13 @@ namespace PixelFlow.Services
 {
     public class StandardDFSPathSolverStrategy : IPathSolverStrategy
     {
-        private readonly RuntimePathSolver _internalSolver = new RuntimePathSolver();
+        private readonly RuntimePathSolver _internalSolver;
+
+        public StandardDFSPathSolverStrategy(GameConfig config = null)
+        {
+            var cfg = config ?? Resources.Load<GameConfig>("Configs/GameConfig");
+            _internalSolver = new RuntimePathSolver { Config = cfg };
+        }
 
         public SolverStrategyType StrategyType => SolverStrategyType.StandardDFS;
 

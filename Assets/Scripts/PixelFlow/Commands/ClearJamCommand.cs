@@ -40,11 +40,6 @@ namespace PixelFlow.Commands
                 return;
             }
 
-            if (PowerUpService != null && PowerUpService.ClearJamUsesRemaining <= 0)
-            {
-                PowerUpService.AddClearJamUse(ResolveConfig().ClearJamUsesPerLevel);
-            }
-
             if (PowerUpService == null || !PowerUpService.TryUseClearJam())
             {
                 LoggerService?.LogWarning("[ClearJamCommand] No Clear Jam uses remaining!");

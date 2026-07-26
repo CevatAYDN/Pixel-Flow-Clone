@@ -24,13 +24,17 @@ namespace PixelFlow.Services
         public LevelData GenerateDailyCrisisLevel(int crisisIndex)
         {
             LoggerService?.Log($"[PixelFlow.DailyCrisisService] Generating daily crisis level for crisisIndex: {crisisIndex}.");
-            int seed = (DailyCrisisModel != null ? DailyCrisisModel.CurrentDailySeed : 20260705) + crisisIndex * 777;
-            var solver = new RuntimePathSolver();
-            var generator = new ProceduralLevelGenerator(solver, seed);
 
-            // game_plan.md §15.9 KURAL 1/4: Zorluk değerleri hardcode edilmez, GameConfig'ten okunur.
+            if (DailyCrisisModel == null)
+                throw new DataValidationException("DailyCrisisModel is null in DailyCrisisService!");
+
             if (Config == null)
-                throw new DataValidationException("GameConfig erişilemedi! DailyCrisisService zorluk parametrelerini yükleyemiyor.");
+                throw new DataValidationException("GameConfig is null in DailyCrisisService!");
+
+            int seedBase = Config.DailyCrisisSeedBase > 0 ? Config.DailyCrisisSeedBase : DailyCrisisModel.CurrentDailySeed;
+            int seed = seedBase + crisisIndex * Config.DailyCrisisSeedFactor;
+            var solver = new RuntimePathSolver { Config = Config };
+            var generator = new ProceduralLevelGenerator(solver, seed);
 
             DifficultyParams param;
             switch (crisisIndex)
@@ -52,7 +56,7 @@ namespace PixelFlow.Services
             var level = generator.Generate(param);
             if (level != null)
             {
-                level.levelIndex = 900 + crisisIndex;
+                level.levelIndex = Config.DailyCrisisLevelIndexOffset + crisisIndex;
                 level.name = $"DailyCrisis_{crisisIndex + 1}";
                 LoggerService?.Log($"[PixelFlow.DailyCrisisService] Generated level successfully: index={level.levelIndex}, name={level.name}.");
             }

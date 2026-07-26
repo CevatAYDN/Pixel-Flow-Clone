@@ -23,6 +23,7 @@ namespace PixelFlow.Editor
 
         private void GeneratePrefabs()
         {
+            AudioClipGenerator.GenerateAllAudioClips();
             if (!Directory.Exists("Assets/Prefabs")) Directory.CreateDirectory("Assets/Prefabs");
 
             var existingPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/CellView.prefab");
@@ -110,8 +111,34 @@ namespace PixelFlow.Editor
             }
             AssignContextData(root, config);
 
-            // ✅ GameContextLifecycle'i Root'a ekle — yoksa Nexus DI servis kaydı yapılmaz
-            EnsureComponent<GameContextLifecycle>(rootObj);
+            // ✅ GameContextLifecycle'i Root'a ekle ve tüm 11 ScriptableObject config varlığını bağla
+            var lifecycle = EnsureComponent<GameContextLifecycle>(rootObj);
+            var lifecycleSO = new SerializedObject(lifecycle);
+
+            T LoadConfigAsset<T>(string relPath) where T : ScriptableObject
+            {
+                var asset = Resources.Load<T>(relPath);
+                if (asset != null) return asset;
+                var guids = AssetDatabase.FindAssets($"t:{typeof(T).Name}");
+                if (guids.Length > 0)
+                    return AssetDatabase.LoadAssetAtPath<T>(AssetDatabase.GUIDToAssetPath(guids[0]));
+                return null;
+            }
+
+            SetProp(lifecycleSO, "gameConfig", config ?? LoadConfigAsset<GameConfig>("Configs/GameConfig"));
+            SetProp(lifecycleSO, "storageKeysConfig", LoadConfigAsset<StorageKeysConfigAsset>("Configs/StorageKeysConfig"));
+            SetProp(lifecycleSO, "themePalette", LoadConfigAsset<ThemePaletteAsset>("Configs/ThemePalette"));
+            SetProp(lifecycleSO, "colorBlindPalette", LoadConfigAsset<ColorBlindPaletteAsset>("Configs/ColorBlindPalette"));
+            SetProp(lifecycleSO, "vehicleMaterialConfig", LoadConfigAsset<VehicleMaterialConfigAsset>("Configs/VehicleMaterialConfig"));
+            SetProp(lifecycleSO, "vehicleVisualConfig", LoadConfigAsset<VehicleVisualConfigAsset>("Configs/VehicleVisualConfig"));
+            SetProp(lifecycleSO, "economyConfig", LoadConfigAsset<EconomyConfigAsset>("Configs/EconomyConfig"));
+            SetProp(lifecycleSO, "levelCatalog", LoadConfigAsset<LevelCatalogAsset>("Configs/LevelCatalog"));
+            SetProp(lifecycleSO, "phaseConfig", LoadConfigAsset<PhaseConfigAsset>("Configs/PhaseConfig"));
+            SetProp(lifecycleSO, "difficultyFormulaConfig", LoadConfigAsset<DifficultyFormulaConfigAsset>("Configs/DifficultyFormulaConfig"));
+            SetProp(lifecycleSO, "defaultSkinIdsConfig", LoadConfigAsset<DefaultSkinIdsConfigAsset>("Configs/DefaultSkinIdsConfig"));
+
+            lifecycleSO.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(lifecycle);
 
             var canvasObj = FindOrCreateChild(rootObj.transform, "Canvas");
             var canvas = canvasObj.GetComponent<Canvas>();
@@ -131,6 +158,16 @@ namespace PixelFlow.Editor
             EnsureComponent<GraphicRaycaster>(canvasObj);
 
             EnsureEventSystem(rootObj.transform);
+
+            // 💡 Directional Light — 3D araç ve gölge aydınlatması
+            var lightObj = FindOrCreateChild(rootObj.transform, "Directional Light");
+            var dirLight = lightObj.GetComponent<Light>();
+            if (dirLight == null) dirLight = lightObj.AddComponent<Light>();
+            dirLight.type = LightType.Directional;
+            dirLight.color = new Color(1.0f, 0.96f, 0.90f);
+            dirLight.intensity = 1.25f;
+            dirLight.shadows = LightShadows.Soft;
+            lightObj.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
 
             var gridObj = FindOrCreateChild(rootObj.transform, "Grid");
             var gridView = gridObj.GetComponent<GridView>();
@@ -214,11 +251,20 @@ namespace PixelFlow.Editor
             }
 
             EnsureExtendedViews(canvasObj.transform);
+            SetupGlobalVolume(rootObj.transform);
+
+            // 🔊 14 Zorunlu Ses Klibini Otomatik Oluştur
+            AudioClipGenerator.GenerateAllAudioClips();
+
+            // 🔗 Tüm UI View'larının [SerializeField] alanlarını otomatik bağla
+            AutoReferenceEditor.AutoReferenceAllViewsInScene();
 
             Selection.activeGameObject = rootObj;
             EditorGUIUtility.PingObject(rootObj);
-            Debug.Log("[PixelFlow] Scene setup complete.");
+            Debug.Log("[PixelFlow] Complete scene setup finished successfully. Camera, Directional Light, Canvas, 11 UI Panels, Volume, Audio, and Auto-References wired.");
         }
+
+
 
 
 
@@ -258,11 +304,13 @@ namespace PixelFlow.Editor
             var obj = FindOrCreateChild(parent.transform, name);
             var img = obj.GetComponent<UnityEngine.UI.Image>();
             if (img == null) img = obj.AddComponent<UnityEngine.UI.Image>();
-            img.raycastTarget = false;
+            img.raycastTarget = true;
 
             var btn = obj.GetComponent<UnityEngine.UI.Button>();
             if (btn == null) btn = obj.AddComponent<UnityEngine.UI.Button>();
             btn.interactable = true;
+
+            EnsureComponent<ButtonJuice>(obj);
             return btn;
         }
 
@@ -1059,15 +1107,17 @@ namespace PixelFlow.Editor
 
 
 
-        private void EnsureComponent<T>(GameObject obj) where T : Component
+        private T EnsureComponent<T>(GameObject obj) where T : Component
         {
-            if (obj.GetComponent<T>() == null)
+            var comp = obj.GetComponent<T>();
+            if (comp == null)
             {
-                obj.AddComponent<T>();
+                comp = obj.AddComponent<T>();
             }
+            return comp;
         }
 
-        private void EnsureComponent<T>(GameObject obj, System.Action<T> configure) where T : Component
+        private T EnsureComponent<T>(GameObject obj, System.Action<T> configure = null) where T : Component
         {
             var component = obj.GetComponent<T>();
             if (component == null)
@@ -1075,6 +1125,7 @@ namespace PixelFlow.Editor
                 component = obj.AddComponent<T>();
             }
             configure?.Invoke(component);
+            return component;
         }
 
         private void AssignContextData(Root root, GameConfig config)
@@ -1851,13 +1902,14 @@ namespace PixelFlow.Editor
             }
         }
 
-        private void SetupGlobalVolume()
+        private void SetupGlobalVolume(Transform rootTransform)
         {
-            var hasVolume = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include)
-                .Any(go => go.name.Contains("Volume"));
-            if (!hasVolume)
+            var volObj = FindOrCreateChild(rootTransform, "Global Volume");
+            var volumeType = System.Type.GetType("UnityEngine.Rendering.Volume, Unity.RenderPipelines.Core.Runtime") ??
+                             System.Type.GetType("UnityEngine.Rendering.Volume, UnityEngine.CoreModule");
+            if (volumeType != null && volObj.GetComponent(volumeType) == null)
             {
-                Debug.LogWarning("[PixelFlow] Global Volume bulunamadı. Scene'de gerçek bir Volume nesnesi oluşturun ve Volume component ekleyin.");
+                volObj.AddComponent(volumeType);
             }
         }
 

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.Services;
 using PixelFlow.Signals;
+using PixelFlow.Data;
 
 namespace PixelFlow.Services.GlobalRelease
 {
@@ -18,6 +19,7 @@ namespace PixelFlow.Services.GlobalRelease
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public IPlayerPrefsService Prefs { get; set; }
         [Inject, OptionalInject] public ILoggerService LoggerService { get; set; }
+        [Inject, OptionalInject] public GameConfig Config { get; set; }
 
         private ISignalSubscription _levelCompletedSub;
 
@@ -34,7 +36,11 @@ namespace PixelFlow.Services.GlobalRelease
             Prefs.SetInt("CompletedLevelsCount", completedCount);
             Prefs.Save();
 
-            if (completedCount == 10 || completedCount == 15)
+            int[] triggerLevels = Config != null && Config.InAppReviewTriggerLevels != null
+                ? Config.InAppReviewTriggerLevels
+                : new int[] { 10, 15 };
+
+            if (System.Array.IndexOf(triggerLevels, completedCount) >= 0)
             {
                 TriggerInAppReview();
             }

@@ -24,11 +24,13 @@ namespace PixelFlow.Models
     {
         private readonly IPlayerPrefsService _prefs;
         private readonly GameConfig _config;
+        private readonly StorageKeysConfigAsset _storageKeys;
 
-        public DailyCrisisModel(IPlayerPrefsService prefs, GameConfig config = null)
+        public DailyCrisisModel(IPlayerPrefsService prefs, GameConfig config = null, StorageKeysConfigAsset storageKeys = null)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
             _config = config;
+            _storageKeys = storageKeys ?? Resources.Load<StorageKeysConfigAsset>("Configs/StorageKeysConfig");
             LoadState();
         }
 
@@ -52,16 +54,16 @@ namespace PixelFlow.Models
 
         public event Action OnDailyCrisisUpdated;
 
-        private const string PrefKeyStreak = "NT_CrisisStreak";
-        private const string PrefKeyBadges = "NT_CrisisBadges";
-        private const string PrefKeySeed = "NT_CrisisLastSeed";
-        private const string PrefKeyFlags = "NT_CrisisFlags";
+        private string KeyStreak => _storageKeys != null && !string.IsNullOrEmpty(_storageKeys.KeyCrisisStreak) ? _storageKeys.KeyCrisisStreak : throw new DataValidationException("StorageKeysConfigAsset.KeyCrisisStreak missing!");
+        private string KeyBadges => _storageKeys != null && !string.IsNullOrEmpty(_storageKeys.KeyCrisisBadges) ? _storageKeys.KeyCrisisBadges : throw new DataValidationException("StorageKeysConfigAsset.KeyCrisisBadges missing!");
+        private string KeySeed => _storageKeys != null && !string.IsNullOrEmpty(_storageKeys.KeyCrisisSeed) ? _storageKeys.KeyCrisisSeed : throw new DataValidationException("StorageKeysConfigAsset.KeyCrisisSeed missing!");
+        private string KeyFlags => _storageKeys != null && !string.IsNullOrEmpty(_storageKeys.KeyCrisisFlags) ? _storageKeys.KeyCrisisFlags : throw new DataValidationException("StorageKeysConfigAsset.KeyCrisisFlags missing!");
 
         private void LoadState()
         {
-            StreakCount = _prefs.GetInt(PrefKeyStreak, 0);
-            BadgesEarned = _prefs.GetInt(PrefKeyBadges, 0);
-            _lastCompletedSeed = _prefs.GetInt(PrefKeySeed, 0);
+            StreakCount = _prefs.GetInt(KeyStreak, 0);
+            BadgesEarned = _prefs.GetInt(KeyBadges, 0);
+            _lastCompletedSeed = _prefs.GetInt(KeySeed, 0);
 
             int currentSeed = GetTodayUtcSeed();
             if (_lastCompletedSeed != currentSeed)
@@ -73,12 +75,12 @@ namespace PixelFlow.Models
                 if (_lastCompletedSeed > 0 && currentSeed - _lastCompletedSeed > 1)
                 {
                     StreakCount = 0;
-                    _prefs.SetInt(PrefKeyStreak, 0);
+                    _prefs.SetInt(KeyStreak, 0);
                 }
             }
             else
             {
-                int flags = _prefs.GetInt(PrefKeyFlags, 0);
+                int flags = _prefs.GetInt(KeyFlags, 0);
                 _completedDaily[0] = (flags & 1) != 0;
                 _completedDaily[1] = (flags & 2) != 0;
                 _completedDaily[2] = (flags & 4) != 0;
@@ -108,10 +110,10 @@ namespace PixelFlow.Models
 
             _lastCompletedSeed = todaySeed;
 
-            _prefs.SetInt(PrefKeyBadges, BadgesEarned);
-            _prefs.SetInt(PrefKeyStreak, StreakCount);
-            _prefs.SetInt(PrefKeySeed, todaySeed);
-            _prefs.SetInt(PrefKeyFlags, flags);
+            _prefs.SetInt(KeyBadges, BadgesEarned);
+            _prefs.SetInt(KeyStreak, StreakCount);
+            _prefs.SetInt(KeySeed, todaySeed);
+            _prefs.SetInt(KeyFlags, flags);
             _prefs.Save();
 
             OnDailyCrisisUpdated?.Invoke();

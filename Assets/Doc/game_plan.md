@@ -838,7 +838,8 @@ namespace PixelFlow.Models
         Simulating,     // Araçlar hareket ediyor (input pasif)
         Paused,         // Duraklatıldı / Kriz paneli
         LevelCompleted, // Seviye başarıyla bitti
-        LevelFailed     // Seviye başarısız (nadiren)
+        LevelFailed,    // Seviye başarısız (nadiren)
+        LevelSelect     // Seviye seçim ekranı
     }
 }
 ```
@@ -849,7 +850,10 @@ namespace PixelFlow.Models
 Boot → Loading → MainMenu
 Boot → MainMenu (direkt fresh start)
 Boot → Playing (save restore)
+MainMenu ↔ LevelSelect
+LevelSelect → Playing
 MainMenu → Playing
+MainMenu → Paused (hub hızlı ayarlar/kriz erişimi)
 Playing ↔ Paused
 Playing → Simulating
 Playing → MainMenu (hub'a çıkış)
@@ -944,8 +948,11 @@ public class CellData
 | `ChangeAudioVolumeSignal` | `ChangeAudioVolumeCommand` | Ses seviyesi değiştir |
 | `ChangeColorBlindModeSignal` | `ChangeColorBlindModeCommand` | Renk körlüğü modu değiştir |
 | `ToggleHapticsSignal` | `ToggleHapticsCommand` | Titreşim aç/kapa |
-| `LevelCompletedSignal` | `SaveProgressCommand` | İlerlemeyi kaydet (`ExecutionMode.Exclusive`, priority 0) |
 | `RequestInterstitialAdSignal` | `InterstitialAdCommand` | Interstitial reklam göster |
+| `SkinUnlockedSignal` | `SkinUnlockCommand` | Araç skin kilidi aç |
+| `StopSkinUnlockedSignal` | `StopSkinUnlockCommand` | Durak skin kilidi aç |
+| `RushHourStartedSignal` | *(Notification-only)* | Rush Hour canlı etkinlik başlangıç bildirimi |
+| `RushHourEndedSignal` | *(Notification-only)* | Rush Hour canlı etkinlik bitiş bildirimi |
 
 > **Ek bağlama notları (kod gerçeği — `GameContextLifecycle.OnConfigure`):**
 > - `LevelVictoryCompositeHandler` bir **composite handler**'dır (çoklu-sinyal fan-in); tek signal→command eşlemesi değildir, DI'da `Bind<LevelVictoryCompositeHandler>` ile kayıtlıdır.

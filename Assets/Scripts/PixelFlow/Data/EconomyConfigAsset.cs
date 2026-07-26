@@ -43,6 +43,14 @@ namespace PixelFlow.Data
         [Tooltip("2 yıldız için maksimum viyadük kullanımı")]
         public int TwoStarsMaxViaducts = 2;
 
+        [Header("=== Daily Login Streak Parameters ===")]
+        [Tooltip("Yeni gün kabul edilmek için gereken minimum geçen saat")]
+        public float DailyLoginRollHours = 20f;
+        [Tooltip("Gün başına ek verilen coin bonus katı")]
+        public int DailyLoginBonusPerDay = 20;
+        [Tooltip("Günlük streak bonus üst sınırı")]
+        public int DailyLoginMaxBonus = 500;
+
         [Header("=== IAP Ürün Kataloğu (game_plan.md §9.3) ===")]
         [Tooltip("IAP ürün tanımları - Product ID, fiyat, içerik ve tip")]
         public List<IapProductDefinition> IapProducts = new List<IapProductDefinition>();

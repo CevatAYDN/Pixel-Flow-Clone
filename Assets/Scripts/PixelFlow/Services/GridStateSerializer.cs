@@ -9,7 +9,26 @@ namespace PixelFlow.Services
 {
     public class GridStateSerializer
     {
-        private const string PrefKey = "NT_PuzzleSave_";
+        public static string GetSaveKey(StorageKeysConfigAsset storageKeys = null)
+        {
+            if (storageKeys != null && !string.IsNullOrEmpty(storageKeys.KeyPuzzleSavePrefix))
+                return storageKeys.KeyPuzzleSavePrefix;
+            var loaded = Resources.Load<StorageKeysConfigAsset>("Configs/StorageKeysConfig");
+            if (loaded != null && !string.IsNullOrEmpty(loaded.KeyPuzzleSavePrefix))
+                return loaded.KeyPuzzleSavePrefix;
+            throw new DataValidationException("StorageKeysConfigAsset.KeyPuzzleSavePrefix missing!");
+        }
+
+        public static bool HasSavedGame(IPlayerPrefsService prefs, StorageKeysConfigAsset storageKeys = null)
+        {
+            return prefs.HasKey(GetSaveKey(storageKeys));
+        }
+
+        public static void ClearSave(IPlayerPrefsService prefs, StorageKeysConfigAsset storageKeys = null)
+        {
+            prefs.DeleteKey(GetSaveKey(storageKeys));
+            prefs.Save();
+        }
 
         [System.Serializable]
         public class GridSaveData
@@ -116,7 +135,7 @@ namespace PixelFlow.Services
             }
 
             string json = JsonUtility.ToJson(data);
-            prefs.SetString(PrefKey, json);
+            prefs.SetString(GetSaveKey(), json);
             prefs.Save();
             Logger?.Log($"[PixelFlow.GridStateSerializer] 💾 Game state saved: Level {data.levelIndex + 1} ({data.width}x{data.height}, Cells: {data.cells.Count}, Active Paths: {data.paths.Count}, Score: {data.score})");
         }
@@ -127,8 +146,8 @@ namespace PixelFlow.Services
         /// </summary>
         public static GridSaveData Load(IPlayerPrefsService prefs)
         {
-            if (!prefs.HasKey(PrefKey)) return null;
-            string json = prefs.GetString(PrefKey, "");
+            if (!prefs.HasKey(GetSaveKey())) return null;
+            string json = prefs.GetString(GetSaveKey(), "");
             if (string.IsNullOrEmpty(json)) return null;
             try
             {
@@ -270,17 +289,6 @@ namespace PixelFlow.Services
                     }
                 }
             }
-        }
-
-        public static bool HasSavedGame(IPlayerPrefsService prefs)
-        {
-            return prefs.HasKey(PrefKey);
-        }
-
-        public static void ClearSave(IPlayerPrefsService prefs)
-        {
-            prefs.DeleteKey(PrefKey);
-            prefs.Save();
         }
     }
 }

@@ -70,7 +70,7 @@ namespace PixelFlow
             builder.BindService<ITutorialDriver, TutorialDriver>();
             builder.BindService<ICrisisAdService, CrisisAdService>();
             builder.BindService<IObstacleService, ObstacleService>();
-            builder.BindService<ILocalizationService, LocalizationService>();
+            builder.BindService<Nexus.Core.Services.ILocalizationService, PixelFlow.Services.LocalizationService>();
             builder.Bind<ILocalizationTableProvider, ResourceLocalizationTableProvider>();
             builder.BindService<IDailyCrisisService, DailyCrisisService>();
             builder.BindService<IDailyLoginStreakService, DailyLoginStreakService>(); // LiveOps: Daily Login Streak
@@ -86,6 +86,9 @@ namespace PixelFlow
             builder.BindService<IapIntegrationService, IapIntegrationService>(); // IAP integration with EconomyConfig
 
             // Global Release Production Services (game_plan.md §3)
+            builder.Bind<ICloudSaveAdapter, PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter>();
+            builder.BindService<CloudSaveManager>();
+            builder.BindService<PixelFlowAnalyticsTracker>();
             builder.BindService<PixelFlow.Services.GlobalRelease.PrivacyComplianceService>();
             builder.BindService<PixelFlow.Services.GlobalRelease.SilentCrashDiagnosticsService>();
             builder.BindService<PixelFlow.Services.GlobalRelease.InAppReviewService>();

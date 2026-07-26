@@ -31,7 +31,14 @@ namespace PixelFlow.Services
         [Inject] public ISettingsModel SettingsModel { get; set; }
         [Inject, OptionalInject] public GameConfig Config { get; set; }
 
-        private int PoolSize => Config != null ? Config.AudioPoolSize : 3;
+        private int PoolSize
+        {
+            get
+            {
+                if (Config != null) return Config.AudioPoolSize;
+                throw new DataValidationException("GameConfig missing in AudioService!");
+            }
+        }
 
         private static readonly HashSet<SfxType> CriticalTypes = new HashSet<SfxType>
         {

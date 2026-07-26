@@ -42,8 +42,17 @@ namespace PixelFlow.Services
         /// </summary>
         public void CheckDailyLogin()
         {
-            if (PlayerPrefsService == null) return;
-            if (string.IsNullOrEmpty(LastLoginKey) || string.IsNullOrEmpty(StreakKey) || string.IsNullOrEmpty(VipSkinGrantedKey) || string.IsNullOrEmpty(VipSkinId)) throw new DataValidationException("DailyLoginStreakService requires configured storage keys.");
+            if (PlayerPrefsService == null) 
+                throw new DataValidationException("PlayerPrefsService is null in DailyLoginStreakService!");
+
+            if (Config == null)
+                throw new DataValidationException("GameConfig is null in DailyLoginStreakService!");
+
+            if (string.IsNullOrEmpty(LastLoginKey) || string.IsNullOrEmpty(StreakKey) || string.IsNullOrEmpty(VipSkinGrantedKey) || string.IsNullOrEmpty(VipSkinId)) 
+                throw new DataValidationException("DailyLoginStreakService requires configured storage keys.");
+
+            var economyConfig = Resources.Load<EconomyConfigAsset>("Configs/EconomyConfig");
+            float rollHours = economyConfig != null ? economyConfig.DailyLoginRollHours : 20f;
 
             string lastLoginStr = PlayerPrefsService.GetString(LastLoginKey, "");
             DateTime lastLogin;
@@ -52,12 +61,12 @@ namespace PixelFlow.Services
             if (DateTime.TryParse(lastLoginStr, out lastLogin))
             {
                 TimeSpan diff = DateTime.UtcNow - lastLogin;
-                if (diff.TotalHours >= 20) // 20+ saat geçmişse yeni gün say
+                if (diff.TotalHours >= rollHours)
                     isNewDay = true;
             }
             else
             {
-                isNewDay = true; // İlk giriş
+                isNewDay = true;
             }
 
             if (!isNewDay)
@@ -66,7 +75,6 @@ namespace PixelFlow.Services
                 return;
             }
 
-            // Streak artır
             int currentStreak = PlayerPrefsService.GetInt(StreakKey, 0) + 1;
             PlayerPrefsService.SetInt(StreakKey, currentStreak);
             PlayerPrefsService.SetString(LastLoginKey, DateTime.UtcNow.ToString("O"));
@@ -74,10 +82,8 @@ namespace PixelFlow.Services
 
             LoggerService?.Log($"[PixelFlow.DailyLoginStreakService] Daily login streak: Day {currentStreak}");
 
-            // Ödüller
             GrantDailyReward(currentStreak);
 
-            // 7. günde VIP Skin
             if (currentStreak >= 7 && !PlayerPrefsService.GetBool(VipSkinGrantedKey, false))
             {
                 GrantVipSkin();
@@ -88,8 +94,15 @@ namespace PixelFlow.Services
 
         private void GrantDailyReward(int streakDay)
         {
-            int baseCoins = Config?.DailyChestCoins ?? 100;
-            int streakBonus = Mathf.Min(streakDay * 20, 500); // Max 500 bonus
+            if (Config == null)
+                throw new DataValidationException("GameConfig is null in DailyLoginStreakService!");
+
+            var economyConfig = Resources.Load<EconomyConfigAsset>("Configs/EconomyConfig");
+            int bonusPerDay = economyConfig != null ? economyConfig.DailyLoginBonusPerDay : 20;
+            int maxBonus = economyConfig != null ? economyConfig.DailyLoginMaxBonus : 500;
+
+            int baseCoins = Config.DailyChestCoins;
+            int streakBonus = Mathf.Min(streakDay * bonusPerDay, maxBonus);
             int totalCoins = baseCoins + streakBonus;
 
             if (string.IsNullOrEmpty(CoinCurrencyId)) throw new DataValidationException("DailyLoginStreakService requires configured currency identifiers.");
@@ -126,13 +139,15 @@ namespace PixelFlow.Services
 
         public int GetCurrentStreak()
         {
-            if (PlayerPrefsService == null) return 0;
+            if (PlayerPrefsService == null)
+                throw new DataValidationException("PlayerPrefsService is null in DailyLoginStreakService!");
             return PlayerPrefsService.GetInt(StreakKey, 0);
         }
 
         public DateTime? GetLastLoginTime()
         {
-            if (PlayerPrefsService == null) return null;
+            if (PlayerPrefsService == null)
+                throw new DataValidationException("PlayerPrefsService is null in DailyLoginStreakService!");
             string lastLoginStr = PlayerPrefsService.GetString(LastLoginKey, "");
             if (DateTime.TryParse(lastLoginStr, out DateTime dt))
                 return dt;

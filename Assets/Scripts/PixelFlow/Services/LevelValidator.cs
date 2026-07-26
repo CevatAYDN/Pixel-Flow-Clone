@@ -134,7 +134,9 @@ namespace PixelFlow.Services
             int colorCount = level.initialNodes != null ? level.initialNodes.Count / 2 : 0;
             int obstacleCount = level.obstacles != null ? level.obstacles.Count : 0;
             int bridgeCount = level.bridgePositions != null ? level.bridgePositions.Count : 0;
-            int complexity = (colorCount * 10) + (bridgeCount * 5) + (obstacleCount * 3) - (level.viaductLimit * 4);
+            var diffConfig = Resources.Load<DifficultyFormulaConfigAsset>("Configs/DifficultyFormulaConfig");
+            if (diffConfig == null) throw new DataValidationException("DifficultyFormulaConfigAsset missing in LevelValidator!");
+            int complexity = diffConfig.CalculateDifficulty(colorCount, bridgeCount, obstacleCount, level.viaductLimit);
             result.ComplexityScore = Mathf.Max(0, complexity);
 
             // 6. Solvability Validation

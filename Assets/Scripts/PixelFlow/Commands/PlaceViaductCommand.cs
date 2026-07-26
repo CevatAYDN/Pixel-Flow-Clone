@@ -44,10 +44,10 @@ namespace PixelFlow.Commands
 
             var cell = GridModel.Grid[pos.x, pos.y];
 
-            // Viyadük sadece en az 2 yolun kesiştiği yerlere ve henüz viyadük olmayan hücrelere konulabilir
-            if (cell.PathColorCount < 2 || cell.PathColorCount > ConfigMaxPathsPerBridge || cell.HasViaduct)
+            // Viyadük: Başlangıç/bitiş noktası (Node) olmayan ve henüz viyadüğü bulunmayan her hücreye yerleştirilebilir
+            if (cell.State == CellState.Node || cell.HasViaduct || cell.PathColorCount > ConfigMaxPathsPerBridge)
             {
-                LoggerService?.LogWarning($"[PixelFlow.PlaceViaductCommand] Cannot place viaduct at {pos}. PathColorCount: {cell.PathColorCount}, HasViaduct: {cell.HasViaduct}");
+                LoggerService?.LogWarning($"[PixelFlow.PlaceViaductCommand] Cannot place viaduct at {pos}. State: {cell.State}, PathColorCount: {cell.PathColorCount}, HasViaduct: {cell.HasViaduct}");
                 return;
             }
 

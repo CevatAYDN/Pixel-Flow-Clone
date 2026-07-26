@@ -15,11 +15,14 @@ namespace PixelFlow.Services.GlobalRelease
     public class LocalNotificationService : INexusService
     {
         [Inject, OptionalInject] public ILoggerService LoggerService { get; set; }
+        [Inject, OptionalInject] public ILocalizationService LocalizationService { get; set; }
 
-        private const string D1_Title = "Günlük Giriş Ödülün Hazır!";
-        private const string D1_Body = "Yeni araçlar ve görevler seni bekliyor. Hadi trafiği aç!";
-        private const string D2_Title = "Yoğun Trafik Etkinliği!";
-        private const string D2_Body = "2x Para kazanma fırsatını kaçırma! Şimdi oyuna katıl.";
+        public const string KeyD1Title = "notif_d1_title";
+        public const string KeyD1Body = "notif_d1_body";
+        public const string KeyD2Title = "notif_d2_title";
+        public const string KeyD2Body = "notif_d2_body";
+
+        private const long HoursToMs = 3600L * 1000L;
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
@@ -29,14 +32,17 @@ namespace PixelFlow.Services.GlobalRelease
 
         public void ScheduleRetentionNotifications()
         {
-            // Schedule D1 (24h) and D2 (48h) retention notifications.
-            // Native API'lerin bulunamaması kritik değildir — oyun bildirimsiz de çalışır.
+            string d1Title = LocalizationService?.GetString(KeyD1Title, "Daily Reward Ready!");
+            string d1Body = LocalizationService?.GetString(KeyD1Body, "New vehicles and challenges are waiting for you!");
+            string d2Title = LocalizationService?.GetString(KeyD2Title, "Rush Hour Event!");
+            string d2Body = LocalizationService?.GetString(KeyD2Body, "Earn 2x coins now!");
+
 #if UNITY_IOS && !UNITY_EDITOR
-            ScheduleIosNotification(D1_Title, D1_Body, delayHours: 24);
-            ScheduleIosNotification(D2_Title, D2_Body, delayHours: 48);
+            ScheduleIosNotification(d1Title, d1Body, delayHours: 24);
+            ScheduleIosNotification(d2Title, d2Body, delayHours: 48);
 #elif UNITY_ANDROID && !UNITY_EDITOR
-            ScheduleAndroidNotification(D1_Title, D1_Body, delayHours: 24, notificationId: 1001);
-            ScheduleAndroidNotification(D2_Title, D2_Body, delayHours: 48, notificationId: 1002);
+            ScheduleAndroidNotification(d1Title, d1Body, delayHours: 24, notificationId: 1001);
+            ScheduleAndroidNotification(d2Title, d2Body, delayHours: 48, notificationId: 1002);
 #else
             LoggerService?.Log($"[LocalNotificationService] Scheduled in editor — D1(24h) / D2(48h) pending.");
 #endif

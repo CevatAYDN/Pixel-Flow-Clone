@@ -32,7 +32,7 @@ namespace PixelFlow.Services
 
         private ProceduralLevelGenerator(IPathSolver solver, System.Random rng, ILoggerService logger)
         {
-            _solver = solver ?? new RuntimePathSolver();
+            _solver = solver ?? throw new DataValidationException("[ProceduralLevelGenerator] IPathSolver parameter cannot be null!");
             _rng = rng;
             _logger = logger;
         }
@@ -49,7 +49,6 @@ namespace PixelFlow.Services
                 if (level != null)
                 {
                     level.name = $"Procedural_{param.gridWidth}x{param.gridHeight}_{param.colorCount}c";
-                    // GDD §9: Difficulty score hesapla ve level'a yaz
                     level.difficultyScore = CalculateDifficultyScore(level, param);
                     return level;
                 }
@@ -59,14 +58,12 @@ namespace PixelFlow.Services
         }
 
         /// <summary>
-        /// GDD §9: Procedural zorluk formülü.
-        /// Difficulty = (Colors × 10) + (Intersections × 5) + (Obstacles × 3) - (ViaductLimit × 4)
+        /// GDD §9: Centralized Procedural difficulty formula.
         /// </summary>
         public static int CalculateDifficultyScore(LevelData level, DifficultyParams param)
         {
             int colors = param.colorCount;
             
-            // Intersection sayısını hesapla (bridge'lerden farklı - çakışan yollar)
             int intersections = 0;
             if (level.solutions != null)
             {
@@ -90,14 +87,18 @@ namespace PixelFlow.Services
             }
             else
             {
-                // Fallback: bridge count as approximation
                 intersections = level.bridgePositions?.Count ?? 0;
             }
             
             int obstacles = level.obstacles?.Count ?? 0;
             int viaductLimit = param.bridgeCount;
             
-            return (colors * 10) + (intersections * 5) + (obstacles * 3) - (viaductLimit * 4);
+            var diffConfig = Resources.Load<DifficultyFormulaConfigAsset>("Configs/DifficultyFormulaConfig");
+            if (diffConfig == null)
+            {
+                throw new DataValidationException("DifficultyFormulaConfigAsset missing at Resources/Configs/DifficultyFormulaConfig!");
+            }
+            return diffConfig.CalculateDifficulty(colors, intersections, obstacles, viaductLimit);
         }
 
         private LevelData TryGenerate(DifficultyParams param)
@@ -193,13 +194,7 @@ namespace PixelFlow.Services
             }
             level.solutions = solutionList;
 
-            // GDD §9.5: Difficulty formula — (Colors×10)+(Intersections×5)+(Obstacles×3)-(ViaductLimit×4)
-            int solutionColorCount = selectedColors.Count;
-            int intersections = bridges.Count;
-            int obstacleCount = level.obstacles != null ? level.obstacles.Count : 0;
-            int viaductLimit = level.viaductLimit;
-            level.difficultyScore = (solutionColorCount * 10) + (intersections * 5) + (obstacleCount * 3) - (viaductLimit * 4);
-
+            level.difficultyScore = CalculateDifficultyScore(level, param);
             return level;
         }
 

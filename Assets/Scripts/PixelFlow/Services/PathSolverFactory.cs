@@ -36,7 +36,11 @@ namespace PixelFlow.Services
                 return GetSolver(SolverStrategyType.PhaseBased);
             }
 
-            if (level.difficultyScore > 40)
+            var config = Resources.Load<GameConfig>("Configs/GameConfig");
+            if (config == null) throw new DataValidationException("GameConfig missing in PathSolverFactory!");
+            int threshold = config.HighDifficultySolverThreshold;
+
+            if (level.difficultyScore > threshold)
             {
                 return GetSolver(SolverStrategyType.DynamicDifficulty);
             }

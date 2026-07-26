@@ -117,6 +117,20 @@ namespace PixelFlow.Editor
                 economyConfig.EnsureCanonicalIapProducts();
             }
 
+            var diffConfig = Resources.Load<DifficultyFormulaConfigAsset>("Configs/DifficultyFormulaConfig");
+            if (diffConfig == null)
+            {
+                errorMessage = "Resources/Configs/DifficultyFormulaConfig.asset bulunamadı!";
+                return false;
+            }
+
+            var defaultSkinConfig = Resources.Load<DefaultSkinIdsConfigAsset>("Configs/DefaultSkinIdsConfig");
+            if (defaultSkinConfig == null)
+            {
+                errorMessage = "Resources/Configs/DefaultSkinIdsConfig.asset bulunamadı!";
+                return false;
+            }
+
             // 3. Seviye Kataloğu Kontrolü (asset Resources/Configs/LevelCatalog.asset konumunda)
             var levelCatalog = Resources.Load<LevelCatalogAsset>("Configs/LevelCatalog");
             if (levelCatalog != null && levelCatalog.Levels != null)
