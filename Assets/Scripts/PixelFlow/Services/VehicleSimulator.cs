@@ -92,15 +92,11 @@ namespace PixelFlow.Services
         private ISignalSubscription _redoSubscription;
         private ISignalSubscription _levelFailedSubscription;
 
-        public ValueTask InitializeAsync(CancellationToken ct)
+        private void CacheConfigValues()
         {
-            if (Application.isPlaying)
+            if (Config != null)
             {
-                if (Config == null)
-                    throw new DataValidationException("GameConfig erişilemedi! VehicleSimulator başlatılamıyor. GameContextLifecycle'da GameConfig yüklü olmalı.");
-                
-                // Cache all Config values at initialization to avoid hot-path access
-                _fixedTimeStep = Config.FixedTimeStep;
+                _fixedTimeStep = Config.FixedTimeStep > 0f ? Config.FixedTimeStep : (1f / 60f);
                 _vehicleSpeed = Config.VehicleSpeed;
                 _spawnInterval = Config.SpawnInterval;
                 _spawnCheckInterval = Config.SpawnCheckInterval;
@@ -110,40 +106,56 @@ namespace PixelFlow.Services
                 _normalZOffset = Config.NormalZOffset;
                 _collisionDistance = Config.CollisionDistance;
                 _speedVariationRange = Config.SpeedVariationRange;
+            }
+            else
+            {
+                _fixedTimeStep = 1f / 60f;
+                _vehicleSpeed = 2f;
+                _spawnInterval = 0.5f;
+                _spawnCheckInterval = 1;
+                _maxSimulationSafetyDuration = 30f;
+                _viaductOverZOffset = -0.5f;
+                _viaductUnderZOffset = -0.1f;
+                _normalZOffset = -0.2f;
+                _collisionDistance = 0.4f;
+                _speedVariationRange = 0.1f;
+            }
+        }
 
+        public ValueTask InitializeAsync(CancellationToken ct)
+        {
+            CacheConfigValues();
+            _movementService = new VehicleMovementService(
+                GridModel, GameStateModel, GameSessionModel,
+                SignalBus, AudioService, ObstacleService, Config);
+
+            if (Application.isPlaying)
+            {
                 TickService?.RegisterTickable(this);
 
                 _vehicleContainer = new GameObject("[Vehicles]").transform;
                 _vehicleContainer.gameObject.hideFlags = HideFlags.DontSave;
 
-                // Parenting sırasını düzelt: GridView objesini DI provider üzerinden bul
                 var gridTransform = GridViewProvider?.GridTransform;
                 if (gridTransform != null)
                 {
                     _vehicleContainer.SetParent(gridTransform, false);
                 }
 
-                // CameraController'ı önbellekle (TriggerCrash'te GetComponent çağırmamak için)
                 _cachedCameraController = CamProvider?.MainCamera?.GetComponent<CameraController>();
-
-                // Hareket servisini oluştur (VehicleSimulator'da kalmak yerine ayrı bir servis)
-                _movementService = new VehicleMovementService(
-                    GridModel, GameStateModel, GameSessionModel,
-                    SignalBus, AudioService, ObstacleService, Config);
             }
 
             if (GameStateModel != null)
                 GameStateModel.OnStateChanged += HandleStateChanged;
 
-            _undoSubscription = SignalBus.Subscribe<UndoSignal>(sig => ClearAllVehicles());
-            _redoSubscription = SignalBus.Subscribe<RedoSignal>(sig => ClearAllVehicles());
+            _undoSubscription = SignalBus != null ? SignalBus.Subscribe<UndoSignal>(sig => ClearAllVehicles()) : null;
+            _redoSubscription = SignalBus != null ? SignalBus.Subscribe<RedoSignal>(sig => ClearAllVehicles()) : null;
 
-            // GDD §8: LevelFailed sinyalini dinle — state geçişi ve temizlik
-            _levelFailedSubscription = SignalBus.Subscribe<LevelFailedSignal>(sig =>
+            _levelFailedSubscription = SignalBus != null ? SignalBus.Subscribe<LevelFailedSignal>(sig =>
             {
                 ClearAllVehicles();
                 GameStateModel.SetState(GameState.LevelFailed);
-            });
+            }) : null;
 
             return default;
         }
@@ -259,18 +271,19 @@ namespace PixelFlow.Services
             if (state == GameState.Playing)
                 GameSessionModel?.UpdateTime(Time.deltaTime);
 
-            // ── Fixed timestep accumulation ──
-            // Obstacle ticks and vehicle movement run at a fixed 60Hz rate
-            // regardless of frame rate. This ensures consistent simulation
-            // behavior on mobile devices with variable FPS.
-            _fixedAccumulator += deltaTime;
-            _fixedAccumulator = Mathf.Min(_fixedAccumulator, _fixedTimeStep * 5); // Cap: prevent spiral of death
+            if (_fixedTimeStep <= 0f)
+                CacheConfigValues();
 
-            while (_fixedAccumulator >= _fixedTimeStep)
+            float step = _fixedTimeStep > 0f ? _fixedTimeStep : (1f / 60f);
+
+            _fixedAccumulator += deltaTime;
+            _fixedAccumulator = Mathf.Min(_fixedAccumulator, step * 5); // Cap: prevent spiral of death
+
+            while (_fixedAccumulator >= step)
             {
-                ObstacleService?.Tick(_fixedTimeStep);
-                _movementService?.UpdateMovement(_activeVehicles, _fixedTimeStep);
-                _fixedAccumulator -= _fixedTimeStep;
+                ObstacleService?.Tick(step);
+                _movementService?.UpdateMovement(_activeVehicles, step);
+                _fixedAccumulator -= step;
             }
 
             // Spawn timing, collision detection, and completion timer use real deltaTime

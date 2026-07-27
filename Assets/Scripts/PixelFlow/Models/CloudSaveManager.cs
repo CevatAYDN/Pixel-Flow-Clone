@@ -155,7 +155,7 @@ namespace PixelFlow.Models
             new CloudSaveManager { Prefs = prefs }.GetOrCreatePlayerId();
 
         public static Task SyncToCloudAsync(IPlayerPrefsService prefs, string localSaveJson, int version) =>
-            new CloudSaveManager { Prefs = prefs, Adapter = new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter() }.SyncToCloudAsync(localSaveJson, version);
+            new CloudSaveManager { Prefs = prefs, Adapter = new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter(prefs) }.SyncToCloudAsync(localSaveJson, version);
 
         /// <summary>
         /// Save sonrası cloud sync. ICloudSaveAdapter varsa gerçek sync yapar, yoksa

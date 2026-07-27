@@ -105,7 +105,7 @@ namespace PixelFlow.Data
 
         [Header("=== Path Solver ===")]
         [Tooltip("Recursive solver maksimum iterasyon sayısı")]
-        public int PathSolverMaxIterations = 200000;
+        public int PathSolverMaxIterations = 2000;
 
         [Header("=== Procedural Audio ===")]
         [Tooltip("Prosedürel ses örnekleme hızı")]
@@ -216,7 +216,7 @@ namespace PixelFlow.Data
 
         [Header("=== Path Solver (Advanced) ===")]
         [Tooltip("Path solver maksimum iterasyon üst sınırı")]
-        public int PathSolverMaxIterationsCap = 1000000;
+        public int PathSolverMaxIterationsCap = 20000;
 
         [Tooltip("Dinamik solver stratejisine geçiş için yüksek zorluk eşiği")]
         public int HighDifficultySolverThreshold = 40;

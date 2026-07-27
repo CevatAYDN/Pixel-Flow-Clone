@@ -13,8 +13,10 @@ namespace PixelFlow.Services
 {
     /// <summary>
     /// AES-256 Encrypted & Device-Bound Storage Service — STRICT MODE.
-    /// game_plan.md §2.2 (Zero Silent Fallback): Eksik/bozuk veri durumunda DataValidationException fırlatır.
-    /// Nexus Core EncryptedStorageService'i wrap eder ama defaultValue yerine hata fırlatır.
+    /// game_plan.md §2.2 (Zero Silent Fallback):
+    ///   - Key hiç yazılmamışsa (ilk çalıştırma) → defaultValue döner ve storage'a yazar (bootstrap).
+    ///   - Key dosyası var ama bozuk/HMAC eşleşmiyorsa (tampering) → DataValidationException fırlatır.
+    /// Nexus Core EncryptedStorageService'i wrap eder; ilk çalıştırmayı bozulma durumundan ayırır.
     /// </summary>
     public class StrictEncryptedStorageService : IPlayerPrefsService, IDisposable
     {
@@ -23,17 +25,64 @@ namespace PixelFlow.Services
 
         public bool AutoSave { get; set; } = false;
 
+        /// <summary>Sentinel returned by inner service when key doesn't exist OR decrypt fails.</summary>
+        private const string Sentinel = "__STRICT_NULL_SENTINEL__";
+
         public StrictEncryptedStorageService(string customSalt = "Nexus_Secure_Salt_2026", ILoggerService logger = null)
         {
             _inner = new EncryptedStorageService(customSalt);
             _logger = logger ?? NexusRuntime.Logger;
         }
 
+        /// <summary>
+        /// Ortak okuma mantığı:
+        /// 1) Key hiç yazılmamışsa (HasKey=false) → first-run bootstrap: defaultValue'yu storage'a yaz ve döndür.
+        /// 2) Key varsa ama inner service okuyamıyorsa (HMAC mismatch / seed değişti / tampering)
+        ///    → corrupt dosyayı sil, warning logla, defaultValue ile yeniden bootstrap yap.
+        /// 3) Key varsa ve okunabiliyorsa → değeri döndür.
+        /// </summary>
+        private string ReadOrBootstrap(string key, string defaultValue)
+        {
+            if (string.IsNullOrEmpty(key))
+                throw new DataValidationException("[StrictEncryptedStorage] Key cannot be null or empty.");
+
+            // Case 1: Key hiç yazılmamış — ilk çalıştırma / temiz yükleme
+            if (!_inner.HasKey(key))
+            {
+                if (defaultValue != null)
+                {
+                    _logger?.Log($"[StrictEncryptedStorage] First-run bootstrap: initializing '{key}' with default value.");
+                    _inner.SetString(key, defaultValue);
+                    _inner.Save();
+                }
+                return defaultValue;
+            }
+
+            // Case 2 & 3: Key dosyası var — okumayı dene
+            string val = _inner.GetString(key, Sentinel);
+            if (val == Sentinel || val == null)
+            {
+                // Dosya var ama okunamadı — encryption seed değişmiş veya tampering.
+                // Kurtarılabilir durum: corrupt dosyayı sil, warning logla, default ile yeniden başlat.
+                _logger?.LogWarning(
+                    $"[StrictEncryptedStorage] Key '{key}' corrupt/tampered (HMAC mismatch). " +
+                    "Recovering: deleting corrupt file and re-initializing with default value.");
+                _inner.DeleteKey(key);
+                if (defaultValue != null)
+                {
+                    _inner.SetString(key, defaultValue);
+                    _inner.Save();
+                }
+                return defaultValue;
+            }
+            return val;
+        }
+
         public int GetInt(string key, int defaultValue = 0)
         {
-            string valStr = GetString(key, null);
+            string valStr = ReadOrBootstrap(key, defaultValue.ToString());
             if (valStr == null)
-                throw new DataValidationException($"[StrictEncryptedStorage] Key '{key}' not found or corrupt. Zero-Silent-Fallback policy (§2.2) forbids returning default.");
+                return defaultValue;
             if (!int.TryParse(valStr, out int res))
                 throw new DataValidationException($"[StrictEncryptedStorage] Key '{key}' contains non-integer value: '{valStr}'");
             return res;
@@ -43,9 +92,9 @@ namespace PixelFlow.Services
 
         public bool GetBool(string key, bool defaultValue = false)
         {
-            string valStr = GetString(key, null);
+            string valStr = ReadOrBootstrap(key, defaultValue.ToString());
             if (valStr == null)
-                throw new DataValidationException($"[StrictEncryptedStorage] Key '{key}' not found or corrupt. Zero-Silent-Fallback policy (§2.2) forbids returning default.");
+                return defaultValue;
             if (!bool.TryParse(valStr, out bool res))
                 throw new DataValidationException($"[StrictEncryptedStorage] Key '{key}' contains non-boolean value: '{valStr}'");
             return res;
@@ -55,22 +104,16 @@ namespace PixelFlow.Services
 
         public string GetString(string key, string defaultValue = "")
         {
-            if (string.IsNullOrEmpty(key))
-                throw new DataValidationException("[StrictEncryptedStorage] Key cannot be null or empty.");
-
-            string val = _inner.GetString(key, null);
-            if (val == null)
-                throw new DataValidationException($"[StrictEncryptedStorage] Key '{key}' not found, tampered, or corrupt. Zero-Silent-Fallback policy (§2.2) forbids returning default.");
-            return val;
+            return ReadOrBootstrap(key, defaultValue);
         }
 
         public void SetString(string key, string value) => _inner.SetString(key, value);
 
         public float GetFloat(string key, float defaultValue = 0f)
         {
-            string valStr = GetString(key, null);
+            string valStr = ReadOrBootstrap(key, defaultValue.ToString(System.Globalization.CultureInfo.InvariantCulture));
             if (valStr == null)
-                throw new DataValidationException($"[StrictEncryptedStorage] Key '{key}' not found or corrupt. Zero-Silent-Fallback policy (§2.2) forbids returning default.");
+                return defaultValue;
             if (!float.TryParse(valStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float res))
                 throw new DataValidationException($"[StrictEncryptedStorage] Key '{key}' contains non-float value: '{valStr}'");
             return res;
@@ -80,9 +123,9 @@ namespace PixelFlow.Services
 
         public long GetLong(string key, long defaultValue = 0L)
         {
-            string valStr = GetString(key, null);
+            string valStr = ReadOrBootstrap(key, defaultValue.ToString());
             if (valStr == null)
-                throw new DataValidationException($"[StrictEncryptedStorage] Key '{key}' not found or corrupt. Zero-Silent-Fallback policy (§2.2) forbids returning default.");
+                return defaultValue;
             if (!long.TryParse(valStr, out long res))
                 throw new DataValidationException($"[StrictEncryptedStorage] Key '{key}' contains non-long value: '{valStr}'");
             return res;

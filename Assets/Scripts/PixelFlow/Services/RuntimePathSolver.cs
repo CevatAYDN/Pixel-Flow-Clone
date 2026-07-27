@@ -322,6 +322,14 @@ namespace PixelFlow.Services
             ColorType[,] grid, HashSet<Vector2Int> bridges,
             int w, int h, ref int iterationCount)
         {
+            // Quick check: if end node is completely surrounded by occupied cells, return null immediately
+            int openNeighbors = 0;
+            if (end.x > 0 && (grid[end.x - 1, end.y] == ColorType.None || grid[end.x - 1, end.y] == color || bridges.Contains(new Vector2Int(end.x - 1, end.y)))) openNeighbors++;
+            if (end.x < w - 1 && (grid[end.x + 1, end.y] == ColorType.None || grid[end.x + 1, end.y] == color || bridges.Contains(new Vector2Int(end.x + 1, end.y)))) openNeighbors++;
+            if (end.y > 0 && (grid[end.x, end.y - 1] == ColorType.None || grid[end.x, end.y - 1] == color || bridges.Contains(new Vector2Int(end.x, end.y - 1)))) openNeighbors++;
+            if (end.y < h - 1 && (grid[end.x, end.y + 1] == ColorType.None || grid[end.x, end.y + 1] == color || bridges.Contains(new Vector2Int(end.x, end.y + 1)))) openNeighbors++;
+            if (openNeighbors == 0 && start != end) return null;
+
             _pathStack.Clear();
             _gridChanges.Clear();
             _currentPath.Clear();
@@ -485,9 +493,10 @@ namespace PixelFlow.Services
 
         private int CalculateMaxIterations(int width, int height, int colorCount)
         {
-            int baseFactor = ResolvedConfig != null && ResolvedConfig.PathSolverMaxIterations > 0 ? ResolvedConfig.PathSolverMaxIterations : 2000;
+            int maxCap = MaxIterationsCap > 0 ? MaxIterationsCap : 10000;
+            int baseFactor = ResolvedConfig != null && ResolvedConfig.PathSolverMaxIterations > 0 ? ResolvedConfig.PathSolverMaxIterations : 1000;
             long raw = width * height * colorCount * (long)baseFactor;
-            int clamped = (int)Math.Max(MinIterations, Math.Min(MaxIterationsCap, raw));
+            int clamped = (int)Math.Min(maxCap, Math.Max(200, raw));
             return clamped;
         }
 
@@ -510,35 +519,16 @@ namespace PixelFlow.Services
             return colorNodes;
         }
 
-        // Reusable buffer to avoid allocating a new array on every recursive call
-        private static readonly Vector2Int[] _directionBuffer = new Vector2Int[4];
-
-        // Pre-allocated comparer class — struct boxing'i önler, her çağrıda zero alloc
-        private sealed class DirectionComparer : System.Collections.Generic.IComparer<Vector2Int>
-        {
-            public Vector2Int Current;
-            public Vector2Int End;
-
-            public int Compare(Vector2Int a, Vector2Int b)
-            {
-                int da = Mathf.Abs((Current + a).x - End.x) + Mathf.Abs((Current + a).y - End.y);
-                int db = Mathf.Abs((Current + b).x - End.x) + Mathf.Abs((Current + b).y - End.y);
-                return da.CompareTo(db);
-            }
-        }
-
-        private static readonly DirectionComparer _directionComparer = new DirectionComparer();
-
         private static Vector2Int[] GetSortedDirections(Vector2Int current, Vector2Int end)
         {
-            _directionBuffer[0] = Vector2Int.up;
-            _directionBuffer[1] = Vector2Int.down;
-            _directionBuffer[2] = Vector2Int.left;
-            _directionBuffer[3] = Vector2Int.right;
-            _directionComparer.Current = current;
-            _directionComparer.End = end;
-            Array.Sort(_directionBuffer, _directionComparer);
-            return _directionBuffer;
+            var dirs = new[] { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
+            Array.Sort(dirs, (a, b) =>
+            {
+                int da = Mathf.Abs((current.x + a.x) - end.x) + Mathf.Abs((current.y + a.y) - end.y);
+                int db = Mathf.Abs((current.x + b.x) - end.x) + Mathf.Abs((current.y + b.y) - end.y);
+                return da.CompareTo(db);
+            });
+            return dirs;
         }
     }
 }

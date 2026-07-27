@@ -46,7 +46,7 @@ namespace PixelFlow.Editor.Tests
             testConfig.BannerPlacementId = "banner_bottom";
             testConfig.IdleReminderSeconds = 300f;
             testConfig.MaxGraceSkips = 3;
-            testConfig.PathSolverMaxIterations = 200000;
+            testConfig.PathSolverMaxIterations = 500;
             testConfig.AudioSampleRate = 44100;
             testConfig.DefaultUnlockedLevels = 1;
             testConfig.RainbowRoadSegmentsPerActivation = 3;
@@ -77,7 +77,8 @@ namespace PixelFlow.Editor.Tests
             testConfig.CrashShakeDuration = 0.45f;
             testConfig.CrashFocusOffset = 0.4f;
             testConfig.AudioPoolSize = 3;
-            testConfig.PathSolverMaxIterationsCap = 1000000;
+            testConfig.PathSolverMaxIterations = 500;
+            testConfig.PathSolverMaxIterationsCap = 2000;
             testConfig.VehiclePartPoolCubes = 512;
             testConfig.VehiclePartPoolCylinders = 256;
             testConfig.RejectionPulseFrequency = 15f;

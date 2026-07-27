@@ -131,6 +131,27 @@ namespace PixelFlow.Editor
                 return false;
             }
 
+            var bouncyConfig = Resources.Load<BouncyPhysicsConfigAsset>("Configs/BouncyPhysicsConfig");
+            if (bouncyConfig == null)
+            {
+                errorMessage = "Resources/Configs/BouncyPhysicsConfig.asset bulunamadı!";
+                return false;
+            }
+
+            var starConfig = Resources.Load<StarCriteriaConfigAsset>("Configs/StarCriteriaConfig");
+            if (starConfig == null)
+            {
+                errorMessage = "Resources/Configs/StarCriteriaConfig.asset bulunamadı!";
+                return false;
+            }
+
+            var rushHourConfig = Resources.Load<RushHourConfigAsset>("Configs/RushHourConfig");
+            if (rushHourConfig == null)
+            {
+                errorMessage = "Resources/Configs/RushHourConfig.asset bulunamadı!";
+                return false;
+            }
+
             // 3. Seviye Kataloğu Kontrolü (asset Resources/Configs/LevelCatalog.asset konumunda)
             var levelCatalog = Resources.Load<LevelCatalogAsset>("Configs/LevelCatalog");
             if (levelCatalog != null && levelCatalog.Levels != null)

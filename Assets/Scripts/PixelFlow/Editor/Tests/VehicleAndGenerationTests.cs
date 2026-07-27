@@ -177,7 +177,7 @@ namespace PixelFlow.Editor.Tests
         {
             // Orta seviye — çözülebilir olmalı
             var param = new DifficultyParams(6, 6, 2, 0, false);
-            var level = _generator.Generate(param);
+            var level = _generator.Generate(param, maxAttempts: 10);
 
             Assert.IsNotNull(level, "Level null olmamalı");
             Assert.AreEqual(6, level.width, "Grid width 6 olmalı");
@@ -192,7 +192,7 @@ namespace PixelFlow.Editor.Tests
         {
             // Köprülü seviye — çözülebilir olmalı
             var param = new DifficultyParams(7, 7, 2, 2, false);
-            var level = _generator.Generate(param);
+            var level = _generator.Generate(param, maxAttempts: 10);
 
             Assert.IsNotNull(level, "Level null olmamalı");
             Assert.GreaterOrEqual(level.bridgePositions.Count, 0, "Köprü listesi null olmamalı");

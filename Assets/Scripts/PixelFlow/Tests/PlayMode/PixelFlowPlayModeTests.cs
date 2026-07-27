@@ -119,6 +119,98 @@ namespace PixelFlow.PlayMode.Tests
         // Context factory (same pattern as EditMode tests)
         // ──────────────────────────────────────────────
 
+        private static StorageKeysConfigAsset CreateTestStorageKeysConfig()
+        {
+            var storageKeys = ScriptableObject.CreateInstance<StorageKeysConfigAsset>();
+            storageKeys.KeyTheme = "AppTheme";
+            storageKeys.KeyColorBlind = "ColorBlindMode";
+            storageKeys.KeyVehicleStyle = "VehicleStyle";
+            storageKeys.KeyMasterVol = "MasterVolume";
+            storageKeys.KeySfxVol = "SfxVolume";
+            storageKeys.KeyMusicVol = "MusicVolume";
+            storageKeys.KeyHaptics = "HapticsDisabled";
+            storageKeys.KeyUnlockedLevels = "UnlockedLevels";
+            storageKeys.KeyHintCount = "HintCount";
+            storageKeys.KeySoundMuted = "SoundMuted";
+            storageKeys.KeyTutorialStep = "TutorialStep";
+            storageKeys.KeyCloudPlayerId = "PF_CloudPlayerId";
+            storageKeys.KeyCloudRecord = "PF_CloudRecord";
+            storageKeys.KeyDailyLogin_LastLogin = "NT_DailyLogin_LastLogin";
+            storageKeys.KeyDailyLogin_Streak = "NT_DailyLogin_Streak";
+            storageKeys.KeyDailyLogin_VipSkinGranted = "NT_DailyLogin_VipSkinGranted";
+            storageKeys.DailyLoginVipSkinId = "skin_vip_golden";
+            storageKeys.KeyRushHour_Active = "NT_RushHour_Active";
+            storageKeys.KeyRushHour_EndTime = "NT_RushHour_EndTime";
+            storageKeys.KeyRushHour_Cooldown = "NT_RushHour_Cooldown";
+            storageKeys.CurrencyIdCoin = "coins";
+            storageKeys.CurrencyIdGem = "gems";
+            storageKeys.CurrencyIdTicket = "tickets";
+            storageKeys.EditorKeyUnlockedLevelsAllOverride = "UnlockedLevels";
+            return storageKeys;
+        }
+
+        private static DefaultSkinIdsConfigAsset CreateTestDefaultSkinIdsConfig()
+        {
+            var config = ScriptableObject.CreateInstance<DefaultSkinIdsConfigAsset>();
+            config.DefaultVehicleSkinId = "skin_car_red";
+            config.DefaultStopSkinId = "skin_stop_classic";
+            return config;
+        }
+
+        private static BouncyPhysicsConfigAsset CreateTestBouncyPhysicsConfig()
+        {
+            var config = ScriptableObject.CreateInstance<BouncyPhysicsConfigAsset>();
+            config.BounceForce = 4.5f;
+            config.BounceDamping = 0.75f;
+            config.SquishFactor = 0.35f;
+            return config;
+        }
+
+        private static StarCriteriaConfigAsset CreateTestStarCriteriaConfig()
+        {
+            var config = ScriptableObject.CreateInstance<StarCriteriaConfigAsset>();
+            config.ThreeStarsMaxViaducts = 0;
+            config.TwoStarsMaxViaducts = 2;
+            config.OneStar = "complete";
+            config.TwoStars = "viaducts_used <= 2";
+            config.ThreeStars = "viaducts_used == 0";
+            return config;
+        }
+
+        private static RushHourConfigAsset CreateTestRushHourConfig()
+        {
+            var config = ScriptableObject.CreateInstance<RushHourConfigAsset>();
+            config.DurationSeconds = 3600;
+            config.CoinMultiplier = 2.0f;
+            config.CooldownHours = 48;
+            config.MinLevel = 10;
+            config.TriggerAfterHours = 24;
+            return config;
+        }
+
+        private static DifficultyFormulaConfigAsset CreateTestDifficultyFormulaConfig()
+        {
+            var config = ScriptableObject.CreateInstance<DifficultyFormulaConfigAsset>();
+            config.ColorWeight = 10;
+            config.IntersectionWeight = 5;
+            config.ObstacleWeight = 3;
+            config.ViaductWeight = 4;
+            return config;
+        }
+
+        private static PhaseConfigAsset CreateTestPhaseConfig()
+        {
+            var phaseConfig = ScriptableObject.CreateInstance<PhaseConfigAsset>();
+            var p1 = ScriptableObject.CreateInstance<PhaseDefinitionAsset>();
+            p1.name = "Phase1_Test"; p1.Phase = GamePhase.Phase1; p1.StartLevelIndex = 0; p1.EndLevelIndex = 11;
+            p1.GridSizeMin = 5; p1.GridSizeMax = 6; p1.ColorCountMin = 1; p1.ColorCountMax = 2;
+            phaseConfig.Phase1 = p1;
+            phaseConfig.Phase2 = p1;
+            phaseConfig.Phase3 = p1;
+            phaseConfig.Phase4 = p1;
+            return phaseConfig;
+        }
+
         private static NexusTestContext CreateGameContext()
         {
             return NexusTestHarness.CreateContext(builder =>
@@ -127,7 +219,26 @@ namespace PixelFlow.PlayMode.Tests
 
                 var testConfig = ScriptableObject.CreateInstance<GameConfig>();
                 testConfig.name = "GameConfig (Test)";
+                testConfig.PathSolverMaxIterations = 500;
+                testConfig.PathSolverMaxIterationsCap = 2000;
+                testConfig.FixedTimeStep = 1f / 60f;
+                testConfig.VehicleSpeed = 2f;
+                testConfig.SpawnInterval = 0.5f;
                 builder.BindInstance(testConfig);
+
+                builder.BindInstance(CreateTestStorageKeysConfig());
+                builder.BindInstance(ScriptableObject.CreateInstance<EconomyConfigAsset>());
+                builder.BindInstance(CreateTestPhaseConfig());
+                builder.BindInstance(ScriptableObject.CreateInstance<LevelCatalogAsset>());
+                builder.BindInstance(CreateTestDefaultSkinIdsConfig());
+                builder.BindInstance(CreateTestBouncyPhysicsConfig());
+                builder.BindInstance(CreateTestStarCriteriaConfig());
+                builder.BindInstance(CreateTestRushHourConfig());
+                builder.BindInstance(CreateTestDifficultyFormulaConfig());
+                builder.BindInstance(ScriptableObject.CreateInstance<ThemePaletteAsset>());
+                builder.BindInstance(ScriptableObject.CreateInstance<ColorBlindPaletteAsset>());
+                builder.BindInstance(ScriptableObject.CreateInstance<VehicleMaterialConfigAsset>());
+                builder.BindInstance(ScriptableObject.CreateInstance<VehicleVisualConfigAsset>());
 
                 builder.Bind<IPathService, PathService>();
                 builder.Bind<IGameHistoryService, GameHistoryService>();

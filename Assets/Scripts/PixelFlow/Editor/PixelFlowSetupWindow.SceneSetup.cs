@@ -109,7 +109,7 @@ namespace PixelFlow.Editor
             }
             AssignContextData(root, config);
 
-            // ✅ GameContextLifecycle'i Root'a ekle ve tüm 11 ScriptableObject config varlığını bağla
+            // ✅ GameContextLifecycle'i Root'a ekle ve tüm ScriptableObject config varlığını bağla
             var lifecycle = EnsureComponent<GameContextLifecycle>(rootObj);
             var lifecycleSO = new SerializedObject(lifecycle);
 
@@ -120,7 +120,20 @@ namespace PixelFlow.Editor
                 var guids = AssetDatabase.FindAssets($"t:{typeof(T).Name}");
                 if (guids.Length > 0)
                     return AssetDatabase.LoadAssetAtPath<T>(AssetDatabase.GUIDToAssetPath(guids[0]));
-                return null;
+                // Auto-create missing config asset in Resources/Configs
+                var dir = "Assets/Resources/Configs";
+                if (!AssetDatabase.IsValidFolder(dir))
+                {
+                    if (!AssetDatabase.IsValidFolder("Assets/Resources"))
+                        AssetDatabase.CreateFolder("Assets", "Resources");
+                    AssetDatabase.CreateFolder("Assets/Resources", "Configs");
+                }
+                var instance = ScriptableObject.CreateInstance<T>();
+                var assetPath = $"{dir}/{typeof(T).Name}.asset";
+                AssetDatabase.CreateAsset(instance, assetPath);
+                AssetDatabase.SaveAssets();
+                Debug.Log($"[PixelFlowSetup] Auto-created missing config: {assetPath}");
+                return instance;
             }
 
             SetProp(lifecycleSO, "gameConfig", config ?? LoadConfigAsset<GameConfig>("Configs/GameConfig"));
@@ -133,7 +146,10 @@ namespace PixelFlow.Editor
             SetProp(lifecycleSO, "levelCatalog", LoadConfigAsset<LevelCatalogAsset>("Configs/LevelCatalog"));
             SetProp(lifecycleSO, "phaseConfig", LoadConfigAsset<PhaseConfigAsset>("Configs/PhaseConfig"));
             SetProp(lifecycleSO, "difficultyFormulaConfig", LoadConfigAsset<DifficultyFormulaConfigAsset>("Configs/DifficultyFormulaConfig"));
-            SetProp(lifecycleSO, "defaultSkinIdsConfig", LoadConfigAsset<DefaultSkinIdsConfigAsset>("Configs/DefaultSkinIdsConfig"));
+            SetProp(lifecycleSO, "defaultSkinConfig", LoadConfigAsset<DefaultSkinIdsConfigAsset>("Configs/DefaultSkinIdsConfig"));
+            SetProp(lifecycleSO, "bouncyPhysicsConfig", LoadConfigAsset<BouncyPhysicsConfigAsset>("Configs/BouncyPhysicsConfig"));
+            SetProp(lifecycleSO, "starCriteriaConfig", LoadConfigAsset<StarCriteriaConfigAsset>("Configs/StarCriteriaConfig"));
+            SetProp(lifecycleSO, "rushHourConfig", LoadConfigAsset<RushHourConfigAsset>("Configs/RushHourConfig"));
 
             lifecycleSO.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(lifecycle);

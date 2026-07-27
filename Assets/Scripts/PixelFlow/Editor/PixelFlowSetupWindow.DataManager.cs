@@ -26,6 +26,9 @@ namespace PixelFlow.Editor
                 ("Configs/PhaseConfig", "PhaseConfig"),
                 ("Configs/DifficultyFormulaConfig", "DifficultyFormulaConfig"),
                 ("Configs/DefaultSkinIdsConfig", "DefaultSkinIdsConfig"),
+                ("Configs/BouncyPhysicsConfig", "BouncyPhysicsConfig"),
+                ("Configs/StarCriteriaConfig", "StarCriteriaConfig"),
+                ("Configs/RushHourConfig", "RushHourConfig"),
             };
             foreach (var (p, n) in types)
             {

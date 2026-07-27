@@ -37,7 +37,7 @@ MonoBehaviour:
   BannerPlacementId: banner_bottom
   IdleReminderSeconds: 300
   MaxGraceSkips: 3
-  PathSolverMaxIterations: 200000
+  PathSolverMaxIterations: 2000
   AudioSampleRate: 44100
   DefaultUnlockedLevels: 1
   RainbowRoadSegmentsPerActivation: 3
@@ -66,7 +66,7 @@ MonoBehaviour:
   CrashShakeDuration: 0.45
   CrashFocusOffset: 0.4
   AudioPoolSize: 3
-  PathSolverMaxIterationsCap: 1000000
+  PathSolverMaxIterationsCap: 20000
   VehiclePartPoolCubes: 512
   VehiclePartPoolCylinders: 256
   RejectionPulseFrequency: 15

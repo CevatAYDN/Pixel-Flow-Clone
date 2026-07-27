@@ -41,7 +41,7 @@ namespace PixelFlow.Services
         /// Zorluk seviyesi için çözülebilir bir LevelData üretir.
         /// maxAttempts sonunda çözüm bulunamazsa null döner.
         /// </summary>
-        public LevelData Generate(DifficultyParams param, int maxAttempts = 50)
+        public LevelData Generate(DifficultyParams param, int maxAttempts = 15)
         {
             for (int attempt = 0; attempt < maxAttempts; attempt++)
             {

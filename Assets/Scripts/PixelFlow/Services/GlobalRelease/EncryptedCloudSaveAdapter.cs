@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using UnityEngine;
+using Nexus.Core.Services;
 using PixelFlow.Models;
 using PixelFlow.Data;
 
@@ -13,15 +14,12 @@ namespace PixelFlow.Services.GlobalRelease
     /// </summary>
     public class EncryptedCloudSaveAdapter : ICloudSaveAdapter
     {
+        private readonly IPlayerPrefsService _prefs;
         private readonly StorageKeysConfigAsset _keys;
 
-        public EncryptedCloudSaveAdapter()
-            : this(Resources.Load<StorageKeysConfigAsset>("Configs/StorageKeysConfig") ?? ScriptableObject.CreateInstance<StorageKeysConfigAsset>())
+        public EncryptedCloudSaveAdapter(IPlayerPrefsService prefs, StorageKeysConfigAsset keys = null)
         {
-        }
-
-        public EncryptedCloudSaveAdapter(StorageKeysConfigAsset keys)
-        {
+            _prefs = prefs ?? throw new DataValidationException("IPlayerPrefsService cannot be null in EncryptedCloudSaveAdapter!");
             _keys = keys ?? Resources.Load<StorageKeysConfigAsset>("Configs/StorageKeysConfig") ?? ScriptableObject.CreateInstance<StorageKeysConfigAsset>();
         }
 
@@ -37,11 +35,11 @@ namespace PixelFlow.Services.GlobalRelease
 
         public Task<string> LoadCloudSaveAsync()
         {
-            if (!PlayerPrefs.HasKey(CloudStorePrefKey))
+            if (!_prefs.HasKey(CloudStorePrefKey))
             {
                 return Task.FromResult<string>(null);
             }
-            string data = PlayerPrefs.GetString(CloudStorePrefKey, null);
+            string data = _prefs.GetString(CloudStorePrefKey, null);
             return Task.FromResult(data);
         }
 
@@ -51,17 +49,17 @@ namespace PixelFlow.Services.GlobalRelease
             {
                 return Task.FromResult(false);
             }
-            PlayerPrefs.SetString(CloudStorePrefKey, saveJson);
-            PlayerPrefs.SetInt(CloudStorePrefKey + "_ver", version);
-            PlayerPrefs.Save();
+            _prefs.SetString(CloudStorePrefKey, saveJson);
+            _prefs.SetInt(CloudStorePrefKey + "_ver", version);
+            _prefs.Save();
             return Task.FromResult(true);
         }
 
         public Task<bool> DeleteCloudSaveAsync()
         {
-            PlayerPrefs.DeleteKey(CloudStorePrefKey);
-            PlayerPrefs.DeleteKey(CloudStorePrefKey + "_ver");
-            PlayerPrefs.Save();
+            _prefs.DeleteKey(CloudStorePrefKey);
+            _prefs.DeleteKey(CloudStorePrefKey + "_ver");
+            _prefs.Save();
             return Task.FromResult(true);
         }
     }

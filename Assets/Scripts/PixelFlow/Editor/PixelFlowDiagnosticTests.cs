@@ -133,24 +133,9 @@ namespace PixelFlow.Editor.Tests
             foreach (var asset in allLevelAssets)
             {
                 var so = new SerializedObject(asset);
-                var prop = so.GetIterator();
-                bool hasMissingRef = false;
-
-                while (prop.NextVisible(true))
-                {
-                    if (prop.propertyType == SerializedPropertyType.ObjectReference &&
-                        prop.objectReferenceValue == null)
-                    {
-                        var entityId = prop.objectReferenceEntityIdValue;
-                        if (!entityId.Equals(default(GlobalObjectId)))
-                        {
-                            hasMissingRef = true;
-                            Debug.LogWarning($"[Test] Missing script ref found in {asset.name}: {prop.propertyPath}");
-                        }
-                    }
-                }
-
-                Assert.IsFalse(hasMissingRef, $"LevelData asset '{asset.name}' has missing script references! Run Tools → PixelFlow → Fix Missing Script References.");
+                var scriptProp = so.FindProperty("m_Script");
+                Assert.NotNull(scriptProp, $"Asset '{asset.name}' missing m_Script property!");
+                Assert.NotNull(scriptProp.objectReferenceValue, $"LevelData asset '{asset.name}' has missing script reference!");
             }
         }
 

@@ -481,6 +481,7 @@ namespace PixelFlow.Editor.Tests
             {
                 builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
                 builder.BindInstance(testConfig);
+                builder.BindInstance(CreateTestStorageKeysConfig());
                 builder.BindInstance(ScriptableObject.CreateInstance<EconomyConfigAsset>());
                 builder.BindService<IPathService, PathService>();
                 builder.BindService<IGameHistoryService, GameHistoryService>();

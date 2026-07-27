@@ -32,9 +32,8 @@ namespace PixelFlow
         public void OnConfigure(IContextBuilder builder)
         {
             NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] OnConfigure: Initializing framework dependency injection bindings...");
-            // PlayerPrefs servisini singleton olarak bağla; kalıcı state kullanan tüm
-            // modeller bunu constructor injection ile alır (test edilebilir).
-            builder.Bind<IPlayerPrefsService, StrictEncryptedStorageService>();
+            var storageService = new StrictEncryptedStorageService();
+            builder.BindInstance<IPlayerPrefsService>(storageService);
             
             // Tüm Nexus Core Çekirdek Servisleri — BindService ile tek instance
             // (BindService<> hem INexusService arayüzünü bağlar hem de auto-init kuyruğuna ekler.
@@ -96,7 +95,7 @@ namespace PixelFlow
             builder.BindService<ISkinCatalogService, SkinCatalogService>();
 
             // Global Release Production Services (game_plan.md §3)
-            builder.BindInstance<ICloudSaveAdapter>(new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter(storageKeysConfig));
+            builder.BindInstance<ICloudSaveAdapter>(new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter(storageService, storageKeysConfig));
             builder.BindService<CloudSaveManager>();
             builder.BindService<PixelFlowAnalyticsTracker>();
             builder.BindService<PixelFlow.Services.GlobalRelease.PrivacyComplianceService>();
