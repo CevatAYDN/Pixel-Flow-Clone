@@ -231,6 +231,30 @@ Projedeki tüm konfigürasyonlar `Assets/Resources/Configs/` klasöründe yer al
 - **Kök Neden**: Unity'de silinen/kopan bir `UnityEngine.Object` (varsayılan silinmiş `LevelData` referansı) üzerinde C# null-conditional (`boot.initialLevel?.name`) operatörü kullanıldığında C# referansı null görmediği için Unity'nin aşırı yüklenmiş `== null` operatörünü atlayıp `.name` özelliğine erişmeye çalışıyor ve `MissingReferenceException` fırlatıyordu.
 - **Çözüm**: `PixelFlowSetupWindow.GameAndDiagnostics.cs` içerisinde `?.name` kullanımı kaldırıldı; açık Unity `operator== null` kontrolü (`bool hasLevel = boot.initialLevel != null;`) ile güvenli hale getirildi.
 
+### 🔴 Hata 34: HUD Viyadük, Temizle, Gökkuşağı ve İleri Al Butonlarının İşlevsizliği
+- **Belirti**: Ekranın alt kısmında yer alan VİYADÜK, TEMİZLE, GÖKKUŞAĞI ve İLERİ AL butonlarına basıldığında hiçbir tepki alınmıyor, Viyadük yerleştirilemiyordu.
+- **Kök Neden**: `HUDView.cs` ve `HUDMediator.cs` dosyalarında bu 4 buton için `Button` alanları, olay delegeleri (`event Action`) ve tıklama dinleyicileri (`onClick.AddListener`) tanımlanmamıştı/yorum satırına alınmıştı.
+- **Çözüm**: 
+  1. `HUDView.cs`: `_viaductButton`, `_rainbowRoadButton`, `_clearJamButton`, `_redoButton` alanları, olay delegeleri ve `AutoWireUIReferences` / `BindHUDButtons` bağlamları eklendi.
+  2. `HUDMediator.cs`: **VİYADÜK** butonuna basıldığında ızgaradaki kesişme noktası taranarak anında 3D Viyadük köprüsü yerleştirilmesi sağlandı; kesişim yoksa uyarı verildi. **TEMİZLE** butonuna basıldığında tüm çizili yollar temizlendi. **GÖKKUŞAĞI** ve **İLERİ AL** butonları ilgili sinyallere bağlandı.
+
+### 🔴 Hata 31: Çarpışma (Crash) Sonrasında Simülasyonun Durmaması ve Araçların Kilitlenmesi
+- **Belirti**: Çarpışma anında Toast uyarısı (`"Kaza! Araçlar çarpıştı!"`) ve zıplama animasyonu çalışmasına rağmen simülasyon durmuyor, araçlar aynı hücrede takılarak her kare sürekli kaza tetikliyordu.
+- **Kök Neden**: `VehicleSimulator.cs` içindeki `TriggerCrash` metodu `_isSimulating` bayrağını `false` yapmıyordu ve araçları başlangıç pozisyonlarına çekmiyordu.
+- **Çözüm**: `TriggerCrash` metodu güncellenerek çarpışma anında `_isSimulating = false;` ile simülasyon durduruldu, `ResetVehiclePositionsToStart()` ile araçlar başlangıç node'larına çekildi. Oyuncu cezasız biçimde 1-tap Undo yapabilir veya yolunu yeniden çizebilir hale getirildi (`game_plan.md §1.2 & §8.1`).
+
+### 🔴 Hata 28: `VehicleVisualFactory` İçinde Hardcoded Fallback Kullanımı (§2.2 İhlali)
+- **Belirti**: `VehicleVisualConfigAsset` yüklenemediğinde veya null olduğunda `VehicleVisualFactory` sessizce C# içi hardcoded varsayılan boyut struct'larına düşüyordu (`game_plan.md §2.2 Zero-Silent-Fallback` ihlali).
+- **Kök Neden**: `CreateCar3D` me `CreateTrain3D` metotlarında `_visualConfig != null ? ... : CreateDefaultCarConfig()` ternary kontrolü kullanılıyordu.
+- **Çözüm**: `_visualConfig == null` olduğunda sessizce devam etmek yerine katı `DataValidationException` fırlatılması sağlandı. `VehicleAndGenerationTests.cs` içerisine `PixelFlow.Data.DataValidationException` namespace'i ile `CreateCar3D_WithNullVisualConfig_ThrowsDataValidationException` unit testi eklendi ve tam yeşillendi.
+
+### 🔴 Hata 38: HUD Viyadük Butonunun Hedef Hücre Seçim Mantığının İyileştirilmesi
+- **Belirti**: Oyuncu HUD üzerindeki VİYADÜK butonuna bastığında viyadük köprüsü rastgele veya alakasız bir hücreye koyuluyordu.
+- **Kök Neden**: `HUDMediator.HandleViaductClicked` metodu `cell.PathColorCount >= 2` şartını arıyordu. Ancak kesişim sürüklemesi engellendiği için bu koşul hiçbir zaman sağlanmıyor ve kod eski bayat `LastCrashPosition` koordinatına düşüyordu.
+- **Çözüm**: 
+  1. `HUDMediator.cs`: Hedef hücre seçimi önceliklendirildi: (1) Aktif kaza hücresi (`LastCrashPosition`), (2) Oyuncunun dokunduğu/çizdiği son yol hücresi (`LastPosition`), (3) Izgarada henüz viyadüğü olmayan çizili ilk yol hücresi.
+  2. `unityMCP` üzerinden tüm **351/351 test başarıyla geçti.**
+
 ---
 
 ## 3.1. Domain-Scoped Locality (Sinyal ve Komut Klasörleşmesi)

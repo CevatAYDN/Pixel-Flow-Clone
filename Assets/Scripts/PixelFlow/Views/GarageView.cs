@@ -39,6 +39,7 @@ namespace PixelFlow.Views
             }
             if (_closeButton != null)
             {
+                ButtonJuice.AttachTo(_closeButton);
                 _closeButton.onClick.RemoveAllListeners();
                 _closeButton.onClick.AddListener(() =>
                 {
@@ -54,21 +55,64 @@ namespace PixelFlow.Views
         public void AutoWireUIReferences()
         {
             if (_panel == null) _panel = gameObject;
+
+            // Search for existing close button
             if (_closeButton == null)
             {
                 var buttons = GetComponentsInChildren<Button>(true);
                 foreach (var button in buttons)
                 {
                     string name = button.gameObject.name.ToLowerInvariant();
-                    if (name.Contains("close") || name.Contains("back"))
+                    if (name.Contains("close") || name.Contains("back") || name.Contains("kapat"))
                     {
                         _closeButton = button;
                         break;
                     }
                 }
-
-                if (_closeButton == null) _closeButton = GetComponentInChildren<Button>(true);
             }
+
+            // Create a prominent top-right AAA close button if missing
+            if (_closeButton == null)
+            {
+                var closeGo = new GameObject("CloseButton", typeof(RectTransform), typeof(Image), typeof(Button));
+                closeGo.transform.SetParent(transform, false);
+                var closeRect = closeGo.GetComponent<RectTransform>();
+                closeRect.anchorMin = new Vector2(1f, 1f);
+                closeRect.anchorMax = new Vector2(1f, 1f);
+                closeRect.pivot = new Vector2(1f, 1f);
+                closeRect.anchoredPosition = new Vector2(-20f, -20f);
+                closeRect.sizeDelta = new Vector2(44f, 44f);
+
+                var img = closeGo.GetComponent<Image>();
+                img.color = new Color(0.94f, 0.27f, 0.27f); // Vibrant Red #EF4444
+
+                var txtGo = new GameObject("Text", typeof(RectTransform));
+                txtGo.transform.SetParent(closeGo.transform, false);
+                var txt = txtGo.AddComponent<TextMeshProUGUI>();
+                txt.text = "✕";
+                txt.fontSize = 24;
+                txt.fontStyle = FontStyles.Bold;
+                txt.color = Color.white;
+                txt.alignment = TextAlignmentOptions.Center;
+                var txtRect = txtGo.GetComponent<RectTransform>();
+                txtRect.anchorMin = Vector2.zero;
+                txtRect.anchorMax = Vector2.one;
+                txtRect.sizeDelta = Vector2.zero;
+
+                _closeButton = closeGo.GetComponent<Button>();
+            }
+
+            if (_closeButton != null)
+            {
+                ButtonJuice.AttachTo(_closeButton);
+                _closeButton.onClick.RemoveAllListeners();
+                _closeButton.onClick.AddListener(() =>
+                {
+                    LoggerService?.Log("[PixelFlow.GarageView] Close button clicked.");
+                    OnCloseClicked?.Invoke();
+                });
+            }
+
             if (_coinsText == null)
             {
                 var texts = GetComponentsInChildren<TMP_Text>(true);
@@ -84,6 +128,7 @@ namespace PixelFlow.Views
 
                 if (_coinsText == null) _coinsText = GetComponentInChildren<TMP_Text>(true);
             }
+
             if (_skinContainer == null)
             {
                 var content = transform.Find("GarageCard/ScrollView/Viewport/Content");
@@ -188,6 +233,7 @@ namespace PixelFlow.Views
                 img.color = Color.white;
 
                 var btn = itemObj.GetComponent<Button>();
+                ButtonJuice.AttachTo(btn);
                 var capturedSkin = skin;
 
                 btn.onClick.AddListener(() =>

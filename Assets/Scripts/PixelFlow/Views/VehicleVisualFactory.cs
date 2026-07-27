@@ -104,7 +104,12 @@ namespace PixelFlow.Views
             if (!Application.isPlaying) return renderers;
             EnsureAllSharedMaterialsCreated();
 
-            var vc = _visualConfig != null ? new VehicleVisualConfig.TrainConfig
+            if (_visualConfig == null)
+            {
+                throw new DataValidationException("VehicleVisualConfigAsset is null! VehicleVisualFactory requires VehicleVisualConfigAsset to be loaded.");
+            }
+
+            var vc = new VehicleVisualConfig.TrainConfig
             {
                 BodySize = _visualConfig.TrainBodySize,
                 CabinSize = _visualConfig.TrainCabinSize,
@@ -128,7 +133,7 @@ namespace PixelFlow.Views
                 Wagon2WheelPositions = _visualConfig.TrainWagon2WheelPositions,
                 TrailTime = _visualConfig.TrainTrailTime,
                 TrailStartWidth = _visualConfig.TrainTrailStartWidth
-            } : CreateDefaultTrainConfig();
+            };
 
             // 1. LOCOMOTIVE ENGINE HEAD
             var locoObj = new GameObject("Locomotive");
@@ -274,10 +279,16 @@ namespace PixelFlow.Views
         public static List<Renderer> CreateCar3D(GameObject root, ColorType color)
         {
             var renderers = new List<Renderer>();
+
+            if (_visualConfig == null)
+            {
+                throw new DataValidationException("VehicleVisualConfigAsset is null! VehicleVisualFactory requires VehicleVisualConfigAsset to be loaded.");
+            }
+
             if (!Application.isPlaying) return renderers;
             EnsureAllSharedMaterialsCreated();
 
-            var vc = _visualConfig != null ? new VehicleVisualConfig.CarConfig
+            var vc = new VehicleVisualConfig.CarConfig
             {
                 BodySize = _visualConfig.CarBodySize,
                 CabinSize = _visualConfig.CarCabinSize,
@@ -292,12 +303,14 @@ namespace PixelFlow.Views
                 WheelZOffset = _visualConfig.CarWheelZOffset,
                 TrailTime = _visualConfig.CarTrailTime,
                 TrailStartWidth = _visualConfig.CarTrailStartWidth
-            } : CreateDefaultCarConfig();
+            };
+
+            bool is2DMode = _visualConfig.VisualMode == VehicleVisualMode.Mode2D_FlatSprite;
 
             // 1. Main Chassis / Body
             var body = VehiclePartPool.GetCube(root.transform);
             body.name = "Chassis";
-            body.transform.localScale = vc.BodySize;
+            body.transform.localScale = is2DMode ? new Vector3(vc.BodySize.x, 0.02f, vc.BodySize.z) : vc.BodySize;
             var rBody = body.GetComponent<Renderer>();
             if (rBody != null)
             {

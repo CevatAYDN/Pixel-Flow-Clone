@@ -51,7 +51,10 @@ namespace PixelFlow.Views
             base.OnBind(context);
             AutoWireUIReferences();
             if (_backButton != null)
+            {
+                ButtonJuice.AttachTo(_backButton);
                 _backButton.onClick.AddListener(() => OnBackClicked?.Invoke());
+            }
 
             LoggerService?.Log($"[PixelFlow.LevelSelectView] AutoWire: title={(bool)_titleText}, " +
                 $"backButton={(bool)_backButton}, gridContainer={(bool)_gridContainer}");
@@ -162,6 +165,7 @@ namespace PixelFlow.Views
             btn.interactable = info.Unlocked;
             if (info.Unlocked)
             {
+                ButtonJuice.AttachTo(btn);
                 int idx = info.LevelIndex; // closure için sabitle
                 btn.onClick.AddListener(() => OnLevelSelected?.Invoke(idx));
             }

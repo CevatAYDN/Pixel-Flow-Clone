@@ -142,140 +142,12 @@ namespace PixelFlow
         /// </summary>
         private bool TryRestoreSavedGame()
         {
-            if (!GridStateSerializer.HasSavedGame(_prefs))
-                return false;
-
-            // Check save format version — clear if mismatched (prevents stale-save skip-to-gameplay)
-            int savedVersion = _prefs.GetInt(SaveVersionKey, 0);
-            if (savedVersion != SaveFormatVersion)
+            // User requirement: Every time a level starts, start clean from the beginning (do not continue mid-level paths)
+            if (_prefs != null)
             {
-                _loggerService?.LogWarning($"[PixelFlow.GameBootstrapper] Save format version mismatch: found {savedVersion}, expected {SaveFormatVersion}. Clearing stale save data.");
                 GridStateSerializer.ClearSave(_prefs);
-                _prefs.DeleteKey(SaveVersionKey);
-                _prefs.Save();
-                return false;
             }
-
-            _loggerService?.Log("[PixelFlow.GameBootstrapper] Saved game detected in PlayerPrefs. Checking save validity...");
-            var saved = GridStateSerializer.Load(_prefs);
-            if (saved == null)
-            {
-                _loggerService?.LogWarning("[PixelFlow.GameBootstrapper] Failed to load saved game snapshot.");
-                return false;
-            }
-
-            var cloud = Models.CloudSaveManager.LoadCloudRecord(_prefs);
-            string saveKey = GridStateSerializer.GetSaveKey();
-            string localJson = _prefs.GetString(saveKey, "");
-            var local = new Models.CloudSaveRecord
-            {
-                PlayerId = Models.CloudSaveManager.GetOrCreatePlayerId(_prefs),
-                LocalSaveJson = localJson,
-                TimestampUnix = (long)(System.DateTime.UtcNow - new System.DateTime(1970, 1, 1, 0, 0, 0, System.DateTimeKind.Utc)).TotalSeconds
-            };
-            string resolvedJson = Models.CloudSaveManager.ResolveConflict(local, cloud);
-            if (!string.IsNullOrEmpty(resolvedJson) && resolvedJson != localJson)
-            {
-                _loggerService?.Log("[PixelFlow.GameBootstrapper] Cloud conflict resolved. Validating before overwrite...");
-                // Cloud verisini doğrudan parse et — geçerliyse local'i güncelle
-                try
-                {
-                    var cloudSnapshot = UnityEngine.JsonUtility.FromJson<GridStateSerializer.GridSaveData>(resolvedJson);
-                    if (cloudSnapshot != null && cloudSnapshot.cells != null && cloudSnapshot.cells.Count > 0)
-                    {
-                        _prefs.SetString(saveKey, resolvedJson);
-                        saved = cloudSnapshot;
-                    }
-                    else
-                    {
-                        _loggerService?.LogWarning("[PixelFlow.GameBootstrapper] Cloud save data invalid. Keeping local save.");
-                    }
-                }
-                catch (System.Exception ex)
-                {
-                    _loggerService?.LogWarning($"[PixelFlow.GameBootstrapper] Cloud save parse failed: {ex.Message}. Keeping local save.");
-                }
-            }
-
-            if (saved == null || saved.cells == null || saved.cells.Count == 0)
-            {
-                _loggerService?.LogWarning("[PixelFlow.GameBootstrapper] Saved game cells collection is empty or null.");
-                return false;
-            }
-
-            if (saved.paths == null || saved.paths.Count == 0)
-            {
-                _loggerService?.LogWarning("[PixelFlow.GameBootstrapper] Saved game snapshot had 0 nodes/paths. Clearing empty save file.");
-                GridStateSerializer.ClearSave(_prefs);
-                return false;
-            }
-
-            var level = ResolveLevelByIndex(saved.levelIndex);
-            if (level == null)
-            {
-                _loggerService?.LogWarning($"[PixelFlow.GameBootstrapper] Could not resolve LevelData asset for index {saved.levelIndex}. Falling back to Hub.");
-                return false;
-            }
-
-            if (!GridStateSerializer.IsSaveDataValidForLevel(saved, level))
-            {
-                _loggerService?.LogWarning($"[PixelFlow.GameBootstrapper] Outdated or invalid saved game layout detected for Level {saved.levelIndex + 1}. Discarding save...");
-                GridStateSerializer.ClearSave(_prefs);
-                return false;
-            }
-
-                        // Refresh save version timestamp on successful restore
-            _prefs.SetInt(SaveVersionKey, SaveFormatVersion);
-            _prefs.Save();
-
-            _loggerService?.Log($"[PixelFlow.GameBootstrapper] Restoring valid saved game: Level {saved.levelIndex + 1} ({level.name}, Grid: {saved.width}x{saved.height}, Cells: {saved.cells.Count}, Paths: {saved.paths.Count})");
-            _levelModel.SetLevel(level);
-            GridStateSerializer.ApplyToGrid(saved, _gridModel);
-            GridStateSerializer.EnsureInitialNodesOnGrid(level, _gridModel);
-            _sessionModel.ApplySave(saved.availableViaducts, saved.maxViaducts,
-                saved.elapsedTime, saved.score, saved.stars, saved.levelIndex, saved.targetFlowScore);
-
-            var obstacleService = nexusRoot.Context.Container.Resolve<IObstacleService>();
-            obstacleService?.InitializeFromLevel(level);
-
-            var tutorialDriver = nexusRoot.Context.Container.Resolve<ITutorialDriver>();
-            tutorialDriver?.OnLevelLoaded(level.levelIndex);
-
-            // Kayıtlı oyunda viyadüksüz kesişimler varsa kriz panelini göster
-            var crashCell = FindFirstCrashCell(_gridModel);
-            if (crashCell.HasValue)
-            {
-                _loggerService?.Log($"[PixelFlow.GameBootstrapper] Restored game has unresolved intersection at {crashCell.Value}. Showing crisis panel.");
-                var cell = _gridModel.GetCell(crashCell.Value);
-                var colors = new System.Collections.Generic.List<ColorType>();
-                foreach (var pc in cell.GetPathColors())
-                    colors.Add(pc);
-
-                _gridModel.LastCrashPosition.Value = crashCell.Value;
-                if (colors.Count >= 2)
-                {
-                    _gridModel.CrashColorA.Value = colors[0];
-                    _gridModel.CrashColorB.Value = colors[1];
-                }
-
-                _signalBus.Fire(new CrashDetectedSignal
-                {
-                    Position = crashCell.Value,
-                    ColorA = colors.Count >= 1 ? colors[0] : ColorType.None,
-                    ColorB = colors.Count >= 2 ? colors[1] : ColorType.None
-                });
-                _signalBus.Fire(new GridUpdatedSignal());
-                _stateModel.SetState(GameState.Paused);
-                _loggerService?.Log($"[PixelFlow.GameBootstrapper] Game state transitioned to Paused for crisis resolution at {crashCell.Value}.");
-            }
-            else
-            {
-                _signalBus.Fire(new GridUpdatedSignal());
-                _stateModel.SetState(GameState.Playing);
-                _loggerService?.Log($"[PixelFlow] Game state transitioned to Playing. Level {level.levelIndex + 1} restored.");
-            }
-
-            return true;
+            return false;
         }
 
         private void OnApplicationPause(bool pause)
@@ -290,22 +162,10 @@ namespace PixelFlow
 
         private void SaveGameState()
         {
-            if (_gridModel == null || _sessionModel == null || _levelModel == null || _stateModel == null) return;
-            if (_levelModel.CurrentLevel == null) return;
-            if (_stateModel.CurrentState == GameState.MainMenu) return;
-            if (_prefs == null) return;
-
-            try
+            // User requirement: Level always starts clean from the beginning without restoring mid-level paths
+            if (_prefs != null)
             {
-                GridStateSerializer.Save(_gridModel, _sessionModel, _levelModel, _prefs);
-                _ = Models.CloudSaveManager.SyncToCloudAsync(
-                    _prefs,
-                    _prefs.GetString(GridStateSerializer.GetSaveKey(), ""),
-                    _sessionModel.Score);
-            }
-            catch (System.Exception ex)
-            {
-                (_loggerService ?? FallbackLogger)?.LogWarning($"[GameBootstrapper] Failed to save game state: {ex.Message}");
+                GridStateSerializer.ClearSave(_prefs);
             }
         }
 

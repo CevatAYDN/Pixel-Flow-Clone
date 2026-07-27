@@ -25,6 +25,8 @@ namespace PixelFlow.Views
         [SerializeField] private Button _colorBlindDeutanButton;
         [SerializeField] private Button _colorBlindTritanButton;
         [SerializeField] private Toggle _hapticsToggle;
+        [SerializeField] private Button _trLanguageButton;
+        [SerializeField] private Button _enLanguageButton;
         [SerializeField] private Button _closeButton;
         [SerializeField] private TMP_Text _titleText;
         [SerializeField] private TMP_Text _masterVolumeLabel;
@@ -39,6 +41,7 @@ namespace PixelFlow.Views
         public event Action<float> OnMusicVolumeChanged;
         public event Action<ColorBlindMode> OnColorBlindChanged;
         public event Action<bool> OnHapticsToggled;
+        public event Action<string> OnLanguageSelected;
 
         [Inject] public ILoggerService LoggerService { get; set; }
 
@@ -71,11 +74,44 @@ namespace PixelFlow.Views
             foreach (var b in buttons)
             {
                 string name = b.gameObject.name.ToLower();
-                if (_closeButton == null && (name.Contains("close") || name.Contains("back"))) _closeButton = b;
+                if (_closeButton == null && (name.Contains("close") || name.Contains("back") || name.Contains("kapat"))) _closeButton = b;
                 if (_colorBlindNoneButton == null && name.Contains("none")) _colorBlindNoneButton = b;
                 if (_colorBlindProtanButton == null && name.Contains("protan")) _colorBlindProtanButton = b;
                 if (_colorBlindDeutanButton == null && name.Contains("deutan")) _colorBlindDeutanButton = b;
                 if (_colorBlindTritanButton == null && name.Contains("tritan")) _colorBlindTritanButton = b;
+                if (_trLanguageButton == null && (name.Contains("tr") || name.Contains("turkish") || name.Contains("türkçe"))) _trLanguageButton = b;
+                if (_enLanguageButton == null && (name.Contains("en") || name.Contains("english") || name.Contains("ingilizce"))) _enLanguageButton = b;
+            }
+
+            // Create a top-right close button if missing
+            if (_closeButton == null)
+            {
+                var closeGo = new GameObject("CloseButton", typeof(RectTransform), typeof(Image), typeof(Button));
+                closeGo.transform.SetParent(transform, false);
+                var closeRect = closeGo.GetComponent<RectTransform>();
+                closeRect.anchorMin = new Vector2(1f, 1f);
+                closeRect.anchorMax = new Vector2(1f, 1f);
+                closeRect.pivot = new Vector2(1f, 1f);
+                closeRect.anchoredPosition = new Vector2(-20f, -20f);
+                closeRect.sizeDelta = new Vector2(44f, 44f);
+
+                var img = closeGo.GetComponent<Image>();
+                img.color = new Color(0.94f, 0.27f, 0.27f); // #EF4444
+
+                var txtGo = new GameObject("Text", typeof(RectTransform));
+                txtGo.transform.SetParent(closeGo.transform, false);
+                var txt = txtGo.AddComponent<TextMeshProUGUI>();
+                txt.text = "✕";
+                txt.fontSize = 24;
+                txt.fontStyle = FontStyles.Bold;
+                txt.color = Color.white;
+                txt.alignment = TextAlignmentOptions.Center;
+                var txtRect = txtGo.GetComponent<RectTransform>();
+                txtRect.anchorMin = Vector2.zero;
+                txtRect.anchorMax = Vector2.one;
+                txtRect.sizeDelta = Vector2.zero;
+
+                _closeButton = closeGo.GetComponent<Button>();
             }
             if (_hapticsToggle == null) _hapticsToggle = GetComponentInChildren<Toggle>(true);
 
@@ -146,11 +182,13 @@ namespace PixelFlow.Views
             if (_sfxVolumeSlider != null) _sfxVolumeSlider.onValueChanged.AddListener(v => OnSfxVolumeChanged?.Invoke(v));
             if (_musicVolumeSlider != null) _musicVolumeSlider.onValueChanged.AddListener(v => OnMusicVolumeChanged?.Invoke(v));
             if (_hapticsToggle != null) _hapticsToggle.onValueChanged.AddListener(v => OnHapticsToggled?.Invoke(v));
-            if (_closeButton != null) _closeButton.onClick.AddListener(() => OnCloseClicked?.Invoke());
-            if (_colorBlindNoneButton != null) _colorBlindNoneButton.onClick.AddListener(() => OnColorBlindChanged?.Invoke(ColorBlindMode.None));
-            if (_colorBlindProtanButton != null) _colorBlindProtanButton.onClick.AddListener(() => OnColorBlindChanged?.Invoke(ColorBlindMode.Protanopia));
-            if (_colorBlindDeutanButton != null) _colorBlindDeutanButton.onClick.AddListener(() => OnColorBlindChanged?.Invoke(ColorBlindMode.Deuteranopia));
-            if (_colorBlindTritanButton != null) _colorBlindTritanButton.onClick.AddListener(() => OnColorBlindChanged?.Invoke(ColorBlindMode.Tritanopia));
+            if (_closeButton != null) { ButtonJuice.AttachTo(_closeButton); _closeButton.onClick.AddListener(() => OnCloseClicked?.Invoke()); }
+            if (_colorBlindNoneButton != null) { ButtonJuice.AttachTo(_colorBlindNoneButton); _colorBlindNoneButton.onClick.AddListener(() => OnColorBlindChanged?.Invoke(ColorBlindMode.None)); }
+            if (_colorBlindProtanButton != null) { ButtonJuice.AttachTo(_colorBlindProtanButton); _colorBlindProtanButton.onClick.AddListener(() => OnColorBlindChanged?.Invoke(ColorBlindMode.Protanopia)); }
+            if (_colorBlindDeutanButton != null) { ButtonJuice.AttachTo(_colorBlindDeutanButton); _colorBlindDeutanButton.onClick.AddListener(() => OnColorBlindChanged?.Invoke(ColorBlindMode.Deuteranopia)); }
+            if (_colorBlindTritanButton != null) { ButtonJuice.AttachTo(_colorBlindTritanButton); _colorBlindTritanButton.onClick.AddListener(() => OnColorBlindChanged?.Invoke(ColorBlindMode.Tritanopia)); }
+            if (_trLanguageButton != null) { ButtonJuice.AttachTo(_trLanguageButton); _trLanguageButton.onClick.AddListener(() => OnLanguageSelected?.Invoke("tr")); }
+            if (_enLanguageButton != null) { ButtonJuice.AttachTo(_enLanguageButton); _enLanguageButton.onClick.AddListener(() => OnLanguageSelected?.Invoke("en")); }
         }
 
         protected override void OnUnbind()

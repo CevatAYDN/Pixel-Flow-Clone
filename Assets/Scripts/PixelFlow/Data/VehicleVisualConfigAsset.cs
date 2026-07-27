@@ -3,6 +3,12 @@ using System.Collections.Generic;
 
 namespace PixelFlow.Data
 {
+    public enum VehicleVisualMode
+    {
+        Mode3D_ToyMesh = 0,
+        Mode2D_FlatSprite = 1
+    }
+
     /// <summary>
     /// Araç görsel parametrelerinin ScriptableObject konfigürasyonu.
     /// Tüm boyutlar, offset'ler ve tren/araca özel ayarlar burada tanımlanır.
@@ -11,6 +17,10 @@ namespace PixelFlow.Data
     [CreateAssetMenu(fileName = "VehicleVisualConfig", menuName = "PixelFlow/Vehicle Visual Config")]
     public class VehicleVisualConfigAsset : ScriptableObject
     {
+        [Header("=== Görsel Mod (2D / 3D) ===")]
+        [Tooltip("Araç görsel modu: Mode3D_ToyMesh (3D Oyuncak Araç) veya Mode2D_FlatSprite (2D Düz Sprite)")]
+        public VehicleVisualMode VisualMode = VehicleVisualMode.Mode3D_ToyMesh;
+
         [Header("=== Tren Parametreleri ===")]
         [Tooltip("Ana gövde boyutu")]
         public Vector3 TrainBodySize = new Vector3(0.38f, 0.22f, 0.18f);

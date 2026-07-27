@@ -77,24 +77,28 @@ namespace PixelFlow.Views
         {
             if (_playButton != null)
             {
+                ButtonJuice.AttachTo(_playButton);
                 _playButton.interactable = true;
                 _playButton.onClick.RemoveAllListeners();
                 _playButton.onClick.AddListener(() => OnPlayClicked?.Invoke());
             }
             if (_openGarageButton != null)
             {
+                ButtonJuice.AttachTo(_openGarageButton);
                 _openGarageButton.interactable = true;
                 _openGarageButton.onClick.RemoveAllListeners();
                 _openGarageButton.onClick.AddListener(() => OnGarageClicked?.Invoke());
             }
             if (_levelSelectButton != null)
             {
+                ButtonJuice.AttachTo(_levelSelectButton);
                 _levelSelectButton.interactable = true;
                 _levelSelectButton.onClick.RemoveAllListeners();
                 _levelSelectButton.onClick.AddListener(() => OnLevelSelectClicked?.Invoke());
             }
             if (_settingsButton != null)
             {
+                ButtonJuice.AttachTo(_settingsButton);
                 _settingsButton.interactable = true;
                 _settingsButton.onClick.RemoveAllListeners();
                 _settingsButton.onClick.AddListener(() => OnSettingsClicked?.Invoke());
@@ -149,13 +153,13 @@ namespace PixelFlow.Views
         public void UpdateCoinBalance(int coins, string format)
         {
             if (_coinText != null)
-                _coinText.text = string.Format(format, coins);
+                _coinText.text = PixelFlow.Services.RtlUtility.SafeFormat(format, coins);
         }
 
         public void UpdatePlayButtonText(int levelNumber, string format)
         {
             if (_playButtonText != null)
-                _playButtonText.text = string.Format(format, levelNumber);
+                _playButtonText.text = PixelFlow.Services.RtlUtility.SafeFormat(format, levelNumber);
         }
 
         public void UpdateEquippedVehicle(string vehicleName)

@@ -204,6 +204,9 @@ namespace Nexus.Generated
             });
             NexusDI.RegisterInjector<PixelFlow.Views.HUDMediator>((instance, di) =>
             {
+                instance.PathService = di.Resolve<PixelFlow.Services.IPathService>();
+                instance.GridModel = di.Resolve<PixelFlow.Models.IGridModel>();
+                instance.PowerUpService = di.Resolve<PixelFlow.Services.IPowerUpService>();
                 instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
                 instance.HintModel = di.Resolve<PixelFlow.Models.IHintModel>();
                 instance.LevelModel = di.Resolve<PixelFlow.Models.ILevelModel>();
@@ -217,6 +220,9 @@ namespace Nexus.Generated
             });
             NexusDI.RegisterClearer<PixelFlow.Views.HUDMediator>(instance =>
             {
+                instance.PathService = null;
+                instance.GridModel = null;
+                instance.PowerUpService = null;
                 instance.LoggerService = null;
                 instance.HintModel = null;
                 instance.LevelModel = null;
@@ -1298,6 +1304,12 @@ namespace Nexus.Generated
                 _ = _p_GridView_Config; // Suppress CS0219 warning
                 var _p_GridView_TickService = default(PixelFlow.Views.GridView).TickService;
                 _ = _p_GridView_TickService; // Suppress CS0219 warning
+                var _p_HUDMediator_PathService = default(PixelFlow.Views.HUDMediator).PathService;
+                _ = _p_HUDMediator_PathService; // Suppress CS0219 warning
+                var _p_HUDMediator_GridModel = default(PixelFlow.Views.HUDMediator).GridModel;
+                _ = _p_HUDMediator_GridModel; // Suppress CS0219 warning
+                var _p_HUDMediator_PowerUpService = default(PixelFlow.Views.HUDMediator).PowerUpService;
+                _ = _p_HUDMediator_PowerUpService; // Suppress CS0219 warning
                 var _p_HUDMediator_LoggerService = default(PixelFlow.Views.HUDMediator).LoggerService;
                 _ = _p_HUDMediator_LoggerService; // Suppress CS0219 warning
                 var _p_HUDMediator_HintModel = default(PixelFlow.Views.HUDMediator).HintModel;

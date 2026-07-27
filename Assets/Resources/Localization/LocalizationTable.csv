@@ -1,7 +1,50 @@
 key,en,tr,es,de,fr,it,pt,ru,ja,ko,zh,ar,he,hi,id
 app_name,Pixel Flow 3D,Pixel Flow 3D,Pixel Flow 3D,Pixel Flow 3D,Pixel Flow 3D,Pixel Flow 3D,Pixel Flow 3D,Pixel Flow 3D,Pixel Flow 3D,Pixel Flow 3D,Pixel Flow 3D,Pixel Flow 3D,Pixel Flow 3D,Pixel Flow 3D,Pixel Flow 3D
-btn_undo,Undo,Geri Al,Deshacer,Rückgängig,Annuler,Annulla,Desfazer,Отмена,元に戻す,実行 van,撤销,تراجع,ביטול,वापस लें,Balkan
+btn_undo,Undo,Geri Al,Deshacer,Rückgängig,Annuler,Annulla,Desfazer,Отмена,元に戻す,실행 취소,撤销,تراجع,ביטול,वापस लें,Balkan
 notif_d1_title,Daily Reward Ready!,Günlük Ödül Hazır!,¡Recompensa diaria lista!,Tägliche Belohnung bereit!,Récompense quotidienne prête!,Ricompensa giornaliera pronta!,Recompensa diária pronta!,Ежедневная награда готова!,毎日の報酬準備完了!,일일 보상 준비 완료!,每日奖励已准备好!,المكافأة اليومية جاهزة!,פרס יומי מוכן!,दैनिक पुरस्कार तैयार!,Hadiah Harian Siap!
 notif_d1_body,New vehicles and challenges are waiting for you!,Yeni araçlar ve görevler seni bekliyor!,¡Nuevos vehículos y desafíos te esperan!,Neue Fahrzeuge und Herausforderungen warten auf dich!,De nouveaux véhicules et défis vous attendent!,Nuovi veicoli e sfide ti aspettano!,Novos veículos e desafios esperam por você!,Новые автомобили и испытания ждут вас!,新しい車両とチャレンジがあなたを待っています!,새로운 차량과 도전 과제가 여러분을 기다리고 있습니다!,新的车辆和挑战等待着你!,مركبات وتحديات جديدة بانتظارك!,כלי רכב ואתגרים חדשים מחכים לך!,नए वाहन और चुनौतियाँ आपका इंतज़ार कर रही हैं!,Kendaraan dan tantangan baru menunggumu!
-notif_d2_title,Rush Hour Event!,Rush Hour Etkinliği!,¡Evento Rush Hour!,Rush Hour Event!,Événement Heure de Pointe!,Evento Rush Hour!,Evento Rush Hour!,Событие Час Пик!,ラッシュアワーイベント!,러시 아워 이벤트!,高峰期活动!,حدث ساعة الذروة!,אירוע שעת השיא!,रश आवर इवेंट!,Acara Rush Hour!
+notif_d2_title,Rush Hour Event!,Rush Hour Etkinliği!,¡Evento Rush Hour!,Rush Hour Event!,Événement Heure de Pointe!,Evento Rush Hour!,Evento Rush Hour!,Событие Час Пик!,ラッシュアワーイベント!,러시 아ワー 이벤트!,高峰期活动!,حدث ساعة الذروة!,אירוע שעת השיא!,रश आवर इवेंट!,Acara Rush Hour!
 notif_d2_body,Earn 2x coins now!,Şimdi 2x coin kazan!,¡Gana el doble de monedas ahora!,Verdiene jetzt 2x Münzen!,Gagnez 2x de pièces maintenant!,Guadagna 2x monete ora!,Ganhe 2x moedas agora!,Заработайте в 2 раза больше монет прямо сейчас!,今すぐ2倍のコインを獲得!,지금 2배 코인을 받으세요!,立即赚取2倍金币!,احصل على ضعف العملات الآن!,הרווח פי 2 מטבעות עכשיו!,अभी 2 गुना सिक्के कमाएं!,Dapatkan 2x koin sekarang!
+hub_coin_format,Coins: {0},Coin: {0},Monedas: {0},Münzen: {0},Pièces: {0},Monete: {0},Moedas: {0},Монеты: {0},コイン: {0},코인: {0},金币: {0},عملات: {0},מטבעות: {0},सिक्के: {0},Koin: {0}
+hub_play_level_format,LEVEL {0},SEVİYE {0},NIVEL {0},LEVEL {0},NIVEAU {0},LIVELLO {0},NÍVEL {0},УРОВЕНЬ {0},レベル {0},레벨 {0},关卡 {0},المستوى {0},שלב {0},स्तर {0},LEVEL {0}
+crash_toast_msg,Crash! Vehicles collided!,Kaza! Araçlar çarpıştı!,¡Colisión! ¡Vehículos chocaron!,Kollision! Fahrzeuge sind zusammengestoßen!,Collision! Les véhicules se sont percutés!,Collisione! I veicoli si sono scontrati!,Colisão! Veículos colidiram!,Столкновение! Транспортные средства столкнулись!,衝突！車両が衝突しました！,충돌! 차량이 충돌했습니다!,碰撞！车辆相撞！,تصادم! تصادمت المركبات!,התנגשות! כלי הרכב התנגשו!,टक्कर! वाहन आपस में टकरा गए!,Tabrakan! Kendaraan bertabrakan!
+intersection_warning_toast_msg,Intersection! Viaduct needed!,Kesişme! Viyadük gerekiyor!,¡Intersección! ¡Se necesita viaducto!,Kreuzung! Viadukt erforderlich!,Intersection ! Viaduc nécessaire !,Intersezione! Serve un viadotto!,Interseção! Viaduto necessário!,Пересечение! Нужен виадук!,交差点！高架橋が必要です！,교차로! 고가교 필요!,交叉口！需要高架桥！,تقاطع! يلزم وجود جسر!,הצטלבות! נדרש ויאדוקט!,चौराहा! वायाडक्ट आवश्यक!,Persimpangan! Butuh viaduk!
+hud_simulation_timer_format,Simulation: {0}s,Simülasyon: {0}sn,Simulación: {0}s,Simulation: {0}s,Simulation : {0}s,Simulazione: {0}s,Simulação: {0}s,Симуляция: {0}с,シミュレーション: {0}秒,시뮬레이션: {0}초,模拟: {0}秒,محاكاة: {0} ث,סימולציה: {0}ש',सिमुलेशन: {0}से,Simulasi: {0}detik
+crisis_exhausted_msg,No attempts remaining!,Hakkınız tükendi!,¡Sin intentos restantes!,Keine Versuche mehr!,Plus de tentatives disponibles!,Nessun tentativo rimasto!,Sem tentativas restantes!,Не осталось попыток!,残り試行回数なし!,남은 시도 횟수 없음!,没有剩余尝试次数!,لا توجد محاولات متبقية!,לא נותרו ניסيوנות!,कोई प्रयास शेष नहीं!,Tidak ada sisa percobaan!
+hud_hint_count_format,Hints: {0},İpucu: {0},Pistas: {0},Hinweise: {0},Indices : {0},Suggerimenti: {0},Dicas: {0},Подсказки: {0},ヒント: {0},힌트: {0},提示: {0},تلميحات: {0},רמזים: {0},संकेत: {0},Petunjuk: {0}
+hud_score_format,Score: {0},Skor: {0},Puntuación: {0},Punkte: {0},Score : {0},Punteggio: {0},Pontuação: {0},Счет: {0},スコア: {0},점수: {0},得分: {0},النتيجة: {0},ניקוד: {0},स्कोर: {0},Skor: {0}
+level_completed_title,LEVEL COMPLETED!,SEVİYE TAMAMLANDI!,¡NIVEL COMPLETADO!,LEVEL ABGESCHLOSSEN!,NIVEAU TERMINÉ!,LIVELLO COMPLETATO!,NÍVEL CONCLUÍDO!,УРОВЕНЬ ПРОЙДЕН!,レベルクリア！,레벨 완료!,关卡完成！,اكتمل المستوى!,השלב הושלם!,स्तर पूरा हुआ!,LEVEL SELESAI!
+level_completed_score_format,Final Score: {0},Toplam Skor: {0},Puntuación final: {0},Endpunkte: {0},Score final : {0},Punteggio finale: {0},Pontuação final: {0},Итоговый счет: {0},最終スコア: {0},최종 점수: {0},最终得分: {0},النتيجة النهائية: {0},ניקוד סופי: {0},אחרון: {0},Akhir: {0}
+level_completed_stars_label,STARS: {0},YILDIZLAR: {0},ESTRELLAS: {0},STERNE: {0},ÉTOILES : {0},STELLE: {0},ESTRELAS: {0},ЗВЕЗДЫ: {0},星: {0},별: {0},星星: {0},النجوم: {0},כוכבים: {0},सितारे: {0},Bintang: {0}
+hud_level_title_format,LEVEL {0},SEVİYE {0},NIVEL {0},LEVEL {0},NIVEAU {0},LIVELLO {0},NÍVEL {0},УРОВЕНЬ {0},レベル {0},레벨 {0},关卡 {0},المستوى {0},שלב {0},स्तर {0},LEVEL {0}
+crisis_viaduct_exhausted_msg,No viaducts available!,Kullanılabilir viyadük yok!,¡No hay viaductos disponibles!,Keine Viadukte verfügbar!,Aucun viaduc disponible!,Nessun viadotto disponibile!,Nenhum viaduto disponível!,Нет доступных виадуков!,利用可能な高架橋はありません！,사용 가능한 고가교 없음!,没有可用的高架桥！,لا توجد جسور متاحة!,אין ויאדוקטים זמינים!,कोई वायाडक्ट उपलब्ध नहीं!,Tidak ada viaduk tersedia!
+crisis_retry_exhausted_msg,Retry limit reached!,Yeniden deneme sınırı aşıldı!,¡Límite de reintentos alcanzado!,Wiederholungslimit erreicht!,Limite d'essais atteint!,Limite di tentativi raggiunto!,Limite de tentativas atingido!,Лимит повторов достигнут!,再試行上限に達しました！,재시도 제한 도달!,已达到重试上限！,تم الوصول إلى حد إعادة المحاولة!,הגעת למגבלת הניסיונות החוזרים!,पुनः प्रयास सीमा समाप्त!,Batas mencoba ulang tercapai!
+level_failed_title,LEVEL FAILED!,SEVİYE BAŞARISIZ!,¡NIVEL FALLIDO!,LEVEL FEHLGESCHLAGEN!,ÉCHEC DU NIVEAU!,LIVELLO FALLITO!,NÍVEL FALHOU!,УРОВЕНЬ НЕ ПРОЙДЕН!,レベル失敗！,레벨 실패!,关卡失败！,فشل المستوى!,השלב נכשל!,स्तर असफल!,LEVEL GAGAL!
+level_failed_retry,RETRY,TEKRAR DENE,REINTENTAR,WIEDERHOLEN,RÉESSAYER,RIPROVA,TENTAR NOVAMENTE,ПОВТОРИТЬ,再試行,재시도,重试,إعادة المحاولة,נסה שوب,पुनः प्रयास,COBA LAGI
+level_failed_hub,MAIN MENU,ANA MENÜ,MENÚ PRINCIPAL,HAUPTMENÜ,MENU PRINCIPAL,MENU PRINCIPALE,MENU PRINCIPAL,ГЛАВНОЕ МЕНЮ,メインメニュー,메인 메뉴,主菜单,القائمة الرئيسية,תפריט ראשי,मुख्य मेनू,MENU UTAMA
+level_failed_score_format,Score: {0},Skor: {0},Puntuación: {0},Punkte: {0},Score : {0},Punteggio: {0},Pontuação: {0},Счет: {0},スコア: {0},점수: {0},得分: {0},النتيجة: {0},ניקוד: {0},स्कोर: {0},Skor: {0}
+garage_equip_label,EQUIP,GİYDİR,EQUIPAR,AUSRÜSTEN,ÉQUIPER,EQUIPAGGIA,EQUIPAR,НАДЕТЬ,装備,장착,装备,تجهيز,צייד,लैस करें,PASANG
+garage_equipped_label,EQUIPPED,GİYDİRİLDİ,EQUIPADO,AUSGERÜSTET,ÉQUIPÉ,EQUIPAGGIATO,EQUIPADO,НАДЕТО,装備中,장착됨,已装备,مجهز,מצויד,लैस,TERPASANG
+garage_cost_format,BUY ({0}),SATIN AL ({0}),COMPRAR ({0}),KAUFEN ({0}),ACHETER ({0}),ACQUISTA ({0}),COMPRAR ({0}),КУПИТЬ ({0}),購入 ({0}),구매 ({0}),购买 ({0}),شراء ({0}),קנה ({0}),खरीदें ({0}),BELI ({0})
+star_pass_tier_progress_format,Tier {0}/{1},Aşama {0}/{1},Nivel {0}/{1},Stufe {0}/{1},Palier {0}/{1},Livello {0}/{1},Nível {0}/{1},Ярус {0}/{1},ティア {0}/{1},티어 {0}/{1},等级 {0}/{1},المستوى {0}/{1},דרגה {0}/{1},स्तर {0}/{1},Tingkat {0}/{1}
+btn_play,PLAY,OYNA,JUGAR,SPIELEN,JOUER,GIOCA,JOGAR,ИГРАТЬ,プレイ,플레이,开始,تشغيل,שחק,खेलें,MAIN
+btn_garage,GARAGE,GARAJ,GARAJE,GARAGE,GARAGE,GARAGE,GARAGEM,ГАРАЖ,ガレージ,차고,车库,المرأب,מוסך,गैराज,GARASI
+btn_level_select,LEVELS,SEVİYELER,NIVELES,LEVELS,NIVEAUX,LIVELLI,NÍVEIS,УРОВНИ,レベル,레벨,关卡,المستويات,שלבים,स्तर,LEVEL
+btn_settings,SETTINGS,AYARLAR,AJUSTES,EINSTELLUNGEN,PARAMÈTRES,IMPOSTAZIONI,CONFIGURAÇÕES,НАСТРОЙКИ,設定,설정,设置,الإعدادات,הגدرות,सेटिंग्स,PENGATURAN
+lbl_settings_title,Settings,Ayarlar,Ajustes,Einstellungen,Paramètres,Impostazioni,Configurações,Настройки,設定,설정,设置,الإعدادات,הגدرות,सेटिंग्स,Pengaturan
+lbl_music,Music,Müzik,Música,Musik,Musique,Musica,Música,Музыка,音楽,음악,音乐,الموسيقى,מוזיקה,संगीत,Musik
+lbl_sfx,SFX,Ses Efektleri,Efectos,SFX,Effets sonores,Effetti SFX,Efeitos,Звуки,効果音,효과음,音效,المؤثرات الصوتية,אפקטים קוליים,ध्वनि प्रभाव,Efek Suara
+lbl_haptic,Haptics,Titreşim,Vibración,Vibration,Vibration,Vibrazione,Vibração,Вибрация,振動,진동,震动,الاهتزاز,רטט,कंपन,Getaran
+lbl_theme,Theme,Tema,Tema,Thema,Thème,Tema,Tema,Тема,テーマ,테마,主题,المظهر,ערכת נושא,थीम,Tema
+lbl_colorblind,Colorblind Mode,Renk Körlüğü Modu,Modo daltónico,Farbenblind-Modus,Mode daltonien,Modalità daltonici,Modo daltônico,Режим для дальтоников,色覚サポート,색맹 모드,色盲模式,وضع عمى الألوان,מצב עיוורון צבעים,वर्णान्धता मोड,Mode Buta Warna
+btn_close,Close,Kapat,Cerrar,Schließen,Fermer,Chiudi,Fechar,Закрыть,閉じる,닫기,关闭,إغلاق,סגור,बंद करें,Tutup
+lbl_garage_title,Garage,Garaj,Garaje,Garage,Garage,Garage,Garagem,Гараж,ガレージ,차고,车库,المرأب,מוסך,गैराज,Garasi
+lbl_vehicles,Vehicles,Araçlar,Vehículos,Fahrzeuge,Véhicules,Veicoli,Veículos,Транспорт,車両,차량,车辆,المركبات,כלי רכב,वाहन,Kendaraan
+lbl_stops,Stops,Duraklar,Paradas,Haltestellen,Arrêts,Fermate,Paradas,Остановки,停留所,정류장,站点,المحطات,تחנות,स्टॉप,Pemberhentian
+btn_unlock,UNLOCK,KİLİT AÇ,DESBLOQUEAR,FREISCHALTEN,DÉBLOQUER,SBLOCCA,DESBLOQUEAR,РАЗБЛОКИРОВАТЬ,解除,잠금 해제,解锁,إلغاء القفل,פתח,अनलाॅक करें,Buka Lock
+lbl_starpass_title,Star Pass,Yıldız Bilet,Pase de estrellas,Sternen-Pass,Pass Étoile,Pass Stelle,Passe de Estrelas,Звездный пропуск,スターパス,스타 패스,星光通行证,تذكرة النجوم,כרטיס כוכבים,स्टार पास,Pass Bintang
+lbl_claim,CLAIM,TOPLA,RECLAMAR,EINFORDERN,RÉCLAMER,RISCATTA,RESGATAR,ЗАБРАТЬ,獲得,수령,领取,مطالبة,ארוף,दावा करें,KLAIM
+lbl_claimed,CLAIMED,TOPLANDI,RECLAMADO,EINGEFORDERT,RÉCLAMÉ,RISCATTATO,RESGATADO,ЗАБРАНО,獲得済み,수령됨,已领取,تمت المطالبة,נאסף,दावा किया,TERKLAIM
+lbl_language,Language,Dil,Idioma,Sprache,Langue,Lingua,Idioma,Язык,言語,언어,语言,اللغة,שפה,भाषा,Bahasa
+btn_lang_tr,Türkçe,Türkçe,Turco,Türkisch,Turc,Turco,Turco,Турецкий,トルコ語,터키어,土耳其语,التركية,טורקית,तुर्की,Turki
+btn_lang_en,English,English,Inglés,Englisch,Anglais,Inglese,Inglês,Английский,英語,영어,英语,الإنجليزية,אנגלית,अंग्रेज़ी,Inggris

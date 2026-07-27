@@ -28,6 +28,12 @@ namespace PixelFlow.Services
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
+            string savedLang = PlayerPrefs.GetString("SelectedLanguage", "");
+            if (string.IsNullOrEmpty(savedLang))
+            {
+                savedLang = Application.systemLanguage == SystemLanguage.Turkish ? "tr" : "en";
+            }
+            _currentLanguage = savedLang.ToLowerInvariant();
             LoadLocalizationTable(_currentLanguage);
             return default;
         }
@@ -38,6 +44,8 @@ namespace PixelFlow.Services
         {
             if (string.IsNullOrEmpty(langCode)) return;
             _currentLanguage = langCode.ToLowerInvariant();
+            PlayerPrefs.SetString("SelectedLanguage", _currentLanguage);
+            PlayerPrefs.Save();
             LoadLocalizationTable(_currentLanguage);
             OnLanguageChanged?.Invoke(_currentLanguage);
         }
@@ -51,7 +59,28 @@ namespace PixelFlow.Services
                 return IsRTL ? FormatRTLIfNeeded(text) : text;
             }
 
-            return !string.IsNullOrEmpty(fallback) ? fallback : key;
+            if (!string.IsNullOrEmpty(fallback)) return fallback;
+
+            // Intelligent fallback for known UI format keys
+            switch (key)
+            {
+                case "hub_coin_format": return "Coins: {0}";
+                case "hub_play_level_format": return "LEVEL {0}";
+                case "hud_level_title_format": return "LEVEL {0}";
+                case "hud_score_format": return "Score: {0}";
+                case "hud_hint_count_format": return "Hints: {0}";
+                case "level_completed_title": return "LEVEL COMPLETED!";
+                case "level_completed_score_format": return "Final Score: {0}";
+                case "level_completed_stars_label": return "STARS: {0}";
+                case "level_failed_title": return "LEVEL FAILED!";
+                case "level_failed_retry": return "RETRY";
+                case "level_failed_hub": return "MAIN MENU";
+                case "garage_equip_label": return "EQUIP";
+                case "garage_equipped_label": return "EQUIPPED";
+                case "garage_cost_format": return "BUY ({0})";
+                case "star_pass_tier_progress_format": return "Tier {0}/{1}";
+                default: return key;
+            }
         }
 
         public string GetText(string key, string fallback = null)
@@ -114,6 +143,14 @@ namespace PixelFlow.Services
                 }
 
                 if (targetCol == -1) targetCol = 1; // Fallback to first language col (en)
+
+                // Standard LiberationSans SDF font asset only contains Latin/ASCII glyphs.
+                // Fallback non-Latin languages to English column to prevent TMPro missing glyph warnings.
+                var supportedLatinLangs = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "en", "tr", "es", "de", "fr", "it", "pt", "id" };
+                if (!supportedLatinLangs.Contains(langCode))
+                {
+                    targetCol = 1; // "en"
+                }
 
                 string line;
                 while ((line = reader.ReadLine()) != null)

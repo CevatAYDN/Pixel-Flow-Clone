@@ -27,6 +27,7 @@ namespace PixelFlow.Views
             View.OnMusicVolumeChanged += HandleMusicVolume;
             View.OnColorBlindChanged += HandleColorBlind;
             View.OnHapticsToggled += HandleHaptics;
+            View.OnLanguageSelected += HandleLanguageSelected;
             View.OnCloseClicked += HandleClose;
 
             if (GameStateModel != null)
@@ -61,6 +62,7 @@ namespace PixelFlow.Views
                 View.OnMusicVolumeChanged -= HandleMusicVolume;
                 View.OnColorBlindChanged -= HandleColorBlind;
                 View.OnHapticsToggled -= HandleHaptics;
+                View.OnLanguageSelected -= HandleLanguageSelected;
                 View.OnCloseClicked -= HandleClose;
             }
 
@@ -104,6 +106,12 @@ namespace PixelFlow.Views
         {
             LoggerService?.Log($"[PixelFlow.SettingsMediator] Haptics toggled: {enabled}");
             SignalBus.Fire(new ToggleHapticsSignal { Disabled = !enabled });
+        }
+
+        private void HandleLanguageSelected(string langCode)
+        {
+            LoggerService?.Log($"[PixelFlow.SettingsMediator] Language changed -> {langCode}");
+            LocalizationService?.SetLanguage(langCode);
         }
 
         private void HandleClose()

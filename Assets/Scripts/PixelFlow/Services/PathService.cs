@@ -51,11 +51,20 @@ namespace PixelFlow.Services
                 LoggerService?.LogWarning($"[PixelFlow.PathService] CanDrawPath blocked: static obstacle of type {cell.ObstacleType} at {to}.");
                 return false;
             }
-            // Max 2 farklı renk kontrolü
-            if (cell.PathColorCount >= 2 && !cell.HasPathColor(color))
+            // GDD §8.1 & §8.3: Viyadük (Viaduct) veya RainbowRoad olmayan hücrelerde 2. yol çizilemez!
+            if (cell.PathColorCount > 0 && !cell.HasPathColor(color))
             {
-                LoggerService?.LogWarning($"[PixelFlow.PathService] CanDrawPath blocked: target cell {to} already contains 2 paths and doesn't contain color {color}.");
-                return false;
+                if (!cell.HasViaduct && !cell.IsRainbowRoad)
+                {
+                    LoggerService?.LogWarning($"[PixelFlow.PathService] CanDrawPath blocked at {to}: cell already has a path of another color and lacks a Viaduct bridge.");
+                    return false;
+                }
+
+                if (cell.PathColorCount >= 2)
+                {
+                    LoggerService?.LogWarning($"[PixelFlow.PathService] CanDrawPath blocked at {to}: Viaduct cell already contains maximum 2 paths.");
+                    return false;
+                }
             }
             return true;
         }

@@ -280,6 +280,16 @@ namespace PixelFlow.Commands
                     if (currentCell.HasPathColor(GridModel.ActiveColor.Value))
                         return;
 
+                    // GDD §8.1 & §8.3: Viyadük (Viaduct) veya RainbowRoad olmayan hücrelerde 2. yol çizilemez!
+                    // Kesişme durumunda çizim engellenir, Toast ("Kesişme! Viyadük gerekiyor!") ateşlenir.
+                    if (!currentCell.HasViaduct && !currentCell.IsRainbowRoad && currentCell.PathColorCount > 0)
+                    {
+                        LoggerService?.LogWarning($"[PixelFlow.ProcessInputCommand] Drag blocked at {signal.GridPosition}: Viaduct required to cross existing path of color {currentCell.FirstPathColor}.");
+                        SignalBus.Fire(new PathIntersectionWarningSignal { Position = signal.GridPosition });
+                        HapticService?.Vibrate(HapticType.Warning);
+                        return;
+                    }
+
                     Vector2Int entryDir = signal.GridPosition - GridModel.LastPosition.Value;
 
                     if (currentCell.PathColorCount > 0)
@@ -301,7 +311,6 @@ namespace PixelFlow.Commands
                     {
                         LoggerService?.LogWarning($"[PixelFlow.ProcessInputCommand] Drag blocked at {signal.GridPosition}: Cell already occupied by max paths.");
                         Nexus.Core.Services.NexusLog.Warn("ProcessInputCommand", "HandleDrag", "?", "Cell already occupied by max paths. Drawing blocked.");
-                        // GDD §4.2: 3. renk reddi görsel geri bildirimi — GridMediator dinleyip pulse çalar.
                         SignalBus.Fire(new ThirdColorRejectionSignal { Position = signal.GridPosition });
                         return;
                     }
@@ -320,12 +329,6 @@ namespace PixelFlow.Commands
                     currentCell.AddPathColor(GridModel.ActiveColor.Value);
                     path.Add(signal.GridPosition);
                     GridModel.LastPosition.Value = signal.GridPosition;
-
-                    if (!currentCell.HasViaduct && currentCell.PathColorCount >= 2)
-                    {
-                        LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Firing PathIntersectionWarningSignal for {signal.GridPosition} due to viaductless crossing.");
-                        SignalBus.Fire(new PathIntersectionWarningSignal { Position = signal.GridPosition });
-                    }
 
                     SignalBus.Fire(new GridUpdatedSignal());
                     // RequestSave();  ← kaldırıldı: bridge crossing intermediate, save gerekmez

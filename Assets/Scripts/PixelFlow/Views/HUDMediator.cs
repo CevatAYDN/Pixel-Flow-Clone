@@ -11,6 +11,9 @@ namespace PixelFlow.Views
 {
     public class HUDMediator : Mediator<HUDView>
     {
+        [Inject] public IPathService PathService { get; set; }
+        [Inject] public IGridModel GridModel { get; set; }
+        [Inject, OptionalInject] public IPowerUpService PowerUpService { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public IHintModel HintModel { get; set; }
         [Inject] public ILevelModel LevelModel { get; set; }
@@ -27,6 +30,10 @@ namespace PixelFlow.Views
             View.OnNextLevelClicked += HandleNextLevelClicked;
             View.OnContinueClicked += HandleContinueClicked;
             View.OnUndoClicked += HandleUndoClicked;
+            View.OnRedoClicked += HandleRedoClicked;
+            View.OnViaductClicked += HandleViaductClicked;
+            View.OnRainbowRoadClicked += HandleRainbowRoadClicked;
+            View.OnClearJamClicked += HandleClearJamClicked;
             View.OnPauseClicked += HandlePauseClicked;
             View.OnRetryClicked += HandleRetryClicked;
             View.OnLevelFailedContinueClicked += HandleLevelFailedContinueClicked;
@@ -73,6 +80,10 @@ namespace PixelFlow.Views
             View.OnNextLevelClicked -= HandleNextLevelClicked;
             View.OnContinueClicked -= HandleContinueClicked;
             View.OnUndoClicked -= HandleUndoClicked;
+            View.OnRedoClicked -= HandleRedoClicked;
+            View.OnViaductClicked -= HandleViaductClicked;
+            View.OnRainbowRoadClicked -= HandleRainbowRoadClicked;
+            View.OnClearJamClicked -= HandleClearJamClicked;
             View.OnPauseClicked -= HandlePauseClicked;
             View.OnRetryClicked -= HandleRetryClicked;
             View.OnLevelFailedContinueClicked -= HandleLevelFailedContinueClicked;
@@ -113,14 +124,98 @@ namespace PixelFlow.Views
             SignalBus.Fire(new UndoSignal());
         }
 
-        // ⚠️ NOTE: Redo removed per game plan (minimal HUD)
-        // private void HandleRedoClicked()
-        // {
-        //     LoggerService?.Log("[PixelFlow.HUDMediator] 'Redo' button clicked.");
-        //     var state = GameStateModel.CurrentState;
-        //     if (state != GameState.Playing && state != GameState.Paused) return;
-        //     SignalBus.Fire(new RedoSignal());
-        // }
+        private void HandleRedoClicked()
+        {
+            LoggerService?.Log("[PixelFlow.HUDMediator] 'Redo' button clicked.");
+            var state = GameStateModel.CurrentState;
+            if (state != GameState.Playing && state != GameState.Paused) return;
+            SignalBus.Fire(new RedoSignal());
+        }
+
+        private void HandleViaductClicked()
+        {
+            LoggerService?.Log("[PixelFlow.HUDMediator] VİYADÜK button clicked.");
+            var state = GameStateModel.CurrentState;
+            if (state != GameState.Playing && state != GameState.Paused) return;
+
+            Vector2Int? targetCell = null;
+            var grid = GridModel?.Grid;
+
+            if (grid != null && GridModel != null)
+            {
+                // Priority 1: Active crash position if valid and cell lacks a Viaduct
+                var crashPos = GridModel.LastCrashPosition.Value;
+                if (crashPos.x >= 0 && crashPos.y >= 0 && crashPos.x < GridModel.Width && crashPos.y < GridModel.Height)
+                {
+                    var crashCell = grid[crashPos.x, crashPos.y];
+                    if (crashCell != null && crashCell.State != CellState.Node && !crashCell.HasViaduct)
+                    {
+                        targetCell = crashPos;
+                    }
+                }
+
+                // Priority 2: Last touched/drawn path cell if valid and lacks a Viaduct
+                if (!targetCell.HasValue)
+                {
+                    var lastPos = GridModel.LastPosition.Value;
+                    if (lastPos.x >= 0 && lastPos.y >= 0 && lastPos.x < GridModel.Width && lastPos.y < GridModel.Height)
+                    {
+                        var lastCell = grid[lastPos.x, lastPos.y];
+                        if (lastCell != null && lastCell.State != CellState.Node && !lastCell.HasViaduct && lastCell.PathColorCount > 0)
+                        {
+                            targetCell = lastPos;
+                        }
+                    }
+                }
+
+                // Priority 3: First drawn path cell on the grid that lacks a Viaduct
+                if (!targetCell.HasValue)
+                {
+                    for (int x = 0; x < GridModel.Width; x++)
+                    {
+                        for (int y = 0; y < GridModel.Height; y++)
+                        {
+                            var cell = grid[x, y];
+                            if (cell != null && cell.State != CellState.Node && !cell.HasViaduct && cell.PathColorCount > 0)
+                            {
+                                targetCell = new Vector2Int(x, y);
+                                break;
+                            }
+                        }
+                        if (targetCell.HasValue) break;
+                    }
+                }
+            }
+
+            if (targetCell.HasValue)
+            {
+                LoggerService?.Log($"[PixelFlow.HUDMediator] Placing Viaduct on target cell {targetCell.Value}.");
+                SignalBus.Fire(new PlaceViaductSignal { Position = targetCell.Value });
+            }
+            else
+            {
+                LoggerService?.Log("[PixelFlow.HUDMediator] No path cell found for Viaduct. Showing toast info.");
+                string msg = LocalizationService.GetString("intersection_warning_toast_msg") ?? "Kesişme! Viyadük gerekiyor!";
+                View.ShowCrashToast(msg);
+            }
+        }
+
+        private void HandleRainbowRoadClicked()
+        {
+            LoggerService?.Log("[PixelFlow.HUDMediator] GÖKKUŞAĞI button clicked.");
+            var state = GameStateModel.CurrentState;
+            if (state != GameState.Playing && state != GameState.Paused) return;
+            PowerUpService?.ActivateRainbowRoad();
+        }
+
+        private void HandleClearJamClicked()
+        {
+            LoggerService?.Log("[PixelFlow.HUDMediator] TEMİZLE button clicked.");
+            var state = GameStateModel.CurrentState;
+            if (state != GameState.Playing && state != GameState.Paused) return;
+            PathService?.ClearAllPaths();
+            SignalBus.Fire(new GridUpdatedSignal());
+        }
 
         private void HandleGridUpdated(GridUpdatedSignal signal)
         {
@@ -137,7 +232,7 @@ namespace PixelFlow.Views
         {
             LoggerService?.Log($"[HUDMediator] Intersection warning at {signal.Position} — viaduct may be needed.");
             // b2: game_plan §15.4.2 Layer A — sürtünmesiz uyarı. Oyun durmaz, kısa toast gösterilir.
-            string msg = LocalizationService.GetString("crash_toast_msg");
+            string msg = LocalizationService.GetString("intersection_warning_toast_msg");
             View.ShowCrashToast(msg);
         }
 

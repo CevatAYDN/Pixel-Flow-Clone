@@ -66,6 +66,15 @@ namespace PixelFlow.Editor.Tests
         }
 
         [Test]
+        public void CreateCar3D_WithNullVisualConfig_ThrowsDataValidationException()
+        {
+            VehicleVisualFactory.Initialize(_materialConfig, null);
+            var root = new GameObject("TestCarRoot");
+            Assert.Throws<PixelFlow.Data.DataValidationException>(() => VehicleVisualFactory.CreateCar3D(root, ColorType.Red));
+            Object.DestroyImmediate(root);
+        }
+
+        [Test]
         public void ApplyColorToRenderers_WithNullRenderer_DoesNotThrow()
         {
             // Null renderer array ile — hata vermemeli
@@ -136,6 +145,16 @@ namespace PixelFlow.Editor.Tests
 
             Assert.Greater(asset.CarWheelXPositions.Count, 0, "CarWheelXPositions boş olmamalı");
             Assert.Greater(asset.TrainLocoWheelPositions.Count, 0, "TrainLocoWheelPositions boş olmamalı");
+        }
+
+        [Test]
+        public void VehicleVisualConfigAsset_VisualMode_CanBeToggled()
+        {
+            var asset = ScriptableObject.CreateInstance<VehicleVisualConfigAsset>();
+            Assert.AreEqual(VehicleVisualMode.Mode3D_ToyMesh, asset.VisualMode, "Varsayılan mod 3D Toy Mesh olmalı");
+
+            asset.VisualMode = VehicleVisualMode.Mode2D_FlatSprite;
+            Assert.AreEqual(VehicleVisualMode.Mode2D_FlatSprite, asset.VisualMode, "2D Flat Sprite moduna güncellenebilmeli");
         }
     }
 

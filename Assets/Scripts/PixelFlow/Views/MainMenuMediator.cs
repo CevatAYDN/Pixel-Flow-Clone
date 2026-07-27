@@ -54,16 +54,14 @@ namespace PixelFlow.Views
 
         private void HandlePlayClicked()
         {
-            LoggerService?.Log("[PixelFlow.MainMenuMediator] 'OYUNA BAŞLA' clicked. Checking for saved game...");
+            LoggerService?.Log("[PixelFlow.MainMenuMediator] 'OYUNA BAŞLA' clicked. Clearing mid-level save and loading level fresh from the beginning...");
 
-            // Kayıtlı oyun varsa restore et
-            if (TryRestoreSavedGame())
+            // Clear mid-level path save so the level always starts fresh from scratch
+            if (PlayerPrefsService != null)
             {
-                LoggerService?.Log("[PixelFlow.MainMenuMediator] Saved game restored. Transitioning to Playing.");
-                return;
+                GridStateSerializer.ClearSave(PlayerPrefsService);
             }
 
-            // Save yok — yeni level yükle
             if (ProgressModel == null)
                 throw new DataValidationException("MainMenuMediator.HandlePlayClicked: IProgressModel is null. Cannot determine unlocked level.");
             if (ProgressionService == null)

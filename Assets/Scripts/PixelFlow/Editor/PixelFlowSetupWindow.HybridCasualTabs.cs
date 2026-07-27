@@ -20,6 +20,40 @@ namespace PixelFlow.Editor
 
             var card = Card($"🎨 Garaj — {vehicleGuids.Length} Araç / {stopGuids.Length} Durak Skin");
 
+            var modeCard = Card("🚘 Araç Görsel Render Modu (2D / 3D Toggle)");
+            var cfgAsset = Resources.Load<Data.VehicleVisualConfigAsset>("Configs/VehicleVisualConfig");
+            if (cfgAsset != null)
+            {
+                var modeLabel = new Label($"Mevcut Mod: {cfgAsset.VisualMode}") { style = { color = new Color(0.2f, 0.9f, 0.5f), fontSize = 12, marginBottom = 6 } };
+                modeCard.Add(modeLabel);
+                modeCard.Add(MakeBtn("🧊 3D Oyuncak Model Modu (Mode3D_ToyMesh)", () =>
+                {
+                    cfgAsset.VisualMode = Data.VehicleVisualMode.Mode3D_ToyMesh;
+                    EditorUtility.SetDirty(cfgAsset);
+                    AssetDatabase.SaveAssets();
+                    modeLabel.text = $"Mevcut Mod: {cfgAsset.VisualMode}";
+                    Debug.Log("[PixelFlow] Araç görsel modu 3D Toy Mesh olarak ayarlandı!");
+                }));
+                modeCard.Add(MakeBtn("🖼 2D Düz Sprite Modu (Mode2D_FlatSprite)", () =>
+                {
+                    cfgAsset.VisualMode = Data.VehicleVisualMode.Mode2D_FlatSprite;
+                    EditorUtility.SetDirty(cfgAsset);
+                    AssetDatabase.SaveAssets();
+                    modeLabel.text = $"Mevcut Mod: {cfgAsset.VisualMode}";
+                    Debug.Log("[PixelFlow] Araç görsel modu 2D Flat Sprite olarak ayarlandı!");
+                }));
+                modeCard.Add(MakeBtn("⚙️ VehicleVisualConfig Asset Aç", () =>
+                {
+                    Selection.activeObject = cfgAsset;
+                    EditorGUIUtility.PingObject(cfgAsset);
+                }));
+            }
+            else
+            {
+                modeCard.Add(InfoLabel("VehicleVisualConfig.asset bulunamadı."));
+            }
+            parent.Add(modeCard);
+
             card.Add(MakeBtn("+ Yeni Skin", CreateNewVehicleSkin));
             card.Add(MakeBtn("🍦 Standart Paket", CreateStandardSkinSuite));
             card.Add(MakeBtn("+ Yeni Durak Skin", CreateNewStopSkin));

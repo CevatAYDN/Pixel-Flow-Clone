@@ -138,7 +138,14 @@ namespace PixelFlow.Editor.Tests
 
         public static LevelCatalogAsset CreateTestLevelCatalog()
         {
-            return ScriptableObject.CreateInstance<LevelCatalogAsset>();
+            var catalog = ScriptableObject.CreateInstance<LevelCatalogAsset>();
+            catalog.Levels.Add(new LevelCatalogAsset.LevelCatalogEntry
+            {
+                LevelIndex = 0,
+                UseProceduralFallback = true,
+                ProceduralDifficulty = DifficultyParams.Easy
+            });
+            return catalog;
         }
 
         public static DefaultSkinIdsConfigAsset CreateTestDefaultSkinIdsConfig()

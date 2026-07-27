@@ -584,26 +584,29 @@ namespace PixelFlow.Services
         {
             if (v1.Color == v2.Color) return false;
 
-            float collisionDist = Config.CollisionDistance;
-            float sqrDist = (v1.CurrentPosition - v2.CurrentPosition).sqrMagnitude;
-            if (sqrDist >= collisionDist * collisionDist) return false;
-
             var cell = GridModel.Grid[
                 Mathf.Clamp(cellPos.x, 0, GridModel.Width - 1),
                 Mathf.Clamp(cellPos.y, 0, GridModel.Height - 1)];
 
-            if (cell.IsRainbowRoad)
+            if (cell.IsRainbowRoad || cell.HasViaduct)
             {
-                return false; // Rainbow Road power-up segments allow all vehicles to pass safely
+                return false; // Rainbow Road power-ups or Viaduct 3D bridges separate vehicle paths
             }
 
-            if (cell.HasViaduct)
+            Vector2Int gridPos1 = new Vector2Int(Mathf.RoundToInt(v1.CurrentPosition.x), Mathf.RoundToInt(v1.CurrentPosition.y));
+            Vector2Int gridPos2 = new Vector2Int(Mathf.RoundToInt(v2.CurrentPosition.x), Mathf.RoundToInt(v2.CurrentPosition.y));
+
+            bool sameCell = gridPos1 == gridPos2;
+            float collisionDist = Mathf.Max(Config != null ? Config.CollisionDistance : 0.75f, 0.75f);
+            float sqrDist = (v1.CurrentPosition - v2.CurrentPosition).sqrMagnitude;
+
+            if (sameCell || sqrDist < collisionDist * collisionDist)
             {
-                return false; // Viaduct separates vehicle paths in 3D (Over/Under) so crossing vehicles never collide
+                TriggerCrash(cellPos, v1.Color, v2.Color);
+                return true;
             }
 
-            TriggerCrash(cellPos, v1.Color, v2.Color);
-            return true;
+            return false;
         }
 
         private void TriggerCrash(Vector2Int crashPos, ColorType colorA, ColorType colorB)
@@ -652,6 +655,9 @@ namespace PixelFlow.Services
                 ColorA = colorA,
                 ColorB = colorB
             });
+
+            // Transition state back to GameState.Playing so simulation stops, Toast is shown, and player can 1-tap Undo or edit path
+            StopSimulationPhase();
         }
 
         private void UpdateCompletionTimer(float deltaTime)

@@ -28,6 +28,10 @@ namespace PixelFlow.Views
         [SerializeField] private Button _nextLevelButton;
         [SerializeField] private Button _continueButton;
         [SerializeField] private Button _undoButton;
+        [SerializeField] private Button _redoButton;
+        [SerializeField] private Button _viaductButton;
+        [SerializeField] private Button _rainbowRoadButton;
+        [SerializeField] private Button _clearJamButton;
         
         [SerializeField] private Button _pauseButton;
         [SerializeField] private GameObject _levelFailedPanel;
@@ -40,9 +44,11 @@ namespace PixelFlow.Views
         [SerializeField] private GameObject _crashToast;
         [SerializeField] private TMP_Text _crashToastText;
 
-        // ⚠️ NOTE: Crisis panel removed from HUD to match the minimal game plan.
-
         public event Action OnGarageClicked;
+        public event Action OnViaductClicked;
+        public event Action OnRainbowRoadClicked;
+        public event Action OnClearJamClicked;
+        public event Action OnRedoClicked;
         
         public event Action OnHintClicked;
         public event Action OnNextLevelClicked;
@@ -95,6 +101,10 @@ namespace PixelFlow.Views
             if (_nextLevelButton == null) _nextLevelButton = FindButton("next", compTr) ?? FindButton("next");
             if (_continueButton == null) _continueButton = FindButton("continue", compTr) ?? FindButton("continue");
             if (_undoButton == null) _undoButton = FindButton("undo");
+            if (_redoButton == null) _redoButton = FindButton("redo") ?? FindButton("ileri");
+            if (_viaductButton == null) _viaductButton = FindButton("viaduct") ?? FindButton("viyadük");
+            if (_rainbowRoadButton == null) _rainbowRoadButton = FindButton("rainbow") ?? FindButton("gökkuşağı");
+            if (_clearJamButton == null) _clearJamButton = FindButton("clear") ?? FindButton("temizle");
             
             if (_pauseButton == null) _pauseButton = FindButton("pause");
             if (_retryButton == null) _retryButton = FindButton("retry", failTr) ?? FindButton("retry");
@@ -112,7 +122,8 @@ namespace PixelFlow.Views
             if (_coinsText == null) _coinsText = FindText("coin");
             
             if (_crashToastText == null) _crashToastText = FindText("toast");
-            LoggerService?.Log($"[PixelFlow.HUDView] AutoWire: hintBtn={(bool)_hintButton}, undoBtn={(bool)_undoButton}, " +
+            LoggerService?.Log($"[PixelFlow.HUDView] AutoWire: hintBtn={(bool)_hintButton}, undoBtn={(bool)_undoButton}, viaductBtn={(bool)_viaductButton}, " +
+                $"rainbowBtn={(bool)_rainbowRoadButton}, clearBtn={(bool)_clearJamButton}, redoBtn={(bool)_redoButton}, " +
                 $"nextLvlBtn={(bool)_nextLevelButton}, continueBtn={(bool)_continueButton}, " +
                 $"pauseBtn={(bool)_pauseButton}, retryBtn={(bool)_retryButton}, garageBtn={(bool)_garageButton}, " +
                 $"completionPanel={(bool)_completionPanel}, levelFailedPanel={(bool)_levelFailedPanel}, starsContainer={(bool)_starsContainer}");
@@ -124,6 +135,10 @@ namespace PixelFlow.Views
             BindButton(_nextLevelButton, () => OnNextLevelClicked?.Invoke());
             BindButton(_continueButton, () => OnContinueClicked?.Invoke());
             BindButton(_undoButton, () => OnUndoClicked?.Invoke());
+            BindButton(_redoButton, () => OnRedoClicked?.Invoke());
+            BindButton(_viaductButton, () => OnViaductClicked?.Invoke());
+            BindButton(_rainbowRoadButton, () => OnRainbowRoadClicked?.Invoke());
+            BindButton(_clearJamButton, () => OnClearJamClicked?.Invoke());
             
             BindButton(_pauseButton, () => OnPauseClicked?.Invoke());
             BindButton(_retryButton, () => OnRetryClicked?.Invoke());
@@ -134,18 +149,19 @@ namespace PixelFlow.Views
         private static void BindButton(Button button, Action onClick)
         {
             if (button == null || onClick == null) return;
+            ButtonJuice.AttachTo(button);
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(() => onClick());
         }
 
         public void UpdateHintCount(int count, string format)
         {
-            if (_hintCountText != null) _hintCountText.text = string.Format(format, count);
+            if (_hintCountText != null) _hintCountText.text = PixelFlow.Services.RtlUtility.SafeFormat(format, count);
         }
 
         public void UpdateScore(int score, string format)
         {
-            if (_scoreText != null) _scoreText.text = string.Format(format, score);
+            if (_scoreText != null) _scoreText.text = PixelFlow.Services.RtlUtility.SafeFormat(format, score);
         }
 
         public void UpdateTimer(float time)
@@ -155,7 +171,7 @@ namespace PixelFlow.Views
 
         public void UpdateSimulationTimer(float remaining, string format)
         {
-            if (_timerText != null) _timerText.text = string.Format(format, remaining);
+            if (_timerText != null) _timerText.text = PixelFlow.Services.RtlUtility.SafeFormat(format, remaining);
         }
 
         public void UpdateStars(int stars)
@@ -168,7 +184,7 @@ namespace PixelFlow.Views
 
         public void UpdateLevelTitle(int levelNumber, string format)
         {
-            if (_levelTitleText != null) _levelTitleText.text = string.Format(format, levelNumber);
+            if (_levelTitleText != null) _levelTitleText.text = PixelFlow.Services.RtlUtility.SafeFormat(format, levelNumber);
         }
 
         public void UpdateViaductCount(int count)

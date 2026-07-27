@@ -32,10 +32,10 @@ namespace PixelFlow.Views
         protected override void OnBind(IContext context)
         {
             base.OnBind(context);
-            if (_closeButton != null) _closeButton.onClick.AddListener(() => OnCloseClicked?.Invoke());
-            if (_easyButton != null) _easyButton.onClick.AddListener(() => OnStartCrisisClicked?.Invoke(0));
-            if (_mediumButton != null) _mediumButton.onClick.AddListener(() => OnStartCrisisClicked?.Invoke(1));
-            if (_hardButton != null) _hardButton.onClick.AddListener(() => OnStartCrisisClicked?.Invoke(2));
+            if (_closeButton != null) { ButtonJuice.AttachTo(_closeButton); _closeButton.onClick.AddListener(() => OnCloseClicked?.Invoke()); }
+            if (_easyButton != null) { ButtonJuice.AttachTo(_easyButton); _easyButton.onClick.AddListener(() => OnStartCrisisClicked?.Invoke(0)); }
+            if (_mediumButton != null) { ButtonJuice.AttachTo(_mediumButton); _mediumButton.onClick.AddListener(() => OnStartCrisisClicked?.Invoke(1)); }
+            if (_hardButton != null) { ButtonJuice.AttachTo(_hardButton); _hardButton.onClick.AddListener(() => OnStartCrisisClicked?.Invoke(2)); }
         }
 
         protected override void OnUnbind()
