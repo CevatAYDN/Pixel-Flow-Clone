@@ -102,6 +102,15 @@ Projedeki tüm konfigürasyonlar `Assets/Resources/Configs/` klasöründe yer al
 
 ---
 
+## 3.1. Domain-Scoped Locality (Sinyal ve Komut Klasörleşmesi)
+- **Problem**: Oyunu ve altyapıyı ilk kez inceleyen yeni bir geliştirici, Düz (Flat) klasör yapısında sinyaller ile komutlar arasındaki ilişkiyi kurarken "Indirection / Dolaylılık" nedeniyle kodda kayboluyordu.
+- **Çözüm**: 
+  1. `Signals/` ve `Commands/` dizinleri 6 ana etki alanına (Domain) bölündü (`Gameplay`, `Level`, `Meta`, `Settings`, `History`, `Hints`). Tüm `.cs` ve `.meta` dosyaları GUID korumasıyla ilgili klasörlere taşındı.
+  2. `GameContextLifecycle.cs` içindeki sinyal-komut bağlamları (`BindSignal`) etki alanlarına göre kategorize edilip belgelendi.
+- **Sonuç**: Namespace veya oyun mantığında sıfır kırılma ile yerellik (locality) ve okunabilirlik maksimum seviyeye çıkarıldı.
+
+---
+
 ## 4. Standart Operasyon ve Çalıştırma Adımları
 
 ### A. Sahne Kurulumu ve Varlık Bağlama

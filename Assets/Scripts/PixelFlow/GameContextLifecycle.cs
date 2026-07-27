@@ -118,31 +118,44 @@ namespace PixelFlow
             builder.BindReactiveModel<IDailyCrisisModel, DailyCrisisModel>();
             builder.BindReactiveModel<IInventoryModel, InventoryModel>();
 
+            // ─────────────────────────────────────────────────────────────
+            // Signal & Command Bindings — Domain Scoped Architecture
+            // ─────────────────────────────────────────────────────────────
+
+            // 1. Gameplay Core (Signals/Gameplay/ -> Commands/Gameplay/)
             builder.BindSignal<PixelFlow.Signals.InputInteractionSignal>().To<PixelFlow.Commands.ProcessInputCommand>();
             builder.BindSignal<PixelFlow.Signals.CheckWinConditionSignal>().To<PixelFlow.Commands.CheckWinConditionCommand>();
-            builder.BindSignal<PixelFlow.Signals.LoadLevelSignal>().To<PixelFlow.Commands.LoadLevelCommand>();
-            builder.BindSignal<PixelFlow.Signals.RequestHintSignal>().To<PixelFlow.Commands.UseHintCommand>();
-            builder.BindSignal<PixelFlow.Signals.ActivateRainbowRoadSignal>().To<PixelFlow.Commands.RainbowRoadCommand>();
+            builder.BindSignal<PixelFlow.Signals.PlaceViaductSignal>().To<PixelFlow.Commands.PlaceViaductCommand>();
+            builder.BindSignal<PixelFlow.Signals.StartSimulationSignal>().To<PixelFlow.Commands.StartSimulationCommand>();
+            builder.BindSignal<PixelFlow.Signals.PauseSimulationSignal>().To<PixelFlow.Commands.PauseSimulationCommand>();
             builder.BindSignal<PixelFlow.Signals.ClearJamSignal>().To<PixelFlow.Commands.ClearJamCommand>();
+            builder.BindSignal<PixelFlow.Signals.ActivateRainbowRoadSignal>().To<PixelFlow.Commands.RainbowRoadCommand>();
+            builder.BindSignal<PixelFlow.Signals.FlowScoreUpdatedSignal>();
+
+            // 2. Level Progression & Save (Signals/Level/ -> Commands/Level/)
+            builder.BindSignal<PixelFlow.Signals.LoadLevelSignal>().To<PixelFlow.Commands.LoadLevelCommand>();
+            builder.BindCommand<PixelFlow.Signals.LevelCompletedSignal, PixelFlow.Commands.SaveProgressCommand>(ExecutionMode.Exclusive, priority: 0);
+            builder.BindSignal<PixelFlow.Signals.LoadedInitialLevelSignal>();
+            builder.BindSignal<PixelFlow.Signals.ProgressUpdatedSignal>();
+
+            // 3. Hints & History (Signals/Hints/ & Signals/History/)
+            builder.BindSignal<PixelFlow.Signals.RequestHintSignal>().To<PixelFlow.Commands.UseHintCommand>();
+            builder.BindSignal<PixelFlow.Signals.UndoSignal>().To<PixelFlow.Commands.UndoCommand>();
+            builder.BindSignal<PixelFlow.Signals.RedoSignal>().To<PixelFlow.Commands.RedoCommand>();
+
+            // 4. Settings & Audio (Signals/Settings/ -> Commands/Settings/)
             builder.BindSignal<PixelFlow.Signals.ChangeThemeSignal>().To<PixelFlow.Commands.ChangeThemeCommand>();
             builder.BindSignal<PixelFlow.Signals.ChangeAudioVolumeSignal>().To<PixelFlow.Commands.ChangeAudioVolumeCommand>();
             builder.BindSignal<PixelFlow.Signals.ChangeColorBlindModeSignal>().To<PixelFlow.Commands.ChangeColorBlindModeCommand>();
             builder.BindSignal<PixelFlow.Signals.ToggleHapticsSignal>().To<PixelFlow.Commands.ToggleHapticsCommand>();
-            builder.BindCommand<PixelFlow.Signals.LevelCompletedSignal, PixelFlow.Commands.SaveProgressCommand>(ExecutionMode.Exclusive, priority: 0);
-            builder.BindSignal<PixelFlow.Signals.UndoSignal>().To<PixelFlow.Commands.UndoCommand>();
-            builder.BindSignal<PixelFlow.Signals.RedoSignal>().To<PixelFlow.Commands.RedoCommand>();
-            builder.BindSignal<PixelFlow.Signals.PlaceViaductSignal>().To<PixelFlow.Commands.PlaceViaductCommand>();
-            builder.BindSignal<PixelFlow.Signals.RequestInterstitialAdSignal>().To<PixelFlow.Commands.InterstitialAdCommand>();
+
+            // 5. Meta & Ads & Shop (Signals/Meta/ -> Commands/Meta/)
+            builder.BindSignal<PixelFlow.Signals.ShowGarageSignal>();
             builder.BindSignal<PixelFlow.Signals.SkinUnlockedSignal>().To<PixelFlow.Commands.SkinUnlockCommand>();
             builder.BindSignal<PixelFlow.Signals.StopSkinUnlockedSignal>().To<PixelFlow.Commands.StopSkinUnlockCommand>();
+            builder.BindSignal<PixelFlow.Signals.RequestInterstitialAdSignal>().To<PixelFlow.Commands.InterstitialAdCommand>();
             builder.BindSignal<PixelFlow.Signals.RushHourStartedSignal>();
             builder.BindSignal<PixelFlow.Signals.RushHourEndedSignal>();
-            // GDD §8: Yeni MVCS sinyalleri ve command'leri
-            builder.BindSignal<PixelFlow.Signals.StartSimulationSignal>().To<PixelFlow.Commands.StartSimulationCommand>();
-            builder.BindSignal<PixelFlow.Signals.PauseSimulationSignal>().To<PixelFlow.Commands.PauseSimulationCommand>();
-            builder.BindSignal<PixelFlow.Signals.ShowGarageSignal>();
-            builder.BindSignal<PixelFlow.Signals.LoadedInitialLevelSignal>();
-            builder.BindSignal<PixelFlow.Signals.FlowScoreUpdatedSignal>();
             builder.BindSignal<PixelFlow.Signals.ProgressUpdatedSignal>();
 
             if (gameConfig == null)
