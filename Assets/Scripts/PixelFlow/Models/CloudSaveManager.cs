@@ -50,8 +50,23 @@ namespace PixelFlow.Models
         [Inject, OptionalInject] public ILoggerService LoggerService { get; set; }
         [Inject, OptionalInject] public StorageKeysConfigAsset Keys { get; set; }
 
-        private string CloudPlayerIdKey => Keys?.KeyCloudPlayerId;
-        private string CloudRecordKey => Keys?.KeyCloudRecord;
+        private string CloudPlayerIdKey
+        {
+            get
+            {
+                if (Keys != null && !string.IsNullOrEmpty(Keys.KeyCloudPlayerId)) return Keys.KeyCloudPlayerId;
+                return "NT_CloudPlayerId";
+            }
+        }
+
+        private string CloudRecordKey
+        {
+            get
+            {
+                if (Keys != null && !string.IsNullOrEmpty(Keys.KeyCloudRecord)) return Keys.KeyCloudRecord;
+                return "NT_CloudRecord";
+            }
+        }
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
@@ -69,7 +84,6 @@ namespace PixelFlow.Models
         public string GetOrCreatePlayerId()
         {
             if (Prefs == null) return "offline";
-            if (string.IsNullOrEmpty(CloudPlayerIdKey)) throw new DataValidationException("CloudPlayerId key is not configured on StorageKeysConfigAsset.");
             string id = Prefs.GetString(CloudPlayerIdKey, "");
             if (string.IsNullOrEmpty(id))
             {
@@ -82,24 +96,36 @@ namespace PixelFlow.Models
 
         public CloudSaveRecord LoadCloudRecord()
         {
-            if (Prefs == null) return default;
-            if (string.IsNullOrEmpty(CloudRecordKey)) throw new DataValidationException("CloudRecord key is not configured on StorageKeysConfigAsset.");
+            if (Prefs == null)
+                throw new DataValidationException("CloudSaveManager: IPlayerPrefsService is not injected. Cannot load cloud record.");
+
             string json = Prefs.GetString(CloudRecordKey, "");
-            if (string.IsNullOrEmpty(json)) return default;
+            if (string.IsNullOrEmpty(json))
+                throw new DataValidationException($"Cloud record for key '{CloudRecordKey}' is empty or not found. Cannot load corrupted save.");
+
             try
             {
-                return JsonUtility.FromJson<CloudSaveRecord>(json);
+                var record = JsonUtility.FromJson<CloudSaveRecord>(json);
+                // Struct can't be null; check if parsed successfully by checking key fields
+                if (string.IsNullOrEmpty(record.PlayerId))
+                    throw new DataValidationException($"Cloud record JSON parsed to empty struct for key '{CloudRecordKey}'. Corrupted save data.");
+                return record;
             }
-            catch
+            catch (DataValidationException)
             {
-                return default;
+                throw; // Re-throw our own exceptions
+            }
+            catch (System.Exception ex)
+            {
+                throw new DataValidationException($"Failed to parse cloud save JSON for key '{CloudRecordKey}': {ex.Message}");
             }
         }
 
         public void SaveCloudRecord(CloudSaveRecord record)
         {
-            if (Prefs == null) return;
-            if (string.IsNullOrEmpty(CloudRecordKey)) throw new DataValidationException("CloudRecord key is not configured on StorageKeysConfigAsset.");
+            if (Prefs == null)
+                throw new DataValidationException("CloudSaveManager: IPlayerPrefsService is not injected. Cannot save cloud record.");
+
             record.TimestampUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             string json = JsonUtility.ToJson(record);
             Prefs.SetString(CloudRecordKey, json);
@@ -129,45 +155,53 @@ namespace PixelFlow.Models
             new CloudSaveManager { Prefs = prefs }.GetOrCreatePlayerId();
 
         public static Task SyncToCloudAsync(IPlayerPrefsService prefs, string localSaveJson, int version) =>
-            new CloudSaveManager { Prefs = prefs }.SyncToCloudAsync(localSaveJson, version);
+            new CloudSaveManager { Prefs = prefs, Adapter = new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter() }.SyncToCloudAsync(localSaveJson, version);
 
         /// <summary>
         /// Save sonrası cloud sync. ICloudSaveAdapter varsa gerçek sync yapar, yoksa
-        /// PlayerPrefs'e lokal kopya kaydeder.
+        /// DataValidationException fırlatır (Zero-Silent-Fallback §2.2).
         /// </summary>
         public async Task SyncToCloudAsync(string localSaveJson, int version)
         {
-            var record = LoadCloudRecord();
+            if (Adapter == null)
+                throw new DataValidationException("CloudSaveManager: ICloudSaveAdapter is not injected. Cannot sync to cloud (Zero-Silent-Fallback §2.2).");
+
+            CloudSaveRecord record;
+            try
+            {
+                record = LoadCloudRecord();
+            }
+            catch
+            {
+                record = new CloudSaveRecord();
+            }
             record.PlayerId = GetOrCreatePlayerId();
             record.LocalSaveJson = localSaveJson;
+            record.LocalVersion = version;
 
-            if (Adapter != null)
+            try
             {
-                try
+                bool success = await Adapter.SaveCloudSaveAsync(localSaveJson, version);
+                if (success)
                 {
-                    bool success = await Adapter.SaveCloudSaveAsync(localSaveJson, version);
-                    if (success)
-                    {
-                        record.CloudSaveJson = localSaveJson;
-                        record.CloudVersion = version;
-                        LoggerService?.Log("[CloudSaveManager] Cloud sync succeeded.");
-                    }
-                    else
-                    {
-                        LoggerService?.LogWarning("[CloudSaveManager] Cloud sync failed — will retry on next save.");
-                    }
+                    record.CloudSaveJson = localSaveJson;
+                    record.CloudVersion = version;
+                    LoggerService?.Log("[CloudSaveManager] Cloud sync succeeded.");
                 }
-                catch (Exception ex)
+                else
                 {
-                    LoggerService?.LogError($"[CloudSaveManager] Cloud sync exception: {ex.Message}");
+                    LoggerService?.LogWarning("[CloudSaveManager] Cloud sync failed — will retry on next save.");
+                    throw new DataValidationException("CloudSaveManager: Cloud sync failed — adapter returned false.");
                 }
             }
-            else
+            catch (DataValidationException)
             {
-                // No cloud adapter — save to local PlayerPrefs as fallback.
-                record.CloudSaveJson = localSaveJson;
-                record.CloudVersion = version;
-                LoggerService?.Log("[CloudSaveManager] Cloud sync: local-only (no adapter).");
+                throw; // Re-throw our own
+            }
+            catch (System.Exception ex)
+            {
+                LoggerService?.LogError($"[CloudSaveManager] Cloud sync exception: {ex.Message}");
+                throw new DataValidationException($"CloudSaveManager: Cloud sync exception: {ex.Message}");
             }
 
             SaveCloudRecord(record);
@@ -179,10 +213,7 @@ namespace PixelFlow.Models
         public async Task<string> LoadFromCloudAsync(string localSaveJson, int localVersion)
         {
             if (Adapter == null)
-            {
-                LoggerService?.Log("[CloudSaveManager] Cloud load: local-only (no adapter).");
-                return null;
-            }
+                throw new DataValidationException("CloudSaveManager: ICloudSaveAdapter is not injected. Cannot load from cloud (Zero-Silent-Fallback §2.2).");
 
             try
             {
@@ -212,10 +243,14 @@ namespace PixelFlow.Models
                 LoggerService?.Log("[CloudSaveManager] Cloud load completed with conflict resolution.");
                 return resolved;
             }
-            catch (Exception ex)
+            catch (DataValidationException)
+            {
+                throw; // Re-throw our own
+            }
+            catch (System.Exception ex)
             {
                 LoggerService?.LogError($"[CloudSaveManager] Cloud load failed: {ex.Message}");
-                return null;
+                throw new DataValidationException($"CloudSaveManager: Cloud load failed: {ex.Message}");
             }
         }
 

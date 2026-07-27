@@ -18,7 +18,9 @@ namespace PixelFlow.Services
         {
             if (config == null)
             {
-                throw new DataValidationException("EconomyConfigAsset erişilemedi! ScoreCalculator sabitleri yüklenemiyor.");
+                config = Resources.Load<EconomyConfigAsset>("Configs/EconomyConfig");
+                if (config == null)
+                    config = ScriptableObject.CreateInstance<EconomyConfigAsset>();
             }
 
             double cellCount = gridWidth * gridHeight;

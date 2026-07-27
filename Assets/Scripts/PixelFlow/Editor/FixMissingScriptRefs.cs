@@ -10,8 +10,7 @@ namespace PixelFlow.Editor
     /// </summary>
     public static class FixMissingScriptRefs
     {
-        [MenuItem("Pixel Flow/Araçlar/Eksik Script Referanslarını Onar", false, 32)]
-        private static void FixMissingRefs()
+        public static void FixMissingRefs()
         {
             var allLevelAssets = AssetDatabase.FindAssets("t:ScriptableObject", new[] { "Assets/Resources/Levels" })
                 .Select(guid => AssetDatabase.LoadAssetAtPath<ScriptableObject>(AssetDatabase.GUIDToAssetPath(guid)))

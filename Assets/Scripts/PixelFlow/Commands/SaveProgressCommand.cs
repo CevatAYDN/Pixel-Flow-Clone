@@ -39,9 +39,10 @@ namespace PixelFlow.Commands
 
                 // Tamamlanan seviye sayısını kaydet
                 int completed = PlayerPrefsService != null ? PlayerPrefsService.GetInt("PF_CompletedLevelsCount", 0) : 0;
-                if (currentLevel.levelIndex > completed)
+                int completedCount = currentLevel.levelIndex + 1;
+                if (completedCount > completed)
                 {
-                    PlayerPrefsService?.SetInt("PF_CompletedLevelsCount", currentLevel.levelIndex);
+                    PlayerPrefsService?.SetInt("PF_CompletedLevelsCount", completedCount);
                     PlayerPrefsService?.Save();
                 }
             }

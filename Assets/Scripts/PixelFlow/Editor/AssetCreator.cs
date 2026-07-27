@@ -13,7 +13,6 @@ namespace PixelFlow.Editor
     {
         private const string ConfigsPath = "Assets/Resources/Configs";
 
-        [MenuItem("Pixel Flow/Asset Creator/Create All Configs")]
         public static void CreateAllConfigs()
         {
             int created = 0;
@@ -25,20 +24,12 @@ namespace PixelFlow.Editor
                 CreateAndSave<GameConfig>("GameConfig");
                 created++;
             }
-            else
-            {
-                alreadyExists++;
-            }
 
             // ThemePalette
             if (!EnsureAsset<ThemePaletteAsset>("ThemePalette", ref alreadyExists))
             {
                 CreateAndSave<ThemePaletteAsset>("ThemePalette");
                 created++;
-            }
-            else
-            {
-                alreadyExists++;
             }
 
             // VehicleMaterialConfig
@@ -47,20 +38,12 @@ namespace PixelFlow.Editor
                 CreateAndSave<VehicleMaterialConfigAsset>("VehicleMaterialConfig");
                 created++;
             }
-            else
-            {
-                alreadyExists++;
-            }
 
             // VehicleVisualConfig
             if (!EnsureAsset<VehicleVisualConfigAsset>("VehicleVisualConfig", ref alreadyExists))
             {
                 CreateAndSave<VehicleVisualConfigAsset>("VehicleVisualConfig");
                 created++;
-            }
-            else
-            {
-                alreadyExists++;
             }
 
             // ColorBlindPalette
@@ -69,20 +52,12 @@ namespace PixelFlow.Editor
                 CreateAndSave<ColorBlindPaletteAsset>("ColorBlindPalette");
                 created++;
             }
-            else
-            {
-                alreadyExists++;
-            }
 
             // EconomyConfig
             if (!EnsureAsset<EconomyConfigAsset>("EconomyConfig", ref alreadyExists))
             {
                 CreateAndSave<EconomyConfigAsset>("EconomyConfig");
                 created++;
-            }
-            else
-            {
-                alreadyExists++;
             }
 
             // LevelCatalog
@@ -91,10 +66,6 @@ namespace PixelFlow.Editor
                 CreateAndSave<LevelCatalogAsset>("LevelCatalog");
                 created++;
             }
-            else
-            {
-                alreadyExists++;
-            }
 
             // PhaseConfig
             if (!EnsureAsset<PhaseConfigAsset>("PhaseConfig", ref alreadyExists))
@@ -102,16 +73,11 @@ namespace PixelFlow.Editor
                 CreateAndSave<PhaseConfigAsset>("PhaseConfig");
                 created++;
             }
-            else
-            {
-                alreadyExists++;
-            }
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
             Debug.Log($"[AssetCreator] Created: {created}, Already Exists: {alreadyExists}");
-            EditorUtility.DisplayDialog("Asset Creator", $"Created: {created}\nAlready Exists: {alreadyExists}", "OK");
         }
 
         private static bool EnsureAsset<T>(string name, ref int alreadyExistsCount) where T : ScriptableObject
@@ -135,7 +101,6 @@ namespace PixelFlow.Editor
             Debug.Log($"[AssetCreator] Created: {path}");
         }
 
-        [MenuItem("Pixel Flow/Asset Creator/Create Vehicle Visual Config Only")]
         public static void CreateVehicleVisualConfigOnly()
         {
             int alreadyExists = 0;

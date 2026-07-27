@@ -14,7 +14,6 @@ namespace PixelFlow.Editor
     {
         private const string PhasesPath = "Assets/Resources/Configs";
 
-        [MenuItem("Pixel Flow/Araçlar/Generate Phase Assets", false, 31)]
         public static void GeneratePhaseAssets()
         {
             // Ensure Configs folder exists
@@ -88,24 +87,6 @@ namespace PixelFlow.Editor
                 case GamePhase.Phase3: return new Color(0.9f, 0.6f, 0.1f); // Turuncu
                 case GamePhase.Phase4: return new Color(0.85f, 0.2f, 0.2f); // Kırmızı
                 default: return Color.gray;
-            }
-        }
-
-        /// <summary>Fazın varsayılan parametrelerini DifficultyParams olarak döndürür</summary>
-        public static DifficultyParams GetDefaultParamsForPhase(GamePhase phase)
-        {
-            switch (phase)
-            {
-                case GamePhase.Phase1:
-                    return new DifficultyParams(5, 5, 2, 0, false, false, false, false);
-                case GamePhase.Phase2:
-                    return new DifficultyParams(6, 7, 3, 2, false, true, false, false);
-                case GamePhase.Phase3:
-                    return new DifficultyParams(7, 9, 4, 3, true, true, true, false);
-                case GamePhase.Phase4:
-                    return new DifficultyParams(9, 10, 5, 4, true, true, true, true);
-                default:
-                    return new DifficultyParams(5, 5, 2, 0, false, false, false, false);
             }
         }
 

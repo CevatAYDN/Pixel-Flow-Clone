@@ -63,8 +63,7 @@ namespace PixelFlow.Services
 
         public void ShowInterstitialAd(string placementId)
         {
-            if (LevelModel == null || LevelModel.CurrentLevel == null)
-                throw new DataValidationException("LevelModel or CurrentLevel is null in AdManagerService!");
+            if (LevelModel == null || LevelModel.CurrentLevel == null) return;
 
             int level = LevelModel.CurrentLevel.levelIndex;
             // game_plan.md §2.2: minimum seviye eşiği GameConfig'ten gelir (base ConfigMinLevel).

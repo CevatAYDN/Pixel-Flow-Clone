@@ -74,7 +74,7 @@ namespace PixelFlow.Editor.Tests
             var loc = new PixelFlow.Services.LocalizationService();
             loc.InitializeAsync(default);
 
-            Assert.AreEqual("Neon Transit", loc.GetString("app_name"));
+            Assert.AreEqual("Pixel Flow 3D", loc.GetString("app_name"));
             Assert.AreEqual("Undo", loc.GetString("btn_undo"));
 
             loc.SetLanguage("tr");

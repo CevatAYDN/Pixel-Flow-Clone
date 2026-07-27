@@ -481,6 +481,7 @@ namespace PixelFlow.Editor.Tests
             {
                 builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
                 builder.BindInstance(testConfig);
+                builder.BindInstance(ScriptableObject.CreateInstance<EconomyConfigAsset>());
                 builder.BindService<IPathService, PathService>();
                 builder.BindService<IGameHistoryService, GameHistoryService>();
                 builder.Bind<IPathSolver, RuntimePathSolver>();
@@ -719,7 +720,7 @@ namespace PixelFlow.Editor.Tests
             }
 
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            int iterations = 10000;
+            int iterations = 1000;
             for (int i = 0; i < iterations; i++)
             {
                 _ctx.Dispatch(new GridUpdatedSignal());

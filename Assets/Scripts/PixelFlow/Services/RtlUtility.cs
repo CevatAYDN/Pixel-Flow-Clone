@@ -17,21 +17,6 @@ namespace PixelFlow.Services
         public static string ProcessRtlText(string text)
         {
             if (string.IsNullOrEmpty(text)) return text;
-
-            // Simple RTL character check
-            bool hasRtlChar = false;
-            foreach (char c in text)
-            {
-                if ((c >= 0x0600 && c <= 0x06FF) || (c >= 0x0590 && c <= 0x05FF))
-                {
-                    hasRtlChar = true;
-                    break;
-                }
-            }
-
-            if (!hasRtlChar) return text;
-
-            // Reverse string for display in standard TMP components without RTL native shaper
             char[] chars = text.ToCharArray();
             System.Array.Reverse(chars);
             return new string(chars);

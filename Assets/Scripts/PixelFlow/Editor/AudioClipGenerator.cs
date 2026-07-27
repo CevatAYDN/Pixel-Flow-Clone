@@ -9,7 +9,6 @@ namespace PixelFlow.Editor
 {
     public static class AudioClipGenerator
     {
-        [MenuItem("Pixel Flow/Generate Missing Audio Clips", false, 50)]
         public static void GenerateAllAudioClips()
         {
             string[] audioPaths = new string[]

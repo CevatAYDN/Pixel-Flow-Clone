@@ -73,8 +73,7 @@ namespace PixelFlow.Services
             if (GameSessionModel == null) return;
             GameSessionModel.IncrementRetryCount();
 
-            if (LevelModel == null || LevelModel.CurrentLevel == null)
-                throw new DataValidationException("LevelModel or CurrentLevel is null in CrisisAdService!");
+            if (LevelModel == null || LevelModel.CurrentLevel == null) return;
 
             int level = LevelModel.CurrentLevel.levelIndex;
             if (level + 1 < ConfigMinLevel) return;

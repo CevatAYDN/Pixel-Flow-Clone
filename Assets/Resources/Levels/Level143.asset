@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6caf0c87315ddb246b44ee324ae84c69, type: 3}
+  m_Name: Level143
+  m_EditorClassIdentifier: PixelFlow::PixelFlow.Data.LevelData
+  levelIndex: 142
+  width: 5
+  height: 5
+  toyTheme: 1
+  bouncyPhysics:
+    BounceForce: 4.5
+    BounceDamping: 0.75
+    SquishFactor: 0.35
+  initialNodes:
+  - position: {x: 0, y: 0}
+    color: 1
+    shape: 1
+    type: 0
+    isSource: 0
+    pairIndex: 0
+  - position: {x: 4, y: 4}
+    color: 1
+    shape: 1
+    type: 0
+    isSource: 0
+    pairIndex: 0
+  solutions:
+  - color: 1
+    pathPositions:
+    - {x: 0, y: 0}
+    - {x: 1, y: 0}
+    - {x: 2, y: 0}
+    - {x: 3, y: 0}
+    - {x: 4, y: 0}
+    - {x: 4, y: 1}
+    - {x: 4, y: 2}
+    - {x: 4, y: 3}
+    - {x: 4, y: 4}
+  bridgePositions: []
+  viaductLimit: 0
+  requireFullGridCoverage: 0
+  flowScoreThreshold: 5
+  difficultyScore: 10
+  stars:
+    OneStar: complete
+    TwoStars: viaducts_used <= 2
+    ThreeStars: viaducts_used == 0
+  tutorialEvent: 0
+  obstacles: []
+  oneWayCells: []

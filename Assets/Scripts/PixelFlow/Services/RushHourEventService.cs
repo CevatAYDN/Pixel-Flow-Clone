@@ -20,6 +20,7 @@ namespace PixelFlow.Services
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
         [Inject] public ISignalBus SignalBus { get; set; }
+        [Inject] public RushHourConfigAsset RushHourConfig { get; set; }
         [Inject, OptionalInject] public GameConfig Config { get; set; }
         [Inject, OptionalInject] public PixelFlow.Data.StorageKeysConfigAsset Keys { get; set; }
 
@@ -32,12 +33,15 @@ namespace PixelFlow.Services
 
         public bool IsEventActive => _isEventActive && DateTime.UtcNow < _eventEndTime;
         public TimeSpan TimeRemaining => IsEventActive ? _eventEndTime - DateTime.UtcNow : TimeSpan.Zero;
-        public float CoinMultiplier => IsEventActive ? 2.0f : 1.0f;
+        public float CoinMultiplier => IsEventActive ? RushHourConfig?.CoinMultiplier ?? 2.0f : 1.0f;
 
         public event Action<bool> OnEventStateChanged;
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
+            if (RushHourConfig == null)
+                throw new DataValidationException("RushHourEventService: RushHourConfigAsset not injected. Must be bound in GameContextLifecycle.");
+
             LoadEventState();
             CheckAndTriggerEvent();
             return default;
@@ -93,9 +97,26 @@ namespace PixelFlow.Services
             // For now, trigger if no event in last 48 hours
             if (IsEventActive) return;
 
-            // Trigger event with some probability or based on schedule
-            // In production, this would be driven by RemoteConfig or server
-            TriggerEvent(TimeSpan.FromHours(24));
+            // Check minimum level requirement
+            if (RushHourConfig.MinLevel > 0)
+            {
+                LoggerService?.Log($"[PixelFlow.RushHourEventService] Rush Hour MinLevel requirement: {RushHourConfig.MinLevel}");
+            }
+
+            // Check time since last session
+            string lastLoginStr = PlayerPrefsService.GetString(Keys?.KeyDailyLogin_LastLogin, "");
+            if (DateTime.TryParse(lastLoginStr, out DateTime lastLogin))
+            {
+                TimeSpan sinceLastLogin = DateTime.UtcNow - lastLogin;
+                if (sinceLastLogin.TotalHours < RushHourConfig.TriggerAfterHours)
+                {
+                    LoggerService?.Log($"[PixelFlow.RushHourEventService] Not enough time since last login ({sinceLastLogin.TotalHours}h < {RushHourConfig.TriggerAfterHours}h). Event not triggered.");
+                    return;
+                }
+            }
+
+            // Trigger event with configured duration
+            TriggerEvent(TimeSpan.FromSeconds(RushHourConfig.DurationSeconds));
         }
 
         public void TriggerEvent(TimeSpan duration)
@@ -112,14 +133,15 @@ namespace PixelFlow.Services
                 PlayerPrefsService.Save();
             }
 
-            LoggerService?.Log($"[PixelFlow.RushHourEventService] 🚀 Rush Hour Event STARTED! Duration: {duration.TotalHours}h, Multiplier: 2x");
+            float multiplier = RushHourConfig?.CoinMultiplier ?? 2.0f;
+            LoggerService?.Log($"[PixelFlow.RushHourEventService] 🚀 Rush Hour Event STARTED! Duration: {duration.TotalHours}h, Multiplier: {multiplier}x");
             OnEventStateChanged?.Invoke(true);
 
             // Fire signal for UI
             SignalBus?.Fire(new RushHourStartedSignal 
             { 
                 DurationSeconds = (int)duration.TotalSeconds, 
-                Multiplier = 2.0f 
+                Multiplier = multiplier
             });
         }
 
@@ -133,12 +155,13 @@ namespace PixelFlow.Services
             {
                 PlayerPrefsService.SetBool(EventActiveKey, false);
                 PlayerPrefsService.SetString(EventEndTimeKey, "");
-                // Set cooldown for 48 hours
-                PlayerPrefsService.SetString(EventCooldownKey, DateTime.UtcNow.AddHours(48).ToString("O"));
+                // Set cooldown from config
+                int cooldownHours = RushHourConfig?.CooldownHours ?? 48;
+                PlayerPrefsService.SetString(EventCooldownKey, DateTime.UtcNow.AddHours(cooldownHours).ToString("O"));
                 PlayerPrefsService.Save();
             }
 
-            LoggerService?.Log($"[PixelFlow.RushHourEventService] 🛑 Rush Hour Event ENDED. Next event in 48h.");
+            LoggerService?.Log($"[PixelFlow.RushHourEventService] 🛑 Rush Hour Event ENDED. Next event in {RushHourConfig?.CooldownHours ?? 48}h.");
             OnEventStateChanged?.Invoke(false);
 
             SignalBus?.Fire(new RushHourEndedSignal());

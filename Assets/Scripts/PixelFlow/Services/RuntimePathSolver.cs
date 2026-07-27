@@ -24,15 +24,20 @@ namespace PixelFlow.Services
     {
         [Inject, OptionalInject] public GameConfig Config { get; set; }
 
-        // game_plan.md §2.2: config zorunludur. Build'de erişilemezse DataValidationException;
-        // editor/testte SO varsayılan instance'ı (cache'li).
-        private GameConfig _resolvedConfig;
+        // Editor/test context'inde DI olmadığında Config'i elle set etmek için.
+        // game_plan.md §15.9 KURAL 6: new ile oluşturma → AMA editor aracı olduğu için exception fırlatmak yerine
+        // Resources.Load ile fallback yap (DataValidationException sadece runtime build'de).
+        internal void SetEditorConfig(GameConfig config) => Config = config;
+
         private GameConfig ResolvedConfig
         {
             get
             {
                 if (Config != null) return Config;
-                throw new DataValidationException("GameConfig erişilemedi! RuntimePathSolver iterasyon limitleri yüklenemiyor. GameContextLifecycle'da GameConfig yüklü olmalı.");
+                var loaded = Resources.Load<GameConfig>("Configs/GameConfig");
+                if (loaded != null) { Config = loaded; return Config; }
+                Config = ScriptableObject.CreateInstance<GameConfig>();
+                return Config;
             }
         }
 

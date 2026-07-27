@@ -36,7 +36,7 @@ namespace PixelFlow.Editor.Tests
         public void LevelProgressionService_GetDifficultyForLevel_ReturnsValidParams()
         {
             var solver = CreateTestRuntimePathSolver();
-            var service = new LevelProgressionService(solver);
+            var service = new LevelProgressionService(solver, GameTestContext.CreateTestPhaseConfig(), GameTestContext.CreateTestLevelCatalog());
 
             var diff1 = service.GetDifficultyForLevel(0);
             Assert.IsTrue(diff1.gridWidth >= 3);
@@ -50,7 +50,7 @@ namespace PixelFlow.Editor.Tests
         public void LevelProgressionService_GetOrGenerateLevel_ReturnsLevelData()
         {
             var solver = CreateTestRuntimePathSolver();
-            var service = new LevelProgressionService(solver);
+            var service = new LevelProgressionService(solver, GameTestContext.CreateTestPhaseConfig(), GameTestContext.CreateTestLevelCatalog());
 
             var level = service.GetOrGenerateLevel(0);
             Assert.IsNotNull(level);

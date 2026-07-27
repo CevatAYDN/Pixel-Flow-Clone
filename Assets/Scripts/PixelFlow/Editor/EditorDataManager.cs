@@ -18,7 +18,6 @@ namespace PixelFlow.Editor
         private static Dictionary<string, bool> _assetStatusCache = new Dictionary<string, bool>();
         private static bool _cacheInitialized;
 
-        [MenuItem("Pixel Flow/Editör Veri Yöneticisi")]
         public static void ShowWindow()
         {
             var window = EditorWindow.GetWindow<EditorDataManager>("Editör Veri Yöneticisi");
@@ -167,11 +166,25 @@ namespace PixelFlow.Editor
             int maxIndexed = levels.Count > 0 ? levels.Max(l => l.levelIndex) : -1;
             for (int i = maxIndexed + 1; i < 150; i++)
             {
+                var phaseConfig = Resources.Load<PhaseConfigAsset>("Configs/PhaseConfig");
+                if (phaseConfig == null)
+                {
+                    Debug.LogError("[EditorDataManager] PhaseConfig bulunamadı! Procedural fallback üretilemez.");
+                    return;
+                }
+
+                var phase = phaseConfig.GetPhaseForLevel(i + 1);
+                if (phase == null)
+                {
+                    Debug.LogError($"[EditorDataManager] Phase bulunamadı: level {i + 1}");
+                    return;
+                }
+
                 var entry = new LevelCatalogAsset.LevelCatalogEntry
                 {
                     LevelIndex = i,
                     UseProceduralFallback = true,
-                    ProceduralDifficulty = GetDefaultDifficultyForLevel(i + 1)
+                    ProceduralDifficulty = LevelProgressionService.PhaseToDifficulty(phase.ToStruct(), i + 1)
                 };
                 catalog.Levels.Add(entry);
             }
@@ -179,16 +192,6 @@ namespace PixelFlow.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log($"[EditorDataManager] LevelCatalog güncellendi: {catalog.Levels.Count} giriş");
-        }
-
-        private DifficultyParams GetDefaultDifficultyForLevel(int levelIndex)
-        {
-            if (levelIndex <= 5) return new DifficultyParams(5, 5, 1, 0, false);
-            if (levelIndex <= 15) return new DifficultyParams(6, 6, 2, 0, false);
-            if (levelIndex <= 30) return new DifficultyParams(7, 7, 2, 1, false);
-            if (levelIndex <= 50) return new DifficultyParams(8, 8, 3, 2, true);
-            if (levelIndex <= 75) return new DifficultyParams(9, 9, 4, 3, true, true);
-            return new DifficultyParams(10, 10, 5, 4, true, true, true, true);
         }
 
         private void DrawLevelStats()
@@ -206,8 +209,9 @@ namespace PixelFlow.Editor
                 int maxIndex = levels.Max(l => l.levelIndex);
                 EditorGUILayout.LabelField("İndeks Aralığı:", $"{minIndex} - {maxIndex}");
 
-                // Solver testi
+                var config = Resources.Load<GameConfig>("Configs/GameConfig");
                 var solver = new RuntimePathSolver();
+                if (config != null) solver.SetEditorConfig(config);
                 int solvable = 0;
                 foreach (var level in levels)
                 {

@@ -13,7 +13,6 @@ namespace PixelFlow.Editor
     /// </summary>
     public class LevelCatalogFixer : EditorWindow
     {
-        [MenuItem("Pixel Flow/Config Validator/Fix LevelCatalog Procedural Entries")]
         public static void FixProceduralEntries()
         {
             var catalog = Resources.Load<LevelCatalogAsset>("Configs/LevelCatalog");
@@ -39,7 +38,21 @@ namespace PixelFlow.Editor
 
                     if (needsFix)
                     {
-                        entry.ProceduralDifficulty = GetCorrectDifficultyForLevel(entry.LevelIndex + 1);
+                        var phaseConfig = Resources.Load<PhaseConfigAsset>("Configs/PhaseConfig");
+                        if (phaseConfig == null)
+                        {
+                            Debug.LogError("[LevelCatalogFixer] PhaseConfig bulunamadı! Procedural entry'ler düzeltilemez.");
+                            return;
+                        }
+
+                        var phase = phaseConfig.GetPhaseForLevel(entry.LevelIndex + 1);
+                        if (phase == null)
+                        {
+                            Debug.LogError($"[LevelCatalogFixer] Phase bulunamadı: level {entry.LevelIndex + 1}");
+                            return;
+                        }
+
+                        entry.ProceduralDifficulty = LevelProgressionService.PhaseToDifficulty(phase.ToStruct(), entry.LevelIndex + 1);
                         fixedCount++;
                     }
                 }
@@ -50,14 +63,8 @@ namespace PixelFlow.Editor
             AssetDatabase.Refresh();
 
             Debug.Log($"[LevelCatalogFixer] Fixed {fixedCount}/{totalCount} procedural entries.");
-            EditorUtility.DisplayDialog(
-                "LevelCatalog Düzeltildi",
-                $"Toplam: {totalCount}\nDüzeltilen: {fixedCount}",
-                "Tamam"
-            );
         }
 
-        [MenuItem("Pixel Flow/Config Validator/Clean Empty LevelCatalog Entries")]
         public static void CleanEmptyEntries()
         {
             var catalog = Resources.Load<LevelCatalogAsset>("Configs/LevelCatalog");
@@ -92,14 +99,8 @@ namespace PixelFlow.Editor
             AssetDatabase.Refresh();
 
             Debug.Log($"[LevelCatalogFixer] Cleaned: {initialCount} -> {catalog.Levels.Count} entries.");
-            EditorUtility.DisplayDialog(
-                "LevelCatalog Temizlendi",
-                $"Başlangıç: {initialCount}\nSon: {catalog.Levels.Count}",
-                "Tamam"
-            );
         }
 
-        [MenuItem("Pixel Flow/Config Validator/Regenerate LevelCatalog from Levels Folder")]
         public static void RegenerateFromLevelsFolder()
         {
             var catalog = Resources.Load<LevelCatalogAsset>("Configs/LevelCatalog");
@@ -136,11 +137,25 @@ namespace PixelFlow.Editor
             int maxIndexed = levels.Count > 0 ? levels.Max(l => l.levelIndex) : -1;
             for (int i = maxIndexed + 1; i < 150; i++)
             {
+                var phaseConfig = Resources.Load<PhaseConfigAsset>("Configs/PhaseConfig");
+                if (phaseConfig == null)
+                {
+                    Debug.LogError("[LevelCatalogFixer] PhaseConfig bulunamadı! Procedural fallback üretilemez.");
+                    return;
+                }
+
+                var phase = phaseConfig.GetPhaseForLevel(i + 1);
+                if (phase == null)
+                {
+                    Debug.LogError($"[LevelCatalogFixer] Phase bulunamadı: level {i + 1}");
+                    return;
+                }
+
                 var entry = new LevelCatalogAsset.LevelCatalogEntry
                 {
                     LevelIndex = i,
                     UseProceduralFallback = true,
-                    ProceduralDifficulty = GetCorrectDifficultyForLevel(i + 1)
+                    ProceduralDifficulty = LevelProgressionService.PhaseToDifficulty(phase.ToStruct(), i + 1)
                 };
                 catalog.Levels.Add(entry);
             }
@@ -149,25 +164,10 @@ namespace PixelFlow.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            Debug.Log($"[LevelCatalogFixer] Regenerated: {levels.Count} authored + {150 - maxIndexed - 1} procedural = {catalog.Levels.Count} total");
-            EditorUtility.DisplayDialog(
-                "LevelCatalog Yeniden Oluşturuldu",
-                $"Authored: {levels.Count}\nProcedural: {150 - maxIndexed - 1}\nTotal: {catalog.Levels.Count}",
-                "Tamam"
-            );
+            int proceduralCount = catalog.Levels.Count - levels.Count;
+            Debug.Log($"[LevelCatalogFixer] Regenerated: {levels.Count} authored + {proceduralCount} procedural = {catalog.Levels.Count} total");
         }
 
-        private static DifficultyParams GetCorrectDifficultyForLevel(int levelIndex)
-        {
-            if (levelIndex <= 5) return new DifficultyParams(5, 5, 1, 0, false);
-            if (levelIndex <= 15) return new DifficultyParams(6, 6, 2, 0, false);
-            if (levelIndex <= 30) return new DifficultyParams(7, 7, 2, 1, false);
-            if (levelIndex <= 50) return new DifficultyParams(8, 8, 3, 2, true);
-            if (levelIndex <= 75) return new DifficultyParams(9, 9, 4, 3, true, true);
-            if (levelIndex <= 100) return new DifficultyParams(10, 10, 5, 4, true, true, true, false);
-            if (levelIndex <= 120) return new DifficultyParams(10, 10, 5, 4, true, true, true, true);
-            return new DifficultyParams(10, 10, 5, 5, true, true, true, true);
-        }
     }
 }
 #endif

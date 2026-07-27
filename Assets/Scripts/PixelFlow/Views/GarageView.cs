@@ -54,8 +54,36 @@ namespace PixelFlow.Views
         public void AutoWireUIReferences()
         {
             if (_panel == null) _panel = gameObject;
-            if (_closeButton == null) _closeButton = GetComponentInChildren<Button>(true);
-            if (_coinsText == null) _coinsText = GetComponentInChildren<TMP_Text>(true);
+            if (_closeButton == null)
+            {
+                var buttons = GetComponentsInChildren<Button>(true);
+                foreach (var button in buttons)
+                {
+                    string name = button.gameObject.name.ToLowerInvariant();
+                    if (name.Contains("close") || name.Contains("back"))
+                    {
+                        _closeButton = button;
+                        break;
+                    }
+                }
+
+                if (_closeButton == null) _closeButton = GetComponentInChildren<Button>(true);
+            }
+            if (_coinsText == null)
+            {
+                var texts = GetComponentsInChildren<TMP_Text>(true);
+                foreach (var text in texts)
+                {
+                    string name = text.gameObject.name.ToLowerInvariant();
+                    if (name.Contains("coin") || name.Contains("gold"))
+                    {
+                        _coinsText = text;
+                        break;
+                    }
+                }
+
+                if (_coinsText == null) _coinsText = GetComponentInChildren<TMP_Text>(true);
+            }
             if (_skinContainer == null)
             {
                 var content = transform.Find("GarageCard/ScrollView/Viewport/Content");

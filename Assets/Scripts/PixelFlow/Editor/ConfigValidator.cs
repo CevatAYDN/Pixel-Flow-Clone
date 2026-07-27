@@ -18,7 +18,6 @@ namespace PixelFlow.Editor
         private List<string> _warnings = new List<string>();
         private Vector2 _scrollPos;
 
-        [MenuItem("Pixel Flow/Config Validator/Validate & Fix All Configs")]
         public static void ShowWindow()
         {
             var window = GetWindow<ConfigValidator>("Config Validator");
@@ -86,12 +85,8 @@ namespace PixelFlow.Editor
             // Auto-fix critical issues
             if (_errors.Any())
             {
-                if (EditorUtility.DisplayDialog("Config Errors Found",
-                    $"Found {_errors.Count} errors. Would you like to auto-fix them?",
-                    "Fix", "Cancel"))
-                {
-                    AutoFixAll();
-                }
+                Debug.LogWarning($"[ConfigValidator] Found {_errors.Count} errors. Auto-fixing immediately to avoid modal dialog failures.");
+                AutoFixAll();
             }
 
             Repaint();
@@ -297,7 +292,21 @@ namespace PixelFlow.Editor
                 // Fix default DifficultyParams
                 if (entry.ProceduralDifficulty.gridWidth == 0 || entry.ProceduralDifficulty.gridHeight == 0)
                 {
-                    entry.ProceduralDifficulty = GetCorrectDifficultyForLevel(entry.LevelIndex + 1);
+                    var phaseConfig = Resources.Load<PhaseConfigAsset>("Configs/PhaseConfig");
+                    if (phaseConfig == null)
+                    {
+                        _errors.Add("PhaseConfig.asset bulunamadı! Procedural entry'ler düzeltilemez.");
+                        return;
+                    }
+
+                    var phase = phaseConfig.GetPhaseForLevel(entry.LevelIndex + 1);
+                    if (phase == null)
+                    {
+                        _errors.Add($"Phase bulunamadı: level {entry.LevelIndex + 1}");
+                        return;
+                    }
+
+                    entry.ProceduralDifficulty = LevelProgressionService.PhaseToDifficulty(phase.ToStruct(), entry.LevelIndex + 1);
                     fixedCount++;
                 }
             }
@@ -309,18 +318,6 @@ namespace PixelFlow.Editor
             }
         }
 
-        private DifficultyParams GetCorrectDifficultyForLevel(int levelIndex)
-        {
-            // GDD §8.3 Progressive Complexity
-            if (levelIndex <= 5) return new DifficultyParams(5, 5, 1, 0, false);
-            if (levelIndex <= 15) return new DifficultyParams(6, 6, 2, 0, false);
-            if (levelIndex <= 30) return new DifficultyParams(7, 7, 2, 1, false);
-            if (levelIndex <= 50) return new DifficultyParams(8, 8, 3, 2, true);
-            if (levelIndex <= 75) return new DifficultyParams(9, 9, 4, 3, true, true);
-            if (levelIndex <= 100) return new DifficultyParams(10, 10, 5, 4, true, true, true, false);
-            if (levelIndex <= 120) return new DifficultyParams(10, 10, 5, 4, true, true, true, true);
-            return new DifficultyParams(10, 10, 5, 5, true, true, true, true);
-        }
     }
 }
 #endif

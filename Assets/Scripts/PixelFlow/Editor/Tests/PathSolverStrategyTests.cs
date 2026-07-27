@@ -10,11 +10,14 @@ namespace PixelFlow.Editor.Tests
     public class PathSolverStrategyTests
     {
         private PathSolverFactory _factory;
+        private GameConfig _testConfig;
 
         [SetUp]
         public void SetUp()
         {
-            _factory = new PathSolverFactory();
+            _testConfig = ScriptableObject.CreateInstance<GameConfig>();
+            _testConfig.HighDifficultySolverThreshold = 100;
+            _factory = new PathSolverFactory(_testConfig);
         }
 
         [Test]

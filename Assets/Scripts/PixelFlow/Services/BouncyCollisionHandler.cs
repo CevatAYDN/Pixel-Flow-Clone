@@ -13,11 +13,17 @@ namespace PixelFlow.Services
     {
         /// <summary>
         /// Kaza anında araç görseline elastik zıplama efekti uygular.
-        /// game_plan.md §15.4.4: fizik parametreleri LevelData.bouncyPhysics'ten (data-driven) gelir.
+        /// game_plan.md §15.4.4: fizik parametreleri LevelData.bouncyPhysicsConfig'ten (data-driven) gelir.
+        /// LevelData'da atanmamışsa global BouncyPhysicsConfigAsset kullanılır.
         /// </summary>
-        public static void ApplyBouncyBounce(GameObject vehicleVisual, Vector3 bounceDirection, BouncyPhysicsConfig physics)
+        public static void ApplyBouncyBounce(GameObject vehicleVisual, Vector3 bounceDirection, BouncyPhysicsConfigAsset physics)
         {
             if (vehicleVisual == null) return;
+
+            // Fallback to global defaults if null
+            float bounceForce = physics?.BounceForce ?? 4.5f;
+            float bounceDamping = physics?.BounceDamping ?? 0.75f;
+            float squishFactor = physics?.SquishFactor ?? 0.35f;
 
             // Simple bouncy animation: quick squash and stretch
             var bouncyComp = vehicleVisual.GetComponent<BouncyVisualEffect>();
@@ -26,7 +32,7 @@ namespace PixelFlow.Services
                 bouncyComp = vehicleVisual.AddComponent<BouncyVisualEffect>();
             }
 
-            bouncyComp.TriggerBounce(bounceDirection, physics);
+            bouncyComp.TriggerBounce(bounceDirection, bounceForce, bounceDamping, squishFactor);
         }
     }
 
@@ -44,14 +50,14 @@ namespace PixelFlow.Services
             _originalScale = transform.localScale;
         }
 
-        public void TriggerBounce(Vector3 direction, BouncyPhysicsConfig physics)
+        public void TriggerBounce(Vector3 direction, float bounceForce, float bounceDamping, float squishFactor)
         {
             _originalScale = Vector3.one;
             // SquishFactor: yatay eksende ger, dikey eksende ez (squash & stretch)
-            float squish = physics.SquishFactor;
+            float squish = squishFactor;
             _targetScale = new Vector3(1f + squish, 1f - squish, 1f + squish);
-            _bounceSpeed = physics.BounceForce;   // animasyon hızı zıplama kuvvetinden
-            _damping = physics.BounceDamping;     // sönümleme genliği azaltır
+            _bounceSpeed = bounceForce;   // animasyon hızı zıplama kuvvetinden
+            _damping = bounceDamping;     // sönümleme genliği azaltır
             _bounceTimer = 0f;
             _isBouncing = true;
         }

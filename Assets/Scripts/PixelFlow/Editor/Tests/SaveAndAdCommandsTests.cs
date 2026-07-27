@@ -1,11 +1,8 @@
 using NUnit.Framework;
-using Nexus.Core;
 using Nexus.Core.Services;
 using PixelFlow.Commands;
-using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Signals;
-using UnityEngine;
 
 namespace PixelFlow.Editor.Tests
 {
@@ -20,6 +17,7 @@ namespace PixelFlow.Editor.Tests
             var levelModel = ctx.GetModel<ILevelModel>();
             var session = ctx.GetModel<IGameSessionModel>();
             var economy = ctx.GetModel<IEconomyService>();
+            var prefs = ctx.GetModel<IPlayerPrefsService>();
 
             var level = GameTestContext.CreateTestLevel(1);
             levelModel.SetLevel(level);
@@ -31,6 +29,7 @@ namespace PixelFlow.Editor.Tests
             Assert.IsTrue(progress.UnlockedLevels >= 1);
             Assert.AreEqual(3, progress.GetStars(1));
             Assert.IsTrue(economy.GetBalance("coins") >= 0);
+            Assert.AreEqual(2, prefs.GetInt("PF_CompletedLevelsCount", 0));
         }
 
         [Test]

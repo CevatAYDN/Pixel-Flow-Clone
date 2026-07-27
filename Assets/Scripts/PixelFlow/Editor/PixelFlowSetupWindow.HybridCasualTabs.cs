@@ -73,6 +73,25 @@ namespace PixelFlow.Editor
             }));
             parent.Add(card);
         }
+
+        private void BuildToolsTab(VisualElement parent)
+        {
+            var card = Card("🧰 Araç Merkezi");
+            card.Add(InfoLabel("Dağınık yardımcı pencereler yerine bu merkezden aç."));
+
+            card.Add(MakeBtn("📦 Veri Yöneticisi", EditorDataManager.ShowWindow));
+            card.Add(MakeBtn("⚙️ Config Validator", ConfigValidator.ShowWindow));
+            card.Add(MakeBtn("🚧 Level Generator", GenerateLevels.ShowWindow));
+            card.Add(MakeBtn("🧩 LevelCatalog Düzeltici", () => LevelCatalogFixer.FixProceduralEntries()));
+            card.Add(MakeBtn("🧬 Eksik Referans Onar", FixMissingScriptRefs.FixMissingRefs));
+            card.Add(MakeBtn("🧱 UI Prefab Üret", UIPrefabCreator.CreateAllUIPrefabs));
+            card.Add(MakeBtn("🎵 Eksik Audio Oluştur", AudioClipGenerator.GenerateAllAudioClips));
+            card.Add(MakeBtn("🧩 Phase Asset Üret", PhaseAssetGenerator.GeneratePhaseAssets));
+            card.Add(MakeBtn("🔤 Emoji Font Kurulumu", PixelFlow.EditorTools.PixelFlowEmojiFontSetup.SetupEmojiFallback));
+            card.Add(MakeBtn("🔗 Auto-Reference Views", AutoReferenceEditor.AutoReferenceAllViewsInScene));
+
+            parent.Add(card);
+        }
     }
 }
 #endif

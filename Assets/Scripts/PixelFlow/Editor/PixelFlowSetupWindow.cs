@@ -22,11 +22,20 @@ namespace PixelFlow.Editor
         private List<Button> _navButtons = new();
         private Vector2 _scrollPos;
 
+        private static readonly (string Title, int StartIndex, int Count)[] SidebarGroups =
+        {
+            ("Başlangıç", 0, 2),
+            ("Üretim", 2, 3),
+            ("Veri ve Denge", 5, 3),
+            ("Yayın ve Kontrol", 8, 3),
+            ("Araçlar", 11, 1),
+        };
+
         public static void OpenTab(int tabIndex)
         {
             var w = GetWindow<PixelFlowSetupWindow>("Color Jam 3D Studio");
             w.minSize = new Vector2(800, 600);
-            w.SelectTab(tabIndex);
+            w.SelectTab(Mathf.Clamp(tabIndex, 0, w._tabNames.Length - 1));
         }
 
         [MenuItem("Pixel Flow/COLOR JAM 3D Studio (v6)", false, 0)]
@@ -36,20 +45,17 @@ namespace PixelFlow.Editor
             w.minSize = new Vector2(800, 600);
         }
 
-        [MenuItem("Pixel Flow/🎬 Sahneyi Eksiksiz Kur (Complete Scene Setup)", false, 1)]
         public static void QuickSetupScene()
         {
             var window = GetWindow<PixelFlowSetupWindow>("Color Jam 3D Studio");
             window.SetupScene();
         }
 
-        [MenuItem("Pixel Flow/🔗 Tüm UI View'larını Otomatik Bağla (Auto-Reference All)", false, 2)]
         public static void QuickAutoReference()
         {
             AutoReferenceEditor.AutoReferenceAllViewsInScene();
         }
 
-        [MenuItem("Pixel Flow/🔊 Ses Kliplerini Oluştur (Generate Audio Clips)", false, 3)]
         public static void QuickGenerateAudio()
         {
             AudioClipGenerator.GenerateAllAudioClips();
@@ -71,40 +77,145 @@ namespace PixelFlow.Editor
 
         private VisualElement BuildHeader()
         {
-            var h = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = Align.Center, backgroundColor = new Color(0.12f, 0.16f, 0.23f), paddingTop = 10, paddingBottom = 10, paddingLeft = 14, paddingRight = 14, marginBottom = 8, borderTopLeftRadius = 8, borderTopRightRadius = 8, borderBottomLeftRadius = 8, borderBottomRightRadius = 8 } };
-            var title = new Label("COLOR JAM 3D — Master Studio");
-            title.style.fontSize = 16; title.style.color = Color.white;
-            h.Add(title);
-            var badge = new Label("● Live");
-            badge.style.backgroundColor = new Color(0f, 0.8f, 0.5f, 0.15f);
-            badge.style.color = new Color(0.2f, 0.83f, 0.6f);
-            badge.style.paddingLeft = badge.style.paddingRight = 10;
-            badge.style.paddingTop = badge.style.paddingBottom = 4;
-            badge.style.borderTopLeftRadius = badge.style.borderTopRightRadius = badge.style.borderBottomLeftRadius = badge.style.borderBottomRightRadius = 100;
-            h.Add(badge);
+            var h = new VisualElement
+            {
+                style =
+                {
+                    flexDirection = FlexDirection.Column,
+                    backgroundColor = new Color(0.12f, 0.16f, 0.23f),
+                    paddingTop = 12,
+                    paddingBottom = 12,
+                    paddingLeft = 14,
+                    paddingRight = 14,
+                    marginBottom = 8,
+                    borderTopLeftRadius = 8,
+                    borderTopRightRadius = 8,
+                    borderBottomLeftRadius = 8,
+                    borderBottomRightRadius = 8
+                }
+            };
+
+            var titleRow = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = Align.Center } };
+            var titleBlock = new VisualElement { style = { flexDirection = FlexDirection.Column, flexGrow = 1 } };
+
+            var title = new Label("COLOR JAM 3D CONTROL HUB");
+            title.style.fontSize = 16;
+            title.style.color = Color.white;
+            title.style.unityFontStyleAndWeight = FontStyle.Bold;
+            titleBlock.Add(title);
+
+            var subtitle = new Label("Oyunu kur, sahneyi denetle, seviyeleri üret, veriyi düzelt, yayına hazırla.");
+            subtitle.style.fontSize = 11;
+            subtitle.style.color = new Color(0.58f, 0.64f, 0.72f);
+            subtitle.style.marginTop = 2;
+            subtitle.style.whiteSpace = WhiteSpace.Normal;
+            titleBlock.Add(subtitle);
+
+            titleRow.Add(titleBlock);
+
+            var liveBadge = new Label(Application.isPlaying ? "PLAY MODE" : "EDIT MODE");
+            liveBadge.style.backgroundColor = Application.isPlaying ? new Color(0f, 0.8f, 0.5f, 0.15f) : new Color(0.23f, 0.51f, 0.96f, 0.15f);
+            liveBadge.style.color = Application.isPlaying ? new Color(0.2f, 0.83f, 0.6f) : new Color(0.4f, 0.7f, 1f);
+            liveBadge.style.paddingLeft = liveBadge.style.paddingRight = 10;
+            liveBadge.style.paddingTop = liveBadge.style.paddingBottom = 4;
+            liveBadge.style.marginLeft = 12;
+            liveBadge.style.borderTopLeftRadius = liveBadge.style.borderTopRightRadius = liveBadge.style.borderBottomLeftRadius = liveBadge.style.borderBottomRightRadius = 100;
+            titleRow.Add(liveBadge);
+
+            h.Add(titleRow);
+
+            var metricsRow = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, marginTop = 10 } };
+            metricsRow.Add(BuildMetricChip("Root", FindAnyObjectByType<Root>(FindObjectsInactive.Include) != null ? "Açık" : "Yok", new Color(0.3f, 0.8f, 1f)));
+            metricsRow.Add(BuildMetricChip("Bootstrapper", FindAnyObjectByType<GameBootstrapper>(FindObjectsInactive.Include) != null ? "Açık" : "Yok", new Color(0.4f, 1f, 0.4f)));
+            metricsRow.Add(BuildMetricChip("Leveller", AssetDatabase.FindAssets("t:LevelData").Length.ToString(), new Color(1f, 0.85f, 0.3f)));
+            metricsRow.Add(BuildMetricChip("Skin", AssetDatabase.FindAssets("t:VehicleSkinConfig").Length.ToString(), new Color(0.8f, 0.6f, 0.9f)));
+            h.Add(metricsRow);
+
+            var quickActions = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, marginTop = 10 } };
+            quickActions.Add(MakeBtn("▶ Oyna", () => EditorApplication.isPlaying = true));
+            quickActions.Add(MakeBtn("🎬 Sahneyi Kur", SetupScene));
+            quickActions.Add(MakeBtn("🎮 Seviye Stüdyosu", PixelFlowLevelStudioWindow.ShowWindow));
+            quickActions.Add(MakeBtn("🔬 Nexus Dashboard", () => EditorApplication.ExecuteMenuItem("Window/Nexus/Dashboard %#n")));
+            quickActions.Add(MakeBtn("🛡 Doğrula", () => PreBuildDataValidator.ValidateAllData(out _)));
+            h.Add(quickActions);
+
             return h;
         }
 
         private VisualElement BuildSidebar()
         {
-            var s = new VisualElement { style = { width = 180, flexShrink = 0, backgroundColor = new Color(0.12f, 0.16f, 0.23f), paddingLeft = 8, paddingRight = 8, paddingTop = 8, paddingBottom = 8, marginRight = 8, borderTopLeftRadius = 8, borderTopRightRadius = 8, borderBottomLeftRadius = 8, borderBottomRightRadius = 8 } };
+            var s = new VisualElement { style = { width = 220, flexShrink = 0, backgroundColor = new Color(0.12f, 0.16f, 0.23f), paddingLeft = 8, paddingRight = 8, paddingTop = 8, paddingBottom = 8, marginRight = 8, borderTopLeftRadius = 8, borderTopRightRadius = 8, borderBottomLeftRadius = 8, borderBottomRightRadius = 8 } };
             _navButtons.Clear();
-            for (int i = 0; i < _tabNames.Length; i++)
+            foreach (var group in SidebarGroups)
             {
-                var idx = i;
-                var btn = new Button(() => SelectTab(idx)) { text = _tabNames[i] };
-                btn.style.backgroundColor = Color.clear;
-                btn.style.color = new Color(0.58f, 0.64f, 0.72f);
-                btn.style.fontSize = 12;
-                btn.style.paddingTop = btn.style.paddingBottom = 8;
-                btn.style.paddingLeft = btn.style.paddingRight = 10;
-                btn.style.marginBottom = 2;
-                btn.style.borderTopLeftRadius = btn.style.borderTopRightRadius = btn.style.borderBottomLeftRadius = btn.style.borderBottomRightRadius = 6;
-                btn.style.unityFontStyleAndWeight = FontStyle.Bold;
-                _navButtons.Add(btn);
-                s.Add(btn);
+                s.Add(BuildSidebarGroupHeader(group.Title));
+
+                for (int i = group.StartIndex; i < group.StartIndex + group.Count; i++)
+                {
+                    var idx = i;
+                    var btn = new Button(() => SelectTab(idx)) { text = _tabNames[i] };
+                    btn.style.backgroundColor = Color.clear;
+                    btn.style.color = new Color(0.58f, 0.64f, 0.72f);
+                    btn.style.fontSize = 12;
+                    btn.style.paddingTop = btn.style.paddingBottom = 8;
+                    btn.style.paddingLeft = btn.style.paddingRight = 10;
+                    btn.style.marginBottom = 2;
+                    btn.style.borderTopLeftRadius = btn.style.borderTopRightRadius = btn.style.borderBottomLeftRadius = btn.style.borderBottomRightRadius = 6;
+                    btn.style.unityFontStyleAndWeight = FontStyle.Bold;
+                    _navButtons.Add(btn);
+                    s.Add(btn);
+                }
             }
             return s;
+        }
+
+        private VisualElement BuildSidebarGroupHeader(string text)
+        {
+            var header = new VisualElement { style = { marginTop = 4, marginBottom = 4, paddingTop = 4, paddingBottom = 2, paddingLeft = 4 } };
+            var label = new Label(text);
+            label.style.fontSize = 10;
+            label.style.color = new Color(0.42f, 0.5f, 0.58f);
+            label.style.unityFontStyleAndWeight = FontStyle.Bold;
+            header.Add(label);
+            return header;
+        }
+
+        private VisualElement BuildMetricChip(string label, string value, Color accent)
+        {
+            var chip = new VisualElement
+            {
+                style =
+                {
+                    flexDirection = FlexDirection.Row,
+                    alignItems = Align.Center,
+                    backgroundColor = new Color(0.08f, 0.11f, 0.18f),
+                    borderTopLeftRadius = 999,
+                    borderTopRightRadius = 999,
+                    borderBottomLeftRadius = 999,
+                    borderBottomRightRadius = 999,
+                    paddingLeft = 10,
+                    paddingRight = 10,
+                    paddingTop = 4,
+                    paddingBottom = 4,
+                    marginRight = 6,
+                    marginTop = 4
+                }
+            };
+
+            var dot = new VisualElement();
+            dot.style.width = 8;
+            dot.style.height = 8;
+            dot.style.borderTopLeftRadius = dot.style.borderTopRightRadius = dot.style.borderBottomLeftRadius = dot.style.borderBottomRightRadius = 999;
+            dot.style.backgroundColor = accent;
+            dot.style.marginRight = 6;
+            chip.Add(dot);
+
+            var txt = new Label($"{label}: {value}");
+            txt.style.fontSize = 10;
+            txt.style.color = Color.white;
+            txt.style.unityFontStyleAndWeight = FontStyle.Bold;
+            chip.Add(txt);
+            return chip;
         }
 
         internal void SelectTab(int idx)
@@ -278,7 +389,12 @@ namespace PixelFlow.Editor
 
         private class SceneSetupHelper
         {
-            public void SetupMinimalScene() { }
+            public void SetupMinimalScene()
+            {
+                var window = EditorWindow.GetWindow<PixelFlowSetupWindow>("Color Jam 3D Studio");
+                window.minSize = new Vector2(800, 600);
+                window.SetupScene();
+            }
         }
     }
 }

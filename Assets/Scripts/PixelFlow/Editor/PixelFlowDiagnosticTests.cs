@@ -153,5 +153,55 @@ namespace PixelFlow.Editor.Tests
                 Assert.IsFalse(hasMissingRef, $"LevelData asset '{asset.name}' has missing script references! Run Tools → PixelFlow → Fix Missing Script References.");
             }
         }
+
+        [Test]
+        public void PreBuildDataValidator_ValidateAllData_PassesCleanly()
+        {
+            bool valid = PreBuildDataValidator.ValidateAllData(out string error);
+            Assert.IsTrue(valid, $"PreBuildDataValidator failed: {error}");
+        }
+
+        [Test]
+        public void HUDView_AutoWire_ResolvesDistinctButtonAndTextReferences()
+        {
+            var go = new GameObject("HUDView_TestObj");
+            var hudView = go.AddComponent<HUDView>();
+
+            var mainCompBtn = new GameObject("ContinueButton");
+            mainCompBtn.transform.SetParent(go.transform);
+            mainCompBtn.AddComponent<Button>();
+
+            var completionPanel = new GameObject("CompletionPanel");
+            completionPanel.transform.SetParent(go.transform);
+            var compScoreText = new GameObject("ScoreText");
+            compScoreText.transform.SetParent(completionPanel.transform);
+            compScoreText.AddComponent<TMPro.TextMeshProUGUI>();
+
+            var hudScoreText = new GameObject("HUDScoreText");
+            hudScoreText.transform.SetParent(go.transform);
+            hudScoreText.AddComponent<TMPro.TextMeshProUGUI>();
+
+            var levelFailedPanel = new GameObject("LevelFailedPanel");
+            levelFailedPanel.transform.SetParent(go.transform);
+            var failedContinueBtn = new GameObject("ContinueButton");
+            failedContinueBtn.transform.SetParent(levelFailedPanel.transform);
+            failedContinueBtn.AddComponent<Button>();
+
+            hudView.AutoWireUIReferences();
+
+            var so = new SerializedObject(hudView);
+            var continueBtnProp = so.FindProperty("_continueButton");
+            var levelFailedContinueBtnProp = so.FindProperty("_levelFailedContinueButton");
+            var scoreTextProp = so.FindProperty("_scoreText");
+            var completionScoreTextProp = so.FindProperty("_completionScoreText");
+
+            Assert.AreNotEqual(continueBtnProp.objectReferenceValue, levelFailedContinueBtnProp.objectReferenceValue,
+                "HUDView AutoWire should resolve distinct continue buttons for main completion vs level failed panel.");
+
+            Assert.AreNotEqual(scoreTextProp.objectReferenceValue, completionScoreTextProp.objectReferenceValue,
+                "HUDView AutoWire should resolve distinct score texts for HUD vs completion panel.");
+
+            Object.DestroyImmediate(go);
+        }
     }
 }

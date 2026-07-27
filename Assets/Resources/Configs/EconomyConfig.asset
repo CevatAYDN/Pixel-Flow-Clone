@@ -21,3 +21,97 @@ MonoBehaviour:
   ViaductPenaltyPerUse: 0.08
   ThreeStarsMaxViaducts: 0
   TwoStarsMaxViaducts: 2
+  DailyLoginRollHours: 20
+  DailyLoginBonusPerDay: 20
+  DailyLoginMaxBonus: 500
+  IapProducts:
+  - ProductId: no_ads
+    DisplayName: No Ads
+    PriceUsd: 2.99
+    CurrencyCode: USD
+    Type: 1
+    CoinAmount: 0
+    GemAmount: 0
+    UnlockSkinId: 
+    RemovesAds: 1
+    Description: Removes all interstitial ads
+  - ProductId: starter_pack
+    DisplayName: Starter Pack
+    PriceUsd: 0.99
+    CurrencyCode: USD
+    Type: 1
+    CoinAmount: 1000
+    GemAmount: 50
+    UnlockSkinId: skin_car_rare_01
+    RemovesAds: 0
+    Description: 1000 Coins + 50 Gems + Rare Car Skin
+  - ProductId: coin_pack_s
+    DisplayName: Coin Pack S
+    PriceUsd: 1.99
+    CurrencyCode: USD
+    Type: 0
+    CoinAmount: 2500
+    GemAmount: 0
+    UnlockSkinId: 
+    RemovesAds: 0
+    Description: 2,500 Gold Coins
+  - ProductId: coin_pack_m
+    DisplayName: Coin Pack M
+    PriceUsd: 4.99
+    CurrencyCode: USD
+    Type: 0
+    CoinAmount: 7500
+    GemAmount: 0
+    UnlockSkinId: 
+    RemovesAds: 0
+    Description: 7,500 Gold Coins
+  - ProductId: coin_pack_l
+    DisplayName: Coin Pack L
+    PriceUsd: 9.99
+    CurrencyCode: USD
+    Type: 0
+    CoinAmount: 20000
+    GemAmount: 0
+    UnlockSkinId: 
+    RemovesAds: 0
+    Description: 20,000 Gold Coins
+  - ProductId: gem_pack_s
+    DisplayName: Gem Pack S
+    PriceUsd: 2.99
+    CurrencyCode: USD
+    Type: 0
+    CoinAmount: 0
+    GemAmount: 100
+    UnlockSkinId: 
+    RemovesAds: 0
+    Description: 100 Gems
+  - ProductId: gem_pack_m
+    DisplayName: Gem Pack M
+    PriceUsd: 7.99
+    CurrencyCode: USD
+    Type: 0
+    CoinAmount: 0
+    GemAmount: 350
+    UnlockSkinId: 
+    RemovesAds: 0
+    Description: 350 Gems
+  - ProductId: star_pass
+    DisplayName: Star Pass
+    PriceUsd: 4.99
+    CurrencyCode: USD
+    Type: 2
+    CoinAmount: 0
+    GemAmount: 0
+    UnlockSkinId: 
+    RemovesAds: 0
+    Description: 30 day seasonal reward track
+  - ProductId: vip_bundle
+    DisplayName: VIP Bundle
+    PriceUsd: 14.99
+    CurrencyCode: USD
+    Type: 1
+    CoinAmount: 5000
+    GemAmount: 200
+    UnlockSkinId: skin_vip_golden
+    RemovesAds: 1
+    Description: No Ads + 5000 Coins + 200 Gems + Legendary Skin

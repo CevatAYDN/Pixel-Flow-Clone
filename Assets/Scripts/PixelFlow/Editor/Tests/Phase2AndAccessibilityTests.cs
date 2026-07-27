@@ -16,50 +16,13 @@ namespace PixelFlow.Editor.Tests
     public class Phase2AndAccessibilityTests
     {
         private NexusTestContext _ctx;
+        private PhaseConfigAsset _phaseConfig;
 
         [SetUp]
         public void SetUp()
         {
-            _ctx = NexusTestHarness.CreateContext(builder =>
-            {
-                builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
-
-                builder.BindInstance(GameTestContext.CreateTestGameConfig());
-                builder.BindInstance(GameTestContext.CreateTestStorageKeysConfig());
-
-                builder.Bind<IPathService, PathService>();
-                builder.Bind<IGameHistoryService, GameHistoryService>();
-                builder.Bind<IPathSolver, RuntimePathSolver>();
-                builder.Bind<IHintService, HintService>();
-                builder.BindService<IVehicleSimulator, VehicleSimulator>();
-                builder.BindService<ISaveThrottler, SaveThrottler>();
-                builder.BindService<INexusService, HapticService>();
-                builder.Bind<IHapticService, HapticService>();
-                var quietLogger = new LoggerService { IsEnabled = false };
-                builder.BindInstance<ILoggerService>(quietLogger);
-                builder.BindService<IObstacleService, ObstacleService>();
-                builder.BindService<ICrisisAdService, CrisisAdService>();
-                builder.BindService<ITutorialDriver, TutorialDriver>();
-                builder.Bind<IFeedbackService, FeedbackService>();
-                builder.Bind<Nexus.Core.Services.IAudioService, StubAudioService>();
-                builder.Bind<ITimeProvider, UnityTimeProvider>();
-                builder.BindService<INexusService, TickService>();
-                builder.Bind<ITickService, TickService>();
-
-                builder.BindReactiveModel<IGridModel, GridModel>();
-                builder.BindReactiveModel<ILevelModel, LevelModel>();
-                builder.BindReactiveModel<IProgressModel, ProgressModel>();
-                builder.BindReactiveModel<IGameStateModel, GameStateModel>();
-                builder.BindReactiveModel<IGameSessionModel, GameSessionModel>();
-                builder.BindReactiveModel<IHintModel, HintModel>();
-                builder.BindReactiveModel<ISettingsModel, SettingsModel>();
-                builder.BindReactiveModel<ISoundModel, SoundModel>();
-                builder.BindReactiveModel<ITutorialModel, TutorialModel>();
-
-                builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));
-                builder.Bind<ICameraProvider, StubCameraProvider>();
-                builder.Bind<IGridViewProvider, StubGridViewProvider>();
-            });
+            _ctx = GameTestContext.CreateGameContext();
+            _phaseConfig = _ctx.Context.Container.Resolve<PhaseConfigAsset>();
         }
 
         [TearDown]
@@ -84,21 +47,21 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void PhaseDefinition_GetPhaseForLevel_ReturnsCorrectPhase()
         {
-            var p1 = PhaseDefinition.GetPhaseForLevel(0);
+            var p1 = _phaseConfig.GetPhaseForLevel(0).ToStruct();
             Assert.AreEqual(GamePhase.Phase1, p1.Phase);
             Assert.AreEqual(0, p1.StartLevelIndex);
             Assert.AreEqual(11, p1.EndLevelIndex);
 
-            var p2 = PhaseDefinition.GetPhaseForLevel(15);
+            var p2 = _phaseConfig.GetPhaseForLevel(15).ToStruct();
             Assert.AreEqual(GamePhase.Phase2, p2.Phase);
             Assert.AreEqual(12, p2.StartLevelIndex);
 
-            var p3 = PhaseDefinition.GetPhaseForLevel(30);
+            var p3 = _phaseConfig.GetPhaseForLevel(30).ToStruct();
             Assert.AreEqual(GamePhase.Phase3, p3.Phase);
             Assert.IsTrue(p3.RequireFullCoverage);
             Assert.IsTrue(p3.ObstaclesEnabled);
 
-            var p4 = PhaseDefinition.GetPhaseForLevel(50);
+            var p4 = _phaseConfig.GetPhaseForLevel(50).ToStruct();
             Assert.AreEqual(GamePhase.Phase4, p4.Phase);
             Assert.IsTrue(p4.FerryEnabled);
             Assert.IsTrue(p4.NarrowPassEnabled);

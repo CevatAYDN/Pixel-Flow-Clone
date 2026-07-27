@@ -6,7 +6,12 @@ namespace PixelFlow.Services
 {
     public class PhaseBasedSolverStrategy : IPathSolverStrategy
     {
-        private readonly StandardDFSPathSolverStrategy _baseStrategy = new StandardDFSPathSolverStrategy();
+        private readonly StandardDFSPathSolverStrategy _baseStrategy;
+
+        public PhaseBasedSolverStrategy(GameConfig config)
+        {
+            _baseStrategy = new StandardDFSPathSolverStrategy(config);
+        }
 
         public SolverStrategyType StrategyType => SolverStrategyType.PhaseBased;
 

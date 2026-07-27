@@ -3,8 +3,6 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using PixelFlow.Data;
-using PixelFlow.Views;
 
 namespace PixelFlow.Editor
 {
@@ -17,25 +15,24 @@ namespace PixelFlow.Editor
     {
         private const string PrefabsPath = "Assets/Prefabs/UI";
 
-        [MenuItem("Pixel Flow/UI/Create All UI Prefabs")]
         public static void CreateAllUIPrefabs()
         {
             System.IO.Directory.CreateDirectory(PrefabsPath);
 
             int created = 0;
-            created += CreateOrUpdatePrefab("MainMenuView.prefab", CreateMainMenuUI, ref created) ? 1 : 0;
-            created += CreateOrUpdatePrefab("HUDView.prefab", CreateHUDUI, ref created) ? 1 : 0;
-            created += CreateOrUpdatePrefab("GarageView.prefab", CreateGarageUI, ref created) ? 1 : 0;
-            created += CreateOrUpdatePrefab("SettingsView.prefab", CreateSettingsUI, ref created) ? 1 : 0;
-            created += CreateOrUpdatePrefab("LevelSelectView.prefab", CreateLevelSelectUI, ref created) ? 1 : 0;
-            created += CreateOrUpdatePrefab("SplashView.prefab", CreateSplashUI, ref created) ? 1 : 0;
+            created += CreateOrUpdatePrefab("MainMenuView.prefab", CreateMainMenuUI) ? 1 : 0;
+            created += CreateOrUpdatePrefab("HUDView.prefab", CreateHUDUI) ? 1 : 0;
+            created += CreateOrUpdatePrefab("GarageView.prefab", CreateGarageUI) ? 1 : 0;
+            created += CreateOrUpdatePrefab("SettingsView.prefab", CreateSettingsUI) ? 1 : 0;
+            created += CreateOrUpdatePrefab("LevelSelectView.prefab", CreateLevelSelectUI) ? 1 : 0;
+            created += CreateOrUpdatePrefab("SplashView.prefab", CreateSplashUI) ? 1 : 0;
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log($"[UIPrefabCreator] {created} UI prefab oluşturuldu/güncellendi.");
         }
 
-        private static bool CreateOrUpdatePrefab(string name, System.Action<GameObject> buildAction, ref int count)
+        private static bool CreateOrUpdatePrefab(string name, System.Action<GameObject> buildAction)
         {
             string path = $"{PrefabsPath}/{name}";
             var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
@@ -50,14 +47,27 @@ namespace PixelFlow.Editor
                 buildAction(go);
                 PrefabUtility.SaveAsPrefabAsset(go, path);
                 Object.DestroyImmediate(go);
-                count++;
                 Debug.Log($"[UIPrefabCreator] Oluşturuldu: {path}");
                 return true;
             }
 
-            // Üstleniyoruz ki prefab mevcut ama update edilmiş olabilir
-            Debug.Log($"[UIPrefabCreator] Zaten mevcut: {path}");
-            return false;
+            var prefabRoot = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                for (int i = prefabRoot.transform.childCount - 1; i >= 0; i--)
+                {
+                    Object.DestroyImmediate(prefabRoot.transform.GetChild(i).gameObject);
+                }
+
+                buildAction(prefabRoot);
+                PrefabUtility.SaveAsPrefabAsset(prefabRoot, path);
+                Debug.Log($"[UIPrefabCreator] Güncellendi: {path}");
+                return false;
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(prefabRoot);
+            }
         }
 
         #region Design System Helpers
@@ -109,6 +119,7 @@ namespace PixelFlow.Editor
             btn.colors = colors;
 
             AddText(go, "ButtonText", text, fontSize, textColor);
+            Views.ButtonJuice.AttachTo(btn);
             return btn;
         }
 
@@ -137,16 +148,15 @@ namespace PixelFlow.Editor
             rect.anchorMax = Vector2.one;
             rect.anchoredPosition = Vector2.zero;
 
-            // Title — Dark indigo (#1E3A8A)
-            var titleObj = new GameObject("TitleText");
+            var titleObj = new GameObject("TitleText", typeof(RectTransform));
             titleObj.transform.SetParent(root.transform, false);
-            var titleRect = titleObj.AddComponent<RectTransform>();
+            var titleRect = titleObj.GetComponent<RectTransform>();
             titleRect.anchorMin = new Vector2(0.06f, 0.88f);
             titleRect.anchorMax = new Vector2(0.65f, 0.96f);
             AddText(titleObj, "TMP_Title", "Color Jam 3D", 42, new Color(0.12f, 0.23f, 0.54f, 1f));
 
             // Coin Pill — Soft gold (#FEF3C7) with amber text
-            var coinObj = new GameObject("CoinPill");
+            var coinObj = new GameObject("CoinPill", typeof(RectTransform));
             coinObj.transform.SetParent(root.transform, false);
             var coinImg = coinObj.AddComponent<Image>();
             coinImg.color = new Color(0.99f, 0.95f, 0.78f, 1f);
@@ -157,7 +167,7 @@ namespace PixelFlow.Editor
             AddText(coinObj, "TMP_Coin", "🪙 1,450", 22, new Color(0.71f, 0.33f, 0.04f, 1f));
 
             // Garage Showcase Card — White rounded
-            var cardObj = new GameObject("GarageCard");
+            var cardObj = new GameObject("GarageCard", typeof(RectTransform));
             cardObj.transform.SetParent(root.transform, false);
             var cardImg = cardObj.AddComponent<Image>();
             cardImg.color = new Color(1f, 1f, 1f, 1f);
@@ -166,7 +176,7 @@ namespace PixelFlow.Editor
             cardRect.anchorMax = new Vector2(0.94f, 0.82f);
 
             // Vehicle Preview Box
-            var previewObj = new GameObject("VehiclePreview");
+            var previewObj = new GameObject("VehiclePreview", typeof(RectTransform));
             previewObj.transform.SetParent(cardObj.transform, false);
             var prevImg = previewObj.AddComponent<Image>();
             prevImg.color = new Color(0.88f, 0.95f, 0.99f, 1f);
@@ -176,7 +186,7 @@ namespace PixelFlow.Editor
             AddText(previewObj, "TMP_VehicleIcon", "🍦", 64, new Color(0.1f, 0.4f, 0.7f, 1f));
 
             // Vehicle Name
-            var nameObj = new GameObject("VehicleName");
+            var nameObj = new GameObject("VehicleName", typeof(RectTransform));
             nameObj.transform.SetParent(cardObj.transform, false);
             var nameRect = nameObj.GetComponent<RectTransform>();
             nameRect.anchorMin = new Vector2(0.05f, 0.20f);
@@ -184,7 +194,7 @@ namespace PixelFlow.Editor
             AddText(nameObj, "TMP_VehName", "Dondurma Arabası", 28, new Color(0.06f, 0.09f, 0.16f, 1f));
 
             // Vehicle Type
-            var typeObj = new GameObject("VehicleType");
+            var typeObj = new GameObject("VehicleType", typeof(RectTransform));
             typeObj.transform.SetParent(cardObj.transform, false);
             var typeRect = typeObj.GetComponent<RectTransform>();
             typeRect.anchorMin = new Vector2(0.05f, 0.10f);
@@ -192,7 +202,7 @@ namespace PixelFlow.Editor
             AddText(typeObj, "TMP_VehType", "KUŞANILMIŞ SARI ARAÇ", 16, new Color(0.39f, 0.45f, 0.55f, 1f));
 
             // Open Garage Button
-            var garageBtnObj = new GameObject("OpenGarageButton");
+            var garageBtnObj = new GameObject("OpenGarageButton", typeof(RectTransform));
             garageBtnObj.transform.SetParent(cardObj.transform, false);
             var garageBtnRect = garageBtnObj.GetComponent<RectTransform>();
             garageBtnRect.anchorMin = new Vector2(0.08f, 0.02f);
@@ -202,7 +212,7 @@ namespace PixelFlow.Editor
             AddText(garageBtnObj, "TMP_GarageBtn", "🚪 Garajı Aç (12/24 Skin)", 20, Color.white);
 
             // Play Button — Emerald green gradient (simulated)
-            var playObj = new GameObject("PlayButton");
+            var playObj = new GameObject("PlayButton", typeof(RectTransform));
             playObj.transform.SetParent(root.transform, false);
             var playRect = playObj.GetComponent<RectTransform>();
             playRect.anchorMin = new Vector2(0.06f, 0.18f);
@@ -212,7 +222,7 @@ namespace PixelFlow.Editor
             AddText(playObj, "TMP_PlayBtn", "▶️ OYUNA BAŞLA (LEVEL 15)", 32, Color.white);
 
             // Level Select Button — Indigo
-            var levelBtnObj = new GameObject("LevelSelectButton");
+            var levelBtnObj = new GameObject("LevelSelectButton", typeof(RectTransform));
             levelBtnObj.transform.SetParent(root.transform, false);
             var levelBtnRect = levelBtnObj.GetComponent<RectTransform>();
             levelBtnRect.anchorMin = new Vector2(0.06f, 0.12f);
@@ -222,7 +232,7 @@ namespace PixelFlow.Editor
             AddText(levelBtnObj, "TMP_LevelBtn", "📋 Seviye Seçimi", 20, Color.white);
 
             // Settings Button — Slate
-            var settingsBtnObj = new GameObject("SettingsButton");
+            var settingsBtnObj = new GameObject("SettingsButton", typeof(RectTransform));
             settingsBtnObj.transform.SetParent(root.transform, false);
             var settingsBtnRect = settingsBtnObj.GetComponent<RectTransform>();
             settingsBtnRect.anchorMin = new Vector2(0.06f, 0.06f);
@@ -246,7 +256,7 @@ namespace PixelFlow.Editor
             rect.anchorMax = Vector2.one;
 
             // Top HUD Bar — Glass morphism (white 0.95 alpha)
-            var barObj = new GameObject("TopBar");
+            var barObj = new GameObject("TopBar", typeof(RectTransform));
             barObj.transform.SetParent(root.transform, false);
             var barRect = barObj.GetComponent<RectTransform>();
             barRect.anchorMin = new Vector2(0, 0.82f);
@@ -255,7 +265,7 @@ namespace PixelFlow.Editor
             barImg.color = new Color(1f, 1f, 1f, 0.95f);
 
             // Level Badge
-            var badgeObj = new GameObject("LevelBadge");
+            var badgeObj = new GameObject("LevelBadge", typeof(RectTransform));
             badgeObj.transform.SetParent(barObj.transform, false);
             var badgeRect = badgeObj.GetComponent<RectTransform>();
             badgeRect.anchorMin = new Vector2(0.05f, 0.2f);
@@ -265,7 +275,7 @@ namespace PixelFlow.Editor
             AddText(badgeObj, "TMP_Level", "LEVEL 15", 18, new Color(0.39f, 0.45f, 0.55f, 1f));
 
             // Coin Counter
-            var coinObj = new GameObject("CoinCounter");
+            var coinObj = new GameObject("CoinCounter", typeof(RectTransform));
             coinObj.transform.SetParent(barObj.transform, false);
             var coinBarRect = coinObj.GetComponent<RectTransform>();
             coinBarRect.anchorMin = new Vector2(0.38f, 0.2f);
@@ -275,7 +285,7 @@ namespace PixelFlow.Editor
             AddText(coinObj, "TMP_Coins", "🪙 1,450", 18, new Color(0.71f, 0.33f, 0.04f, 1f));
 
             // Pause Button
-            var pauseObj = new GameObject("PauseButton");
+            var pauseObj = new GameObject("PauseButton", typeof(RectTransform));
             pauseObj.transform.SetParent(barObj.transform, false);
             var pauseRect = pauseObj.GetComponent<RectTransform>();
             pauseRect.anchorMin = new Vector2(0.75f, 0.3f);
@@ -285,7 +295,7 @@ namespace PixelFlow.Editor
             AddText(pauseObj, "TMP_Pause", "⏸", 24, new Color(0.39f, 0.45f, 0.55f, 1f));
 
             // Bottom Power-Up Bar
-            var powerBarObj = new GameObject("PowerUpBar");
+            var powerBarObj = new GameObject("PowerUpBar", typeof(RectTransform));
             powerBarObj.transform.SetParent(root.transform, false);
             var powerBarRect = powerBarObj.GetComponent<RectTransform>();
             powerBarRect.anchorMin = new Vector2(0, 0.02f);
@@ -294,7 +304,7 @@ namespace PixelFlow.Editor
             powerBarImg.color = new Color(1f, 1f, 1f, 0.95f);
 
             // Rainbow Road Button
-            var rainbowObj = new GameObject("RainbowRoadButton");
+            var rainbowObj = new GameObject("RainbowRoadButton", typeof(RectTransform));
             rainbowObj.transform.SetParent(powerBarObj.transform, false);
             var rainbowRect = rainbowObj.GetComponent<RectTransform>();
             rainbowRect.anchorMin = new Vector2(0.05f, 0.1f);
@@ -305,7 +315,7 @@ namespace PixelFlow.Editor
             AddText(rainbowObj, "TMP_Rainbow", "🌈", 28, Color.white);
 
             // Clear Jam Button
-            var clearObj = new GameObject("ClearJamButton");
+            var clearObj = new GameObject("ClearJamButton", typeof(RectTransform));
             clearObj.transform.SetParent(powerBarObj.transform, false);
             var clearRect = clearObj.GetComponent<RectTransform>();
             clearRect.anchorMin = new Vector2(0.37f, 0.1f);
@@ -315,7 +325,7 @@ namespace PixelFlow.Editor
             AddText(clearObj, "TMP_Clear", "✨", 28, Color.white);
 
             // Viaduct Button
-            var viaductObj = new GameObject("ViaductButton");
+            var viaductObj = new GameObject("ViaductButton", typeof(RectTransform));
             viaductObj.transform.SetParent(powerBarObj.transform, false);
             var viaductRect = viaductObj.GetComponent<RectTransform>();
             viaductRect.anchorMin = new Vector2(0.68f, 0.1f);
@@ -325,7 +335,7 @@ namespace PixelFlow.Editor
             AddText(viaductObj, "TMP_Viaduct", "🌉", 28, Color.white);
 
             // Undo Button (left side)
-            var undoObj = new GameObject("UndoButton");
+            var undoObj = new GameObject("UndoButton", typeof(RectTransform));
             undoObj.transform.SetParent(root.transform, false);
             var undoRect = undoObj.GetComponent<RectTransform>();
             undoRect.anchorMin = new Vector2(0.02f, 0.18f);
@@ -335,7 +345,7 @@ namespace PixelFlow.Editor
             AddText(undoObj, "TMP_Undo", "↩️", 22, Color.white);
 
             // Redo Button (right of undo)
-            var redoObj = new GameObject("RedoButton");
+            var redoObj = new GameObject("RedoButton", typeof(RectTransform));
             redoObj.transform.SetParent(root.transform, false);
             var redoRect = redoObj.GetComponent<RectTransform>();
             redoRect.anchorMin = new Vector2(0.14f, 0.18f);
@@ -358,7 +368,7 @@ namespace PixelFlow.Editor
             rect.anchorMax = Vector2.one;
 
             // Garage Card — white glass
-            var cardObj = new GameObject("GarageCard");
+            var cardObj = new GameObject("GarageCard", typeof(RectTransform));
             cardObj.transform.SetParent(root.transform, false);
             var cardRect = cardObj.GetComponent<RectTransform>();
             cardRect.anchorMin = new Vector2(0.05f, 0.08f);
@@ -367,25 +377,51 @@ namespace PixelFlow.Editor
             cardImg.color = new Color(1f, 1f, 1f, 0.98f);
 
             // Title
-            var titleObj = new GameObject("Title");
+            var titleObj = new GameObject("Title", typeof(RectTransform));
             titleObj.transform.SetParent(cardObj.transform, false);
             var titleRect = titleObj.GetComponent<RectTransform>();
             titleRect.anchorMin = new Vector2(0.05f, 0.90f);
             titleRect.anchorMax = new Vector2(0.95f, 0.98f);
-            AddText(titleObj, "TMP_Title", "🚗 GARAJ & Araç Skinleri", 30, new Color(0.12f, 0.23f, 0.54f, 1f));
+            AddText(titleObj, "TMP_Title", "GARAJ & Araç Skinleri", 30, new Color(0.12f, 0.23f, 0.54f, 1f));
 
             // Coins display
-            var coinsObj = new GameObject("CoinsDisplay");
+            var coinsObj = new GameObject("CoinsDisplay", typeof(RectTransform));
             coinsObj.transform.SetParent(cardObj.transform, false);
             var coinsRect = coinsObj.GetComponent<RectTransform>();
             coinsRect.anchorMin = new Vector2(0.10f, 0.82f);
             coinsRect.anchorMax = new Vector2(0.90f, 0.88f);
             var coinsImg = coinsObj.AddComponent<Image>();
             coinsImg.color = new Color(0.99f, 0.95f, 0.78f, 1f);
-            AddText(coinsObj, "TMP_Coins", "🪙 1,450 Gold", 22, new Color(0.71f, 0.33f, 0.04f, 1f));
+            AddText(coinsObj, "TMP_Coins", "1,450 GOLD", 22, new Color(0.71f, 0.33f, 0.04f, 1f));
+
+            var scrollObj = new GameObject("ScrollView", typeof(RectTransform), typeof(ScrollRect));
+            scrollObj.transform.SetParent(cardObj.transform, false);
+            var scrollRect = scrollObj.GetComponent<RectTransform>();
+            scrollRect.anchorMin = new Vector2(0.05f, 0.18f);
+            scrollRect.anchorMax = new Vector2(0.95f, 0.78f);
+
+            var viewportObj = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D), typeof(Image));
+            viewportObj.transform.SetParent(scrollObj.transform, false);
+            var viewportRect = viewportObj.GetComponent<RectTransform>();
+            viewportRect.anchorMin = Vector2.zero;
+            viewportRect.anchorMax = Vector2.one;
+            viewportRect.sizeDelta = Vector2.zero;
+            var viewportImg = viewportObj.GetComponent<Image>();
+            viewportImg.color = new Color(1f, 1f, 1f, 0f);
+
+            var contentObj = new GameObject("Content", typeof(RectTransform), typeof(UnityEngine.UI.ContentSizeFitter));
+            contentObj.transform.SetParent(viewportObj.transform, false);
+            var contentRect = contentObj.GetComponent<RectTransform>();
+            contentRect.anchorMin = new Vector2(0f, 1f);
+            contentRect.anchorMax = new Vector2(1f, 1f);
+            contentRect.pivot = new Vector2(0.5f, 1f);
+            contentRect.sizeDelta = Vector2.zero;
+            var fitter = contentObj.GetComponent<UnityEngine.UI.ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            scrollObj.GetComponent<ScrollRect>().content = contentRect;
 
             // Close Button
-            var closeObj = new GameObject("CloseButton");
+            var closeObj = new GameObject("CloseButton", typeof(RectTransform));
             closeObj.transform.SetParent(cardObj.transform, false);
             var closeRect = closeObj.GetComponent<RectTransform>();
             closeRect.anchorMin = new Vector2(0.10f, 0.03f);
@@ -407,7 +443,7 @@ namespace PixelFlow.Editor
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
 
-            var cardObj = new GameObject("SettingsCard");
+            var cardObj = new GameObject("SettingsCard", typeof(RectTransform));
             cardObj.transform.SetParent(root.transform, false);
             var cardRect = cardObj.GetComponent<RectTransform>();
             cardRect.anchorMin = new Vector2(0.05f, 0.08f);
@@ -416,7 +452,7 @@ namespace PixelFlow.Editor
             cardImg.color = new Color(1f, 1f, 1f, 0.98f);
 
             // Title
-            var titleObj = new GameObject("Title");
+            var titleObj = new GameObject("Title", typeof(RectTransform));
             titleObj.transform.SetParent(cardObj.transform, false);
             var titleRect = titleObj.GetComponent<RectTransform>();
             titleRect.anchorMin = new Vector2(0.05f, 0.90f);
@@ -424,7 +460,7 @@ namespace PixelFlow.Editor
             AddText(titleObj, "TMP_Title", "⚙️ Ayarlar", 30, new Color(0.06f, 0.15f, 0.35f, 1f));
 
             // Master Volume Slider placeholder
-            var masterSliderObj = new GameObject("MasterSliderRow");
+            var masterSliderObj = new GameObject("MasterSliderRow", typeof(RectTransform));
             masterSliderObj.transform.SetParent(cardObj.transform, false);
             var masterRect = masterSliderObj.GetComponent<RectTransform>();
             masterRect.anchorMin = new Vector2(0.08f, 0.78f);
@@ -434,7 +470,7 @@ namespace PixelFlow.Editor
             AddText(masterSliderObj, "TMP_MasterLabel", "🔊 Ses", 18, new Color(0.06f, 0.15f, 0.35f, 1f));
 
             // SFX Slider
-            var sfxSliderObj = new GameObject("SfxSliderRow");
+            var sfxSliderObj = new GameObject("SfxSliderRow", typeof(RectTransform));
             sfxSliderObj.transform.SetParent(cardObj.transform, false);
             var sfxRect = sfxSliderObj.GetComponent<RectTransform>();
             sfxRect.anchorMin = new Vector2(0.08f, 0.66f);
@@ -444,7 +480,7 @@ namespace PixelFlow.Editor
             AddText(sfxSliderObj, "TMP_SfxLabel", "🎵 Ses Efektleri", 18, new Color(0.06f, 0.15f, 0.35f, 1f));
 
             // Music Slider
-            var musicSliderObj = new GameObject("MusicSliderRow");
+            var musicSliderObj = new GameObject("MusicSliderRow", typeof(RectTransform));
             musicSliderObj.transform.SetParent(cardObj.transform, false);
             var musicRect = musicSliderObj.GetComponent<RectTransform>();
             musicRect.anchorMin = new Vector2(0.08f, 0.54f);
@@ -454,7 +490,7 @@ namespace PixelFlow.Editor
             AddText(musicSliderObj, "TMP_MusicLabel", "🎶 Müzik", 18, new Color(0.06f, 0.15f, 0.35f, 1f));
 
             // Color Blind Mode Header
-            var cbHeaderObj = new GameObject("CBHeader");
+            var cbHeaderObj = new GameObject("CBHeader", typeof(RectTransform));
             cbHeaderObj.transform.SetParent(cardObj.transform, false);
             var cbHeaderRect = cbHeaderObj.GetComponent<RectTransform>();
             cbHeaderRect.anchorMin = new Vector2(0.08f, 0.42f);
@@ -462,7 +498,7 @@ namespace PixelFlow.Editor
             AddText(cbHeaderObj, "TMP_CBHeader", "👁️ Renk Körlüğü Modu", 18, new Color(0.06f, 0.15f, 0.35f, 1f));
 
             // CB Buttons row
-            var cbNoneObj = new GameObject("CBNoneButton");
+            var cbNoneObj = new GameObject("CBNoneButton", typeof(RectTransform));
             cbNoneObj.transform.SetParent(cardObj.transform, false);
             var cbNoneRect = cbNoneObj.GetComponent<RectTransform>();
             cbNoneRect.anchorMin = new Vector2(0.08f, 0.32f);
@@ -471,7 +507,7 @@ namespace PixelFlow.Editor
             cbNoneImg.color = new Color(0.20f, 0.60f, 1.00f, 1f);
             AddText(cbNoneObj, "TMP_CBNone", "NONE", 16, Color.white);
 
-            var cbProtanObj = new GameObject("CBProtanButton");
+            var cbProtanObj = new GameObject("CBProtanButton", typeof(RectTransform));
             cbProtanObj.transform.SetParent(cardObj.transform, false);
             var cbProtanRect = cbProtanObj.GetComponent<RectTransform>();
             cbProtanRect.anchorMin = new Vector2(0.32f, 0.32f);
@@ -480,7 +516,7 @@ namespace PixelFlow.Editor
             cbProtanImg.color = new Color(0.50f, 0.50f, 0.55f, 1f);
             AddText(cbProtanObj, "TMP_CBProtan", "PROTAN", 16, Color.white);
 
-            var cbDeutanObj = new GameObject("CBDeutanButton");
+            var cbDeutanObj = new GameObject("CBDeutanButton", typeof(RectTransform));
             cbDeutanObj.transform.SetParent(cardObj.transform, false);
             var cbDeutanRect = cbDeutanObj.GetComponent<RectTransform>();
             cbDeutanRect.anchorMin = new Vector2(0.56f, 0.32f);
@@ -489,7 +525,7 @@ namespace PixelFlow.Editor
             cbDeutanImg.color = new Color(0.50f, 0.50f, 0.55f, 1f);
             AddText(cbDeutanObj, "TMP_CBDeutan", "DEUTAN", 16, Color.white);
 
-            var cbTritanObj = new GameObject("CBTritanButton");
+            var cbTritanObj = new GameObject("CBTritanButton", typeof(RectTransform));
             cbTritanObj.transform.SetParent(cardObj.transform, false);
             var cbTritanRect = cbTritanObj.GetComponent<RectTransform>();
             cbTritanRect.anchorMin = new Vector2(0.80f, 0.32f);
@@ -499,7 +535,7 @@ namespace PixelFlow.Editor
             AddText(cbTritanObj, "TMP_CBTritan", "TRITAN", 16, Color.white);
 
             // Haptics toggle
-            var hapticsObj = new GameObject("HapticsToggle");
+            var hapticsObj = new GameObject("HapticsToggle", typeof(RectTransform));
             hapticsObj.transform.SetParent(cardObj.transform, false);
             var hapticsRect = hapticsObj.GetComponent<RectTransform>();
             hapticsRect.anchorMin = new Vector2(0.08f, 0.20f);
@@ -509,7 +545,7 @@ namespace PixelFlow.Editor
             AddText(hapticsObj, "TMP_HapticsLabel", "📳 Titreşim", 16, new Color(0.06f, 0.15f, 0.35f, 1f));
 
             // Close button
-            var closeObj = new GameObject("CloseButton");
+            var closeObj = new GameObject("CloseButton", typeof(RectTransform));
             closeObj.transform.SetParent(cardObj.transform, false);
             var closeRect = closeObj.GetComponent<RectTransform>();
             closeRect.anchorMin = new Vector2(0.10f, 0.03f);
@@ -532,7 +568,7 @@ namespace PixelFlow.Editor
             rect.anchorMax = Vector2.one;
 
             // Title
-            var titleObj = new GameObject("Title");
+            var titleObj = new GameObject("Title", typeof(RectTransform));
             titleObj.transform.SetParent(root.transform, false);
             var titleRect = titleObj.GetComponent<RectTransform>();
             titleRect.anchorMin = new Vector2(0.05f, 0.90f);
@@ -540,14 +576,14 @@ namespace PixelFlow.Editor
             AddText(titleObj, "TMP_Title", "📋 Seviye Seçimi", 40, new Color(0.12f, 0.23f, 0.54f, 1f));
 
             // Grid Container placeholder
-            var gridObj = new GameObject("LevelGrid");
+            var gridObj = new GameObject("LevelGrid", typeof(RectTransform));
             gridObj.transform.SetParent(root.transform, false);
             var gridRect = gridObj.GetComponent<RectTransform>();
             gridRect.anchorMin = new Vector2(0.06f, 0.15f);
             gridRect.anchorMax = new Vector2(0.94f, 0.88f);
 
             // Back button
-            var backObj = new GameObject("BackButton");
+            var backObj = new GameObject("BackButton", typeof(RectTransform));
             backObj.transform.SetParent(root.transform, false);
             var backRect = backObj.GetComponent<RectTransform>();
             backRect.anchorMin = new Vector2(0.06f, 0.04f);
@@ -569,14 +605,14 @@ namespace PixelFlow.Editor
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
 
-            var titleObj = new GameObject("Title");
+            var titleObj = new GameObject("Title", typeof(RectTransform));
             titleObj.transform.SetParent(root.transform, false);
             var titleRect = titleObj.GetComponent<RectTransform>();
             titleRect.anchorMin = new Vector2(0.10f, 0.60f);
             titleRect.anchorMax = new Vector2(0.90f, 0.75f);
             AddText(titleObj, "TMP_Title", "Color Jam 3D", 56, Color.white);
 
-            var subObj = new GameObject("Subtitle");
+            var subObj = new GameObject("Subtitle", typeof(RectTransform));
             subObj.transform.SetParent(root.transform, false);
             var subRect = subObj.GetComponent<RectTransform>();
             subRect.anchorMin = new Vector2(0.15f, 0.40f);

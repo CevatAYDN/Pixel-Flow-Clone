@@ -24,7 +24,6 @@ namespace PixelFlow.EditorTools
         private const string EmojiFontAssetPath = "Assets/TextMesh Pro/Resources/Fonts & Materials/Emoji Fallback.asset";
         private const string SystemFontCopyPath = "Assets/TextMesh Pro/Resources/Fonts & Materials/SystemEmoji.ttf";
 
-        [MenuItem("Pixel Flow/Araçlar/Emoji Fallback Font Kurulumu", false, 30)]
         public static void SetupEmojiFallback()
         {
             // Step 1: Ensure emoji support is enabled in TMP Settings (always runs)
@@ -114,13 +113,7 @@ namespace PixelFlow.EditorTools
             LinkFallback(emojiFontAsset);
             EnableEmojiSupport();
 
-            EditorUtility.DisplayDialog("Emoji Fallback Setup Complete",
-                $"Created emoji TMP font asset from:\n{Path.GetFileName(emojiFontPath)}\n\n" +
-                $"Glyphs generated: {glyphCount}\n\n" +
-                "LiberationSans SDF will now use this emoji font to render emoji.\n" +
-                "If some emoji still show □, try downloading Noto Emoji (an outline-based emoji font)\n" +
-                "from https://fonts.google.com/noto/specimen/Noto+Emoji and re-run this tool.",
-                "OK");
+            Debug.Log($"[PixelFlowEmojiFontSetup] Emoji fallback setup complete from {Path.GetFileName(emojiFontPath)}. Glyphs generated: {glyphCount}");
 
             return true;
         }
@@ -278,12 +271,6 @@ namespace PixelFlow.EditorTools
                 "   • Drag the generated emoji font asset into the slot\n\n" +
                 "5. Edit → Project Settings → TextMesh Pro\n" +
                 "   • Enable 'Enable Emoji Support'";
-
-            EditorUtility.DisplayDialog(
-                "Emoji Font — Manual Setup Required",
-                instructions,
-                "OK"
-            );
 
             Debug.Log("[PixelFlowEmojiFontSetup] Manual setup instructions:\n" + instructions);
         }

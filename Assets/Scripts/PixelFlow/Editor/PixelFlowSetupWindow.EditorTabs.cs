@@ -19,7 +19,8 @@ namespace PixelFlow.Editor
             "⚡ Performans",
             "🎨 Garaj & Skin Stüdyosu",
             "📺 Reklam & Monetization",
-            "🛡️ Pre-Build Validator"
+            "🛡️ Pre-Build Validator",
+            "🧰 Araçlar"
         };
 
         private void RenderSelectedTabContent(int idx)
@@ -37,6 +38,7 @@ namespace PixelFlow.Editor
                 case 8: BuildGarageTab(_content); break;
                 case 9: BuildAdMonetizationTab(_content); break;
                 case 10: BuildValidatorTab(_content); break;
+                case 11: BuildToolsTab(_content); break;
                 default: BuildGameControlTab(_content); break;
             }
         }

@@ -10,7 +10,7 @@ using UnityEngine.UI;
 namespace PixelFlow.Views
 {
     [Mediator(typeof(HUDMediator))]
-    public class HUDView : MonoBehaviour
+    public class HUDView : View
     {
         [SerializeField] private Button _hintButton;
         [SerializeField] private TMP_Text _hintCountText;
@@ -100,46 +100,66 @@ namespace PixelFlow.Views
             ApplyDesignTokens();
         }
 
+        protected override void OnBind(IContext context)
+        {
+            base.OnBind(context);
+            SetupHUD();
+            HideCompletion();
+            HideLevelFailed();
+            HideCrisis();
+        }
+
+        protected override void OnUnbind()
+        {
+            base.OnUnbind();
+        }
+
         public void AutoWireUIReferences()
         {
+            if (_completionPanel == null) _completionPanel = FindObject("completion");
+            if (_levelFailedPanel == null) _levelFailedPanel = FindObject("failed");
+            if (_crashToast == null) _crashToast = FindObject("toast");
+            if (_crisisPanel == null) _crisisPanel = FindObject("crisis");
+            if (_starsContainer == null) _starsContainer = FindObject("stars");
+
+            var compTr = _completionPanel != null ? _completionPanel.transform : null;
+            var failTr = _levelFailedPanel != null ? _levelFailedPanel.transform : null;
+            var crisisTr = _crisisPanel != null ? _crisisPanel.transform : null;
+
             if (_hintButton == null) _hintButton = FindButton("hint");
-            if (_nextLevelButton == null) _nextLevelButton = FindButton("next");
-            if (_continueButton == null) _continueButton = FindButton("continue");
+            if (_nextLevelButton == null) _nextLevelButton = FindButton("next", compTr) ?? FindButton("next");
+            if (_continueButton == null) _continueButton = FindButton("continue", compTr) ?? FindButton("continue");
             if (_undoButton == null) _undoButton = FindButton("undo");
             if (_redoButton == null) _redoButton = FindButton("redo");
             if (_themeDarkButton == null) _themeDarkButton = FindButton("dark");
             if (_themeLightButton == null) _themeLightButton = FindButton("light");
             if (_themeNeonButton == null) _themeNeonButton = FindButton("neon");
             if (_pauseButton == null) _pauseButton = FindButton("pause");
-            if (_retryButton == null) _retryButton = FindButton("retry");
-            if (_levelFailedContinueButton == null) _levelFailedContinueButton = FindButton("continue");
+            if (_retryButton == null) _retryButton = FindButton("retry", failTr) ?? FindButton("retry");
+            if (_levelFailedContinueButton == null) _levelFailedContinueButton = FindButton("continue", failTr) ?? FindButton("hub", failTr);
             if (_garageButton == null) _garageButton = FindButton("garage");
             if (_rainbowRoadButton == null) _rainbowRoadButton = FindButton("rainbow");
             if (_clearJamButton == null) _clearJamButton = FindButton("clear");
             if (_viaductButton == null) _viaductButton = FindButton("viaduct");
+            if (_crisisViaductButton == null) _crisisViaductButton = FindButton("viaduct", crisisTr);
+            if (_crisisUndoButton == null) _crisisUndoButton = FindButton("undo", crisisTr);
 
             if (_hintCountText == null) _hintCountText = FindText("hint");
-            if (_scoreText == null) _scoreText = FindText("score");
+            if (_scoreText == null) _scoreText = FindText("hudscore") ?? FindText("score");
             if (_timerText == null) _timerText = FindText("timer");
             if (_levelTitleText == null) _levelTitleText = FindText("title");
-            if (_completionText == null) _completionText = FindText("completion");
-            if (_completionScoreText == null) _completionScoreText = FindText("score");
-            if (_completionStarsText == null) _completionStarsText = FindText("stars");
-            if (_levelFailedText == null) _levelFailedText = FindText("failed");
+            if (_completionText == null) _completionText = FindText("completion") ?? FindText("title", compTr);
+            if (_completionScoreText == null) _completionScoreText = FindText("score", compTr) ?? FindText("completionscore");
+            if (_completionStarsText == null) _completionStarsText = FindText("stars", compTr) ?? FindText("completionstars");
+            if (_levelFailedText == null) _levelFailedText = FindText("failed") ?? FindText("title", failTr);
             if (_coinsText == null) _coinsText = FindText("coin");
             if (_rainbowRoadCountText == null) _rainbowRoadCountText = FindText("rainbow");
             if (_clearJamCountText == null) _clearJamCountText = FindText("clear");
             if (_viaductCountText == null) _viaductCountText = FindText("viaduct");
             if (_crashToastText == null) _crashToastText = FindText("toast");
-            if (_crisisTitleText == null) _crisisTitleText = FindText("crisis");
-            if (_crisisDescriptionText == null) _crisisDescriptionText = FindText("crisis");
-            if (_crisisViaductCountText == null) _crisisViaductCountText = FindText("crisis");
-
-            if (_starsContainer == null) _starsContainer = FindObject("stars");
-            if (_completionPanel == null) _completionPanel = FindObject("completion");
-            if (_levelFailedPanel == null) _levelFailedPanel = FindObject("failed");
-            if (_crashToast == null) _crashToast = FindObject("toast");
-            if (_crisisPanel == null) _crisisPanel = FindObject("crisis");
+            if (_crisisTitleText == null) _crisisTitleText = FindText("crisistitle") ?? FindText("title", crisisTr);
+            if (_crisisDescriptionText == null) _crisisDescriptionText = FindText("desc", crisisTr);
+            if (_crisisViaductCountText == null) _crisisViaductCountText = FindText("count", crisisTr) ?? FindText("viaduct", crisisTr);
 
             LoggerService?.Log($"[PixelFlow.HUDView] AutoWire: hintBtn={(bool)_hintButton}, undoBtn={(bool)_undoButton}, redoBtn={(bool)_redoButton}, nextLvlBtn={(bool)_nextLevelButton}, continueBtn={(bool)_continueButton}, pauseBtn={(bool)_pauseButton}, retryBtn={(bool)_retryButton}, garageBtn={(bool)_garageButton}, rainbowBtn={(bool)_rainbowRoadButton}, clearJamBtn={(bool)_clearJamButton}, themeDark={(bool)_themeDarkButton}, themeLight={(bool)_themeLightButton}, themeNeon={(bool)_themeNeonButton}, completionPanel={(bool)_completionPanel}, levelFailedPanel={(bool)_levelFailedPanel}, starsContainer={(bool)_starsContainer}");
         }
@@ -163,6 +183,9 @@ namespace PixelFlow.Views
             BindButton(_viaductButton, () => OnViaductClicked?.Invoke());
             BindButton(_crisisViaductButton, () => OnCrisisViaductClicked?.Invoke());
             BindButton(_crisisUndoButton, () => OnCrisisUndoClicked?.Invoke());
+
+            var debugBtn = FindButton("debug") ?? FindButton("simulate");
+            if (debugBtn != null) BindButton(debugBtn, () => OnSimulateDebugPressed?.Invoke());
         }
 
         private static void BindButton(Button button, Action onClick)
@@ -358,9 +381,10 @@ namespace PixelFlow.Views
             if (star != null) star.SetActive(active);
         }
 
-        private Button FindButton(string token)
+        private Button FindButton(string token, Transform root = null)
         {
-            var buttons = GetComponentsInChildren<Button>(true);
+            var searchRoot = root != null ? root : transform;
+            var buttons = searchRoot.GetComponentsInChildren<Button>(true);
             foreach (var button in buttons)
             {
                 string name = button.gameObject.name.ToLowerInvariant();
@@ -369,9 +393,10 @@ namespace PixelFlow.Views
             return null;
         }
 
-        private TMP_Text FindText(string token)
+        private TMP_Text FindText(string token, Transform root = null)
         {
-            var texts = GetComponentsInChildren<TMP_Text>(true);
+            var searchRoot = root != null ? root : transform;
+            var texts = searchRoot.GetComponentsInChildren<TMP_Text>(true);
             foreach (var text in texts)
             {
                 string name = text.gameObject.name.ToLowerInvariant();
@@ -380,9 +405,10 @@ namespace PixelFlow.Views
             return null;
         }
 
-        private GameObject FindObject(string token)
+        private GameObject FindObject(string token, Transform root = null)
         {
-            var transforms = GetComponentsInChildren<Transform>(true);
+            var searchRoot = root != null ? root : transform;
+            var transforms = searchRoot.GetComponentsInChildren<Transform>(true);
             foreach (var tr in transforms)
             {
                 string name = tr.gameObject.name.ToLowerInvariant();

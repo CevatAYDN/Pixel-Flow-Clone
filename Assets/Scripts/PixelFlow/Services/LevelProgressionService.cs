@@ -60,25 +60,21 @@ namespace PixelFlow.Services
 
         public DifficultyParams GetDifficultyForLevel(int levelIndex)
         {
-            // GDD §3.6: Önce ScriptableObject asset, yoksa struct fallback
-            PhaseDefinition phase;
-            if (_phaseConfig != null)
+            if (_phaseConfig == null)
             {
-                var phaseAsset = _phaseConfig.GetPhaseForLevel(levelIndex);
-                if (phaseAsset != null)
-                    phase = phaseAsset.ToStruct();
-                else
-                    phase = PhaseDefinition.GetPhaseForLevel(levelIndex);
-            }
-            else
-            {
-                phase = PhaseDefinition.GetPhaseForLevel(levelIndex);
+                throw new DataValidationException("PhaseConfig erişilemedi! LevelProgressionService progression hesaplayamaz.");
             }
 
-            return PhaseToDifficulty(phase, levelIndex);
+            var phaseAsset = _phaseConfig.GetPhaseForLevel(levelIndex);
+            if (phaseAsset == null)
+            {
+                throw new DataValidationException($"PhaseConfig level {levelIndex} için faz döndürmedi!");
+            }
+
+            return PhaseToDifficulty(phaseAsset.ToStruct(), levelIndex);
         }
 
-        private static DifficultyParams PhaseToDifficulty(PhaseDefinition phase, int levelIndex)
+        public static DifficultyParams PhaseToDifficulty(PhaseDefinition phase, int levelIndex)
         {
             int span = phase.EndLevelIndex - phase.StartLevelIndex + 1;
             float progress = span > 0 ? (float)(levelIndex - phase.StartLevelIndex) / span : 0f;
@@ -100,60 +96,15 @@ namespace PixelFlow.Services
             if (_generatedCache.TryGetValue(levelIndex, out var cached))
                 return cached;
 
+            if (_levelCatalog == null)
+            {
+                throw new DataValidationException("LevelCatalog erişilemedi! LevelProgressionService hand-authored/procedural akışını çözemiyor.");
+            }
+
             LevelData level = null;
 
             // GDD §3.6: Önce LevelCatalogAsset'e bak
-            if (_levelCatalog != null)
-            {
-                level = _levelCatalog.GetAuthoredLevel(levelIndex);
-            }
-
-            // Fallback: eski Resources.Load zinciri (katalogda yok veya asset null)
-            if (level == null)
-            {
-                level = UnityEngine.Resources.Load<LevelData>($"Levels/Level{levelIndex + 1}");
-            }
-            if (level == null)
-            {
-                level = UnityEngine.Resources.Load<LevelData>($"Levels/Level{levelIndex}");
-            }
-            if (level == null)
-            {
-                var allLevels = UnityEngine.Resources.LoadAll<LevelData>("Levels");
-                if (allLevels != null)
-                {
-                    foreach (var l in allLevels)
-                    {
-                        if (l != null && l.levelIndex == levelIndex)
-                        {
-                            level = l;
-                            break;
-                        }
-                    }
-                }
-            }
-            if (level == null)
-            {
-                var packs = UnityEngine.Resources.LoadAll<LevelPack>("Levels");
-                if (packs != null)
-                {
-                    foreach (var pack in packs)
-                    {
-                        if (pack != null && pack.levels != null)
-                        {
-                            foreach (var l in pack.levels)
-                            {
-                                if (l != null && l.levelIndex == levelIndex)
-                                {
-                                    level = l;
-                                    break;
-                                }
-                            }
-                        }
-                        if (level != null) break;
-                    }
-                }
-            }
+            level = _levelCatalog.GetAuthoredLevel(levelIndex);
 
             if (level != null)
             {

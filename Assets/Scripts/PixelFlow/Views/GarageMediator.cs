@@ -3,9 +3,9 @@ using Nexus.Core.Services;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Data;
+using PixelFlow.Services;
 using UnityEngine;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace PixelFlow.Views
 {
@@ -14,16 +14,18 @@ namespace PixelFlow.Views
         [Inject] public IInventoryModel InventoryModel { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
-
-        private readonly List<VehicleSkinConfig> _availableSkins = new List<VehicleSkinConfig>();
-        private readonly List<StopSkinConfig> _availableStopSkins = new List<StopSkinConfig>();
+        [Inject] public ISkinCatalogService SkinCatalog { get; set; }
 
         protected override void OnBind()
         {
             LoggerService?.Log("[PixelFlow.GarageMediator] Binding Garage UI with explicit logging...");
             if (View == null || InventoryModel == null) return;
 
-            InitDefaultSkins();
+            if (SkinCatalog == null)
+            {
+                LoggerService?.LogError("[PixelFlow.GarageMediator] ISkinCatalogService not injected! Cannot load skins.");
+                return;
+            }
 
             View.UpdateCoins(InventoryModel.Coins);
             InventoryModel.OnCoinsChanged += HandleCoinsChanged;
@@ -47,62 +49,6 @@ namespace PixelFlow.Views
             });
 
             LoggerService?.Log("[PixelFlow.GarageMediator] Garage UI bound and ready.");
-        }
-
-        private void InitDefaultSkins()
-        {
-            _availableSkins.Clear();
-
-            var loadedSkins = Resources.LoadAll<VehicleSkinConfig>("Configs/Skins");
-            if (loadedSkins == null || loadedSkins.Length == 0)
-            {
-                loadedSkins = Resources.LoadAll<VehicleSkinConfig>("Skins");
-            }
-#if UNITY_EDITOR
-            if (loadedSkins == null || loadedSkins.Length == 0)
-            {
-                var guids = UnityEditor.AssetDatabase.FindAssets("t:VehicleSkinConfig");
-                loadedSkins = guids
-                    .Select(g => UnityEditor.AssetDatabase.LoadAssetAtPath<VehicleSkinConfig>(UnityEditor.AssetDatabase.GUIDToAssetPath(g)))
-                    .Where(s => s != null)
-                    .ToArray();
-            }
-#endif
-            if (loadedSkins != null && loadedSkins.Length > 0)
-            {
-                _availableSkins.AddRange(loadedSkins);
-                LoggerService?.Log($"[PixelFlow.GarageMediator] Loaded {_availableSkins.Count} VehicleSkinConfig assets.");
-            }
-            else
-            {
-                throw new DataValidationException("No VehicleSkinConfig assets found in Resources/Configs/Skins!");
-            }
-
-            _availableStopSkins.Clear();
-            var loadedStopSkins = Resources.LoadAll<StopSkinConfig>("Configs/Skins");
-            if (loadedStopSkins == null || loadedStopSkins.Length == 0)
-            {
-                loadedStopSkins = Resources.LoadAll<StopSkinConfig>("Skins");
-            }
-#if UNITY_EDITOR
-            if (loadedStopSkins == null || loadedStopSkins.Length == 0)
-            {
-                var guids = UnityEditor.AssetDatabase.FindAssets("t:StopSkinConfig");
-                loadedStopSkins = guids
-                    .Select(g => UnityEditor.AssetDatabase.LoadAssetAtPath<StopSkinConfig>(UnityEditor.AssetDatabase.GUIDToAssetPath(g)))
-                    .Where(s => s != null)
-                    .ToArray();
-            }
-#endif
-            if (loadedStopSkins != null && loadedStopSkins.Length > 0)
-            {
-                _availableStopSkins.AddRange(loadedStopSkins);
-                LoggerService?.Log($"[PixelFlow.GarageMediator] Loaded {_availableStopSkins.Count} StopSkinConfig assets.");
-            }
-            else
-            {
-                throw new DataValidationException("No StopSkinConfig assets found in Resources/Configs/Skins!");
-            }
         }
 
         protected override void OnUnbind()
@@ -160,10 +106,10 @@ namespace PixelFlow.Views
 
         private void RefreshSkinsList()
         {
-            if (View == null || InventoryModel == null) return;
+            if (View == null || InventoryModel == null || SkinCatalog == null) return;
             LoggerService?.Log("[PixelFlow.GarageMediator] Refreshing Garage skins list...");
             View.PopulateSkins(
-                _availableSkins,
+                SkinCatalog.AllVehicleSkins,
                 id => InventoryModel.IsSkinUnlocked(id),
                 (color, id) => InventoryModel.GetEquippedSkin(color) == id
             );
@@ -171,10 +117,10 @@ namespace PixelFlow.Views
 
         private void RefreshStopSkinsList()
         {
-            if (View == null || InventoryModel == null) return;
+            if (View == null || InventoryModel == null || SkinCatalog == null) return;
             LoggerService?.Log("[PixelFlow.GarageMediator] Refreshing Garage stop skins list...");
             View.PopulateStopSkins(
-                _availableStopSkins,
+                SkinCatalog.AllStopSkins,
                 id => InventoryModel.IsStopSkinUnlocked(id),
                 (color, id) => InventoryModel.GetEquippedStopSkin(color) == id
             );

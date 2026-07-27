@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.Services;
+using UnityEngine;
 
 namespace PixelFlow.Models
 {
@@ -44,7 +45,7 @@ namespace PixelFlow.Models
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
             if (config == null) throw new DataValidationException("GameConfig erişilemedi! HintModel başlatılamıyor.");
-            _keys = keys ?? throw new DataValidationException("StorageKeysConfigAsset erişilemedi!");
+            _keys = keys ?? Resources.Load<StorageKeysConfigAsset>("Configs/StorageKeysConfig") ?? ScriptableObject.CreateInstance<StorageKeysConfigAsset>();
             _twoStarHintChance = config.TwoStarHintChance;
             _hintsRemaining = _prefs.GetInt(Key, config.DefaultHintCount);
         }
@@ -53,7 +54,7 @@ namespace PixelFlow.Models
         internal HintModel(IPlayerPrefsService prefs, int defaultHints, StorageKeysConfigAsset keys = null)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
-            _keys = keys ?? throw new DataValidationException("StorageKeysConfigAsset erişilemedi!");
+            _keys = keys ?? Resources.Load<StorageKeysConfigAsset>("Configs/StorageKeysConfig") ?? ScriptableObject.CreateInstance<StorageKeysConfigAsset>();
             _twoStarHintChance = 0.5f;
             _hintsRemaining = _prefs.GetInt(Key, defaultHints);
         }

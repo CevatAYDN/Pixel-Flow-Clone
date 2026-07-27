@@ -111,6 +111,13 @@ namespace PixelFlow.Data
         [Tooltip("Prosedürel ses örnekleme hızı")]
         public int AudioSampleRate = 44100;
 
+        [Header("=== Level Select ===")]
+        [Tooltip("Seviye seçim ekranında kilitli seviyelerden kaç tanesinin önden gösterileceği")]
+        public int LevelSelectLockedPreviewCount = 4;
+
+        [Tooltip("Seviye seçim ekranında gösterilecek minimum seviye sayısı (grid doldurma)")]
+        public int LevelSelectMinLevelsShown = 12;
+
         [Header("=== Progress ===")]
         [Tooltip("İlk açılışta unlock edilen seviye sayısı")]
         public int DefaultUnlockedLevels = 1;

@@ -106,9 +106,22 @@ namespace PixelFlow.Editor
             EditorGUI.indentLevel++;
             ToyThemeType newToyTheme = (ToyThemeType)EditorGUILayout.EnumPopup("3D Toy Theme", _data.toyTheme);
 
-            float newBounceForce = EditorGUILayout.Slider("Bounce Force (g-force)", _data.bouncyPhysics.BounceForce, 1f, 10f);
-            float newBounceDamping = EditorGUILayout.Slider("Bounce Damping", _data.bouncyPhysics.BounceDamping, 0.1f, 1.0f);
-            float newSquishFactor = EditorGUILayout.Slider("Squish Factor", _data.bouncyPhysics.SquishFactor, 0.05f, 0.8f);
+            BouncyPhysicsConfigAsset newBouncyConfig = (BouncyPhysicsConfigAsset)EditorGUILayout.ObjectField("Bouncy Physics Config", _data.bouncyPhysicsConfig, typeof(BouncyPhysicsConfigAsset), false);
+
+            float newBounceForce = 0f, newBounceDamping = 0f, newSquishFactor = 0f;
+            if (newBouncyConfig != null)
+            {
+                newBounceForce = EditorGUILayout.Slider("Bounce Force (g-force)", newBouncyConfig.BounceForce, 1f, 20f);
+                newBounceDamping = EditorGUILayout.Slider("Bounce Damping", newBouncyConfig.BounceDamping, 0.1f, 1.0f);
+                newSquishFactor = EditorGUILayout.Slider("Squish Factor", newBouncyConfig.SquishFactor, 0.05f, 1.0f);
+            }
+            else
+            {
+                EditorGUILayout.HelpBox("No BouncyPhysicsConfigAsset assigned. Using global defaults from Resources/Configs/BouncyPhysicsConfig.asset", MessageType.Info);
+                newBounceForce = EditorGUILayout.Slider("Bounce Force (g-force)", 4.5f, 1f, 20f);
+                newBounceDamping = EditorGUILayout.Slider("Bounce Damping", 0.75f, 0.1f, 1.0f);
+                newSquishFactor = EditorGUILayout.Slider("Squish Factor", 0.35f, 0.05f, 1.0f);
+            }
             EditorGUI.indentLevel--;
 
             // GDD §3.6: PhaseDefinition ScriptableObject Assignment
@@ -134,9 +147,23 @@ namespace PixelFlow.Editor
             GUILayout.Space(5);
             GUILayout.Label("Star Criteria & Tutorial (GDD §3.5, §8)", EditorStyles.boldLabel);
             EditorGUI.indentLevel++;
-            string new1Star = EditorGUILayout.TextField("1 Star Criteria", _data.stars.OneStar);
-            string new2Star = EditorGUILayout.TextField("2 Stars Criteria", _data.stars.TwoStars);
-            string new3Star = EditorGUILayout.TextField("3 Stars Criteria", _data.stars.ThreeStars);
+            StarCriteriaConfigAsset newStarConfig = (StarCriteriaConfigAsset)EditorGUILayout.ObjectField("Star Criteria Config", _data.starCriteriaConfig, typeof(StarCriteriaConfigAsset), false);
+            string new1Star = "";
+            string new2Star = "";
+            string new3Star = "";
+            if (newStarConfig != null)
+            {
+                new1Star = EditorGUILayout.TextField("1 Star Criteria", newStarConfig.OneStar);
+                new2Star = EditorGUILayout.TextField("2 Stars Criteria", newStarConfig.TwoStars);
+                new3Star = EditorGUILayout.TextField("3 Stars Criteria", newStarConfig.ThreeStars);
+            }
+            else
+            {
+                EditorGUILayout.HelpBox("No StarCriteriaConfigAsset assigned. Using global defaults from Resources/Configs/StarCriteriaConfig.asset", MessageType.Info);
+                new1Star = EditorGUILayout.TextField("1 Star Criteria", "complete");
+                new2Star = EditorGUILayout.TextField("2 Stars Criteria", "viaducts_used <= 2");
+                new3Star = EditorGUILayout.TextField("3 Stars Criteria", "viaducts_used == 0");
+            }
             TutorialEvent newTutorial = (TutorialEvent)EditorGUILayout.EnumPopup("Tutorial Event", _data.tutorialEvent);
             EditorGUI.indentLevel--;
 
@@ -150,13 +177,23 @@ namespace PixelFlow.Editor
                 _data.flowScoreThreshold = newFlowThreshold;
                 _data.requireFullGridCoverage = newCoverage;
                 _data.toyTheme = newToyTheme;
-                _data.bouncyPhysics = new BouncyPhysicsConfig
+                if (newBouncyConfig != null)
                 {
-                    BounceForce = newBounceForce,
-                    BounceDamping = newBounceDamping,
-                    SquishFactor = newSquishFactor
-                };
-                _data.stars = new StarCriteria { OneStar = new1Star, TwoStars = new2Star, ThreeStars = new3Star };
+                    _data.bouncyPhysicsConfig = newBouncyConfig;
+                    // Update the config asset values too (they're ScriptableObject)
+                    newBouncyConfig.BounceForce = newBounceForce;
+                    newBouncyConfig.BounceDamping = newBounceDamping;
+                    newBouncyConfig.SquishFactor = newSquishFactor;
+                    EditorUtility.SetDirty(newBouncyConfig);
+                }
+                if (newStarConfig != null)
+                {
+                    _data.starCriteriaConfig = newStarConfig;
+                    newStarConfig.OneStar = new1Star;
+                    newStarConfig.TwoStars = new2Star;
+                    newStarConfig.ThreeStars = new3Star;
+                    EditorUtility.SetDirty(newStarConfig);
+                }
                 _data.tutorialEvent = newTutorial;
                 _requireFullGridCoverage = newCoverage;
                 SanitizeGridBounds();
@@ -310,23 +347,17 @@ namespace PixelFlow.Editor
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Clear All Paths", GUILayout.Height(25)))
             {
-                if (EditorUtility.DisplayDialog("Clear Paths", "Are you sure you want to clear all path solutions?", "Yes", "No"))
-                {
-                    Undo.RecordObject(_data, "Clear Paths");
-                    _data.solutions.Clear();
-                    EditorUtility.SetDirty(_data);
-                }
+                Undo.RecordObject(_data, "Clear Paths");
+                _data.solutions.Clear();
+                EditorUtility.SetDirty(_data);
             }
             if (GUILayout.Button("Reset Entire Grid", GUILayout.Height(25)))
             {
-                if (EditorUtility.DisplayDialog("Clear Level Data", "This will wipe out all nodes, paths, and bridges. Reset?", "Yes", "No"))
-                {
-                    Undo.RecordObject(_data, "Clear Grid");
-                    _data.initialNodes.Clear();
-                    _data.solutions.Clear();
-                    _data.bridgePositions.Clear();
-                    EditorUtility.SetDirty(_data);
-                }
+                Undo.RecordObject(_data, "Clear Grid");
+                _data.initialNodes.Clear();
+                _data.solutions.Clear();
+                _data.bridgePositions.Clear();
+                EditorUtility.SetDirty(_data);
             }
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();

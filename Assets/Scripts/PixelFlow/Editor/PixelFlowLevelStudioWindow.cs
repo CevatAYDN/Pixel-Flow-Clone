@@ -46,15 +46,31 @@ namespace PixelFlow.Editor
         private List<string> _diagnosticLogs = new List<string>();
 
         // Services
-        private readonly ILevelValidator _validator = new LevelValidator();
-        private readonly PathSolverFactory _solverFactory = new PathSolverFactory();
+        private ILevelValidator _validator;
+        private PathSolverFactory _solverFactory;
+
+        private void EnsureServices()
+        {
+            if (_validator != null) return;
+            _validator = new LevelValidator();
+            
+            // Load GameConfig for PathSolverFactory
+            var gameConfig = Resources.Load<GameConfig>("Configs/GameConfig");
+            if (gameConfig != null)
+            {
+                _solverFactory = new PathSolverFactory(gameConfig);
+            }
+            else
+            {
+                _solverFactory = new PathSolverFactory(new GameConfig());
+            }
+        }
 
         // UI Styles
         private GUIStyle _headerStyle;
         private GUIStyle _cardStyle;
         private GUIStyle _badgeStyle;
 
-        [MenuItem("Pixel Flow/Seviye Stüdyosu Bankası (Level Bank Studio)", false, 10)]
         public static void ShowWindow()
         {
             PixelFlowSetupWindow.OpenTab(1);
@@ -62,6 +78,7 @@ namespace PixelFlow.Editor
 
         private void OnEnable()
         {
+            EnsureServices();
             RefreshLevelBank();
         }
 

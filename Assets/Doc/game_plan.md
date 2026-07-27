@@ -45,14 +45,25 @@ Projemizde halihazırda bulunan gelişmiş editör altyapısı ([`PixelFlowSetup
 
 ### 2.1 Mevcut Editör Araçlarının Genişletilme Planı (No Parallel Systems)
 
-#### A. Mevcut `LevelDataEditor.cs` Genişletmesi:
+#### A. Mevcut `LevelDataEditor.cs` (Visual Grid Editor, Zaten Genişletilmiş):
 - **Hali hazırda var olanlar:** Visual Grid Editor (Node, Path, Bridge, Obstacle, OneWay, Eraser fırçaları), Otomatik Zorluk Puanlaması ve Solver Testi.
-- **Genişletme:** Seviye bazlı 3D Toy Teması önizlemesi ve Zıplayan Araç (Bouncy Physics) parametre ayarları bu inspector'a eklenecektir.
+- **Zaten yapılmış (game_plan.md §2.1.A):** Seviye bazlı 3D Toy Teması (ToyThemeType enum) önizlemesi ve Zıplayan Araç (BouncyPhysicsConfig: BounceForce, BounceDamping, SquishFactor) parametre ayarları LevelDataEditor Inspector'ına eklenmiştir.
 
-#### B. Mevcut `PixelFlowSetupWindow.cs` Genişletmesi (8 Sekmeye Ek 3 Yeni Sekme):
-1. 🎨 **Sekme 9: Garaj & Skin Stüdyosu:** 3D Araç skin'i tanımlama, renk ailesi atama, 3D model ve ses efektlerini Editör Play Mode başlatmadan canlı önizleme.
-2. 📺 **Sekme 10: Reklam & Monetization Ayarları:** Interstitial seviye barajları, Rewarded Ad ödül miktarları ve placement ID yönetimi.
-3. 🛡️ **Sekme 11: Pre-Build Validator:** Build almadan önce tüm ScriptableObject referanslarını ve seviye çözülebilirliğini doğrulayan kontrol paneli.
+#### B. Mevcut `PixelFlowSetupWindow.cs` Genişletmesi (12 Sekme):
+
+```
+Başlangıç: [0]🕹️ Oyun Kontrol, [1]🔍 Sahne Tanılama
+Üretim:    [2]🎮 Seviye Stüdyosu, [3]🧩 Toplu Çözücü
+Veri:      [4]📦 Data Yöneticisi, [5]💰 Ekonomi & Isı Haritası
+Yayın:     [6]🔬 Nexus, [7]⚡ Performans
+Hybrid:    [8]🎨 Garaj & Skin Stüdyosu, [9]📺 Reklam & Monetization, [10]🛡️ Pre-Build Validator
+Araçlar:   [11]🧰 Araçlar
+```
+
+1. 🎨 **Sekme 8 (Hybrid): Garaj & Skin Stüdyosu:** 3D Araç skin'i tanımlama, renk ailesi atama, 3D model ve ses efektlerini Editör Play Mode başlatmadan canlı önizleme.
+2. 📺 **Sekme 9 (Hybrid): Reklam & Monetization Ayarları:** Interstitial seviye barajları, Rewarded Ad ödül miktarları ve placement ID yönetimi.
+3. 🛡️ **Sekme 10 (Hybrid): Pre-Build Validator:** Build almadan önce tüm ScriptableObject referanslarını ve seviye çözülebilirliğini doğrulayan kontrol paneli.
+4. 🧰 **Sekme 11 (Araçlar):** Dağınık yardımcı araçlar (Data Manager, Config Validator, Level Generator, LevelCatalog Fixer, Missing Reference Fixer, UI Prefab Creator, Audio Generator, Phase Asset Generator, Emoji Font Setup, Auto-Reference) için merkezi başlatma paneli.
 
 ### 2.2 Strict Zero-Hardcode & Zero-Mock Data Policy
 1. **Sıfır Hardcoded Veri (Zero Hardcoded Data):** C# kodları içinde hiçbir sabit sayı veya string (`const`, `literal`) BULUNAMAZ. Tüm değerler veri varlıklarından (`ScriptableObject`) okunur.
@@ -678,10 +689,16 @@ Assets/Scripts/PixelFlow/
 │   ├── ThemePaletteAsset.cs     ← Tema renk paletleri
 │   ├── VehicleSkinConfig.cs     ← Araç skin tanımları
 │   ├── VehicleMaterialConfigAsset.cs ← Araç materyal renkleri
+│   ├── VehicleVisualConfigAsset.cs ← Araç görsel parametreleri (config-driven)
 │   ├── ColorBlindPaletteAsset.cs ← Renk körlüğü paleti
 │   ├── LevelCatalogAsset.cs     ← Merkezi seviye kataloğu
 │   ├── LevelPack.cs             ← Seviye paketi
-│   ├── PhaseDefinitionAsset.cs  ← Faz tanımı
+│   ├── PhaseDefinitionAsset.cs  ← Faz tanımı (eski)
+│   ├── PhaseConfigAsset.cs      ← Faz konfigürasyonu (yeni, GameContextLifecycle referansı)
+│   ├── StorageKeysConfigAsset.cs ← Zero-hardcode PlayerPrefs anahtarları
+│   ├── StopSkinConfig.cs        ← Stop/Durak skin konfigürasyonu
+│   ├── DefaultSkinIdsConfigAsset.cs ← Varsayılan skin ID'leri
+│   ├── DifficultyFormulaConfigAsset.cs ← Zorluk formülü konfigürasyonu
 │   ├── GddColorPalette.cs       ← GDD renk paleti
 │   └── DataValidationException.cs ← Sert hata (zero fallback)
 │
@@ -719,8 +736,15 @@ Assets/Scripts/PixelFlow/
 │   ├── GameplayTimerService.cs  ← Süre takibi
 │   ├── DailyCrisisService.cs    ← Günlük kriz
 │   ├── CrisisAdService.cs       ← Kriz reklamı
+│   ├── DailyLoginStreakService.cs ← LiveOps: Günlük giriş serisi
+│   ├── RushHourEventService.cs  ← LiveOps: Rush Hour etkinliği
 │   ├── TutorialDriver.cs        ← Tutorial akışı
 │   ├── RuntimePathSolver.cs     ← BFS/DFS path solver
+│   ├── PathSolverFactory.cs     ← Path solver factory (strateji deseni)
+│   ├── StandardDFSPathSolverStrategy.cs ← Varsayılan DFS stratejisi
+│   ├── PhaseBasedSolverStrategy.cs ← Phase-based path solver stratejisi
+│   ├── DynamicDifficultySolverStrategy.cs ← Dinamik zorluk path solver
+│   ├── LevelValidator.cs        ← Level geçerlilik doğrulama
 │   ├── ProceduralLevelGenerator.cs ← Prosedürel seviye
 │   ├── ProceduralAudioFactory.cs ← Prosedürel ses
 │   ├── GridStateSerializer.cs   ← Save/Load serialization
@@ -732,9 +756,17 @@ Assets/Scripts/PixelFlow/
 │   ├── CameraProvider.cs        ← Aktif kamera erişim sağlayıcısı
 │   ├── GridViewProvider.cs      ← Aktif GridView erişim sağlayıcısı
 │   ├── ResourceLocalizationTableProvider.cs ← Yerelleştirme tablo yükleyici
+│   ├── LocalizationService.cs   ← PixelFlow yerelleştirme servisi (Nexus Core ILocalizationService)
+│   ├── SkinCatalogService.cs    ← Skin kataloğu yönetimi
+│   ├── IapIntegrationService.cs ← IAP entegrasyonu (EconomyConfig ile)
+│   ├── PixelFlowAnalyticsTracker.cs ← Analytics takipçisi (Global Release)
+│   ├── RtlUtility.cs            ← RTL (sağdan-sola) dil yardımcısı
 │   ├── (Arayüzler) ICameraProvider, IGameHistoryService, IGridViewProvider,
-│   │               IHintService, IPathService, IPathSolver, IPowerUpService
+│   │               IHintService, IPathService, IPathSolver, IPowerUpService,
+│   │               IDailyLoginStreakService, ILevelValidator, IPathSolverStrategy,
+│   │               IRushHourEventService
 │   └── GlobalRelease/           ← Global mağaza servisleri
+│       ├── EncryptedCloudSaveAdapter.cs ← Şifreli cloud save (ICloudSaveAdapter)
 │       ├── PrivacyComplianceService.cs
 │       ├── SilentCrashDiagnosticsService.cs
 │       ├── InAppReviewService.cs
@@ -777,14 +809,16 @@ Assets/Scripts/PixelFlow/
 │   ├── PlaceViaductSignal.cs
 │   ├── RequestHintSignal.cs
 │   ├── ProgressUpdatedSignal.cs
-│   ├── CollectionSignals.cs     ← Koleksiyon/garaj sinyalleri (ShowGarage vb.)
-│   ├── FlowSignals.cs           ← FlowScoreUpdated, LoadedInitialLevel vb.
-│   ├── SettingsSignals.cs       ← ChangeAudioVolume/ColorBlind/ToggleHaptics
+│   ├── CollectionSignals.cs     ← Koleksiyon/garaj/skin sinyalleri (CoinsEarned, SkinUnlocked, EquipSkin)
+│   ├── FlowSignals.cs           ← FlowScoreUpdated, LoadedInitialLevel, RequestInterstitialAd vb.
+│   ├── SettingsSignals.cs       ← ChangeAudioVolume/ColorBlind/ToggleHaptics/ShowSettings
+│   ├── RushHourSignals.cs       ← RushHourStarted, RushHourEnded (LiveOps)
 │   ├── ActivateRainbowRoadSignal.cs
 │   ├── ClearJamSignal.cs
 │   ├── ChangeThemeSignal.cs
 │   ├── ThemeChangedSignal.cs
 │   ├── ShowGarageSignal.cs
+│   ├── StopSkinUnlockedSignal.cs
 │   ├── PathIntersectionWarningSignal.cs
 │   ├── ThirdColorRejectionSignal.cs
 │   └── TimerTickSignal.cs
@@ -793,10 +827,12 @@ Assets/Scripts/PixelFlow/
 │   ├── GridView.cs + GridMediator.cs
 │   ├── HUDView.cs + HUDMediator.cs
 │   ├── MainMenuView.cs + MainMenuMediator.cs
+│   ├── LevelSelectView.cs + LevelSelectMediator.cs
 │   ├── GarageView.cs + GarageMediator.cs
 │   ├── SettingsView.cs + SettingsMediator.cs
 │   ├── SplashView.cs + SplashMediator.cs
 │   ├── DailyCrisisView.cs + DailyCrisisMediator.cs
+│   ├── StarPassView.cs + StarPassMediator.cs
 │   ├── TutorialView.cs
 │   ├── VehicleVisualFactory.cs
 │   ├── VehiclePartPool.cs
@@ -809,19 +845,28 @@ Assets/Scripts/PixelFlow/
 │   └── SafeArea.cs              ← Çentik/safe-area yerleşimi
 │
 └── Editor/                      ← Editör araçları (Runtime'a dahil DEĞİL)
-    ├── PixelFlowSetupWindow.cs  ← Ana editör penceresi (11 sekme, partial class)
-    ├── PixelFlowSetupWindow.EditorTabs.cs      ← Seviye/çözücü sekmeleri
+    ├── PixelFlowSetupWindow.cs  ← Ana editör penceresi (12 sekme, partial class)
+    ├── PixelFlowSetupWindow.EditorTabs.cs      ← Sekme yönlendirme (tab 0-11)
     ├── PixelFlowSetupWindow.SceneSetup.cs      ← Sahne kurulum otomasyonu
     ├── PixelFlowSetupWindow.DataManager.cs     ← Data yöneticisi sekmesi
     ├── PixelFlowSetupWindow.GameAndDiagnostics.cs ← Oyun kontrol & tanılama
-    ├── PixelFlowSetupWindow.HybridCasualTabs.cs ← Garaj/Reklam/Validator sekmeleri
+    ├── PixelFlowSetupWindow.HybridCasualTabs.cs ← Garaj/Reklam/Validator/Araçlar sekmeleri
     ├── LevelDataEditor.cs       ← Visual grid editör (CustomEditor)
-    ├── PreBuildDataValidator.cs ← Build öncesi doğrulama
+    ├── PreBuildDataValidator.cs ← Build öncesi doğrulama (IPreprocessBuildWithReport)
     ├── PhaseAssetGenerator.cs   ← Faz asset üretici
     ├── PixelFlowEmojiFontSetup.cs ← Emoji font kurulumu
     ├── AutoReferenceEditor.cs / FixMissingScriptRefs.cs ← Referans onarım
     ├── PixelFlowDiagnosticTests.cs ← Editör tanılama testleri
-    └── Tests/                   ← 30+ NUnit test dosyası (GameTestContext + stub'lar)
+    ├── LevelCatalogFixer.cs     ← LevelCatalog prosedürel giriş düzeltici
+    ├── AssetCreator.cs          ← Varlık oluşturma yardımcısı
+    ├── AudioClipGenerator.cs    ← Prosedürel ses klibi oluşturucu
+    ├── ConfigValidator.cs       ← Config doğrulama penceresi
+    ├── DataManagerController.cs ← Veri yöneticisi kontrolcüsü
+    ├── EditorDataManager.cs     ← Editör veri yönetimi
+    ├── GenerateLevels.cs        ← Toplu seviye üretici
+    ├── PixelFlowLevelStudioWindow.cs ← Level Bank, Prosedürel Studio, Balance Analyzer
+    ├── UIPrefabCreator.cs       ← UI Prefab oluşturucu
+    └── Tests/                   ← 46+ NUnit test + stub dosyası (GameTestContext + stub'lar)
 ```
 
 #### 15.2.2 GameState Machine (Kesin Tanım)

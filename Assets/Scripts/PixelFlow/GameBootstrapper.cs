@@ -6,6 +6,7 @@ using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Services;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace PixelFlow
 {
@@ -14,9 +15,8 @@ namespace PixelFlow
     /// İlk çalıştırmada EnterHubSignal ateşlenir; save varsa restore edilir.
     ///
     /// Tüm DI bağımlılıkları Root başlatıldıktan sonra container'dan tek seferde
-    /// çözülür ve önbelleğe alınır. Resources.Load yerine ILevelProgressionService
-    /// kullanılır. initialLevel ve nexusRoot public field'ları Editor uyumluluğu
-    /// için korunur.
+    /// çözülür ve önbelleğe alınır. FindAnyObjectByType yerine Root static registry'si kullanılır (§15.9 Kural 8).
+    /// initialLevel ve nexusRoot public field'ları Editor uyumluluğu için korunur.
     /// </summary>
     public class GameBootstrapper : MonoBehaviour
     {
@@ -314,12 +314,17 @@ namespace PixelFlow
             int retries = _rootSearchRetries;
             while (_cachedRoot == null && retries > 0)
             {
-                _cachedRoot = FindAnyObjectByType<Root>();
-                if (_cachedRoot == null)
+                // Use FindObjectsByType directly - Root.AllRoots is internal
+                var roots = FindObjectsByType<Root>(FindObjectsInactive.Exclude);
+                if (roots != null && roots.Length > 0)
                 {
-                    retries--;
-                    yield return new WaitForSeconds(_rootSearchInterval);
+                    _cachedRoot = roots[0];
+                    break;
                 }
+
+                retries--;
+                if (retries > 0)
+                    yield return new WaitForSeconds(_rootSearchInterval);
             }
         }
 

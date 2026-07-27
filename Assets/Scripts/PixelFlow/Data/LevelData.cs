@@ -101,22 +101,6 @@ public enum ColorType { None, Red, Green, Blue, Yellow, Purple }
     /// <summary>game_plan.md §2.1.A: Seviye bazlı 3D Toy Temaları.</summary>
     public enum ToyThemeType { Default, PastelToy, NeonCity, CandyPark, Woodland }
 
-    /// <summary>game_plan.md §2.1.A: Zıplayan Araç (Bouncy Physics) parametreleri.</summary>
-    [System.Serializable]
-    public struct BouncyPhysicsConfig
-    {
-        [Tooltip("Zıplama kuvveti (g-force/impulse)")] public float BounceForce;
-        [Tooltip("Zayıflama / sönümleme katsayısı")] public float BounceDamping;
-        [Tooltip("Esneklik / ezilme-büzülme şiddeti")] public float SquishFactor;
-
-        public static BouncyPhysicsConfig Default => new BouncyPhysicsConfig
-        {
-            BounceForce = 4.5f,
-            BounceDamping = 0.75f,
-            SquishFactor = 0.35f
-        };
-    }
-
     [CreateAssetMenu(fileName = "LevelData", menuName = "PixelFlow/LevelData")]
     public class LevelData : ScriptableObject
     {
@@ -129,7 +113,8 @@ public enum ColorType { None, Red, Green, Blue, Yellow, Purple }
         public ToyThemeType toyTheme = ToyThemeType.PastelToy;
 
         [Header("Zıplayan Araç Physics (game_plan.md §2.1.A)")]
-        public BouncyPhysicsConfig bouncyPhysics = BouncyPhysicsConfig.Default;
+        [Tooltip("Seviye özel zıplama parametreleri. Atanmazsa global BouncyPhysicsConfigAsset kullanılır.")]
+        public BouncyPhysicsConfigAsset bouncyPhysicsConfig;
 
         [Header("Nodes (2 per color)")]
         public List<GridNode> initialNodes = new List<GridNode>();
@@ -153,7 +138,8 @@ public enum ColorType { None, Red, Green, Blue, Yellow, Purple }
         public int difficultyScore;
 
         [Header("Yıldız Kriterleri (GDD §3.5)")]
-        public StarCriteria stars = StarCriteria.Default;
+        [Tooltip("Seviye özel yıldız kriterleri. Atanmazsa global StarCriteriaConfigAsset kullanılır.")]
+        public StarCriteriaConfigAsset starCriteriaConfig;
 
         [Header("Tutorial (GDD §8)")]
         public TutorialEvent tutorialEvent = TutorialEvent.None;

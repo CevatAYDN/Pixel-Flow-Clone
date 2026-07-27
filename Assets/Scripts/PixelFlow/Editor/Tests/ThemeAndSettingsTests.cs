@@ -115,16 +115,11 @@ namespace PixelFlow.Editor.Tests
         }
 
         [Test]
-        public void EconomyConfigAsset_EnsureCanonicalIapProducts_PopulatesNineProducts()
+        public void EconomyConfigAsset_ValidateIapProducts_ThrowsWhenEmpty()
         {
             var economyConfig = ScriptableObject.CreateInstance<EconomyConfigAsset>();
-            var products = economyConfig.EnsureCanonicalIapProducts();
-
-            Assert.IsNotNull(products);
-            Assert.AreEqual(9, products.Count, "Canonical IAP catalogue must contain exactly 9 products per game_plan.md §9.3");
-            Assert.IsTrue(products.Exists(p => p.ProductId == "no_ads"));
-            Assert.IsTrue(products.Exists(p => p.ProductId == "starter_pack"));
-            Assert.IsTrue(products.Exists(p => p.ProductId == "vip_bundle"));
+            // Empty IAP list must throw — §2.2 Zero Silent Fallback policy
+            Assert.Throws<DataValidationException>(() => economyConfig.ValidateIapProducts());
         }
     }
 }

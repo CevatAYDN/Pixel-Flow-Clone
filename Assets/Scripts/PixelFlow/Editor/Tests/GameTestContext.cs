@@ -125,6 +125,100 @@ namespace PixelFlow.Editor.Tests
             return new RuntimePathSolver { Config = CreateTestGameConfig() };
         }
 
+        public static PhaseConfigAsset CreateTestPhaseConfig()
+        {
+            var phaseConfig = ScriptableObject.CreateInstance<PhaseConfigAsset>();
+            phaseConfig.Phase1 = CreatePhase("Phase1_Test", GamePhase.Phase1, 0, 11, 5, 6, 1, 2, 0, 0, false, false, false, false, false);
+            phaseConfig.Phase2 = CreatePhase("Phase2_Test", GamePhase.Phase2, 12, 27, 7, 7, 2, 3, 1, 2, false, false, false, false, false);
+            phaseConfig.Phase3 = CreatePhase("Phase3_Test", GamePhase.Phase3, 28, 44, 8, 9, 3, 4, 2, 3, true, true, true, false, false);
+            phaseConfig.Phase4 = CreatePhase("Phase4_Test", GamePhase.Phase4, 45, 59, 10, 10, 4, 5, 3, 4, true, true, true, true, true);
+            return phaseConfig;
+        }
+
+        public static LevelCatalogAsset CreateTestLevelCatalog()
+        {
+            return ScriptableObject.CreateInstance<LevelCatalogAsset>();
+        }
+
+        public static DefaultSkinIdsConfigAsset CreateTestDefaultSkinIdsConfig()
+        {
+            var config = ScriptableObject.CreateInstance<DefaultSkinIdsConfigAsset>();
+            config.DefaultVehicleSkinId = "skin_default";
+            return config;
+        }
+
+        public static BouncyPhysicsConfigAsset CreateTestBouncyPhysicsConfig()
+        {
+            var config = ScriptableObject.CreateInstance<BouncyPhysicsConfigAsset>();
+            config.BounceForce = 4.5f;
+            config.BounceDamping = 0.75f;
+            config.SquishFactor = 0.35f;
+            return config;
+        }
+
+        public static StarCriteriaConfigAsset CreateTestStarCriteriaConfig()
+        {
+            var config = ScriptableObject.CreateInstance<StarCriteriaConfigAsset>();
+            config.ThreeStarsMaxViaducts = 0;
+            config.TwoStarsMaxViaducts = 2;
+            config.OneStar = "complete";
+            config.TwoStars = "viaducts_used <= 2";
+            config.ThreeStars = "viaducts_used == 0";
+            return config;
+        }
+
+        public static RushHourConfigAsset CreateTestRushHourConfig()
+        {
+            var config = ScriptableObject.CreateInstance<RushHourConfigAsset>();
+            config.DurationSeconds = 3600;
+            config.CoinMultiplier = 2.0f;
+            config.CooldownHours = 48;
+            config.MinLevel = 10;
+            config.TriggerAfterHours = 24;
+            return config;
+        }
+
+        public static DifficultyFormulaConfigAsset CreateTestDifficultyFormulaConfig()
+        {
+            var config = ScriptableObject.CreateInstance<DifficultyFormulaConfigAsset>();
+            config.ColorWeight = 10;
+            config.IntersectionWeight = 5;
+            config.ObstacleWeight = 3;
+            config.ViaductWeight = 4;
+            return config;
+        }
+
+        public static ThemePaletteAsset CreateTestThemePalette()
+        {
+            var palette = ScriptableObject.CreateInstance<ThemePaletteAsset>();
+            return palette;
+        }
+
+        public static ColorBlindPaletteAsset CreateTestColorBlindPalette()
+        {
+            var palette = ScriptableObject.CreateInstance<ColorBlindPaletteAsset>();
+            return palette;
+        }
+
+        public static VehicleMaterialConfigAsset CreateTestVehicleMaterialConfig()
+        {
+            var config = ScriptableObject.CreateInstance<VehicleMaterialConfigAsset>();
+            return config;
+        }
+
+        public static VehicleVisualConfigAsset CreateTestVehicleVisualConfig()
+        {
+            var config = ScriptableObject.CreateInstance<VehicleVisualConfigAsset>();
+            config.TrainWheelYOffset = 0.09f;
+            config.TrainWheelZOffset = 0.05f;
+            config.TrainTrailTime = 0.55f;
+            config.TrainTrailStartWidth = 0.22f;
+            config.CarWheelZOffset = 0.06f;
+            config.CarTrailTime = 0.45f;
+            config.CarTrailStartWidth = 0.18f;
+            return config;
+        }
+
         /// <summary>
         /// Builds a Nexus test context with all PixelFlow game bindings registered.
         /// Uses InMemoryPlayerPrefsService so models can be constructed in EditMode.
@@ -144,14 +238,44 @@ namespace PixelFlow.Editor.Tests
                 var economyConfig = ScriptableObject.CreateInstance<EconomyConfigAsset>();
                 builder.BindInstance(economyConfig);
 
-                var phaseConfig = ScriptableObject.CreateInstance<PhaseConfigAsset>();
+                var phaseConfig = CreateTestPhaseConfig();
                 builder.BindInstance(phaseConfig);
+
+                var levelCatalog = CreateTestLevelCatalog();
+                builder.BindInstance(levelCatalog);
 
                 var themeConfig = ScriptableObject.CreateInstance<ThemePaletteAsset>();
                 builder.BindInstance(themeConfig);
 
                 var vehicleMatConfig = ScriptableObject.CreateInstance<VehicleMaterialConfigAsset>();
                 builder.BindInstance(vehicleMatConfig);
+
+                var defaultSkinConfig = CreateTestDefaultSkinIdsConfig();
+                builder.BindInstance(defaultSkinConfig);
+
+                var bouncyPhysicsConfig = CreateTestBouncyPhysicsConfig();
+                builder.BindInstance(bouncyPhysicsConfig);
+
+                var starCriteriaConfig = CreateTestStarCriteriaConfig();
+                builder.BindInstance(starCriteriaConfig);
+
+                var rushHourConfig = CreateTestRushHourConfig();
+                builder.BindInstance(rushHourConfig);
+
+                var difficultyFormulaConfig = CreateTestDifficultyFormulaConfig();
+                builder.BindInstance(difficultyFormulaConfig);
+
+                var themePalette = CreateTestThemePalette();
+                builder.BindInstance(themePalette);
+
+                var colorBlindPalette = CreateTestColorBlindPalette();
+                builder.BindInstance(colorBlindPalette);
+
+                var vehicleMaterialConfig = CreateTestVehicleMaterialConfig();
+                builder.BindInstance(vehicleMaterialConfig);
+
+                var vehicleVisualConfig = CreateTestVehicleVisualConfig();
+                builder.BindInstance(vehicleVisualConfig);
 
                 // Economy services (required by SaveProgressCommand)
                 builder.BindService<IEconomyService, Nexus.Core.Services.EconomyService>();
@@ -160,7 +284,7 @@ namespace PixelFlow.Editor.Tests
                 builder.BindService<IPathService, PathService>();
                 builder.BindService<IGameHistoryService, GameHistoryService>();
                 builder.Bind<IPathSolver, RuntimePathSolver>();
-                builder.Bind<IHintService, HintService>();
+                builder.BindService<IHintService, HintService>();
                 builder.BindService<IVehicleSimulator, VehicleSimulator>();
                 builder.BindService<ISaveThrottler, SaveThrottler>();
                 builder.BindService<IHapticService, HapticService>();
@@ -188,14 +312,15 @@ namespace PixelFlow.Editor.Tests
                 builder.BindReactiveModel<ISettingsModel, SettingsModel>();
                 builder.BindReactiveModel<ISoundModel, SoundModel>();
                 builder.BindReactiveModel<ITutorialModel, TutorialModel>();
+                builder.BindReactiveModel<IDailyCrisisModel, DailyCrisisModel>();
                 builder.BindReactiveModel<IInventoryModel, InventoryModel>();
                 builder.Bind<ILevelProgressionService, LevelProgressionService>();
 
-                builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));
                 builder.Bind<ICameraProvider, StubCameraProvider>();
                 builder.Bind<IGridViewProvider, StubGridViewProvider>();
                 builder.BindService<ILevelLoaderService, LevelLoaderService>();
-
+                builder.Bind<ICloudSaveAdapter, PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter>();
+                builder.BindService<ILocalizationService, PixelFlow.Services.LocalizationService>();
                 builder.BindSignal<InputInteractionSignal>().To<ProcessInputCommand>();
                 builder.BindSignal<CheckWinConditionSignal>().To<CheckWinConditionCommand>();
                 builder.BindSignal<LoadLevelSignal>().To<LoadLevelCommand>();
@@ -287,6 +412,29 @@ namespace PixelFlow.Editor.Tests
             level.bridgePositions = new List<Vector2Int>();
             level.solutions = new List<PathSolution>();
             return level;
+        }
+
+        private static PhaseDefinitionAsset CreatePhase(string name, GamePhase phase, int startIdx, int endIdx,
+            int gridMin, int gridMax, int colorMin, int colorMax, int bridgeMin, int bridgeMax,
+            bool fullCoverage, bool obstacles, bool oneWay, bool ferry, bool narrowPass)
+        {
+            var asset = ScriptableObject.CreateInstance<PhaseDefinitionAsset>();
+            asset.name = name;
+            asset.Phase = phase;
+            asset.StartLevelIndex = startIdx;
+            asset.EndLevelIndex = endIdx;
+            asset.GridSizeMin = gridMin;
+            asset.GridSizeMax = gridMax;
+            asset.ColorCountMin = colorMin;
+            asset.ColorCountMax = colorMax;
+            asset.BridgeCountMin = bridgeMin;
+            asset.BridgeCountMax = bridgeMax;
+            asset.RequireFullCoverage = fullCoverage;
+            asset.ObstaclesEnabled = obstacles;
+            asset.OneWayEnabled = oneWay;
+            asset.FerryEnabled = ferry;
+            asset.NarrowPassEnabled = narrowPass;
+            return asset;
         }
     }
 }

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Nexus.Core;
 using Nexus.Core.Services;
+using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Signals;
 using PixelFlow.Services;
@@ -20,10 +21,7 @@ namespace PixelFlow.Views
         [Inject] public IProgressModel ProgressModel { get; set; }
         [Inject] public ILevelProgressionService ProgressionService { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
-
-        // Kilitli seviyelerden kaç tanesinin önden gösterileceği ve minimum ızgara boyutu.
-        private const int LockedPreviewCount = 4;
-        private const int MinLevelsShown = 12;
+        [Inject] public GameConfig Config { get; set; }
 
         protected override void OnBind()
         {
@@ -74,7 +72,9 @@ namespace PixelFlow.Views
             if (unlocked < 1) unlocked = 1;
 
             // Açılan seviyeler + birkaç kilitli önizleme; düzgün ızgara için 4'ün katına yuvarla.
-            int total = Mathf.Max(MinLevelsShown, unlocked + LockedPreviewCount);
+            int lockedPreview = Config != null ? Config.LevelSelectLockedPreviewCount : 4;
+            int minLevels = Config != null ? Config.LevelSelectMinLevelsShown : 12;
+            int total = Mathf.Max(minLevels, unlocked + lockedPreview);
             int remainder = total % 4;
             if (remainder != 0) total += (4 - remainder);
 

@@ -4,12 +4,10 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
-using UnityEngine.Rendering;
 using Nexus.Core;
 using PixelFlow.Views;
 using PixelFlow.Data;
 using PixelFlow.Services;
-using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 
@@ -1375,6 +1373,11 @@ namespace PixelFlow.Editor
             if (garageView == null) return;
             var garageObj = garageView.gameObject;
 
+            for (int i = garageObj.transform.childCount - 1; i >= 0; i--)
+            {
+                Object.DestroyImmediate(garageObj.transform.GetChild(i).gameObject);
+            }
+
             var cg = garageObj.GetComponent<CanvasGroup>();
             if (cg == null) cg = garageObj.AddComponent<CanvasGroup>();
 
@@ -2037,10 +2040,7 @@ namespace PixelFlow.Editor
             string targetPath = $"Assets/Resources/Levels/Level{targetIndex}.asset";
             if (File.Exists(targetPath))
             {
-                if (!EditorUtility.DisplayDialog("Seviye Zaten Var",
-                    $"Level{targetIndex}.asset zaten mevcut. Üzerine yazılsın mı?",
-                    "Evet", "Hayır"))
-                    return;
+                Debug.LogWarning($"[PixelFlow] Duplicate level overwrite: Level{targetIndex}.asset already exists, replacing it.");
                 AssetDatabase.DeleteAsset(targetPath);
             }
 

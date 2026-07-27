@@ -282,28 +282,19 @@ namespace PixelFlow.Commands
 
                     Vector2Int entryDir = signal.GridPosition - GridModel.LastPosition.Value;
 
-if (currentCell.PathColorCount > 0)
+                    if (currentCell.PathColorCount > 0)
+                    {
+                        ColorType existingColor = currentCell.FirstPathColor;
+                        if (GridModel.Paths.TryGetValue(existingColor, out var otherPath))
                         {
-                            ColorType existingColor = currentCell.FirstPathColor;
-                            if (GridModel.Paths.TryGetValue(existingColor, out var otherPath))
+                            if (!BridgeValidationUtility.IsValidBridgeCrossing(
+                                otherPath, path, signal.GridPosition, entryDir))
                             {
-                                if (!BridgeValidationUtility.IsValidBridgeCrossing(
-                                    otherPath, path, signal.GridPosition, entryDir))
-                                {
-                                    LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Path crossing conflict at {signal.GridPosition} between {GridModel.ActiveColor.Value} and {existingColor}. Backtracking conflicting path.");
-                                    EnsureHistoryRecorded();
-                                    PathService.BacktrackPath(existingColor, signal.GridPosition);
-                                }
+                                LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Path crossing conflict at {signal.GridPosition} between {GridModel.ActiveColor.Value} and {existingColor}. Backtracking conflicting path.");
+                                EnsureHistoryRecorded();
+                                PathService.BacktrackPath(existingColor, signal.GridPosition);
                             }
                         }
-
-                        if (currentCell.PathColorCount >= _configMaxPathsPerBridge)
-                        {
-                        // If still full, backtrack the conflicting color to make space
-                        ColorType firstColor = currentCell.FirstPathColor;
-                        LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Cell at {signal.GridPosition} remains full after backtrack. Forcing backtrack of {firstColor} color.");
-                        EnsureHistoryRecorded();
-                        PathService.BacktrackPath(firstColor, signal.GridPosition);
                     }
 
                     if (currentCell.PathColorCount >= _configMaxPathsPerBridge)

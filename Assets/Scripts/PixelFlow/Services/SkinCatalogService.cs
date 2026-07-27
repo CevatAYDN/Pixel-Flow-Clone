@@ -20,6 +20,8 @@ namespace PixelFlow.Services
         StopSkinConfig GetStopSkinById(string skinId);
         IReadOnlyList<VehicleSkinConfig> AllVehicleSkins { get; }
         IReadOnlyList<StopSkinConfig> AllStopSkins { get; }
+        void RegisterVehicleSkins(IEnumerable<VehicleSkinConfig> skins);
+        void RegisterStopSkins(IEnumerable<StopSkinConfig> skins);
     }
 
     public class SkinCatalogService : ISkinCatalogService, INexusService

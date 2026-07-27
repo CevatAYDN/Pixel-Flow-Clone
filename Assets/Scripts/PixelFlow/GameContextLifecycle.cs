@@ -23,13 +23,18 @@ namespace PixelFlow
         [SerializeField] private EconomyConfigAsset economyConfig;
         [SerializeField] private LevelCatalogAsset levelCatalog;
         [SerializeField] private PhaseConfigAsset phaseConfig;
+        [SerializeField] private DifficultyFormulaConfigAsset difficultyFormulaConfig;
+        [SerializeField] private DefaultSkinIdsConfigAsset defaultSkinConfig;
+        [SerializeField] private BouncyPhysicsConfigAsset bouncyPhysicsConfig;
+        [SerializeField] private StarCriteriaConfigAsset starCriteriaConfig;
+        [SerializeField] private RushHourConfigAsset rushHourConfig;
 
         public void OnConfigure(IContextBuilder builder)
         {
             NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] OnConfigure: Initializing framework dependency injection bindings...");
             // PlayerPrefs servisini singleton olarak bağla; kalıcı state kullanan tüm
             // modeller bunu constructor injection ile alır (test edilebilir).
-            builder.Bind<IPlayerPrefsService, EncryptedStorageService>();
+            builder.Bind<IPlayerPrefsService, StrictEncryptedStorageService>();
             
             // Tüm Nexus Core Çekirdek Servisleri — BindService ile tek instance
             // (BindService<> hem INexusService arayüzünü bağlar hem de auto-init kuyruğuna ekler.
@@ -77,16 +82,21 @@ namespace PixelFlow
             builder.BindService<IRushHourEventService, RushHourEventService>(); // LiveOps: Rush Hour Event
             builder.Bind<IPathSolver, RuntimePathSolver>();
             builder.Bind<ILevelValidator, LevelValidator>();
-            builder.Bind<PathSolverFactory, PathSolverFactory>();
+            builder.Bind<PathSolverFactory>();
             builder.Bind<IPathSolverStrategy, StandardDFSPathSolverStrategy>();
+            builder.Bind<IPathSolverStrategy, PhaseBasedSolverStrategy>();
+            builder.Bind<IPathSolverStrategy, DynamicDifficultySolverStrategy>();
             builder.BindService<IHintService, HintService>(); // Fixed: was Bind<> now BindService<> for auto-init
             builder.BindService<IPowerUpService, PowerUpService>();
             builder.Bind<ILevelProgressionService, LevelProgressionService>();
             builder.BindService<ILevelLoaderService, LevelLoaderService>(); // GDD §8: DI injection for level loading
             builder.BindService<IapIntegrationService, IapIntegrationService>(); // IAP integration with EconomyConfig
 
+            // Skin Catalog Service (LiveOps: Garage & Collection)
+            builder.BindService<ISkinCatalogService, SkinCatalogService>();
+
             // Global Release Production Services (game_plan.md §3)
-            builder.Bind<ICloudSaveAdapter, PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter>();
+            builder.BindInstance<ICloudSaveAdapter>(new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter(storageKeysConfig));
             builder.BindService<CloudSaveManager>();
             builder.BindService<PixelFlowAnalyticsTracker>();
             builder.BindService<PixelFlow.Services.GlobalRelease.PrivacyComplianceService>();
@@ -183,6 +193,8 @@ namespace PixelFlow
             {
                 throw new DataValidationException("VehicleVisualConfig referansı GameContextLifecycle üzerinde atanmadı. Lütfen Bootstrap Config Assets alanlarını doldurun.");
             }
+            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] VehicleVisualConfig reference bound successfully.");
+            builder.BindInstance(vehicleVisualConfig);
             Views.VehicleVisualFactory.Initialize(vehicleMaterialConfig, vehicleVisualConfig);
 
             // EconomyConfigAsset — GDD §9: Ekonomi/balance konfigürasyonu
@@ -208,10 +220,91 @@ namespace PixelFlow
             }
             NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] PhaseConfig reference bound successfully.");
             builder.BindInstance(phaseConfig);
+
+            // DifficultyFormulaConfigAsset — Zorluk formülü
+            if (difficultyFormulaConfig == null)
+            {
+                throw new DataValidationException("DifficultyFormulaConfig referansı GameContextLifecycle üzerinde atanmadı. Lütfen Bootstrap Config Assets alanlarını doldurun.");
+            }
+            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] DifficultyFormulaConfig reference bound successfully.");
+            builder.BindInstance(difficultyFormulaConfig);
+
+            // DefaultSkinIdsConfigAsset — Varsayılan skin ID'leri
+            if (defaultSkinConfig == null)
+            {
+                throw new DataValidationException("DefaultSkinIdsConfig referansı GameContextLifecycle üzerinde atanmadı. Lütfen Bootstrap Config Assets alanlarını doldurun.");
+            }
+            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] DefaultSkinIdsConfig reference bound successfully.");
+            builder.BindInstance(defaultSkinConfig);
+
+            // RushHourConfigAsset — LiveOps Rush Hour Event
+            if (rushHourConfig == null)
+            {
+                throw new DataValidationException("RushHourConfig referansı GameContextLifecycle üzerinde atanmadı. Lütfen Bootstrap Config Assets alanlarını doldurun.");
+            }
+            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] RushHourConfig reference bound successfully.");
+            builder.BindInstance(rushHourConfig);
+
+            // BouncyPhysicsConfigAsset — Global bouncy physics defaults
+            if (bouncyPhysicsConfig == null)
+            {
+                throw new DataValidationException("BouncyPhysicsConfig referansı GameContextLifecycle üzerinde atanmadı. Lütfen Bootstrap Config Assets alanlarını doldurun.");
+            }
+            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] BouncyPhysicsConfig reference bound successfully.");
+            builder.BindInstance(bouncyPhysicsConfig);
+
+            // StarCriteriaConfigAsset — Global star criteria defaults
+            if (starCriteriaConfig == null)
+            {
+                throw new DataValidationException("StarCriteriaConfig referansı GameContextLifecycle üzerinde atanmadı. Lütfen Bootstrap Config Assets alanlarını doldurun.");
+            }
+            NexusRuntime.Logger?.Log("[PixelFlow.GameContextLifecycle] StarCriteriaConfig reference bound successfully.");
+            builder.BindInstance(starCriteriaConfig);
+            
+            // Register skins from Resources into SkinCatalogService
+            var vehicleSkins = Resources.LoadAll<VehicleSkinConfig>("Configs/Skins");
+            var stopSkins = Resources.LoadAll<StopSkinConfig>("Configs/Skins");
+            
+            // Fallback to "Skins" folder if not found in "Configs/Skins"
+            if ((vehicleSkins == null || vehicleSkins.Length == 0) && (stopSkins == null || stopSkins.Length == 0))
+            {
+                vehicleSkins = Resources.LoadAll<VehicleSkinConfig>("Skins");
+                stopSkins = Resources.LoadAll<StopSkinConfig>("Skins");
+            }
+
+            // We'll initialize the catalog after all services are bound by using a callback
+            // The SkinCatalogService will be initialized in OnInitializeAsync
             
             }
 
-        public ValueTask OnInitializeAsync(CancellationToken ct) => default;
+        public ValueTask OnInitializeAsync(CancellationToken ct)
+        {
+            // Register skins from Resources into SkinCatalogService
+            var root = GetComponentInParent<Root>();
+            if (root != null && root.Context != null)
+            {
+                var skinCatalog = root.Context.Container.Resolve<ISkinCatalogService>();
+                if (skinCatalog != null)
+                {
+                    var vehicleSkins = Resources.LoadAll<VehicleSkinConfig>("Configs/Skins");
+                    var stopSkins = Resources.LoadAll<StopSkinConfig>("Configs/Skins");
+                    
+                    if ((vehicleSkins == null || vehicleSkins.Length == 0) && (stopSkins == null || stopSkins.Length == 0))
+                    {
+                        vehicleSkins = Resources.LoadAll<VehicleSkinConfig>("Skins");
+                        stopSkins = Resources.LoadAll<StopSkinConfig>("Skins");
+                    }
+
+                    if (vehicleSkins != null && vehicleSkins.Length > 0)
+                        skinCatalog.RegisterVehicleSkins(vehicleSkins);
+                    
+                    if (stopSkins != null && stopSkins.Length > 0)
+                        skinCatalog.RegisterStopSkins(stopSkins);
+                }
+            }
+            
+            return default;
+        }
         public ValueTask OnStartAsync(CancellationToken ct) => default;
         public void OnDispose() { }
     }

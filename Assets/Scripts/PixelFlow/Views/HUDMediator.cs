@@ -123,7 +123,7 @@ namespace PixelFlow.Views
             _themeLightHandler = null;
             _themeNeonHandler = null;
 
-            if (_continueCoroutine != null) View.StopCoroutine(_continueCoroutine);
+            if (_continueCoroutine != null && View != null) View.StopCoroutine(_continueCoroutine);
             _continueCoroutine = null;
             HintModel.OnHintCountChanged -= HandleHintCountChanged;
             GameSessionModel.OnScoreChanged -= HandleScoreChanged;
@@ -354,6 +354,12 @@ namespace PixelFlow.Views
             if (!Application.isPlaying) return;
             if (View == null || GameSessionModel == null) return;
 
+            if (_continueCoroutine != null)
+            {
+                View.StopCoroutine(_continueCoroutine);
+                _continueCoroutine = null;
+            }
+
             string title = LocalizationService.GetString("level_completed_title");
             string scoreFormat = LocalizationService.GetString("level_completed_score_format");
             string starsLabel = LocalizationService.GetString("level_completed_stars_label");
@@ -366,12 +372,14 @@ namespace PixelFlow.Views
 
         private System.Collections.IEnumerator AutoContinueToNextRoutine()
         {
-            yield return new WaitForSeconds(3f);
+            yield return new WaitForSecondsRealtime(3f);
             if (View != null && GameStateModel != null && SignalBus != null
                 && GameStateModel.CurrentState == GameState.LevelCompleted)
             {
                 HandleNextLevelClicked();
             }
+
+            _continueCoroutine = null;
         }
 
         private void HandleContinueClicked()

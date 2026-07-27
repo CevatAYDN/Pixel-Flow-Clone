@@ -15,9 +15,14 @@ namespace PixelFlow.Services.GlobalRelease
     {
         private readonly StorageKeysConfigAsset _keys;
 
-        public EncryptedCloudSaveAdapter(StorageKeysConfigAsset keys = null)
+        public EncryptedCloudSaveAdapter()
+            : this(Resources.Load<StorageKeysConfigAsset>("Configs/StorageKeysConfig") ?? ScriptableObject.CreateInstance<StorageKeysConfigAsset>())
         {
-            _keys = keys ?? Resources.Load<StorageKeysConfigAsset>("Configs/StorageKeysConfig");
+        }
+
+        public EncryptedCloudSaveAdapter(StorageKeysConfigAsset keys)
+        {
+            _keys = keys ?? Resources.Load<StorageKeysConfigAsset>("Configs/StorageKeysConfig") ?? ScriptableObject.CreateInstance<StorageKeysConfigAsset>();
         }
 
         private string CloudStorePrefKey

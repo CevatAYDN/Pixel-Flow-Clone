@@ -21,37 +21,7 @@ namespace PixelFlow.Editor.Tests
         [SetUp]
         public void SetUp()
         {
-            _ctx = NexusTestHarness.CreateContext(builder =>
-            {
-                builder.Bind<IPlayerPrefsService, InMemoryPlayerPrefsService>();
-
-                builder.BindInstance(GameTestContext.CreateTestGameConfig());
-                builder.BindInstance(GameTestContext.CreateTestStorageKeysConfig());
-
-                builder.Bind<ILevelProgressionService, LevelProgressionService>();
-                builder.BindReactiveModel<IGridModel, GridModel>();
-                builder.BindReactiveModel<ILevelModel, LevelModel>();
-                builder.BindReactiveModel<IGameStateModel, GameStateModel>();
-                builder.BindReactiveModel<IGameSessionModel, GameSessionModel>();
-                builder.BindReactiveModel<IHintModel, HintModel>();
-                builder.BindReactiveModel<ISettingsModel, SettingsModel>();
-                builder.BindReactiveModel<ISoundModel, SoundModel>();
-                builder.BindReactiveModel<IProgressModel, ProgressModel>();
-
-                builder.BindService<IObstacleService, ObstacleService>();
-                builder.BindService<IVehicleSimulator, VehicleSimulator>();
-                builder.BindService<INexusService, HapticService>();
-                builder.Bind<IHapticService, HapticService>();
-                var quietLogger = new LoggerService { IsEnabled = false };
-                builder.BindInstance<ILoggerService>(quietLogger);
-                builder.BindService<PixelFlow.Services.IAudioService, PixelFlow.Services.AudioService>();
-                builder.BindService<ISaveThrottler, SaveThrottler>();
-                builder.Bind<IFeedbackService, FeedbackService>();
-                builder.Bind<Nexus.Core.Services.IAudioService, StubAudioService>();
-                builder.Bind<ICameraProvider, StubCameraProvider>();
-                builder.Bind<IGridViewProvider, StubGridViewProvider>();
-                builder.Bind<ICrisisAdService, StubCrisisAdService>();
-            });
+            _ctx = GameTestContext.CreateGameContext();
 
             _grid = _ctx.GetModel<IGridModel>();
             _level = _ctx.GetModel<ILevelModel>();
@@ -81,6 +51,7 @@ namespace PixelFlow.Editor.Tests
         [TearDown]
         public void TearDown()
         {
+            LogAssert.ignoreFailingMessages = false;
             _ctx?.Dispose();
             _ctx = null;
         }

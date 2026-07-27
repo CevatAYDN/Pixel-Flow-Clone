@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Color Jam 3D — İnteraktif Oyun Prototipi</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #E2E8F0;
+  --surface: #F8FAFC;
+  --fg: #1E293B;
+  --muted: #64748B;
+  --border: #E2E8F0;
+  --accent: #3B82F6;
+  --accent-glow: rgba(59,130,246,0.3);
+  --pastel-bg: linear-gradient(180deg, #EFF6FF 0%, #DBEAFE 40%, #F0F9FF 100%);
+  --dark-bg: linear-gradient(180deg, #0F172A 0%, #1E293B 100%);
+}
+body {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #E2E8F0;
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+  padding: 16px; user-select: none; -webkit-tap-highlight-color: transparent;
+}
+h1 { color: #1E293B; font-size: 20px; margin-bottom: 12px; font-weight: 800; text-align: center; }
+
+/* ===== DEVICE FRAME ===== */
+.device-frame {
+  width: 390px; aspect-ratio: 9/19.5;
+  background: #F8FAFC; border-radius: 40px;
+  box-shadow: 0 0 0 10px #CBD5E1, 0 30px 60px -15px rgba(15,23,42,0.25);
+  position: relative; overflow: hidden; flex-shrink: 0;
+}
+.device-frame::before {
+  content: ''; position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 5px; background: #94A3B8; border-radius: 3px; z-index: 100;
+}
+
+/* ===== SCREENS ===== */
+.screen {
+  position: absolute; inset: 0; overflow: hidden;
+  display: none; flex-direction: column;
+}
+.screen.active { display: flex; animation: screenIn 0.3s ease; }
+@keyframes screenIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+
+/* ===== SPLASH ===== */
+.screen-splash {
+  background: linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%);
+  justify-content: center; align-items: center; text-align: center; color: #FFF;
+}
+.splash-icon { font-size: 80px; margin-bottom: 10px; animation: float 1.5s ease-in-out infinite alternate; }
+@keyframes float { from { transform: translateY(0); } to { transform: translateY(-12px); } }
+.splash-title { font-size: 2.2rem; font-weight: 900; letter-spacing: -0.02em; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+.splash-sub { font-size: 0.85rem; font-weight: 700; opacity: 0.8; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em; }
+.splash-loading { margin-top: 48px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.splash-bar { width: 120px; height: 4px; background: rgba(255,255,255,0.25); border-radius: 2px; overflow: hidden; }
+.splash-bar-fill { height: 100%; width: 0%; background: #FFF; border-radius: 2px; animation: loadBar 2.2s ease forwards; }
+@keyframes loadBar { 0% { width: 0%; } 60% { width: 45%; } 100% { width: 100%; } }
+.splash-version { font-size: 0.7rem; opacity: 0.5; margin-top: 4px; }
+
+/* ===== MAIN MENU ===== */
+.screen-mainmenu {
+  background: var(--pastel-bg); padding: 44px 20px 24px;
+}
+.header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.game-title { font-size: 28px; font-weight: 900; color: #1E3A8A; letter-spacing: -0.02em; text-shadow: 0 2px 4px rgba(30,58,138,0.1); line-height: 1.1; }
+.coin-pill {
+  background: #FEF3C7; border: 2px solid #FDE047; padding: 6px 14px; border-radius: 100px;
+  font-weight: 800; color: #B45309; font-size: 15px; display: flex; align-items: center; gap: 6px;
+  box-shadow: 0 4px 12px rgba(253,224,71,0.3); white-space: nowrap;
+}
+.garage-card {
+  background: #FFF; border-radius: 28px; padding: 18px; margin: 8px 0 16px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.06); border: 2px solid #E2E8F0;
+  text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center;
+}
+.vehicle-preview {
+  width: 100%; height: 120px; border-radius: 20px;
+  background: radial-gradient(circle, #E0F2FE 0%, #BAE6FD 100%);
+  display: flex; justify-content: center; align-items: center; font-size: 56px; margin-bottom: 10px;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.05); transition: all 0.3s;
+}
+.vehicle-name { font-size: 20px; font-weight: 800; color: #0F172A; }
+.vehicle-type { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+
+/* ===== BUTTONS ===== */
+.btn {
+  width: 100%; border: none; cursor: pointer; font-family: inherit;
+  transition: transform 0.12s ease, box-shadow 0.12s ease; display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn:active { transform: scale(0.96); }
+.btn-garage {
+  padding: 12px; border-radius: 16px; background: #3B82F6; color: #FFF;
+  font-weight: 800; font-size: 15px; box-shadow: 0 6px 16px rgba(59,130,246,0.3);
+}
+.btn-play {
+  padding: 18px; border-radius: 24px;
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  color: #FFF; font-size: 20px; font-weight: 900;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.15); box-shadow: 0 10px 25px rgba(16,185,129,0.35);
+  letter-spacing: 0.02em; margin-bottom: 8px;
+}
+.btn-level-select {
+  padding: 12px; border-radius: 16px;
+  background: linear-gradient(135deg, #4F46E5 0%, #4338CA 100%);
+  color: #FFF; font-size: 15px; font-weight: 800; box-shadow: 0 6px 16px rgba(79,70,229,0.25);
+  margin-bottom: 8px;
+}
+.btn-settings {
+  padding: 12px; border-radius: 16px; background: #334155; color: #F8FAFC;
+  font-size: 15px; font-weight: 800; box-shadow: 0 4px 12px rgba(51,65,85,0.2);
+}
+.btn-close {
+  padding: 10px 18px; border-radius: 14px; background: #334155; color: #FFF;
+  font-weight: 800; font-size: 14px; border: none; cursor: pointer;
+}
+.btn-primary {
+  padding: 14px; border-radius: 18px; background: #3B82F6; color: #FFF;
+  font-weight: 800; font-size: 16px; border: none; cursor: pointer;
+  box-shadow: 0 6px 16px rgba(59,130,246,0.3);
+}
+.btn-success {
+  padding: 14px; border-radius: 18px;
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  color: #FFF; font-weight: 800; font-size: 16px; border: none; cursor: pointer;
+  box-shadow: 0 6px 16px rgba(16,185,129,0.3);
+}
+
+/* ===== GAMEPLAY HUD ===== */
+.screen-gameplay { background: #F1F5F9; }
+.grid-bg {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image: linear-gradient(rgba(148,163,184,0.12) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(148,163,184,0.12) 1px, transparent 1px);
+  background-size: 44px 44px; z-index: 0;
+}
+.top-hud {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 20;
+  padding: 36px 14px 10px; display: flex; align-items: center; justify-content: space-between;
+  background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
+  border-radius: 0 0 20px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+}
+.level-badge {
+  display: flex; align-items: center; gap: 4px; padding: 6px 12px;
+  background: #FFF; border: 2px solid #E2E8F0; border-radius: 100px;
+  font-weight: 800; font-size: 13px; color: #475569;
+}
+.coin-counter {
+  display: flex; align-items: center; gap: 4px; padding: 6px 12px;
+  background: #FEF3C7; border: 2px solid #FDE047; border-radius: 100px;
+  font-weight: 800; color: #B45309; font-size: 13px;
+}
+.icon-btn {
+  width: 38px; height: 38px; border-radius: 12px; background: #FFF;
+  border: 2px solid #E2E8F0; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.05); font-size: 17px;
+  transition: transform 0.12s ease;
+}
+.icon-btn:active { transform: scale(0.9); }
+
+/* Game grid area */
+.game-grid-area {
+  position: absolute; inset: 76px 14px 100px; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.game-grid {
+  display: grid; gap: 3px; margin: 0 auto;
+}
+.game-cell {
+  width: 48px; height: 48px; background: #FFF; border: 2px solid #E2E8F0;
+  border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  font-size: 20px; cursor: pointer; transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+.game-cell:hover { border-color: #93C5FD; }
+.game-cell.source { border-style: dashed; border-width: 2.5px; }
+.game-cell.path { background: rgba(59,130,246,0.12); border-color: #93C5FD; }
+.game-cell.target { background: rgba(16,185,129,0.08); }
+.game-cell.vehicle { background: #DBEAFE; border-color: #3B82F6; transform: scale(1.05); box-shadow: 0 4px 12px rgba(59,130,246,0.2); }
+.game-cell.completed { background: #D1FAE5; border-color: #34D399; }
+.game-cell.bridge { background: rgba(148,163,184,0.2); border-color: #94A3B8; }
+.game-cell.obstacle { background: #E2E8F0; border-color: #94A3B8; cursor: not-allowed; }
+.game-cell.oneway { background: rgba(251,191,36,0.15); border-color: #F59E0B; }
+
+/* Bottom HUD */
+.bottom-hud {
+  position: absolute; bottom: 14px; left: 14px; right: 14px; z-index: 20;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.undo-row { display: flex; justify-content: flex-start; gap: 8px; }
+.ir-btn {
+  width: 42px; height: 42px; border-radius: 14px; background: rgba(51,65,85,0.9);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 17px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  border: none; transition: transform 0.12s ease;
+}
+.ir-btn:active { transform: scale(0.9); }
+.powerup-bar {
+  display: flex; justify-content: space-around;
+  background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
+  padding: 10px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  border: 2px solid #F1F5F9;
+}
+.powerup-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  border: none; background: none; cursor: pointer; transition: transform 0.12s ease;
+}
+.powerup-btn:active { transform: scale(0.9); }
+.powerup-icon {
+  width: 44px; height: 44px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  transition: transform 0.15s ease;
+}
+.powerup-icon:hover { transform: scale(1.08); }
+.powerup-rainbow { background: linear-gradient(135deg, #FF4757, #FFA502, #2ED573, #1E90FF); color: #FFF; }
+.powerup-clear { background: linear-gradient(135deg, #38BDF8, #7DD3FC); color: #FFF; }
+.powerup-viaduct { background: linear-gradient(135deg, #8B5CF6, #A78BFA); color: #FFF; }
+.powerup-label { font-size: 9px; font-weight: 700; color: var(--muted); }
+
+/* Toast notifications */
+.toast {
+  position: absolute; top: 80px; left: 50%; transform: translateX(-50%); z-index: 30;
+  padding: 8px 16px; border-radius: 100px; font-weight: 800; font-size: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 6px;
+  transition: opacity 0.3s, transform 0.3s; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.hidden { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+.toast-info { background: #3B82F6; color: #FFF; }
+.toast-warn { background: linear-gradient(135deg, #FF4757, #FF6B81); color: #FFF; animation: bounceToast 0.8s ease-in-out infinite alternate; }
+.toast-success { background: #10B981; color: #FFF; }
+@keyframes bounceToast { from { transform: translateX(-50%) translateY(0); } to { transform: translateX(-50%) translateY(-6px); } }
+
+/* ===== OVERLAYS ===== */
+.overlay {
+  position: absolute; inset: 0; z-index: 50;
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(15,23,42,0.7); backdrop-filter: blur(6px);
+  padding: 30px; animation: fadeIn 0.2s ease;
+}
+.overlay.active { display: flex; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.pause-content {
+  background: #FFF; border-radius: 28px; padding: 28px; width: 100%; max-width: 300px;
+  text-align: center; display: flex; flex-direction: column; gap: 12px;
+}
+.pause-title { font-size: 22px; font-weight: 900; color: #0F172A; }
+.pause-btn-row { display: flex; gap: 10px; }
+.pause-btn-row .btn { flex: 1; }
+
+/* Level Complete */
+.complete-content {
+  background: #FFF; border-radius: 28px; padding: 28px; width: 100%; max-width: 300px;
+  text-align: center; display: flex; flex-direction: column; gap: 12px;
+}
+.complete-stars { font-size: 36px; letter-spacing: 6px; }
+.complete-title { font-size: 24px; font-weight: 900; color: #059669; }
+.complete-score { font-size: 14px; color: var(--muted); font-weight: 600; }
+.complete-actions { display: flex; gap: 10px; margin-top: 4px; }
+.complete-actions .btn { flex: 1; padding: 12px; border-radius: 16px; font-size: 14px; }
+
+/* ===== LEVEL SELECT ===== */
+.screen-levels {
+  background: #F1F5F9; padding: 40px 18px 18px;
+}
+.level-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.level-title { font-size: 20px; font-weight: 900; color: #0F172A; }
+.level-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; overflow-y: auto; flex: 1; align-content: start; padding-bottom: 8px; }
+.level-box {
+  aspect-ratio: 1; background: #FFF; border-radius: 14px; border: 2px solid #E2E8F0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-weight: 800; color: #334155; cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.04); transition: transform 0.12s ease;
+}
+.level-box:active { transform: scale(0.93); }
+.level-box.locked { background: #E2E8F0; color: #94A3B8; cursor: not-allowed; }
+.level-box.completed { background: #ECFDF5; border-color: #A7F3D0; color: #059669; }
+.level-box.current { border-color: #3B82F6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+.level-num { font-size: 16px; }
+.level-stars { font-size: 9px; color: #F59E0B; margin-top: 2px; }
+
+/* ===== GARAGE ===== */
+.screen-garage {
+  background: var(--dark-bg); padding: 18px;
+}
+.garage-inner {
+  background: rgba(255,255,255,0.98); border-radius: 28px; padding: 20px;
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+}
+.garage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.garage-title { font-size: 20px; font-weight: 900; color: #1E3A8A; }
+.garage-scroll { display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 12px; flex: 1; align-content: start; flex-wrap: wrap; }
+.skin-card {
+  width: calc(50% - 5px); background: #F8FAFC; border: 2px solid #E2E8F0;
+  border-radius: 18px; padding: 14px; text-align: center; cursor: pointer;
+  transition: all 0.15s ease; flex-shrink: 0;
+}
+.skin-card:active { transform: scale(0.96); }
+.skin-card.equipped { border-color: #10B981; background: #ECFDF5; }
+.skin-card.locked { opacity: 0.5; cursor: not-allowed; }
+.skin-card.locked:active { transform: none; }
+.skin-emoji { font-size: 36px; display: block; margin-bottom: 4px; }
+.skin-name { font-size: 12px; font-weight: 700; color: #0F172A; display: block; }
+.skin-rarity { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin-top: 2px; }
+.rarity-common { color: #64748B; }
+.rarity-rare { color: #3B82F6; }
+.rarity-epic { color: #8B5CF6; }
+.rarity-legendary { color: #F59E0B; }
+.garage-footer {
+  padding: 12px; background: #FEF3C7; border-radius: 16px;
+  text-align: center; font-weight: 800; color: #B45309; font-size: 13px; margin-top: 10px;
+}
+
+/* ===== SETTINGS ===== */
+.screen-settings {
+  background: var(--dark-bg); padding: 18px;
+}
+.settings-inner {
+  background: rgba(255,255,255,0.98); border-radius: 28px; padding: 24px;
+  flex: 1; display: flex; flex-direction: column;
+}
+.settings-title { font-size: 22px; font-weight: 900; color: #0F172A; margin-bottom: 18px; }
+.setting-row { margin: 10px 0; }
+.setting-label { font-size: 15px; font-weight: 700; color: #0F172A; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+.setting-value { font-size: 13px; color: var(--muted); font-weight: 600; }
+.slider-track {
+  height: 10px; background: #E2E8F0; border-radius: 100px; position: relative; overflow: hidden; cursor: pointer;
+}
+.slider-fill {
+  height: 100%; background: linear-gradient(90deg, #3B82F6, #60A5FA); border-radius: 100px; transition: width 0.2s;
+  pointer-events: none;
+}
+.cb-group { display: flex; gap: 8px; margin: 10px 0; }
+.cb-btn {
+  flex: 1; padding: 10px; border-radius: 12px; border: 2px solid transparent;
+  font-weight: 800; font-size: 11px; cursor: pointer; transition: all 0.12s;
+  background: #F1F5F9; color: #475569;
+}
+.cb-btn.selected { background: #3B82F6; color: #FFF; border-color: #2563EB; }
+.toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; }
+.toggle-label { font-size: 15px; font-weight: 700; color: #0F172A; }
+.toggle-switch {
+  width: 48px; height: 28px; background: #CBD5E1; border-radius: 100px;
+  position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0;
+}
+.toggle-switch.on { background: #10B981; }
+.toggle-switch::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px;
+  background: #FFF; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+.toggle-switch.on::after { transform: translateX(20px); }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 420px) {
+  body { padding: 8px; }
+  .device-frame { width: 100%; max-width: 390px; }
+  h1 { font-size: 16px; }
+}
+
+/* ===== INTERACTIVE GRID PLAY AREA ===== */
+.game-interactive-grid {
+  display: grid; gap: 3px; margin: 0 auto;
+}
+.game-cell { transition: all 0.12s ease; }
+.game-cell.node-red { background: rgba(239,68,68,0.2); border-color: #EF4444; }
+.game-cell.node-green { background: rgba(16,185,129,0.2); border-color: #10B981; }
+.game-cell.node-blue { background: rgba(59,130,246,0.2); border-color: #3B82F6; }
+.game-cell.node-yellow { background: rgba(245,158,11,0.2); border-color: #F59E0B; }
+.game-cell.node-purple { background: rgba(139,92,246,0.2); border-color: #8B5CF6; }
+
+/* ===== COLORBLIND MODES ===== */
+.colorblind-protan .game-cell.node-red { background: rgba(100,100,100,0.2); border-color: #666; }
+.colorblind-protan .game-cell.node-green { background: rgba(239,68,68,0.2); border-color: #EF4444; }
+.colorblind-deutan .game-cell.node-red { background: rgba(100,100,100,0.2); border-color: #666; }
+.colorblind-deutan .game-cell.node-green { background: rgba(100,100,100,0.2); border-color: #666; }
+.colorblind-tritan .game-cell.node-blue { background: rgba(100,100,100,0.2); border-color: #666; }
+.colorblind-tritan .game-cell.node-yellow { background: rgba(100,100,100,0.2); border-color: #666; }
+
+/* Scrollable level select */
+.level-grid::-webkit-scrollbar { width: 3px; }
+.level-grid::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 2px; }
+.garage-scroll::-webkit-scrollbar { height: 3px; }
+.garage-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<h1>🎮 Color Jam 3D — İnteraktif Prototip</h1>
+
+<div class="device-frame">
+
+  <!-- ===== SPLASH ===== -->
+  <div id="splash" class="screen screen-splash active">
+    <div class="splash-icon">🚗💨</div>
+    <div class="splash-title">Color Jam 3D</div>
+    <div class="splash-sub">Traffic Flow & Collection</div>
+    <div class="splash-loading">
+      <div class="splash-bar"><div class="splash-bar-fill"></div></div>
+      <span style="font-size:11px;opacity:0.6;">Yükleniyor...</span>
+    </div>
+    <div class="splash-version">v7.0 Interactive Prototype</div>
+  </div>
+
+  <!-- ===== MAIN MENU ===== -->
+  <div id="mainmenu" class="screen screen-mainmenu">
+    <div class="header-row">
+      <div class="game-title">Color Jam 3D</div>
+      <div class="coin-pill">🪙 <span id="mainCoins">1,450</span></div>
+    </div>
+    <div class="garage-card">
+      <div class="vehicle-preview" id="mainVehiclePreview">🍦</div>
+      <div class="vehicle-name" id="mainVehicleName">Dondurma Arabası</div>
+      <div class="vehicle-type" id="mainVehicleType">Kuşanılmış Sarı Araç</div>
+      <button class="btn btn-garage" onclick="showScreen('garage')">🚪 Garajı Aç (<span id="skinCount">12</span>/<span id="skinTotal">24</span> Skin)</button>
+    </div>
+    <button class="btn btn-play" onclick="startLevel()">▶️ OYUNA BAŞLA (LEVEL <span id="currentLevelDisplay">1</span>)</button>
+    <button class="btn btn-level-select" onclick="showScreen('levels')">📋 Seviye Seçimi</button>
+    <button class="btn btn-settings" onclick="showScreen('settings')">⚙️ Ayarlar</button>
+  </div>
+
+  <!-- ===== GAMEPLAY ===== -->
+  <div id="gameplay" class="screen screen-gameplay">
+    <div class="grid-bg"></div>
+
+    <div class="top-hud">
+      <div class="level-badge">🎯 LEVEL <span id="gameLevelDisplay" style="color:#6366F1;font-weight:900;">1</span></div>
+      <div class="coin-counter">🪙 <span id="gameCoins">1,450</span></div>
+      <button class="icon-btn" onclick="togglePause()">⏸</button>
+    </div>
+
+    <div id="gameToast" class="toast toast-info hidden">🚗 Yolları bağlamak için hücrelere tıkla!</div>
+
+    <div class="game-grid-area">
+      <div id="gameGrid" class="game-interactive-grid"></div>
+    </div>
+
+    <div class="bottom-hud">
+      <div class="undo-row">
+        <button class="ir-btn" onclick="undoMove()">↩</button>
+        <button class="ir-btn" onclick="redoMove()">↪</button>
+      </div>
+      <div class="powerup-bar">
+        <button class="powerup-btn" onclick="usePowerup('rainbow')">
+          <div class="powerup-icon powerup-rainbow">🌈</div>
+          <span class="powerup-label">Gökkuşağı</span>
+        </button>
+        <button class="powerup-btn" onclick="usePowerup('clear')">
+          <div class="powerup-icon powerup-clear">✨</div>
+          <span class="powerup-label">Temizle</span>
+        </button>
+        <button class="powerup-btn" onclick="usePowerup('viaduct')">
+          <div class="powerup-icon powerup-viaduct">🌉</div>
+          <span class="powerup-label">Viyadük</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- PAUSE OVERLAY -->
+    <div id="pauseOverlay" class="overlay">
+      <div class="pause-content">
+        <div style="font-size:40px;margin-bottom:4px;">⏸</div>
+        <div class="pause-title">Oyun Duraklatıldı</div>
+        <div style="font-size:13px;color:var(--muted);">Seviye <span id="pauseLevel">1</span></div>
+        <div class="pause-btn-row">
+          <button class="btn btn-success" onclick="resumeGame()">▶ Devam Et</button>
+        </div>
+        <div class="pause-btn-row">
+          <button class="btn btn-primary" onclick="showScreen('mainmenu')">🏠 Ana Menü</button>
+          <button class="btn btn-settings" onclick="restartLevel()" style="background:#EF4444;">🔄 Yeniden Başlat</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEVEL COMPLETE OVERLAY -->
+    <div id="completeOverlay" class="overlay">
+      <div class="complete-content">
+        <div style="font-size:40px;">🎉</div>
+        <div class="complete-stars" id="completeStars">⭐⭐⭐</div>
+        <div class="complete-title">Seviye Tamamlandı!</div>
+        <div class="complete-score" id="completeScore">+120 🪙 kazandın!</div>
+        <div class="complete-actions">
+          <button class="btn btn-success" onclick="retryLevel()">🔄 Tekrar Dene</button>
+          <button class="btn btn-primary" onclick="nextLevel()">▶️ Sonraki</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== LEVEL SELECT ===== -->
+  <div id="levels" class="screen screen-levels">
+    <div class="level-header">
+      <div class="level-title">📋 Seviye Seçimi</div>
+      <button class="btn btn-close" onclick="showScreen('mainmenu')">✖ Kapat</button>
+    </div>
+    <div class="level-grid" id="levelGrid"></div>
+  </div>
+
+  <!-- ===== GARAGE ===== -->
+  <div id="garage" class="screen screen-garage">
+    <div class="garage-inner">
+      <div class="garage-header">
+        <div class="garage-title">🚗 Garaj & Skinler</div>
+        <button class="btn btn-close" onclick="showScreen('mainmenu')">✖ Kapat</button>
+      </div>
+      <div class="garage-scroll" id="garageGrid"></div>
+      <div class="garage-footer" id="garageFooter">🪙 <span id="garageCoins">1,450</span> Gold — <span id="garageCount">12</span>/<span id="garageTotal">24</span> Skin Açık</div>
+    </div>
+  </div>
+
+  <!-- ===== SETTINGS ===== -->
+  <div id="settings" class="screen screen-settings">
+    <div class="settings-inner">
+      <div class="settings-title">⚙️ Ayarlar</div>
+
+      <div class="setting-row">
+        <div class="setting-label">🔊 Ses (Master) <span class="setting-value" id="masterVolLabel">100%</span></div>
+        <div class="slider-track" onclick="setMasterVol(event)"><div class="slider-fill" id="masterVolFill" style="width:100%;"></div></div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">🎵 Ses Efektleri <span class="setting-value" id="sfxVolLabel">80%</span></div>
+        <div class="slider-track" onclick="setSfxVol(event)"><div class="slider-fill" id="sfxVolFill" style="width:80%;background:linear-gradient(90deg,#10B981,#34D399);"></div></div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">🎶 Müzik <span class="setting-value" id="musicVolLabel">70%</span></div>
+        <div class="slider-track" onclick="setMusicVol(event)"><div class="slider-fill" id="musicVolFill" style="width:70%;background:linear-gradient(90deg,#3B82F6,#60A5FA);"></div></div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <div class="setting-label">👁️ Renk Körlüğü Modu</div>
+        <div class="cb-group">
+          <button class="cb-btn selected" id="cb-none" onclick="setColorBlind('none')">NONE</button>
+          <button class="cb-btn" id="cb-protan" onclick="setColorBlind('protan')">PROTAN</button>
+          <button class="cb-btn" id="cb-deutan" onclick="setColorBlind('deutan')">DEUTAN</button>
+          <button class="cb-btn" id="cb-tritan" onclick="setColorBlind('tritan')">TRITAN</button>
+        </div>
+      </div>
+
+      <div class="toggle-row">
+        <span class="toggle-label">📳 Titreşim</span>
+        <div class="toggle-switch on" id="hapticToggle" onclick="toggleHaptic()"></div>
+      </div>
+
+      <button class="btn btn-success" style="margin-top:auto;" onclick="showScreen('mainmenu')">✖ Kapat</button>
+    </div>
+  </div>
+
+</div>
+
+<p style="margin-top:12px;font-size:12px;color:var(--muted);">📱 Tüm butonlar interaktif — tıkla ve oyna! 🎮</p>
+
+<script>
+// ============= GAME STATE =============
+const STATE = {
+  coins: 1450,
+  currentLevel: 1,
+  totalLevels: 24,
+  levels: {},
+  skins: [
+    { id: 'icecream', name: 'Dondurma Arabası', emoji: '🍦', rarity: 'common', cost: 0 },
+    { id: 'burger', name: 'Burger Vanı', emoji: '🍔', rarity: 'common', cost: 500 },
+    { id: 'pizza', name: 'Pizza Kamyonu', emoji: '🍕', rarity: 'common', cost: 500 },
+    { id: 'sushi', name: 'Sushi Express', emoji: '🍣', rarity: 'common', cost: 500 },
+    { id: 'donut', name: 'Donut Mobili', emoji: '🍩', rarity: 'rare', cost: 1500 },
+    { id: 'strawberry', name: 'Çilek Canavarı', emoji: '🍓', rarity: 'rare', cost: 1500 },
+    { id: 'avocado', name: 'Avokado Cruiser', emoji: '🥑', rarity: 'rare', cost: 1500 },
+    { id: 'unicorn', name: 'Unicorn Rüyası', emoji: '🦄', rarity: 'epic', cost: 4000 },
+    { id: 'panda', name: 'Panda Kamyonu', emoji: '🐼', rarity: 'epic', cost: 4000 },
+    { id: 'rocket', name: 'Roket Arabası', emoji: '🚀', rarity: 'legendary', cost: 10000 },
+    { id: 'dragon', name: 'Ejderha Sürücü', emoji: '🐉', rarity: 'legendary', cost: 10000 },
+    { id: 'crown', name: 'Kraliyet Faytonu', emoji: '👑', rarity: 'legendary', cost: 10000 },
+  ],
+  unlockedSkins: ['icecream'],
+  equippedSkin: 'icecream',
+  masterVol: 100,
+  sfxVol: 80,
+  musicVol: 70,
+  colorBlind: 'none',
+  hapticOn: true,
+  // Gameplay state
+  gameActive: false,
+  moves: [],
+  redoStack: [],
+  gridState: {},
+};
+
+// ============= GAME DEFINITIONS =============
+const COLORS = ['red','green','blue','yellow','purple'];
+const COLOR_EMOJI = { red: '🔴', green: '🟢', blue: '🔵', yellow: '🟡', purple: '🟣' };
+
+// Level definitions: gridSize, pairs (source, target, color)
+const LEVEL_DEFS = [
+  // Level 1 - Tutorial
+  { size: 4, pairs: [{ s: [0,0], t: [3,3], color: 'red' }] },
+  // Level 2
+  { size: 4, pairs: [{ s: [0,0], t: [3,3], color: 'red' }, { s: [0,3], t: [3,0], color: 'blue' }] },
+  // Level 3
+  { size: 5, pairs: [{ s: [0,0], t: [4,4], color: 'red' }, { s: [0,4], t: [4,0], color: 'green' }] },
+  // Level 4-8 harder variants
+  { size: 5, pairs: [{ s: [0,0], t: [4,4], color: 'red' }, { s: [0,4], t: [4,0], color: 'blue' }, { s: [2,2], t: [2,3], color: 'yellow' }] },
+  { size: 5, pairs: [{ s: [0,1], t: [4,3], color: 'red' }, { s: [0,3], t: [4,1], color: 'green' }, { s: [1,0], t: [3,4], color: 'purple' }] },
+  { size: 6, pairs: [{ s: [0,0], t: [5,5], color: 'red' }, { s: [0,5], t: [5,0], color: 'blue' }, { s: [5,2], t: [0,3], color: 'yellow' }] },
+  { size: 6, pairs: [{ s: [0,2], t: [5,4], color: 'red' }, { s: [0,4], t: [5,2], color: 'green' }, { s: [2,0], t: [3,5], color: 'purple' }] },
+  { size: 6, pairs: [{ s: [0,0], t: [5,5], color: 'red' }, { s: [0,5], t: [5,0], color: 'blue' }, { s: [0,2], t: [4,2], color: 'green' }, { s: [5,3], t: [1,3], color: 'yellow' }] },
+];
+
+// Generate remaining levels procedurally
+for (let i = LEVEL_DEFS.length; i < STATE.totalLevels; i++) {
+  const size = i < 12 ? 6 : i < 18 ? 7 : 8;
+  const numPairs = Math.min(2 + Math.floor(i / 4), 5);
+  const pairs = [];
+  const used = new Set();
+  for (let p = 0; p < numPairs; p++) {
+    let sx, sy, tx, ty;
+    do { sx = Math.floor(Math.random() * size); sy = Math.floor(Math.random() * size); } while (used.has(`${sx},${sy}`));
+    do { tx = Math.floor(Math.random() * size); ty = Math.floor(Math.random() * size); } while (used.has(`${tx},${ty}`) || (sx===tx && sy===ty));
+    used.add(`${sx},${sy}`); used.add(`${tx},${ty}`);
+    pairs.push({ s: [sx,sy], t: [tx,ty], color: COLORS[p % COLORS.length] });
+  }
+  LEVEL_DEFS.push({ size, pairs });
+}
+
+// Init level states
+for (let i = 0; i < STATE.totalLevels; i++) {
+  STATE.levels[i+1] = { completed: false, stars: 0 };
+}
+STATE.levels[1].completed = true; // first level accessible
+
+// ============= SCREEN MANAGEMENT =============
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+
+  if (id === 'mainmenu') { updateMainMenu(); }
+  else if (id === 'levels') { renderLevelSelect(); }
+  else if (id === 'garage') { renderGarage(); }
+  else if (id === 'settings') { renderSettings(); }
+
+  // If leaving gameplay, stop game
+  if (id !== 'gameplay' && STATE.gameActive) {
+    STATE.gameActive = false;
+  }
+}
+
+// ============= SPLASH AUTO-TRANSITION =============
+setTimeout(() => {
+  showScreen('mainmenu');
+  updateMainMenu();
+}, 2400);
+
+// ============= COIN FORMAT =============
+function fmtCoins(n) {
+  return n.toLocaleString('tr-TR');
+}
+function updateCoinDisplays() {
+  const val = fmtCoins(STATE.coins);
+  document.getElementById('mainCoins').textContent = val;
+  document.getElementById('gameCoins').textContent = val;
+  document.getElementById('garageCoins').textContent = val;
+}
+
+// ============= MAIN MENU =============
+function updateMainMenu() {
+  document.getElementById('currentLevelDisplay').textContent = STATE.currentLevel;
+  const skin = STATE.skins.find(s => s.id === STATE.equippedSkin);
+  if (skin) {
+    document.getElementById('mainVehiclePreview').textContent = skin.emoji;
+    document.getElementById('mainVehicleName').textContent = skin.name;
+    document.getElementById('mainVehicleType').textContent = `Kuşanılmış ${skin.rarity.charAt(0).toUpperCase() + skin.rarity.slice(1)} Araç`;
+  }
+  document.getElementById('skinCount').textContent = STATE.unlockedSkins.length;
+  document.getElementById('skinTotal').textContent = STATE.skins.length;
+  updateCoinDisplays();
+}
+
+// ============= GAMEPLAY =============
+function startLevel() {
+  showScreen('gameplay');
+  STATE.gameActive = true;
+  STATE.moves = [];
+  STATE.redoStack = [];
+  STATE.gameToastTimer = null;
+  document.getElementById('completeOverlay').classList.remove('active');
+  document.getElementById('pauseOverlay').classList.remove('active');
+  document.getElementById('pauseLevel').textContent = STATE.currentLevel;
+  document.getElementById('gameLevelDisplay').textContent = STATE.currentLevel;
+  updateCoinDisplays();
+  buildGameGrid();
+  showToast('info', '🚗 Yolları bağlamak için hücrelere tıkla!', 3000);
+}
+
+function buildGameGrid() {
+  const def = LEVEL_DEFS[STATE.currentLevel - 1] || LEVEL_DEFS[0];
+  const size = def.size;
+  const grid = document.getElementById('gameGrid');
+  grid.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+  grid.innerHTML = '';
+
+  STATE.gridState = {};
+  for (const pair of def.pairs) {
+    const sk = `${pair.s[0]},${pair.s[1]}`;
+    STATE.gridState[sk] = { kind: 'source', color: pair.color };
+    const tk = `${pair.t[0]},${pair.t[1]}`;
+    STATE.gridState[tk] = { kind: 'target', color: pair.color };
+  }
+
+  for (let y = size - 1; y >= 0; y--) {
+    for (let x = 0; x < size; x++) {
+      const key = `${x},${y}`;
+      const cell = document.createElement('div');
+      cell.className = 'game-cell';
+      cell.dataset.x = x;
+      cell.dataset.y = y;
+      cell.dataset.key = key;
+
+      const gs = STATE.gridState[key];
+      if (gs) {
+        if (gs.kind === 'source') {
+          cell.classList.add('source', `node-${gs.color}`);
+          cell.innerHTML = `<span style="font-size:18px;">${COLOR_EMOJI[gs.color]}</span>`;
+        } else if (gs.kind === 'target') {
+          cell.classList.add('target', `node-${gs.color}`);
+          cell.innerHTML = `<span style="font-size:14px;">🏁</span>`;
+        }
+      } else {
+        cell.innerHTML = '·';
+      }
+
+      cell.addEventListener('click', () => handleGridClick(x, y));
+      grid.appendChild(cell);
+    }
+  }
+}
+
+function handleGridClick(x, y) {
+  if (!STATE.gameActive) return;
+  const key = `${x},${y}`;
+  const cell = document.querySelector(`.game-cell[data-key="${key}"]`);
+  if (!cell) return;
+  const gs = STATE.gridState[key];
+  // If it's a source/target/obstacle, ignore cell click
+  if (gs && (gs.kind === 'source' || gs.kind === 'target')) return;
+
+  // Toggle path on/off
+  if (gs && gs.kind === 'path') {
+    delete STATE.gridState[key];
+    cell.classList.remove('path');
+    cell.innerHTML = '·';
+    STATE.moves.push({ type: 'remove', x, y });
+  } else {
+    STATE.gridState[key] = { kind: 'path', color: 'path' };
+    cell.classList.add('path');
+    cell.innerHTML = '·';
+    STATE.moves.push({ type: 'add', x, y });
+  }
+  STATE.redoStack = [];
+
+  // Auto-check win when grid click happens
+  setTimeout(() => checkWinCondition(), 200);
+}
+
+function checkWinCondition() {
+  const def = LEVEL_DEFS[STATE.currentLevel - 1] || LEVEL_DEFS[0];
+  // Check: each source has a path reaching its target
+  let allConnected = true;
+  for (const pair of def.pairs) {
+    const sk = `${pair.s[0]},${pair.s[1]}`;
+    const tk = `${pair.t[0]},${pair.t[1]}`;
+    if (!hasPathTo(pair.s[0], pair.s[1], pair.t[0], pair.t[1])) {
+      allConnected = false;
+      break;
+    }
+  }
+  if (allConnected && STATE.moves.length > 0) {
+    completeLevel();
+  }
+}
+
+function hasPathTo(sx, sy, tx, ty) {
+  const def = LEVEL_DEFS[STATE.currentLevel - 1] || LEVEL_DEFS[0];
+  const size = def.size;
+  const visited = new Set();
+  const queue = [[sx, sy]];
+  while (queue.length > 0) {
+    const [cx, cy] = queue.shift();
+    if (cx === tx && cy === ty) return true;
+    const ck = `${cx},${cy}`;
+    if (visited.has(ck)) continue;
+    visited.add(ck);
+    for (const [nx, ny] of [[cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]]) {
+      if (nx < 0 || ny < 0 || nx >= size || ny >= size) continue;
+      const nk = `${nx},${ny}`;
+      if (visited.has(nk)) continue;
+      // Walkable: path cell, target cell, or source cell (starting)
+      const gs = STATE.gridState[nk];
+      if (nk === `${tx},${ty}`) return true; // direct check
+      if (gs && (gs.kind === 'path' || gs.kind === 'source')) {
+        queue.push([nx, ny]);
+      }
+    }
+  }
+  return false;
+}
+
+function completeLevel() {
+  STATE.gameActive = false;
+  const stars = STATE.moves.length < 6 ? 3 : STATE.moves.length < 12 ? 2 : 1;
+  const coinBonus = 50 + stars * 25;
+  STATE.coins += coinBonus;
+  STATE.levels[STATE.currentLevel].completed = true;
+  STATE.levels[STATE.currentLevel].stars = Math.max(STATE.levels[STATE.currentLevel].stars, stars);
+
+  // Unlock next level
+  if (STATE.currentLevel < STATE.totalLevels) {
+    STATE.levels[STATE.currentLevel + 1].completed = true;
+  }
+
+  updateCoinDisplays();
+  document.getElementById('completeStars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3-stars);
+  document.getElementById('completeScore').textContent = `+${coinBonus} 🪙 kazandın! (${stars}★)`;
+  document.getElementById('completeOverlay').classList.add('active');
+}
+
+function retryLevel() {
+  document.getElementById('completeOverlay').classList.remove('active');
+  document.getElementById('pauseOverlay').classList.remove('active');
+  startLevel();
+}
+
+function nextLevel() {
+  document.getElementById('completeOverlay').classList.remove('active');
+  if (STATE.currentLevel < STATE.totalLevels) {
+    STATE.currentLevel++;
+  }
+  startLevel();
+}
+
+function togglePause() {
+  const overlay = document.getElementById('pauseOverlay');
+  overlay.classList.toggle('active');
+  document.getElementById('pauseLevel').textContent = STATE.currentLevel;
+  if (!overlay.classList.contains('active') && STATE.gameActive) {
+    // resume
+  }
+}
+
+function resumeGame() {
+  document.getElementById('pauseOverlay').classList.remove('active');
+}
+
+function restartLevel() {
+  document.getElementById('pauseOverlay').classList.remove('active');
+  startLevel();
+}
+
+// Undo/Redo
+function undoMove() {
+  if (STATE.moves.length === 0) return;
+  const move = STATE.moves.pop();
+  STATE.redoStack.push(move);
+  const key = `${move.x},${move.y}`;
+  const cell = document.querySelector(`.game-cell[data-key="${key}"]`);
+  if (move.type === 'add') {
+    delete STATE.gridState[key];
+    if (cell) { cell.classList.remove('path'); cell.innerHTML = '·'; }
+  } else if (move.type === 'remove') {
+    STATE.gridState[key] = { kind: 'path', color: 'path' };
+    if (cell) { cell.classList.add('path'); cell.innerHTML = '·'; }
+  }
+}
+
+function redoMove() {
+  if (STATE.redoStack.length === 0) return;
+  const move = STATE.redoStack.pop();
+  STATE.moves.push(move);
+  const key = `${move.x},${move.y}`;
+  const cell = document.querySelector(`.game-cell[data-key="${key}"]`);
+  if (move.type === 'add') {
+    STATE.gridState[key] = { kind: 'path', color: 'path' };
+    if (cell) { cell.classList.add('path'); cell.innerHTML = '·'; }
+  } else if (move.type === 'remove') {
+    delete STATE.gridState[key];
+    if (cell) { cell.classList.remove('path'); cell.innerHTML = '·'; }
+  }
+}
+
+// Power-ups
+function usePowerup(type) {
+  if (!STATE.gameActive) return;
+  const labels = { rainbow: '🌈 Gökkuşağı Yolu', clear: '✨ Sıkışıklık Temizlendi!', viaduct: '🌉 Viyadük Yerleştirildi!' };
+  showToast('success', labels[type] || 'Kullanıldı!', 1500);
+  if (type === 'rainbow') {
+    // Fill entire grid with paths
+    const def = LEVEL_DEFS[STATE.currentLevel - 1] || LEVEL_DEFS[0];
+    const size = def.size;
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const key = `${x},${y}`;
+        if (!STATE.gridState[key]) {
+          STATE.gridState[key] = { kind: 'path', color: 'path' };
+          STATE.moves.push({ type: 'add', x, y });
+          const cell = document.querySelector(`.game-cell[data-key="${key}"]`);
+          if (cell) { cell.classList.add('path'); cell.innerHTML = '·'; }
+        }
+      }
+    }
+    STATE.redoStack = [];
+    setTimeout(checkWinCondition, 300);
+  } else if (type === 'clear') {
+    // Remove all path cells
+    const cells = document.querySelectorAll('.game-cell.path');
+    cells.forEach(c => {
+      const key = c.dataset.key;
+      if (STATE.gridState[key] && STATE.gridState[key].kind === 'path') {
+        delete STATE.gridState[key];
+        c.classList.remove('path');
+        c.innerHTML = '·';
+      }
+    });
+    STATE.moves = [];
+    STATE.redoStack = [];
+  } else if (type === 'viaduct') {
+    // Mark center-ish cells as bridge
+    const def = LEVEL_DEFS[STATE.currentLevel - 1] || LEVEL_DEFS[0];
+    const cx = Math.floor(def.size / 2);
+    const cy = Math.floor(def.size / 2);
+    const key = `${cx},${cy}`;
+    if (!STATE.gridState[key] || STATE.gridState[key].kind !== 'path') {
+      STATE.gridState[key] = { kind: 'path', color: 'path' };
+      STATE.moves.push({ type: 'add', x: cx, y: cy });
+      const cell = document.querySelector(`.game-cell[data-key="${key}"]`);
+      if (cell) { cell.classList.add('path'); cell.innerHTML = '🌉'; }
+      STATE.redoStack = [];
+      setTimeout(checkWinCondition, 300);
+    }
+  }
+}
+
+// Toast
+let toastTimeout = null;
+function showToast(type, msg, duration) {
+  const toast = document.getElementById('gameToast');
+  toast.className = 'toast';
+  toast.classList.add(`toast-${type}`, 'show');
+  toast.innerHTML = msg;
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => {
+    toast.classList.remove('show');
+    toast.classList.add('hidden');
+  }, duration || 2000);
+}
+
+// ============= LEVEL SELECT =============
+function renderLevelSelect() {
+  const grid = document.getElementById('levelGrid');
+  grid.innerHTML = '';
+  let unlockedCount = 0;
+  for (let i = 0; i < STATE.totalLevels; i++) {
+    const lvl = i + 1;
+    const data = STATE.levels[lvl];
+    const div = document.createElement('div');
+    div.className = 'level-box';
+    if (!data.completed) {
+      div.classList.add('locked');
+    } else {
+      unlockedCount++;
+    }
+    if (lvl === STATE.currentLevel) div.classList.add('current');
+    if (data.stars > 0) div.classList.add('completed');
+
+    const stars = data.stars > 0 ? '⭐'.repeat(data.stars) : data.completed ? '🔓' : '🔒';
+    div.innerHTML = `<span class="level-num">${lvl}</span><span class="level-stars">${stars}</span>`;
+
+    if (data.completed) {
+      div.addEventListener('click', () => {
+        STATE.currentLevel = lvl;
+        renderLevelSelect();
+      });
+    }
+    grid.appendChild(div);
+  }
+}
+
+// ============= GARAGE =============
+function renderGarage() {
+  const grid = document.getElementById('garageGrid');
+  grid.innerHTML = '';
+  for (const skin of STATE.skins) {
+    const card = document.createElement('div');
+    const unlocked = STATE.unlockedSkins.includes(skin.id);
+    const equipped = STATE.equippedSkin === skin.id;
+    card.className = 'skin-card';
+    if (equipped) card.classList.add('equipped');
+    if (!unlocked) card.classList.add('locked');
+
+    card.innerHTML = `
+      <span class="skin-emoji">${skin.emoji}</span>
+      <span class="skin-name">${skin.name}</span>
+      <span class="skin-rarity rarity-${skin.rarity}">${skin.rarity.toUpperCase()}${unlocked ? '' : ' · ' + fmtCoins(skin.cost)}</span>
+      ${equipped ? '<span style="font-size:10px;color:#059669;font-weight:800;">✓ KUŞANILDI</span>' : ''}
+      ${!unlocked ? `<button class="btn btn-primary" style="padding:6px;border-radius:10px;font-size:11px;margin-top:4px;" onclick="event.stopPropagation();buySkin('${skin.id}')">🪙 SATIN AL (${fmtCoins(skin.cost)})</button>` : ''}
+    `;
+
+    if (unlocked) {
+      card.addEventListener('click', () => {
+        STATE.equippedSkin = skin.id;
+        renderGarage();
+        updateMainMenu();
+      });
+    }
+    grid.appendChild(card);
+  }
+
+  document.getElementById('garageCount').textContent = STATE.unlockedSkins.length;
+  document.getElementById('garageTotal').textContent = STATE.skins.length;
+  updateCoinDisplays();
+}
+
+function buySkin(skinId) {
+  const skin = STATE.skins.find(s => s.id === skinId);
+  if (!skin) return;
+  if (STATE.coins >= skin.cost) {
+    STATE.coins -= skin.cost;
+    STATE.unlockedSkins.push(skinId);
+    STATE.equippedSkin = skinId;
+    renderGarage();
+    updateMainMenu();
+    showToast('success', `🎉 ${skin.name} satın alındı!`, 1500);
+  } else {
+    alert(`❌ Yetersiz bakiye! ${fmtCoins(skin.cost)} Gold gerekli.`);
+  }
+}
+
+// ============= SETTINGS =============
+function renderSettings() {
+  document.getElementById('masterVolLabel').textContent = STATE.masterVol + '%';
+  document.getElementById('masterVolFill').style.width = STATE.masterVol + '%';
+  document.getElementById('sfxVolLabel').textContent = STATE.sfxVol + '%';
+  document.getElementById('sfxVolFill').style.width = STATE.sfxVol + '%';
+  document.getElementById('musicVolLabel').textContent = STATE.musicVol + '%';
+  document.getElementById('musicVolFill').style.width = STATE.musicVol + '%';
+}
+
+function setMasterVol(e) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  STATE.masterVol = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+  renderSettings();
+}
+function setSfxVol(e) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  STATE.sfxVol = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+  renderSettings();
+}
+function setMusicVol(e) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  STATE.musicVol = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+  renderSettings();
+}
+
+function setColorBlind(mode) {
+  STATE.colorBlind = mode;
+  document.querySelectorAll('.cb-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById(`cb-${mode}`).classList.add('selected');
+  // Apply class to gameplay
+  const gp = document.getElementById('gameplay');
+  gp.classList.remove('colorblind-protan', 'colorblind-deutan', 'colorblind-tritan');
+  if (mode !== 'none') gp.classList.add(`colorblind-${mode}`);
+  showToast('success', `👁️ Renk Körlüğü: ${mode.toUpperCase()}`, 1000);
+}
+
+function toggleHaptic() {
+  STATE.hapticOn = !STATE.hapticOn;
+  document.getElementById('hapticToggle').classList.toggle('on');
+  showToast('info', STATE.hapticOn ? '📳 Titreşim Açık' : '📳 Titreşim Kapalı', 1000);
+}
+
+// ============= INIT =============
+document.addEventListener('DOMContentLoaded', () => {
+  updateMainMenu();
+  // Apply initial colorblind state
+  document.getElementById('gameplay').classList.remove('colorblind-protan', 'colorblind-deutan', 'colorblind-tritan');
+});
+</script>
+</body>
+</html>

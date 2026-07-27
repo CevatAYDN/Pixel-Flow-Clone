@@ -141,27 +141,46 @@ namespace PixelFlow.Services
         }
 
         /// <summary>
-        /// Kayıtlı oyun state'ini yükler. Kayıt yoksa null döner.
+        /// Kayıtlı oyun state'ini yükler. Kayıt yoksa veya bozuksa DataValidationException fırlatır.
         /// Çağıran, GridModel/GameSessionModel'a uygulamakla yükümlüdür.
         /// </summary>
         public static GridSaveData Load(IPlayerPrefsService prefs)
         {
-            if (!prefs.HasKey(GetSaveKey())) return null;
-            string json = prefs.GetString(GetSaveKey(), "");
-            if (string.IsNullOrEmpty(json)) return null;
+            string saveKey = GetSaveKey();
+            if (!prefs.HasKey(saveKey))
+            {
+                throw new DataValidationException($"Save file not found for key: {saveKey}. No saved game to load.");
+            }
+
+            string json = prefs.GetString(saveKey, "");
+            if (string.IsNullOrEmpty(json))
+            {
+                throw new DataValidationException($"Save file is empty for key: {saveKey}. Corrupted or incomplete save.");
+            }
+
             try
             {
                 var loaded = JsonUtility.FromJson<GridSaveData>(json);
-                if (loaded != null)
+                if (loaded == null)
                 {
-                    Logger?.Log($"[PixelFlow.GridStateSerializer] 📖 Save file loaded successfully: Level {loaded.levelIndex + 1} ({loaded.width}x{loaded.height}, Cells: {loaded.cells.Count}, Paths: {loaded.paths.Count})");
+                    throw new DataValidationException($"Save file JSON parsed to null for key: {saveKey}. Corrupted save data.");
                 }
+
+                if (loaded.cells == null || loaded.cells.Count == 0)
+                {
+                    throw new DataValidationException($"Save file has no cell data for key: {saveKey}. Corrupted save.");
+                }
+
+                Logger?.Log($"[PixelFlow.GridStateSerializer] 📖 Save file loaded successfully: Level {loaded.levelIndex + 1} ({loaded.width}x{loaded.height}, Cells: {loaded.cells.Count}, Paths: {loaded.paths.Count})");
                 return loaded;
+            }
+            catch (DataValidationException)
+            {
+                throw; // Re-throw our own exceptions
             }
             catch (System.Exception ex)
             {
-                Logger?.LogWarning($"[PixelFlow.GridStateSerializer] Failed to parse save JSON: {ex.Message}");
-                return null;
+                throw new DataValidationException($"Failed to parse save JSON for key: {saveKey}. Error: {ex.Message}");
             }
         }
 

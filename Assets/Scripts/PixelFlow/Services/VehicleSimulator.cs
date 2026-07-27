@@ -48,6 +48,8 @@ namespace PixelFlow.Services
         [Inject] public IGridViewProvider GridViewProvider { get; set; }
         [Inject, OptionalInject] public Data.GameConfig Config { get; set; }
         [Inject, OptionalInject] public ITickService TickService { get; set; }
+        [Inject, OptionalInject] public DefaultSkinIdsConfigAsset DefaultSkinConfig { get; set; }
+        [Inject, OptionalInject] public BouncyPhysicsConfigAsset BouncyPhysicsConfig { get; set; }
         [Inject, OptionalInject] public IInventoryModel InventoryModel { get; set; }
 
         private static readonly ColorType[] AllColors;
@@ -400,8 +402,10 @@ namespace PixelFlow.Services
             if (InventoryModel == null)
                 throw new DataValidationException("InventoryModel is null in VehicleSimulator!");
 
-            var defaultSkinConfig = Resources.Load<DefaultSkinIdsConfigAsset>("Configs/DefaultSkinIdsConfig");
-            string defaultSkin = defaultSkinConfig != null ? defaultSkinConfig.DefaultVehicleSkinId : "skin_default";
+            if (DefaultSkinConfig == null)
+                throw new DataValidationException("DefaultSkinIdsConfigAsset not injected in VehicleSimulator!");
+
+            string defaultSkin = DefaultSkinConfig.DefaultVehicleSkinId;
             string equippedSkin = InventoryModel.GetEquippedSkin(color);
             if (string.IsNullOrEmpty(equippedSkin)) equippedSkin = defaultSkin;
 
@@ -606,10 +610,22 @@ namespace PixelFlow.Services
                     Vector2Int vPos = new Vector2Int(Mathf.RoundToInt(v.CurrentPosition.x), Mathf.RoundToInt(v.CurrentPosition.y));
                     if (vPos == crashPos && v.Visual != null)
                     {
-                        var physics = LevelModel?.CurrentLevel != null
-                            ? LevelModel.CurrentLevel.bouncyPhysics
-                            : PixelFlow.Data.BouncyPhysicsConfig.Default;
-                        BouncyCollisionHandler.ApplyBouncyBounce(v.Visual, Vector3.up, physics);
+                        var level = LevelModel?.CurrentLevel;
+                        BouncyPhysicsConfigAsset physicsAsset = null;
+
+                        if (level?.bouncyPhysicsConfig != null)
+                        {
+                            physicsAsset = level.bouncyPhysicsConfig;
+                        }
+                        else if (BouncyPhysicsConfig != null)
+                        {
+                            physicsAsset = BouncyPhysicsConfig;
+                        }
+
+                        if (physicsAsset != null)
+                        {
+                            BouncyCollisionHandler.ApplyBouncyBounce(v.Visual, Vector3.up, physicsAsset);
+                        }
                     }
                 }
             }

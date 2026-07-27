@@ -28,7 +28,12 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void ApplyBouncyBounce_AttachesBouncyVisualEffectComponent()
         {
-            BouncyCollisionHandler.ApplyBouncyBounce(_testVehicle, Vector3.up, BouncyPhysicsConfig.Default);
+            var physicsAsset = ScriptableObject.CreateInstance<BouncyPhysicsConfigAsset>();
+            physicsAsset.BounceForce = 4.5f;
+            physicsAsset.BounceDamping = 0.75f;
+            physicsAsset.SquishFactor = 0.35f;
+
+            BouncyCollisionHandler.ApplyBouncyBounce(_testVehicle, Vector3.up, physicsAsset);
 
             var bouncyComp = _testVehicle.GetComponent<BouncyVisualEffect>();
             Assert.IsNotNull(bouncyComp);

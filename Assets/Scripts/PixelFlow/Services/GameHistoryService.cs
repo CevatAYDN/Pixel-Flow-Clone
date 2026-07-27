@@ -32,7 +32,9 @@ namespace PixelFlow.Services
         // DI dışı manuel oluşturma (testler vb.) için internal bırakıldı.
         internal GameHistoryService(int maxDepth)
         {
-            _maxDepth = maxDepth > 0 ? maxDepth : 200;
+            if (maxDepth <= 0)
+                throw new DataValidationException("GameHistoryService: maxDepth must be positive.");
+            _maxDepth = maxDepth;
         }
 
         public void Record(IGridModel grid)

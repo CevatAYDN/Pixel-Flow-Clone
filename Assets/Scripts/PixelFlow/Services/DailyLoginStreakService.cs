@@ -19,8 +19,9 @@ namespace PixelFlow.Services
         [Inject] public IEconomyService EconomyService { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
-        [Inject, OptionalInject] public GameConfig Config { get; set; }
-        [Inject, OptionalInject] public StorageKeysConfigAsset Keys { get; set; }
+        [Inject] public GameConfig Config { get; set; }
+        [Inject] public StorageKeysConfigAsset Keys { get; set; }
+        [Inject] public EconomyConfigAsset EconomyConfig { get; set; }
         [Inject, OptionalInject] public ISkinCatalogService SkinCatalog { get; set; }
 
         private string CoinCurrencyId => Keys?.CurrencyIdCoin;
@@ -32,6 +33,18 @@ namespace PixelFlow.Services
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
+            if (Config == null)
+                throw new DataValidationException("GameConfig is null in DailyLoginStreakService! Must be bound in GameContextLifecycle.");
+
+            if (Keys == null)
+                throw new DataValidationException("StorageKeysConfigAsset is null in DailyLoginStreakService! Must be bound in GameContextLifecycle.");
+
+            if (EconomyConfig == null)
+                throw new DataValidationException("EconomyConfigAsset is null in DailyLoginStreakService! Must be bound in GameContextLifecycle.");
+
+            if (string.IsNullOrEmpty(LastLoginKey) || string.IsNullOrEmpty(StreakKey) || string.IsNullOrEmpty(VipSkinGrantedKey) || string.IsNullOrEmpty(VipSkinId))
+                throw new DataValidationException("DailyLoginStreakService requires configured storage keys.");
+
             return default;
         }
 
@@ -45,14 +58,7 @@ namespace PixelFlow.Services
             if (PlayerPrefsService == null) 
                 throw new DataValidationException("PlayerPrefsService is null in DailyLoginStreakService!");
 
-            if (Config == null)
-                throw new DataValidationException("GameConfig is null in DailyLoginStreakService!");
-
-            if (string.IsNullOrEmpty(LastLoginKey) || string.IsNullOrEmpty(StreakKey) || string.IsNullOrEmpty(VipSkinGrantedKey) || string.IsNullOrEmpty(VipSkinId)) 
-                throw new DataValidationException("DailyLoginStreakService requires configured storage keys.");
-
-            var economyConfig = Resources.Load<EconomyConfigAsset>("Configs/EconomyConfig");
-            float rollHours = economyConfig != null ? economyConfig.DailyLoginRollHours : 20f;
+            float rollHours = EconomyConfig.DailyLoginRollHours;
 
             string lastLoginStr = PlayerPrefsService.GetString(LastLoginKey, "");
             DateTime lastLogin;
@@ -97,9 +103,8 @@ namespace PixelFlow.Services
             if (Config == null)
                 throw new DataValidationException("GameConfig is null in DailyLoginStreakService!");
 
-            var economyConfig = Resources.Load<EconomyConfigAsset>("Configs/EconomyConfig");
-            int bonusPerDay = economyConfig != null ? economyConfig.DailyLoginBonusPerDay : 20;
-            int maxBonus = economyConfig != null ? economyConfig.DailyLoginMaxBonus : 500;
+            int bonusPerDay = EconomyConfig.DailyLoginBonusPerDay;
+            int maxBonus = EconomyConfig.DailyLoginMaxBonus;
 
             int baseCoins = Config.DailyChestCoins;
             int streakBonus = Mathf.Min(streakDay * bonusPerDay, maxBonus);

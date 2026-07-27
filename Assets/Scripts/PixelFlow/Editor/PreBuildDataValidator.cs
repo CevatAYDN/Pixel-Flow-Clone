@@ -49,7 +49,7 @@ namespace PixelFlow.Editor
                     Debug.LogError($"[Zero-Hardcode Validator] Play Mode Engellendi! Nedeni: {errorMessage}");
                     if (!Application.isBatchMode && !IsRunningTests())
                     {
-                        EditorUtility.DisplayDialog("Veri Doğrulama Hatası", $"Play Mode başlatılamadı:\n\n{errorMessage}", "Tamam");
+                        Debug.LogError($"[Zero-Hardcode Validator] Play Mode dialog skipped: {errorMessage}");
                     }
                 }
             }
@@ -114,7 +114,7 @@ namespace PixelFlow.Editor
             var economyConfig = Resources.Load<EconomyConfigAsset>("Configs/EconomyConfig");
             if (economyConfig != null)
             {
-                economyConfig.EnsureCanonicalIapProducts();
+                economyConfig.ValidateIapProducts();
             }
 
             var diffConfig = Resources.Load<DifficultyFormulaConfigAsset>("Configs/DifficultyFormulaConfig");

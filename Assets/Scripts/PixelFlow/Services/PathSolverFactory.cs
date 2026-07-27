@@ -7,14 +7,17 @@ namespace PixelFlow.Services
     public class PathSolverFactory
     {
         private readonly Dictionary<SolverStrategyType, IPathSolverStrategy> _strategies;
+        private readonly GameConfig _config;
 
-        public PathSolverFactory()
+        public PathSolverFactory(GameConfig config)
         {
+            _config = config ?? throw new DataValidationException("GameConfig is required for PathSolverFactory!");
+            
             _strategies = new Dictionary<SolverStrategyType, IPathSolverStrategy>
             {
-                { SolverStrategyType.StandardDFS, new StandardDFSPathSolverStrategy() },
-                { SolverStrategyType.PhaseBased, new PhaseBasedSolverStrategy() },
-                { SolverStrategyType.DynamicDifficulty, new DynamicDifficultySolverStrategy() }
+                { SolverStrategyType.StandardDFS, new StandardDFSPathSolverStrategy(config) },
+                { SolverStrategyType.PhaseBased, new PhaseBasedSolverStrategy(config) },
+                { SolverStrategyType.DynamicDifficulty, new DynamicDifficultySolverStrategy(config) }
             };
         }
 
@@ -36,9 +39,7 @@ namespace PixelFlow.Services
                 return GetSolver(SolverStrategyType.PhaseBased);
             }
 
-            var config = Resources.Load<GameConfig>("Configs/GameConfig");
-            if (config == null) throw new DataValidationException("GameConfig missing in PathSolverFactory!");
-            int threshold = config.HighDifficultySolverThreshold;
+            int threshold = _config.HighDifficultySolverThreshold;
 
             if (level.difficultyScore > threshold)
             {

@@ -56,32 +56,18 @@ namespace PixelFlow.Data
         public List<IapProductDefinition> IapProducts = new List<IapProductDefinition>();
 
         /// <summary>
-        /// game_plan.md §9.3 kataloğundaki 9 varsayılan ürünü liste boşsa otomatik oluşturur/döndürür.
+        /// game_plan.md §9.3 kataloğundaki 9 ürünün tanımlandığını doğrular.
+        /// Liste boşsa DataValidationException fırlatır (Zero-Silent-Fallback §2.2).
         /// </summary>
-        public List<IapProductDefinition> EnsureCanonicalIapProducts()
+        public void ValidateIapProducts()
         {
-            if (IapProducts == null) IapProducts = new List<IapProductDefinition>();
-            if (IapProducts.Count == 0)
+            if (IapProducts == null || IapProducts.Count == 0)
             {
-                IapProducts = GetCanonicalIapProducts();
+                throw new DataValidationException(
+                    "IapProducts listesi EconomyConfigAsset içinde boş! " +
+                    "Lütfen EconomyConfig.asset'i açıp IAP ürünlerini manuel olarak ekleyin. " +
+                    "(Referans: game_plan.md §9.3)");
             }
-            return IapProducts;
-        }
-
-        public static List<IapProductDefinition> GetCanonicalIapProducts()
-        {
-            return new List<IapProductDefinition>
-            {
-                new IapProductDefinition { ProductId = "no_ads", DisplayName = "No Ads", PriceUsd = 2.99f, Type = IapProductType.NonConsumable, RemovesAds = true, Description = "Removes all interstitial ads" },
-                new IapProductDefinition { ProductId = "starter_pack", DisplayName = "Starter Pack", PriceUsd = 0.99f, Type = IapProductType.NonConsumable, CoinAmount = 1000, GemAmount = 50, UnlockSkinId = "skin_car_rare_01", Description = "1000 Coins + 50 Gems + Rare Car Skin" },
-                new IapProductDefinition { ProductId = "coin_pack_s", DisplayName = "Coin Pack S", PriceUsd = 1.99f, Type = IapProductType.Consumable, CoinAmount = 2500, Description = "2,500 Gold Coins" },
-                new IapProductDefinition { ProductId = "coin_pack_m", DisplayName = "Coin Pack M", PriceUsd = 4.99f, Type = IapProductType.Consumable, CoinAmount = 7500, Description = "7,500 Gold Coins" },
-                new IapProductDefinition { ProductId = "coin_pack_l", DisplayName = "Coin Pack L", PriceUsd = 9.99f, Type = IapProductType.Consumable, CoinAmount = 20000, Description = "20,000 Gold Coins" },
-                new IapProductDefinition { ProductId = "gem_pack_s", DisplayName = "Gem Pack S", PriceUsd = 2.99f, Type = IapProductType.Consumable, GemAmount = 100, Description = "100 Gems" },
-                new IapProductDefinition { ProductId = "gem_pack_m", DisplayName = "Gem Pack M", PriceUsd = 7.99f, Type = IapProductType.Consumable, GemAmount = 350, Description = "350 Gems" },
-                new IapProductDefinition { ProductId = "star_pass", DisplayName = "Star Pass", PriceUsd = 4.99f, Type = IapProductType.Subscription, Description = "30 day seasonal reward track" },
-                new IapProductDefinition { ProductId = "vip_bundle", DisplayName = "VIP Bundle", PriceUsd = 14.99f, Type = IapProductType.NonConsumable, RemovesAds = true, CoinAmount = 5000, GemAmount = 200, UnlockSkinId = "skin_vip_golden", Description = "No Ads + 5000 Coins + 200 Gems + Legendary Skin" },
-            };
         }
 
         /// <summary>

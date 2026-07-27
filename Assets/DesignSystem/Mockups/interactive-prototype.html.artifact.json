@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "Assets/DesignSystem/Mockups/interactive-prototype.html",
+  "entry": "Assets/DesignSystem/Mockups/interactive-prototype.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-07-26T10:26:59.308Z",
+  "updatedAt": "2026-07-26T10:26:59.308Z",
+  "metadata": {
+    "inferred": true,
+    "reconciled": true
+  }
+}

@@ -23,7 +23,6 @@ namespace PixelFlow.Editor
         private Vector2 _scrollPos;
         private bool _verboseLogging = false;
 
-        [MenuItem("Pixel Flow/Level Generation/Generate Levels")]
         public static void ShowWindow()
         {
             var window = GetWindow<GenerateLevels>("Level Generator");
@@ -119,7 +118,7 @@ namespace PixelFlow.Editor
 
             if (_currentLevelCount >= _targetLevelCount)
             {
-                EditorUtility.DisplayDialog("Level Generation", "Already have enough levels!", "OK");
+                Debug.Log("[GenerateLevels] Already have enough levels!");
                 return;
             }
 
@@ -130,10 +129,18 @@ namespace PixelFlow.Editor
                 return;
             }
 
+            var phaseConfig = Resources.Load<PhaseConfigAsset>("Configs/PhaseConfig");
+            if (phaseConfig == null)
+            {
+                Debug.LogError("[GenerateLevels] PhaseConfig bulunamadı! Önce Phase Asset Generator çalıştırın.");
+                return;
+            }
+
             int startLevel = _generateAll ? _currentLevelCount + 1 : _startFromLevel;
-            int levelsToGenerate = _targetLevelCount - startLevel + 1;
+            int levelsToGenerate = Mathf.Max(0, _targetLevelCount - startLevel + 1);
 
             var solver = new RuntimePathSolver();
+            var progression = new LevelProgressionService(solver, phaseConfig);
             var generator = new ProceduralLevelGenerator(solver);
             int generated = 0;
             int failed = 0;
@@ -150,13 +157,12 @@ namespace PixelFlow.Editor
                     continue;
                 }
 
-                // Determine phase and difficulty params based on level index
-                var param = GetDifficultyParamsForLevel(levelIndex);
+                var param = progression.GetDifficultyForLevel(levelIndex - 1);
 
                 var level = generator.Generate(param);
                 if (level != null)
                 {
-                    level.levelIndex = levelIndex - 1; // 0-based
+                    level.levelIndex = levelIndex - 1;
                     level.name = $"Level{levelIndex}";
 
                     // Solve test — sadece çözülebilir seviyeleri kaydet
@@ -213,46 +219,6 @@ namespace PixelFlow.Editor
 
             string msg = $"Generated: {generated}\nValidated (Solvable): {validated}\nFailed: {failed}\nTotal: {_currentLevelCount + generated}";
             Debug.Log($"[GenerateLevels] Generation complete!\n{msg}");
-            EditorUtility.DisplayDialog("Level Generation Complete", msg, "OK");
-        }
-
-        private DifficultyParams GetDifficultyParamsForLevel(int levelIndex)
-        {
-            // Phase-based difficulty — GDD §8.3 Progressive Complexity
-            // Her yeni mekanik tanıtımında zorluk artar, ardından "nefes" seviyeleri
-
-            if (levelIndex <= 5) // Tutorial: Tek araç, düz yol
-            {
-                return new DifficultyParams(5, 5, 1, 1, false, false);
-            }
-            else if (levelIndex <= 15) // 2-3 araç, yol çakışması
-            {
-                return new DifficultyParams(5, 6, 2, 3, false, false);
-            }
-            else if (levelIndex <= 30) // Köprü (Bridge) tanıtımı
-            {
-                return new DifficultyParams(6, 7, 2, 3, true, false);
-            }
-            else if (levelIndex <= 50) // Tek Yön (OneWay) tanıtımı
-            {
-                return new DifficultyParams(7, 8, 3, 4, true, true);
-            }
-            else if (levelIndex <= 75) // Engel (Obstacle) tanıtımı
-            {
-                return new DifficultyParams(7, 9, 3, 5, true, true, true, false);
-            }
-            else if (levelIndex <= 100) // Kombinasyon
-            {
-                return new DifficultyParams(8, 10, 4, 5, true, true, true, true);
-            }
-            else if (levelIndex <= 120) // Zor kombinasyon
-            {
-                return new DifficultyParams(9, 10, 4, 5, true, true, true, true);
-            }
-            else // Legendary (121-150)
-            {
-                return new DifficultyParams(10, 10, 5, 5, true, true, true, true);
-            }
         }
 
         private void ValidateAllLevels()
@@ -294,7 +260,6 @@ namespace PixelFlow.Editor
 
             string msg = $"Validated (Solvable): {validated}\nFailed (Unsolvable): {failed}\nSkipped (Load Error): {skipped}\nTotal: {files.Length}";
             Debug.Log($"[ValidateAllLevels] {msg}");
-            EditorUtility.DisplayDialog("Validation Complete", msg, "OK");
         }
 
         private void GeneratePhaseDefinitions()
@@ -359,6 +324,13 @@ namespace PixelFlow.Editor
         {
             string catalogPath = "Assets/Resources/Configs/LevelCatalog.asset";
             var catalog = AssetDatabase.LoadAssetAtPath<LevelCatalogAsset>(catalogPath);
+            var phaseConfig = Resources.Load<PhaseConfigAsset>("Configs/PhaseConfig");
+            if (phaseConfig == null)
+            {
+                Debug.LogError("[RegenerateLevelCatalog] PhaseConfig bulunamadı! Önce Phase Asset Generator çalıştırın.");
+                return;
+            }
+            var progression = new LevelProgressionService(new RuntimePathSolver(), phaseConfig, catalog);
 
             if (catalog == null)
             {
@@ -402,7 +374,7 @@ namespace PixelFlow.Editor
                 {
                     LevelIndex = i,
                     UseProceduralFallback = true,
-                    ProceduralDifficulty = GetDifficultyParamsForLevel(i + 1)
+                    ProceduralDifficulty = progression.GetDifficultyForLevel(i)
                 };
                 catalog.Levels.Add(entry);
             }
@@ -410,7 +382,6 @@ namespace PixelFlow.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log($"[RegenerateLevelCatalog] Catalog updated with {catalog.Levels.Count} entries");
-            EditorUtility.DisplayDialog("LevelCatalog Updated", $"Total entries: {catalog.Levels.Count}", "OK");
         }
     }
 }

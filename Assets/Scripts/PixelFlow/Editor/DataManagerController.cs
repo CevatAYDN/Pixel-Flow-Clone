@@ -18,7 +18,6 @@ namespace PixelFlow.Editor
     {
         private static Dictionary<string, bool> _assetStatusCache = new Dictionary<string, bool>();
 
-        [MenuItem("Pixel Flow/Data/Refresh Asset Status")]
         public static void RefreshAssetStatus()
         {
             _assetStatusCache.Clear();
@@ -62,7 +61,6 @@ namespace PixelFlow.Editor
         /// <summary>
         /// Tüm config asset'lerini oluşturur — sıfır hardcode, data-driven.
         /// </summary>
-        [MenuItem("Pixel Flow/Data/Create All Config Assets")]
         public static void CreateAllConfigAssets()
         {
             int created = 0;
@@ -83,7 +81,6 @@ namespace PixelFlow.Editor
             AssetDatabase.Refresh();
 
             Debug.Log($"[DataManager] {created} config asset oluşturuldu.");
-            EditorUtility.DisplayDialog("Veri Yöneticisi", $"{created} config asset oluşturuldu!", "Tamam");
         }
 
         private static int CreateIfMissing<T>(string resourcePath, string description) where T : ScriptableObject
@@ -106,7 +103,6 @@ namespace PixelFlow.Editor
         /// <summary>
         /// Seviye kataloğunu yeniden oluşturur — tüm LevelData asset'lerini tarar.
         /// </summary>
-        [MenuItem("Pixel Flow/Data/Regenerate Level Catalog")]
         public static void RegenerateLevelCatalog()
         {
             var catalog = Resources.Load<LevelCatalogAsset>("Configs/LevelCatalog");
@@ -139,11 +135,25 @@ namespace PixelFlow.Editor
             int maxIndexed = levels.Count > 0 ? levels.Max(l => l.levelIndex) : -1;
             for (int i = maxIndexed + 1; i < 150; i++)
             {
+                var phaseConfig = Resources.Load<PhaseConfigAsset>("Configs/PhaseConfig");
+                if (phaseConfig == null)
+                {
+                    Debug.LogError("[DataManager] PhaseConfig bulunamadı! Procedural fallback üretilemez.");
+                    return;
+                }
+
+                var phase = phaseConfig.GetPhaseForLevel(i + 1);
+                if (phase == null)
+                {
+                    Debug.LogError($"[DataManager] Phase bulunamadı: level {i + 1}");
+                    return;
+                }
+
                 var entry = new LevelCatalogAsset.LevelCatalogEntry
                 {
                     LevelIndex = i,
                     UseProceduralFallback = true,
-                    ProceduralDifficulty = GetDefaultDifficultyForLevel(i + 1)
+                    ProceduralDifficulty = LevelProgressionService.PhaseToDifficulty(phase.ToStruct(), i + 1)
                 };
                 catalog.Levels.Add(entry);
             }
@@ -152,23 +162,11 @@ namespace PixelFlow.Editor
             AssetDatabase.Refresh();
 
             Debug.Log($"[DataManager] LevelCatalog güncellendi: {catalog.Levels.Count} giriş");
-            EditorUtility.DisplayDialog("LevelCatalog Güncellendi", $"Toplam {catalog.Levels.Count} seviye kaydedildi.", "Tamam");
-        }
-
-        private static DifficultyParams GetDefaultDifficultyForLevel(int levelIndex)
-        {
-            if (levelIndex <= 5) return new DifficultyParams(5, 5, 1, 0, false);
-            if (levelIndex <= 15) return new DifficultyParams(6, 6, 2, 0, false);
-            if (levelIndex <= 30) return new DifficultyParams(7, 7, 2, 1, false);
-            if (levelIndex <= 50) return new DifficultyParams(8, 8, 3, 2, true);
-            if (levelIndex <= 75) return new DifficultyParams(9, 9, 4, 3, true, true);
-            return new DifficultyParams(10, 10, 5, 4, true, true, true, true);
         }
 
         /// <summary>
         /// Eksik LevelData referanslarını düzeltir — LevelCatalog'ta null AuthoredLevel olanları tarar.
         /// </summary>
-        [MenuItem("Pixel Flow/Data/Fix Missing Level References")]
         public static void FixMissingLevelReferences()
         {
             var catalog = Resources.Load<LevelCatalogAsset>("Configs/LevelCatalog");

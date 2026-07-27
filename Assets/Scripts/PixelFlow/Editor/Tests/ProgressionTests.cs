@@ -77,11 +77,12 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void ProgressionService_InfinityMode_TriggersAfterLevel50()
         {
-            var phaseDef49 = PhaseDefinition.GetPhaseForLevel(49);
-            var phaseDef55 = PhaseDefinition.GetPhaseForLevel(55);
+            var phaseConfig = _ctx.Context.Container.Resolve<PhaseConfigAsset>();
+            var phaseDef49 = phaseConfig.GetPhaseForLevel(49).ToStruct();
+            var phaseDef55 = phaseConfig.GetPhaseForLevel(55).ToStruct();
 
-            Assert.IsNotNull(phaseDef49);
-            Assert.IsNotNull(phaseDef55);
+            Assert.AreEqual(GamePhase.Phase4, phaseDef49.Phase);
+            Assert.AreEqual(GamePhase.Phase4, phaseDef55.Phase);
             
             // Just test that phase detection works, no need to generate levels
             Assert.AreEqual(GamePhase.Phase4, phaseDef55.Phase);
