@@ -49,12 +49,6 @@ namespace PixelFlow.Services
             // Case 1: Key hiç yazılmamış — ilk çalıştırma / temiz yükleme
             if (!_inner.HasKey(key))
             {
-                if (defaultValue != null)
-                {
-                    _logger?.Log($"[StrictEncryptedStorage] First-run bootstrap: initializing '{key}' with default value.");
-                    _inner.SetString(key, defaultValue);
-                    _inner.Save();
-                }
                 return defaultValue;
             }
 
@@ -63,16 +57,11 @@ namespace PixelFlow.Services
             if (val == Sentinel || val == null)
             {
                 // Dosya var ama okunamadı — encryption seed değişmiş veya tampering.
-                // Kurtarılabilir durum: corrupt dosyayı sil, warning logla, default ile yeniden başlat.
+                // Kurtarılabilir durum: corrupt dosyayı sil, warning logla ve default döndür.
                 _logger?.LogWarning(
                     $"[StrictEncryptedStorage] Key '{key}' corrupt/tampered (HMAC mismatch). " +
-                    "Recovering: deleting corrupt file and re-initializing with default value.");
+                    "Recovering: deleting corrupt file.");
                 _inner.DeleteKey(key);
-                if (defaultValue != null)
-                {
-                    _inner.SetString(key, defaultValue);
-                    _inner.Save();
-                }
                 return defaultValue;
             }
             return val;

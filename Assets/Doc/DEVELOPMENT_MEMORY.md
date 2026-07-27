@@ -91,6 +91,15 @@ Projedeki tüm konfigürasyonlar `Assets/Resources/Configs/` klasöründe yer al
 - **Kök Neden**: `PixelFlowPlayModeTests.cs` içerisindeki `CreateGameContext()` metodu 14 adet ScriptableObject konfigürasyon varlığından sadece `GameConfig`'i tek başına bağlamış, kalan 13 konfigürasyonu bağlamamıştı. Zero-Hardcode & Zero-Silent-Fallback kuralları gereği eksik konfigürasyon tespit edildiğinde testler başarısız oluyordu.
 - **Çözüm**: `PixelFlowPlayModeTests.cs` içerisine `CreateTestStorageKeysConfig()`, `CreateTestDefaultSkinIdsConfig()`, `CreateTestBouncyPhysicsConfig()`, `CreateTestStarCriteriaConfig()`, `CreateTestRushHourConfig()`, `CreateTestDifficultyFormulaConfig()`, `CreateTestPhaseConfig()` helper metotları yazıldı ve tüm 14 ScriptableObject konfigürasyonu DI bağlamına eklendi. PlayMode testleri %100 uyumlu hale getirildi.
 
+### 🔴 Hata 10: Boş/Bozuk Kayıt Yükleme Hatası ve StrictEncryptedStorage Hayalet Anahtar Oluşumu
+- **Belirti**: `MainMenuMediator.HandlePlayClicked()` butonuna basıldığında `DataValidationException: [Zero-Hardcode Policy Violation] Save file is empty for key: NT_PuzzleSave_` hatası alınıyor ve oyun takılıyordu.
+- **Kök Neden**: 
+  1. `StrictEncryptedStorageService.ReadOrBootstrap()` metodu, kayıtlı olmayan bir anahtar için `GetString(key, "")` çağrıldığında varsayılan değer `""` olduğu için depolama alanına hayalet bir anahtar (`NT_PuzzleSave_` = `""`) yazıyordu. Bu nedenle `HasKey("NT_PuzzleSave_")` metodu `true` dönmeye başlıyordu.
+  2. `MainMenuMediator.TryRestoreSavedGame()` metodu `HasKey` true döndüğü için `GridStateSerializer.Load()` metodunu çağırıyor; boş JSON ile karşılaşan `Load` sert `DataValidationException` fırlatarak akışı kesiyordu.
+- **Çözüm**: 
+  1. `StrictEncryptedStorageService.cs` içerisindeki okuma getter metotlarının, anahtar yokken depolamaya hayalet kayıt yazması engellendi.
+  2. `MainMenuMediator.TryRestoreSavedGame()` metodu `try-catch (DataValidationException)` bloğuyla sarmalandı. Boş veya bozuk kayıt durumunda kayıt otomatik temizlenip yeni seviye başlatılması sağlandı.
+
 ---
 
 ## 4. Standart Operasyon ve Çalıştırma Adımları

@@ -86,38 +86,53 @@ namespace PixelFlow.Views
             if (!GridStateSerializer.HasSavedGame(PlayerPrefsService))
                 return false;
 
-            var saved = GridStateSerializer.Load(PlayerPrefsService);
-            if (saved == null || saved.cells == null || saved.cells.Count == 0)
-                return false;
-            if (saved.paths == null || saved.paths.Count == 0)
+            try
             {
+                var saved = GridStateSerializer.Load(PlayerPrefsService);
+                if (saved == null || saved.cells == null || saved.cells.Count == 0)
+                    return false;
+                if (saved.paths == null || saved.paths.Count == 0)
+                {
+                    GridStateSerializer.ClearSave(PlayerPrefsService);
+                    return false;
+                }
+
+                var level = ProgressionService?.GetOrGenerateLevel(saved.levelIndex);
+                if (level == null)
+                    return false;
+
+                if (!GridStateSerializer.IsSaveDataValidForLevel(saved, level))
+                {
+                    GridStateSerializer.ClearSave(PlayerPrefsService);
+                    return false;
+                }
+
+                LoggerService?.Log($"[PixelFlow.MainMenuMediator] Restoring saved game: Level {saved.levelIndex + 1}");
+                LevelModel.SetLevel(level);
+                GridStateSerializer.ApplyToGrid(saved, GridModel);
+                GridStateSerializer.EnsureInitialNodesOnGrid(level, GridModel);
+                GameSessionModel.ApplySave(saved.availableViaducts, saved.maxViaducts,
+                    saved.elapsedTime, saved.score, saved.stars, saved.levelIndex, saved.targetFlowScore);
+
+                ObstacleService?.InitializeFromLevel(level);
+                TutorialDriver?.OnLevelLoaded(level.levelIndex);
+
+                SignalBus.Fire(new GridUpdatedSignal());
+                GameStateModel.SetState(GameState.Playing);
+                return true;
+            }
+            catch (DataValidationException ex)
+            {
+                LoggerService?.LogWarning($"[PixelFlow.MainMenuMediator] Saved game corrupted ({ex.Message}). Clearing save.");
                 GridStateSerializer.ClearSave(PlayerPrefsService);
                 return false;
             }
-
-            var level = ProgressionService?.GetOrGenerateLevel(saved.levelIndex);
-            if (level == null)
-                return false;
-
-            if (!GridStateSerializer.IsSaveDataValidForLevel(saved, level))
+            catch (System.Exception ex)
             {
+                LoggerService?.LogWarning($"[PixelFlow.MainMenuMediator] Unexpected error restoring saved game ({ex.Message}). Clearing save.");
                 GridStateSerializer.ClearSave(PlayerPrefsService);
                 return false;
             }
-
-            LoggerService?.Log($"[PixelFlow.MainMenuMediator] Restoring saved game: Level {saved.levelIndex + 1}");
-            LevelModel.SetLevel(level);
-            GridStateSerializer.ApplyToGrid(saved, GridModel);
-            GridStateSerializer.EnsureInitialNodesOnGrid(level, GridModel);
-            GameSessionModel.ApplySave(saved.availableViaducts, saved.maxViaducts,
-                saved.elapsedTime, saved.score, saved.stars, saved.levelIndex, saved.targetFlowScore);
-
-            ObstacleService?.InitializeFromLevel(level);
-            TutorialDriver?.OnLevelLoaded(level.levelIndex);
-
-            SignalBus.Fire(new GridUpdatedSignal());
-            GameStateModel.SetState(GameState.Playing);
-            return true;
         }
 
         private void HandleGarageClicked()

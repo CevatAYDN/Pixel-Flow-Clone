@@ -16,10 +16,7 @@ MonoBehaviour:
   width: 5
   height: 6
   toyTheme: 1
-  bouncyPhysics:
-    BounceForce: 4.5
-    BounceDamping: 0.75
-    SquishFactor: 0.35
+  bouncyPhysicsConfig: {fileID: 0}
   initialNodes:
   - position: {x: 3, y: 0}
     color: 3
@@ -71,10 +68,7 @@ MonoBehaviour:
   requireFullGridCoverage: 0
   flowScoreThreshold: 10
   difficultyScore: 8
-  stars:
-    OneStar: complete
-    TwoStars: viaducts_used <= 2
-    ThreeStars: viaducts_used == 0
+  starCriteriaConfig: {fileID: 0}
   tutorialEvent: 0
   obstacles: []
   oneWayCells: []
