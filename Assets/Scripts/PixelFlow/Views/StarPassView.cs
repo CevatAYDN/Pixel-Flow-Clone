@@ -3,6 +3,7 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using Nexus.Core;
+using Nexus.Core.Services;
 
 namespace PixelFlow.Views
 {
@@ -21,6 +22,8 @@ namespace PixelFlow.Views
         public event Action OnCloseClicked;
         public event Action OnClaimClicked;
         public event Action OnBuyPassClicked;
+
+        [Inject] public ILocalizationService LocalizationService { get; set; }
 
         protected override void OnBind(IContext context)
         {
@@ -65,7 +68,12 @@ namespace PixelFlow.Views
         public void UpdateProgress(int currentTier, int maxTier, float progress, bool isPremiumUnlocked)
         {
             if (_tierProgressText != null)
-                _tierProgressText.text = $"Tier {currentTier} / {maxTier}";
+            {
+                string format = LocalizationService != null ? LocalizationService.GetString("star_pass_tier_progress_format") : null;
+                _tierProgressText.text = string.IsNullOrWhiteSpace(format)
+                    ? $"{currentTier}/{maxTier}"
+                    : string.Format(format, currentTier, maxTier);
+            }
             if (_tierProgressBar != null)
                 _tierProgressBar.value = progress;
             if (_buyPassButton != null)

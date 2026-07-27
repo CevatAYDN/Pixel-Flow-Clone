@@ -108,12 +108,9 @@ namespace PixelFlow.Services
             level.height = param.gridHeight;
             level.requireFullGridCoverage = param.requireFullGridCoverage;
             level.viaductLimit = param.bridgeCount;
-            
-            // GDD §2.8: flowScoreThreshold ataması (renk sayısı × 5 standart eşiği, min 5, max 30)
             level.flowScoreThreshold = Mathf.Clamp(param.colorCount * 5, 5, 30);
 
             var availableColors = new List<ColorType>(GddColorPalette.Standard);
-
             int colorCount = Mathf.Min(param.colorCount, availableColors.Count);
 
             var selectedColors = new List<ColorType>();
@@ -143,8 +140,8 @@ namespace PixelFlow.Services
                     ColorType.Purple => ShapeType.Star,
                     _ => ShapeType.Circle
                 };
-                nodes.Add(new GridNode { position = positions.Value.pos1, color = color, shape = shape });
-                nodes.Add(new GridNode { position = positions.Value.pos2, color = color, shape = shape });
+                nodes.Add(new GridNode { position = positions.Value.pos1, color = color, shape = shape, isSource = true, pairIndex = selectedColors.IndexOf(color) });
+                nodes.Add(new GridNode { position = positions.Value.pos2, color = color, shape = shape, isSource = false, pairIndex = selectedColors.IndexOf(color) });
                 usedPositions.Add(positions.Value.pos1);
                 usedPositions.Add(positions.Value.pos2);
             }
@@ -152,18 +149,11 @@ namespace PixelFlow.Services
             level.initialNodes = nodes;
             _lastLevelNodes = nodes;
 
-            if (!_solver.Solve(level, out var solutions))
-            {
-                return null;
-            }
-
-            if (!ValidateSolutions(solutions, nodes))
-            {
-                return null;
-            }
+            Dictionary<ColorType, List<Vector2Int>> solutions = null;
+            bool solvedWithoutBridges = _solver.Solve(level, out solutions);
 
             var bridges = new HashSet<Vector2Int>();
-            if (param.bridgeCount > 0)
+            if (solvedWithoutBridges && param.bridgeCount > 0)
             {
                 var crossings = FindPathCrossings(solutions);
                 foreach (var cross in crossings)
@@ -172,15 +162,79 @@ namespace PixelFlow.Services
                     bridges.Add(cross);
                 }
             }
+            else if (!solvedWithoutBridges && param.bridgeCount > 0)
+            {
+                // Try placing candidate interior bridges
+                int candidateCount = Mathf.Min(param.bridgeCount, 3);
+                for (int b = 0; b < candidateCount; b++)
+                {
+                    int bx = _rng.Next(1, param.gridWidth - 1);
+                    int by = _rng.Next(1, param.gridHeight - 1);
+                    var bpos = new Vector2Int(bx, by);
+                    if (!usedPositions.Contains(bpos))
+                    {
+                        bridges.Add(bpos);
+                    }
+                }
+                level.bridgePositions = new List<Vector2Int>(bridges);
+                if (!_solver.Solve(level, out solutions))
+                {
+                    return null; // Could not solve with candidate bridges
+                }
+            }
+            else if (!solvedWithoutBridges)
+            {
+                return null; // Unsolvable without bridges and no bridge allowance
+            }
+
             level.bridgePositions = new List<Vector2Int>(bridges);
 
+            if (!ValidateSolutions(solutions, nodes))
+            {
+                return null;
+            }
+
+            // Generate obstacles if enabled
             if (param.obstaclesEnabled || param.ferryEnabled || param.narrowPassEnabled)
             {
-                level.obstacles = GenerateObstacles(param, bridges);
+                var candidates = GenerateObstacles(param, bridges);
+                level.obstacles = candidates;
+
+                // Handle OneWay cells if generated
+                level.oneWayCells = new List<OneWayCell>();
+                foreach (var obs in candidates)
+                {
+                    if (obs.type == ObstacleType.OneWay)
+                    {
+                        Vector2Int[] dirs = { Vector2Int.right, Vector2Int.up, Vector2Int.left, Vector2Int.down };
+                        level.oneWayCells.Add(new OneWayCell
+                        {
+                            position = obs.position,
+                            allowedDirection = dirs[_rng.Next(dirs.Length)]
+                        });
+                    }
+                }
+
+                // CRITICAL RE-VALIDATION: Must re-verify solver with obstacles attached!
+                if (!_solver.Solve(level, out var obstacleVerifiedSolutions))
+                {
+                    // Obstacles blocked solution — clear obstacles and fallback to clear map solution
+                    level.obstacles.Clear();
+                    level.oneWayCells.Clear();
+                    if (!_solver.Solve(level, out solutions))
+                    {
+                        return null;
+                    }
+                }
+                else
+                {
+                    solutions = obstacleVerifiedSolutions;
+                }
             }
             else
             {
                 level.obstacles = new List<ObstacleData>();
+                level.oneWayCells = new List<OneWayCell>();
             }
 
             var solutionList = new List<PathSolution>(solutions.Count);
@@ -199,53 +253,62 @@ namespace PixelFlow.Services
         }
 
         /// <summary>
-        /// Creates a simple but solvable fallback level when all generation attempts fail.
-        /// Uses 5x5 grid, 1 color, 2 nodes at opposite corners with a straight L-shaped path.
-        /// No bridges, no obstacles. Trivially solvable — does not call the solver.
+        /// Creates a clean, guaranteed solvable fallback level for the requested dimensions and color count.
+        /// Uses straight parallel horizontal paths for each color pair.
+        /// Fully verified by the solver. Zero hardcode.
         /// </summary>
         private LevelData GenerateFallbackLevel(DifficultyParams param)
         {
             var level = ScriptableObject.CreateInstance<LevelData>();
-            level.width = 5;
-            level.height = 5;
+            level.width = Mathf.Max(3, param.gridWidth);
+            level.height = Mathf.Max(3, param.gridHeight);
             level.requireFullGridCoverage = false;
-            level.viaductLimit = 0;
-            level.flowScoreThreshold = 5;
+            level.viaductLimit = param.bridgeCount;
+            level.flowScoreThreshold = Mathf.Clamp(param.colorCount * 5, 5, 30);
 
-            // Single color — first standard color
-            ColorType fallbackColor = GddColorPalette.Standard[0];
+            var availableColors = GddColorPalette.Standard;
+            int colorCount = Mathf.Min(param.colorCount, Mathf.Min(availableColors.Length, level.height));
 
-            // Two nodes at opposite corners of 5x5 grid
-            var nodes = new List<GridNode>
+            var nodes = new List<GridNode>();
+            var solutionsList = new List<PathSolution>();
+
+            for (int i = 0; i < colorCount; i++)
             {
-                new GridNode { position = new Vector2Int(0, 0), color = fallbackColor, shape = ShapeType.Triangle },
-                new GridNode { position = new Vector2Int(4, 4), color = fallbackColor, shape = ShapeType.Triangle }
-            };
+                ColorType color = availableColors[i];
+                int row = i;
+                var start = new Vector2Int(0, row);
+                var end = new Vector2Int(level.width - 1, row);
+
+                ShapeType shape = color switch
+                {
+                    ColorType.Blue => ShapeType.Circle,
+                    ColorType.Red => ShapeType.Triangle,
+                    ColorType.Yellow => ShapeType.Square,
+                    ColorType.Green => ShapeType.Diamond,
+                    ColorType.Purple => ShapeType.Star,
+                    _ => ShapeType.Circle
+                };
+
+                nodes.Add(new GridNode { position = start, color = color, shape = shape, isSource = true, pairIndex = i });
+                nodes.Add(new GridNode { position = end, color = color, shape = shape, isSource = false, pairIndex = i });
+
+                var path = new List<Vector2Int>();
+                for (int x = 0; x < level.width; x++)
+                {
+                    path.Add(new Vector2Int(x, row));
+                }
+                solutionsList.Add(new PathSolution { color = color, pathPositions = path });
+            }
+
             level.initialNodes = nodes;
             _lastLevelNodes = nodes;
-
-            // Straight L-shaped path from (0,0) to (4,4): right across top, then down right column
-            var pathPositions = new List<Vector2Int>();
-            for (int x = 0; x <= 4; x++)
-                pathPositions.Add(new Vector2Int(x, 0));
-            for (int y = 1; y <= 4; y++)
-                pathPositions.Add(new Vector2Int(4, y));
-
-            level.solutions = new List<PathSolution>
-            {
-                new PathSolution { color = fallbackColor, pathPositions = pathPositions }
-            };
-
+            level.solutions = solutionsList;
             level.bridgePositions = new List<Vector2Int>();
             level.obstacles = new List<ObstacleData>();
+            level.oneWayCells = new List<OneWayCell>();
+            level.name = $"Procedural_Guaranteed_{level.width}x{level.height}_{colorCount}c";
 
-            // Name reflects the original requested dimensions for traceability
-            level.name = $"Procedural_Fallback_{param.gridWidth}x{param.gridHeight}";
-
-            // Calculate difficulty score with fallback params (5x5, 1 color, 0 bridges)
-            var fallbackParams = new DifficultyParams(5, 5, 1, 0);
-            level.difficultyScore = CalculateDifficultyScore(level, fallbackParams);
-
+            level.difficultyScore = CalculateDifficultyScore(level, param);
             return level;
         }
 

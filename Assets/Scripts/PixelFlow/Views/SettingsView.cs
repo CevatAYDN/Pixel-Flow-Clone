@@ -1,4 +1,5 @@
 using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using PixelFlow.Models;
@@ -25,6 +26,12 @@ namespace PixelFlow.Views
         [SerializeField] private Button _colorBlindTritanButton;
         [SerializeField] private Toggle _hapticsToggle;
         [SerializeField] private Button _closeButton;
+        [SerializeField] private TMP_Text _titleText;
+        [SerializeField] private TMP_Text _masterVolumeLabel;
+        [SerializeField] private TMP_Text _sfxVolumeLabel;
+        [SerializeField] private TMP_Text _musicVolumeLabel;
+        [SerializeField] private TMP_Text _colorBlindLabel;
+        [SerializeField] private TMP_Text _hapticsLabel;
 
         public event Action OnCloseClicked;
         public event Action<float> OnMasterVolumeChanged;
@@ -38,6 +45,20 @@ namespace PixelFlow.Views
         public void AutoWireUIReferences()
         {
             if (_settingsCanvas == null) _settingsCanvas = gameObject;
+            if (_titleText == null || _masterVolumeLabel == null || _sfxVolumeLabel == null || _musicVolumeLabel == null || _colorBlindLabel == null || _hapticsLabel == null)
+            {
+                var texts = GetComponentsInChildren<TMP_Text>(true);
+                foreach (var t in texts)
+                {
+                    string name = t.gameObject.name.ToLower();
+                    if (_titleText == null && name.Contains("title")) _titleText = t;
+                    else if (_masterVolumeLabel == null && name.Contains("master")) _masterVolumeLabel = t;
+                    else if (_sfxVolumeLabel == null && (name.Contains("sfx") || name.Contains("effect"))) _sfxVolumeLabel = t;
+                    else if (_musicVolumeLabel == null && name.Contains("music")) _musicVolumeLabel = t;
+                    else if (_colorBlindLabel == null && (name.Contains("colorblind") || name.Contains("renk"))) _colorBlindLabel = t;
+                    else if (_hapticsLabel == null && (name.Contains("haptic") || name.Contains("titreşim") || name.Contains("vibration"))) _hapticsLabel = t;
+                }
+            }
             var sliders = GetComponentsInChildren<Slider>(true);
             foreach (var s in sliders)
             {

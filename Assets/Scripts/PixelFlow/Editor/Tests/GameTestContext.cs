@@ -237,6 +237,22 @@ namespace PixelFlow.Editor.Tests
                 builder.BindInstance(storageKeys);
 
                 var economyConfig = ScriptableObject.CreateInstance<EconomyConfigAsset>();
+                economyConfig.IapProducts = new List<IapProductDefinition>
+                {
+                    new IapProductDefinition
+                    {
+                        ProductId = "test_iap_product",
+                        DisplayName = "Test Product",
+                        PriceUsd = 0.99f,
+                        CurrencyCode = "USD",
+                        Type = IapProductType.Consumable,
+                        CoinAmount = 50,
+                        GemAmount = 0,
+                        UnlockSkinId = string.Empty,
+                        RemovesAds = false,
+                        Description = "Test IAP product"
+                    }
+                };
                 builder.BindInstance(economyConfig);
 
                 var phaseConfig = CreateTestPhaseConfig();

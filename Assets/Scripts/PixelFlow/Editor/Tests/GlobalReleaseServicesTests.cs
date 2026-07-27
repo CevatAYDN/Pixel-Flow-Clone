@@ -3,6 +3,8 @@ using Nexus.Core;
 using Nexus.Core.Services;
 using PixelFlow.Signals;
 using PixelFlow.Services.GlobalRelease;
+using PixelFlow.Data;
+using UnityEngine;
 using System.Threading;
 
 namespace PixelFlow.Editor.Tests
@@ -67,7 +69,12 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void LocalNotificationService_InitializeAsync_SchedulesNotifications()
         {
-            var service = new LocalNotificationService();
+            var service = new LocalNotificationService
+            {
+                LocalizationService = new PixelFlow.Services.LocalizationService(),
+                Config = ScriptableObject.CreateInstance<GameConfig>()
+            };
+            service.Config.AllowNotificationFallbackText = true;
             Assert.DoesNotThrowAsync(async () => await service.InitializeAsync(CancellationToken.None));
             Assert.DoesNotThrow(() => service.ScheduleRetentionNotifications());
             Assert.DoesNotThrow(() => service.OnDispose());

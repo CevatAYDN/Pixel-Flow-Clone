@@ -118,22 +118,17 @@ namespace PixelFlow.Services
                 if (_levelCatalog != null && _levelCatalog.TryGetProceduralParams(levelIndex, out param))
                 {
                     _logger?.Log($"[PixelFlow.LevelProgressionService] Generating level {levelIndex} with catalog-defined procedural params.");
+                    level = _generator.Generate(param);
+                    if (level != null)
+                    {
+                        level.levelIndex = levelIndex;
+                        _logger?.Log($"[PixelFlow.LevelProgressionService] Procedurally generated Level {levelIndex + 1} ({param.gridWidth}x{param.gridHeight}, {param.colorCount} colors).");
+                    }
                 }
                 else
                 {
-                    param = GetDifficultyForLevel(levelIndex);
-                }
-
-                _logger?.Log($"[PixelFlow.LevelProgressionService] No handcrafted LevelData asset found for index {levelIndex}. Generating procedurally...");
-                level = _generator.Generate(param);
-                if (level != null)
-                {
-                    level.levelIndex = levelIndex;
-                    _logger?.Log($"[PixelFlow.LevelProgressionService] Procedurally generated Level {levelIndex + 1} ({param.gridWidth}x{param.gridHeight}, {param.colorCount} colors).");
-                }
-                else
-                {
-                    _logger?.LogError($"[PixelFlow.LevelProgressionService] ERROR: Procedural generator failed to generate level for index {levelIndex}.");
+                    _logger?.LogWarning($"[PixelFlow.LevelProgressionService] Level index {levelIndex} catalog/disk üzerinde tanımlı değil. Otomatik seviye üretimi engellendi.");
+                    return null;
                 }
             }
 

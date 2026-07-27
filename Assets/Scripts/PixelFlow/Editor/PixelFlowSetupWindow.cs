@@ -297,15 +297,13 @@ namespace PixelFlow.Editor
                 .Select(g => AssetDatabase.LoadAssetAtPath<LevelData>(AssetDatabase.GUIDToAssetPath(g)))
                 .Where(l => l != null).OrderBy(l => l.levelIndex).ToList();
 
-            var card = Card($"🎮 Leveller ({levels.Count})");
+            var card = Card($"🎮 Seviye Stüdyosu (Toplam {levels.Count} Seviye Asset'i)");
 
             var toolbox = new VisualElement { style = { flexDirection = FlexDirection.Row, marginBottom = 6 } };
-            toolbox.Add(MakeBtn("Toplu Çöz", () => {
-                int solved = 0;
-                var solver = new RuntimePathSolver();
-                foreach (var l in levels) { if (solver.Solve(l, out _)) solved++; }
-                Debug.Log($"[PixelFlow] {levels.Count} levelden {solved} çözülebilir.");
-            }));
+            int nextLevelNum = levels.Count > 0 ? levels.Max(l => l.levelIndex) + 2 : 1;
+            toolbox.Add(MakeBtn($"Tek Seviye Ekle (Level {nextLevelNum})", () => GenerateSingleNextLevel()));
+            toolbox.Add(MakeBtn("150 Seviye Paketi Üret", () => GenerateMissingLevels(150)));
+            toolbox.Add(MakeBtn("LevelCatalog Yenile", () => RegenerateLevelCatalog(150)));
             toolbox.Add(MakeBtn("Inspector'da Aç", () => {
                 if (levels.Count > 0) { Selection.activeObject = levels[0]; EditorGUIUtility.PingObject(levels[0]); }
             }));
@@ -314,7 +312,7 @@ namespace PixelFlow.Editor
             foreach (var lvl in levels)
             {
                 var r = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, marginBottom = 2, backgroundColor = new Color(0.08f, 0.11f, 0.18f), paddingLeft = 4, paddingRight = 4, paddingTop = 4, paddingBottom = 4 } };
-                var info = new Label($"#{lvl.levelIndex}  {lvl.name}  ({lvl.width}x{lvl.height})");
+                var info = new Label($"#{lvl.levelIndex}  {lvl.name}  ({lvl.width}x{lvl.height}, Nodes:{lvl.initialNodes?.Count ?? 0}, Obstacles:{lvl.obstacles?.Count ?? 0})");
                 info.style.color = new Color(0.78f, 0.82f, 0.85f); info.style.fontSize = 11;
                 info.style.flexGrow = 1;
                 r.Add(info);
@@ -328,6 +326,188 @@ namespace PixelFlow.Editor
                 card.Add(r);
             }
             parent.Add(card);
+        }
+
+        public static LevelData GenerateSingleNextLevel()
+        {
+            string outputPath = "Assets/Resources/Levels";
+            if (!Directory.Exists(outputPath)) Directory.CreateDirectory(outputPath);
+
+            var files = Directory.GetFiles(outputPath, "Level*.asset")
+                .Select(f => Path.GetFileNameWithoutExtension(f))
+                .ToList();
+
+            int maxIndex = 0;
+            foreach (var f in files)
+            {
+                string numStr = f.Replace("Level", "").Replace("Data_", "");
+                if (int.TryParse(numStr, out int idx))
+                {
+                    if (idx > maxIndex) maxIndex = idx;
+                }
+            }
+
+            int nextLevelNumber = maxIndex + 1;
+            int nextLevelIndex = nextLevelNumber - 1;
+
+            var phaseConfig = Resources.Load<PhaseConfigAsset>("Configs/PhaseConfig");
+            if (phaseConfig == null)
+            {
+                Debug.LogError("[PixelFlow] PhaseConfig bulunamadı! Önce Phase Asset Generator çalıştırın.");
+                return null;
+            }
+
+            var solver = new RuntimePathSolver();
+            var progression = new LevelProgressionService(solver, phaseConfig);
+            var generator = new ProceduralLevelGenerator(solver);
+
+            var param = progression.GetDifficultyForLevel(nextLevelIndex);
+            var level = generator.Generate(param);
+
+            if (level != null)
+            {
+                level.levelIndex = nextLevelIndex;
+                level.name = $"Level{nextLevelNumber}";
+                string filePath = $"{outputPath}/Level{nextLevelNumber}.asset";
+                AssetDatabase.CreateAsset(level, filePath);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                RegenerateLevelCatalog(Mathf.Max(150, nextLevelNumber));
+                Debug.Log($"[PixelFlow] Tekli seviye başarıyla oluşturuldu: Seviye #{nextLevelIndex} ({level.name}) -> {filePath}");
+                Selection.activeObject = level;
+                EditorGUIUtility.PingObject(level);
+                return level;
+            }
+            else
+            {
+                Debug.LogError($"[PixelFlow] Seviye #{nextLevelIndex} ({nextLevelNumber}) oluşturulamadı.");
+                return null;
+            }
+        }
+
+        public static void GenerateMissingLevels(int targetCount = 150)
+        {
+            string outputPath = "Assets/Resources/Levels";
+            if (!Directory.Exists(outputPath)) Directory.CreateDirectory(outputPath);
+
+            var phaseConfig = Resources.Load<PhaseConfigAsset>("Configs/PhaseConfig");
+            if (phaseConfig == null)
+            {
+                Debug.LogError("[PixelFlow] PhaseConfig bulunamadı! Önce Phase Asset Generator çalıştırın.");
+                return;
+            }
+
+            var solver = new RuntimePathSolver();
+            var progression = new LevelProgressionService(solver, phaseConfig);
+            var generator = new ProceduralLevelGenerator(solver);
+            int generated = 0;
+
+            for (int i = 1; i <= targetCount; i++)
+            {
+                string filePath = $"{outputPath}/Level{i}.asset";
+                if (File.Exists(filePath)) continue;
+
+                var param = progression.GetDifficultyForLevel(i - 1);
+                var level = generator.Generate(param);
+                if (level != null)
+                {
+                    level.levelIndex = i - 1;
+                    level.name = $"Level{i}";
+                    AssetDatabase.CreateAsset(level, filePath);
+                    generated++;
+                }
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            RegenerateLevelCatalog(targetCount);
+            Debug.Log($"[PixelFlow] Toplam {generated} yeni seviye üretildi ve kataloğa eklendi.");
+        }
+
+        public static void RegenerateLevelCatalog(int targetCount = 150)
+        {
+            string catalogPath = "Assets/Resources/Configs/LevelCatalog.asset";
+            var catalog = AssetDatabase.LoadAssetAtPath<LevelCatalogAsset>(catalogPath);
+            if (catalog == null)
+            {
+                catalog = ScriptableObject.CreateInstance<LevelCatalogAsset>();
+                AssetDatabase.CreateAsset(catalog, catalogPath);
+            }
+
+            string levelsDir = "Assets/Resources/Levels";
+            if (!Directory.Exists(levelsDir)) Directory.CreateDirectory(levelsDir);
+
+            var files = Directory.GetFiles(levelsDir, "Level*.asset")
+                .OrderBy(f => int.TryParse(Path.GetFileNameWithoutExtension(f).Replace("Level", "").Replace("Data_", ""), out int idx) ? idx : 999)
+                .ToList();
+
+            catalog.Levels.Clear();
+            var phaseConfig = Resources.Load<PhaseConfigAsset>("Configs/PhaseConfig");
+            var progression = phaseConfig != null ? new LevelProgressionService(new RuntimePathSolver(), phaseConfig, catalog) : null;
+
+            foreach (var file in files)
+            {
+                var level = AssetDatabase.LoadAssetAtPath<LevelData>(file);
+                if (level != null)
+                {
+                    // Auto-fix node isSource flags if invalid
+                    if (level.initialNodes != null && level.initialNodes.Count > 0)
+                    {
+                        var colorSeen = new HashSet<ColorType>();
+                        bool isDirty = false;
+                        for (int n = 0; n < level.initialNodes.Count; n++)
+                        {
+                            var node = level.initialNodes[n];
+                            if (node.color == ColorType.None) continue;
+                            if (colorSeen.Add(node.color))
+                            {
+                                if (!node.isSource)
+                                {
+                                    node.isSource = true;
+                                    level.initialNodes[n] = node;
+                                    isDirty = true;
+                                }
+                            }
+                            else
+                            {
+                                if (node.isSource)
+                                {
+                                    node.isSource = false;
+                                    level.initialNodes[n] = node;
+                                    isDirty = true;
+                                }
+                            }
+                        }
+                        if (isDirty)
+                        {
+                            EditorUtility.SetDirty(level);
+                        }
+                    }
+
+                    catalog.Levels.Add(new LevelCatalogAsset.LevelCatalogEntry
+                    {
+                        LevelIndex = level.levelIndex,
+                        AuthoredLevel = level,
+                        UseProceduralFallback = false
+                    });
+                }
+            }
+
+            // Auto-repair any null AuthoredLevel entries in catalog
+            for (int i = 0; i < catalog.Levels.Count; i++)
+            {
+                var entry = catalog.Levels[i];
+                if (entry != null && !entry.UseProceduralFallback && entry.AuthoredLevel == null)
+                {
+                    entry.UseProceduralFallback = true;
+                    entry.ProceduralDifficulty = progression != null ? progression.GetDifficultyForLevel(entry.LevelIndex) : DifficultyParams.Easy;
+                    catalog.Levels[i] = entry;
+                }
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log($"[PixelFlow] LevelCatalog yenilendi. Toplam {catalog.Levels.Count} somut seviye kaydı hazır.");
         }
 
         private void CreateNewVehicleSkin()

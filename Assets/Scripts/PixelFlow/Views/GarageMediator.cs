@@ -1,3 +1,4 @@
+using System;
 using Nexus.Core;
 using Nexus.Core.Services;
 using PixelFlow.Models;
@@ -15,6 +16,7 @@ namespace PixelFlow.Views
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
         [Inject] public ISkinCatalogService SkinCatalog { get; set; }
+        [Inject] public ILocalizationService LocalizationService { get; set; }
 
         protected override void OnBind()
         {
@@ -22,10 +24,9 @@ namespace PixelFlow.Views
             if (View == null || InventoryModel == null) return;
 
             if (SkinCatalog == null)
-            {
-                LoggerService?.LogError("[PixelFlow.GarageMediator] ISkinCatalogService not injected! Cannot load skins.");
-                return;
-            }
+                throw new DataValidationException("GarageMediator.OnBind: ISkinCatalogService not injected! Cannot load skins.");
+            if (LocalizationService == null)
+                throw new DataValidationException("GarageMediator.OnBind: ILocalizationService not injected! Cannot localize UI.");
 
             View.UpdateCoins(InventoryModel.Coins);
             InventoryModel.OnCoinsChanged += HandleCoinsChanged;
@@ -107,22 +108,44 @@ namespace PixelFlow.Views
         private void RefreshSkinsList()
         {
             if (View == null || InventoryModel == null || SkinCatalog == null) return;
+            if (LocalizationService == null)
+                throw new DataValidationException("GarageMediator.RefreshSkinsList: ILocalizationService is null.");
+            
             LoggerService?.Log("[PixelFlow.GarageMediator] Refreshing Garage skins list...");
+            
+            string equipLabel = LocalizationService.GetString("garage_equip_label");
+            string equippedLabel = LocalizationService.GetString("garage_equipped_label");
+            Func<int, string> formatCost = cost => LocalizationService.GetString("garage_cost_format").Replace("{0}", cost.ToString());
+            
             View.PopulateSkins(
                 SkinCatalog.AllVehicleSkins,
                 id => InventoryModel.IsSkinUnlocked(id),
-                (color, id) => InventoryModel.GetEquippedSkin(color) == id
+                (color, id) => InventoryModel.GetEquippedSkin(color) == id,
+                formatCost,
+                equipLabel,
+                equippedLabel
             );
         }
 
         private void RefreshStopSkinsList()
         {
             if (View == null || InventoryModel == null || SkinCatalog == null) return;
+            if (LocalizationService == null)
+                throw new DataValidationException("GarageMediator.RefreshStopSkinsList: ILocalizationService is null.");
+            
             LoggerService?.Log("[PixelFlow.GarageMediator] Refreshing Garage stop skins list...");
+            
+            string equipLabel = LocalizationService.GetString("garage_equip_label");
+            string equippedLabel = LocalizationService.GetString("garage_equipped_label");
+            Func<int, string> formatCost = cost => LocalizationService.GetString("garage_cost_format").Replace("{0}", cost.ToString());
+            
             View.PopulateStopSkins(
                 SkinCatalog.AllStopSkins,
                 id => InventoryModel.IsStopSkinUnlocked(id),
-                (color, id) => InventoryModel.GetEquippedStopSkin(color) == id
+                (color, id) => InventoryModel.GetEquippedStopSkin(color) == id,
+                formatCost,
+                equipLabel,
+                equippedLabel
             );
         }
 

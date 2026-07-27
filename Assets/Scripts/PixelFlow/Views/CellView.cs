@@ -34,7 +34,7 @@ namespace PixelFlow.Views
         [SerializeField] private Sprite _starSprite;
         [SerializeField] private Sprite _warningSprite;
 
-        private static Sprite _fallbackCircle, _fallbackSquare, _fallbackTriangle, _fallbackDiamond, _fallbackStar, _fallbackWarning, _fallbackBg;
+        private static Sprite _fallbackCircle, _fallbackSquare, _fallbackTriangle, _fallbackDiamond, _fallbackStar, _fallbackWarning, _fallbackBg, _fallbackConstruction, _fallbackLake, _fallbackPark, _fallbackArrow;
         private static Color _fallbackBorderColor = new Color(0.18f, 0.22f, 0.32f, 0.85f);
 
         public Vector2Int GridPosition { get; private set; }
@@ -227,6 +227,88 @@ namespace PixelFlow.Views
 
             _fallbackStar = _fallbackDiamond;
             _fallbackWarning = _fallbackTriangle;
+
+            // 5. Construction Hazard Stripes Sprite
+            Texture2D texConst = new Texture2D(size, size);
+            Color[] colorsConst = new Color[size * size];
+            Color cAmber = new Color(0.95f, 0.65f, 0.1f, 1f);
+            Color cDark = new Color(0.2f, 0.15f, 0.05f, 1f);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    bool stripe = ((x + y) / 16) % 2 == 0;
+                    float distFromCenter = Vector2.Distance(new Vector2(x, y), center);
+                    float alpha = Mathf.Clamp01(size * 0.45f - distFromCenter);
+                    Color col = stripe ? cAmber : cDark;
+                    col.a *= alpha;
+                    colorsConst[y * size + x] = col;
+                }
+            }
+            texConst.SetPixels(colorsConst);
+            texConst.Apply();
+            _fallbackConstruction = Sprite.Create(texConst, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 128f);
+
+            // 6. Lake Water Ripple Sprite
+            Texture2D texLake = new Texture2D(size, size);
+            Color[] colorsLake = new Color[size * size];
+            Color cWaterDeep = new Color(0.12f, 0.38f, 0.75f, 1f);
+            Color cWaterLight = new Color(0.40f, 0.75f, 0.95f, 1f);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dist = Vector2.Distance(new Vector2(x, y), center);
+                    float ripple = (Mathf.Sin(dist * 0.25f) + 1f) * 0.5f;
+                    float alpha = Mathf.Clamp01(size * 0.44f - dist);
+                    Color col = Color.Lerp(cWaterDeep, cWaterLight, ripple * 0.6f);
+                    col.a *= alpha;
+                    colorsLake[y * size + x] = col;
+                }
+            }
+            texLake.SetPixels(colorsLake);
+            texLake.Apply();
+            _fallbackLake = Sprite.Create(texLake, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 128f);
+
+            // 7. Park Grass & Foliage Sprite
+            Texture2D texPark = new Texture2D(size, size);
+            Color[] colorsPark = new Color[size * size];
+            Color cParkBase = new Color(0.18f, 0.52f, 0.24f, 1f);
+            Color cParkLeaf = new Color(0.35f, 0.75f, 0.38f, 1f);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dist = Vector2.Distance(new Vector2(x, y), center);
+                    float leafPattern = (Mathf.Sin(x * 0.3f) * Mathf.Cos(y * 0.3f) + 1f) * 0.5f;
+                    float alpha = Mathf.Clamp01(size * 0.44f - dist);
+                    Color col = Color.Lerp(cParkBase, cParkLeaf, leafPattern * 0.5f);
+                    col.a *= alpha;
+                    colorsPark[y * size + x] = col;
+                }
+            }
+            texPark.SetPixels(colorsPark);
+            texPark.Apply();
+            _fallbackPark = Sprite.Create(texPark, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 128f);
+
+            // 8. OneWay Arrow Sprite
+            Texture2D texArrow = new Texture2D(size, size);
+            Color[] colorsArrow = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float nx = (x - center.x) / (size * 0.5f);
+                    float ny = (y - center.y) / (size * 0.5f);
+                    bool inShaft = (nx >= -0.6f && nx <= 0.1f && Mathf.Abs(ny) <= 0.2f);
+                    bool inHead = (nx >= 0.1f && nx <= 0.6f && Mathf.Abs(ny) <= (0.6f - nx));
+                    float alpha = (inShaft || inHead) ? 1f : 0f;
+                    colorsArrow[y * size + x] = new Color(1f, 1f, 1f, alpha);
+                }
+            }
+            texArrow.SetPixels(colorsArrow);
+            texArrow.Apply();
+            _fallbackArrow = Sprite.Create(texArrow, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 128f);
         }
 
         private static float DistToLine(Vector2 p, Vector2 a, Vector2 b)
@@ -378,86 +460,39 @@ namespace PixelFlow.Views
             bool showOneWayArrow = false;
             float arrowAngle = 0f;
 
-            // Use ThemePaletteAsset if available, fallback to per-type defaults
-            if (ThemePalette != null)
+            if (ThemePalette == null)
             {
-                var pal = ThemePalette.GetObstaclePalette(type);
-                switch (type)
-                {
-                    case ObstacleType.Lake:
-                        baseBg = pal.Background; iconColor = pal.Icon; iconSprite = _circleSprite; break;
-                    case ObstacleType.Park:
-                        baseBg = pal.Background; iconColor = pal.Icon; iconSprite = _diamondSprite; break;
-                    case ObstacleType.Construction:
-                        baseBg = pal.Background; iconColor = pal.Icon; iconSprite = _triangleSprite; break;
-                    case ObstacleType.OneWay:
-                        baseBg = cellBg * 0.8f; iconColor = pal.Icon; iconSprite = _triangleSprite;
-                        iconScale = 0.6f; showOneWayArrow = true; 
-                        Vector2Int dir = ObstacleService != null ? ObstacleService.GetOneWayDirection(GridPosition) : Vector2Int.right;
-                        arrowAngle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
-                        break;
-                    case ObstacleType.Ferry:
-                        bool isFerryBlocked = ObstacleService != null && ObstacleService.IsFerryBlocked(GridPosition);
-                        baseBg = isFerryBlocked ? pal.Background * 0.5f : pal.Background;
-                        iconColor = isFerryBlocked ? pal.Icon * 0.5f : pal.Icon;
-                        iconSprite = _diamondSprite; 
-                        iconScale = 0.6f; 
-                        break;
-                    case ObstacleType.NarrowPass:
-                        baseBg = pal.Background; iconColor = pal.Icon; iconSprite = _squareSprite; iconScale = 0.35f; break;
-                    default:
-                        baseBg = cellBg * 0.6f; iconColor = cellBg * 0.4f; break;
-                }
+                ThemePalette = Resources.Load<ThemePaletteAsset>("Configs/ThemePalette");
+                if (ThemePalette == null)
+                    throw new DataValidationException("[CellView] ThemePaletteAsset (Resources/Configs/ThemePalette) missing! Zero-Hardcode & Zero-Silent-Fallback policy requires ThemePaletteAsset.");
             }
-            else
+
+            var pal = ThemePalette.GetObstaclePalette(type);
+            switch (type)
             {
-                // Hardcoded fallback (no asset injected)
-                switch (type)
-                {
-                    case ObstacleType.Lake:
-                        baseBg = new Color(0.10f, 0.28f, 0.55f, 1f);
-                        iconColor = new Color(0.20f, 0.55f, 0.85f, 1f);
-                        iconSprite = _circleSprite;
-                        break;
-                    case ObstacleType.Park:
-                        baseBg = new Color(0.15f, 0.40f, 0.20f, 1f);
-                        iconColor = new Color(0.25f, 0.65f, 0.30f, 1f);
-                        iconSprite = _diamondSprite;
-                        break;
-                    case ObstacleType.Construction:
-                        baseBg = new Color(0.55f, 0.40f, 0.10f, 1f);
-                        iconColor = new Color(0.85f, 0.65f, 0.15f, 1f);
-                        iconSprite = _triangleSprite;
-                        break;
-                    case ObstacleType.OneWay:
-                        baseBg = cellBg * 0.8f;
-                        iconColor = new Color(0.8f, 0.8f, 0.85f, 1f);
-                        iconSprite = _triangleSprite;
-                        iconScale = 0.6f;
-                        showOneWayArrow = true;
-                        Vector2Int dirFallback = ObstacleService != null ? ObstacleService.GetOneWayDirection(GridPosition) : Vector2Int.right;
-                        arrowAngle = Mathf.Atan2(dirFallback.y, dirFallback.x) * Mathf.Rad2Deg;
-                        break;
-                    case ObstacleType.Ferry:
-                        bool isFerryBlockedFallback = ObstacleService != null && ObstacleService.IsFerryBlocked(GridPosition);
-                        Color baseFerryBg = new Color(0.15f, 0.35f, 0.50f, 1f);
-                        Color baseFerryIconColor = new Color(0.30f, 0.65f, 0.85f, 1f);
-                        baseBg = isFerryBlockedFallback ? baseFerryBg * 0.5f : baseFerryBg;
-                        iconColor = isFerryBlockedFallback ? baseFerryIconColor * 0.5f : baseFerryIconColor;
-                        iconSprite = _diamondSprite;
-                        iconScale = 0.6f;
-                        break;
-                    case ObstacleType.NarrowPass:
-                        baseBg = new Color(0.45f, 0.45f, 0.50f, 1f);
-                        iconColor = new Color(0.85f, 0.85f, 0.90f, 1f);
-                        iconSprite = _squareSprite;
-                        iconScale = 0.35f;
-                        break;
-                    default:
-                        baseBg = cellBg * 0.6f;
-                        iconColor = cellBg * 0.4f;
-                        break;
-                }
+                case ObstacleType.Lake:
+                    baseBg = pal.Background; iconColor = pal.Icon; iconSprite = pal.Sprite != null ? pal.Sprite : (_circleSprite != null ? _circleSprite : _fallbackLake); iconScale = pal.IconScale > 0 ? pal.IconScale : 0.85f; break;
+                case ObstacleType.Park:
+                    baseBg = pal.Background; iconColor = pal.Icon; iconSprite = pal.Sprite != null ? pal.Sprite : (_diamondSprite != null ? _diamondSprite : _fallbackPark); iconScale = pal.IconScale > 0 ? pal.IconScale : 0.85f; break;
+                case ObstacleType.Construction:
+                    baseBg = pal.Background; iconColor = pal.Icon; iconSprite = pal.Sprite != null ? pal.Sprite : (_triangleSprite != null ? _triangleSprite : _fallbackConstruction); iconScale = pal.IconScale > 0 ? pal.IconScale : 0.85f; break;
+                case ObstacleType.OneWay:
+                    baseBg = cellBg * 0.8f; iconColor = pal.Icon; iconSprite = pal.Sprite != null ? pal.Sprite : _fallbackArrow;
+                    iconScale = pal.IconScale > 0 ? pal.IconScale : 0.7f; showOneWayArrow = true; 
+                    Vector2Int dir = ObstacleService != null ? ObstacleService.GetOneWayDirection(GridPosition) : Vector2Int.right;
+                    arrowAngle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+                    break;
+                case ObstacleType.Ferry:
+                    bool isFerryBlocked = ObstacleService != null && ObstacleService.IsFerryBlocked(GridPosition);
+                    baseBg = isFerryBlocked ? pal.Background * 0.5f : pal.Background;
+                    iconColor = isFerryBlocked ? pal.Icon * 0.5f : pal.Icon;
+                    iconSprite = pal.Sprite != null ? pal.Sprite : (_circleSprite != null ? _circleSprite : _fallbackLake); 
+                    iconScale = pal.IconScale > 0 ? pal.IconScale : 0.75f; 
+                    break;
+                case ObstacleType.NarrowPass:
+                    baseBg = pal.Background; iconColor = pal.Icon; iconSprite = pal.Sprite != null ? pal.Sprite : (_squareSprite != null ? _squareSprite : _fallbackSquare); iconScale = pal.IconScale > 0 ? pal.IconScale : 0.5f; break;
+                default:
+                    baseBg = cellBg * 0.6f; iconColor = cellBg * 0.4f; break;
             }
 
             _bgRenderer.color = baseBg;

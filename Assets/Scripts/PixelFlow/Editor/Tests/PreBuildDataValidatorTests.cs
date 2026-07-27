@@ -1,5 +1,6 @@
 using NUnit.Framework;
-using PixelFlow.Editor;
+using PixelFlow.Data;
+using UnityEngine;
 
 namespace PixelFlow.Editor.Tests
 {
@@ -21,6 +22,17 @@ namespace PixelFlow.Editor.Tests
                 Assert.IsTrue(string.IsNullOrEmpty(errorMessage),
                     "Geçerliyse hata mesajı boş olmalı (yanıltıcı hata metni bırakılmamalı)");
             }
+        }
+
+        [Test]
+        public void GameConfig_EditorFlags_DefaultToStrictValidation()
+        {
+            var config = ScriptableObject.CreateInstance<GameConfig>();
+            Assert.IsFalse(config.AllowFallbackReleaseText);
+            Assert.IsFalse(config.AllowLocalizationFallbackDictionary);
+            Assert.IsFalse(config.AllowNotificationFallbackText);
+            Assert.IsFalse(config.AllowOfflineCloudSave);
+            Assert.IsTrue(config.StrictGlobalReleaseValidation);
         }
     }
 }

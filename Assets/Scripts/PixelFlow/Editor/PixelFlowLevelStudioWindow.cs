@@ -71,9 +71,10 @@ namespace PixelFlow.Editor
         private GUIStyle _cardStyle;
         private GUIStyle _badgeStyle;
 
+        [MenuItem("PixelFlow/Level Studio")]
         public static void ShowWindow()
         {
-            PixelFlowSetupWindow.OpenTab(1);
+            PixelFlowSetupWindow.OpenTab(2);
         }
 
         private void OnEnable()

@@ -20,6 +20,7 @@ namespace PixelFlow.Views
         [Inject] public IInventoryModel InventoryModel { get; set; }
         [Inject] public ILevelProgressionService ProgressionService { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject] public ILocalizationService LocalizationService { get; set; }
         [Inject] public IGridModel GridModel { get; set; }
         [Inject] public IGameSessionModel GameSessionModel { get; set; }
         [Inject] public ILevelModel LevelModel { get; set; }
@@ -63,19 +64,20 @@ namespace PixelFlow.Views
             }
 
             // Save yok — yeni level yükle
-            int currentUnlockedLevel = ProgressModel != null ? ProgressModel.UnlockedLevels : 1;
+            if (ProgressModel == null)
+                throw new DataValidationException("MainMenuMediator.HandlePlayClicked: IProgressModel is null. Cannot determine unlocked level.");
+            if (ProgressionService == null)
+                throw new DataValidationException("MainMenuMediator.HandlePlayClicked: ILevelProgressionService is null. Cannot resolve level data.");
+
+            int currentUnlockedLevel = ProgressModel.UnlockedLevels;
             int levelIndex = currentUnlockedLevel - 1;
 
-            var levelToLoad = ProgressionService?.GetOrGenerateLevel(levelIndex);
-            if (levelToLoad != null)
-            {
-                LoggerService?.Log($"[PixelFlow.MainMenuMediator] Firing LoadLevelSignal for Level {currentUnlockedLevel} ({levelToLoad.name})");
-                SignalBus.Fire(new LoadLevelSignal { LevelToLoad = levelToLoad });
-            }
-            else
-            {
-                LoggerService?.LogError($"[PixelFlow.MainMenuMediator] Failed to resolve level data for level index {levelIndex}.");
-            }
+            var levelToLoad = ProgressionService.GetOrGenerateLevel(levelIndex);
+            if (levelToLoad == null)
+                throw new DataValidationException($"MainMenuMediator.HandlePlayClicked: Failed to resolve level data for level index {levelIndex}.");
+
+            LoggerService?.Log($"[PixelFlow.MainMenuMediator] Firing LoadLevelSignal for Level {currentUnlockedLevel} ({levelToLoad.name})");
+            SignalBus.Fire(new LoadLevelSignal { LevelToLoad = levelToLoad });
 
             LoggerService?.Log("[PixelFlow.MainMenuMediator] Transitioning GameState -> Playing...");
             GameStateModel?.SetState(GameState.Playing);
@@ -165,14 +167,21 @@ namespace PixelFlow.Views
 
         private void RefreshHubUI()
         {
-            int coins = InventoryModel != null ? InventoryModel.Coins : 1450;
-            int levelNumber = ProgressModel != null ? ProgressModel.UnlockedLevels : 1;
+            if (InventoryModel == null)
+                throw new DataValidationException("MainMenuMediator.RefreshHubUI: IInventoryModel is null.");
+            if (ProgressModel == null)
+                throw new DataValidationException("MainMenuMediator.RefreshHubUI: IProgressModel is null.");
+            if (LocalizationService == null)
+                throw new DataValidationException("MainMenuMediator.RefreshHubUI: ILocalizationService is null.");
 
-            View.UpdateCoinBalance(coins);
-            View.UpdatePlayButtonText(levelNumber);
+            int coins = InventoryModel.Coins;
+            int levelNumber = ProgressModel.UnlockedLevels;
 
-            string skinId = InventoryModel != null ? InventoryModel.GetEquippedSkin(ColorType.Red) : "skin_default";
-            View.UpdateEquippedVehicle(skinId, "Kuşanılan Araç");
+            View.UpdateCoinBalance(coins, LocalizationService.GetString("hub_coin_format"));
+            View.UpdatePlayButtonText(levelNumber, LocalizationService.GetString("hub_play_level_format"));
+
+            string skinId = InventoryModel.GetEquippedSkin(ColorType.Red);
+            View.UpdateEquippedVehicle(skinId);
         }
 
         private void UpdateVisibility()

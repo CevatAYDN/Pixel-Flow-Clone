@@ -127,21 +127,16 @@ Pixel Flow/Asset Creator/Create All Configs
 
 ---
 
-### 4. GenerateLevels.cs — İyileştirilmiş Seviye Üretimi
+### 4. Konsolide Editör Araçları & Seviye Üretimi (No Parallel Editors - §2.1)
 
-**Dosya:** `Editor/GenerateLevels.cs` (416 satır)
+**Dosya:** `Editor/GenerateLevels.cs`, `Editor/PixelFlowLevelStudioWindow.cs` → `PixelFlowSetupWindow.cs` (Sekme 2 & 3)
 
 **Özellikler:**
-- ✅ RuntimePathSolver ile doğrulama
-- ✅ Max 3 deneme — çözülemezse tekrar dene
-- ✅ Verbose logging toggle
-- ✅ RegenerateLevelCatalog butonu
-- ✅ GDD §8.3 Progressive Complexity'e uygun difficulty params
-
-**Menu Items:**
-```
-Pixel Flow/Level Generation/Generate Levels
-```
+- ✅ `game_plan.md §2.1` No Parallel Editors kuralına tam uyum: Tüm seviye üreticileri `PixelFlowSetupWindow` içine konsolide edilmiştir. `ShowWindow()` çağrıları `PixelFlowSetupWindow.OpenTab(2)`'ye yönlendirilir.
+- ✅ RuntimePathSolver (DFS/IDA*) ile 100% çözülebilirlik doğrulaması.
+- ✅ Artımlı tekli seviye üretimi (`GenerateSingleNextLevel()`) — diskteki varlık sayısını okur, sıradaki seviyeyi üretir ve kataloğu yeniler.
+- ✅ Kataloğun diskteki somut `LevelData` varlıklarına sıkı sıkıya kısıtlanması (otomatik sahte prosedürel seviye doldurma yapılmaz).
+- ✅ GDD §8.3 Progressive Complexity'e uygun difficulty params.
 
 ---
 

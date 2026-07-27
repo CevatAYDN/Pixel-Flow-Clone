@@ -154,8 +154,10 @@ namespace PixelFlow.Models
         public static string GetOrCreatePlayerId(IPlayerPrefsService prefs) =>
             new CloudSaveManager { Prefs = prefs }.GetOrCreatePlayerId();
 
-        public static Task SyncToCloudAsync(IPlayerPrefsService prefs, string localSaveJson, int version) =>
-            new CloudSaveManager { Prefs = prefs, Adapter = new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter(prefs) }.SyncToCloudAsync(localSaveJson, version);
+        public static Task SyncToCloudAsync(IPlayerPrefsService prefs, string localSaveJson, int version)
+        {
+            throw new DataValidationException("CloudSaveManager.SyncToCloudAsync(IPlayerPrefsService, ...) is deprecated. Bind ICloudSaveAdapter and call the instance method instead.");
+        }
 
         /// <summary>
         /// Save sonrası cloud sync. ICloudSaveAdapter varsa gerçek sync yapar, yoksa

@@ -20,37 +20,17 @@ namespace PixelFlow.Views
         [Inject] public IGameHistoryService HistoryService { get; set; }
         [Inject] public ILevelProgressionService ProgressionService { get; set; }
         [Inject] public ILocalizationService LocalizationService { get; set; }
-        [Inject] public IPowerUpService PowerUpService { get; set; }
-
-        private Action _themeDarkHandler;
-        private Action _themeLightHandler;
-        private Action _themeNeonHandler;
-        private Vector2Int _lastCrashPosition;
 
         protected override void OnBind()
         {
-            _themeDarkHandler = () => FireTheme(PixelFlow.Models.AppTheme.Dark);
-            _themeLightHandler = () => FireTheme(PixelFlow.Models.AppTheme.Light);
-            _themeNeonHandler = () => FireTheme(PixelFlow.Models.AppTheme.Neon);
-
             View.OnHintClicked += HandleHintClicked;
             View.OnNextLevelClicked += HandleNextLevelClicked;
             View.OnContinueClicked += HandleContinueClicked;
             View.OnUndoClicked += HandleUndoClicked;
-            View.OnRedoClicked += HandleRedoClicked;
-            View.OnThemeDarkClicked += _themeDarkHandler;
-            View.OnThemeLightClicked += _themeLightHandler;
-            View.OnThemeNeonClicked += _themeNeonHandler;
-            View.OnSimulateDebugPressed += HandleSimulateDebugPressed;
-            View.OnCrisisViaductClicked += HandleCrisisViaductClicked;
-            View.OnCrisisUndoClicked += HandleCrisisUndoClicked;
             View.OnPauseClicked += HandlePauseClicked;
             View.OnRetryClicked += HandleRetryClicked;
             View.OnLevelFailedContinueClicked += HandleLevelFailedContinueClicked;
             View.OnGarageClicked += HandleGarageClicked;
-            View.OnRainbowRoadClicked += HandleRainbowRoadClicked;
-            View.OnClearJamClicked += HandleClearJamClicked;
-            View.OnViaductClicked += HandleViaductClicked;
 
             if (LocalizationService == null)
                 throw new DataValidationException("HUDMediator: ILocalizationService must be injected. All UI texts depend on it.");
@@ -61,29 +41,18 @@ namespace PixelFlow.Views
             GameSessionModel.OnStarsChanged += HandleStarsChanged;
             GameSessionModel.OnSimulationTimerChanged += HandleSimulationTimerChanged;
             GameSessionModel.OnViaductsChanged += HandleViaductsChanged;
-            if (PowerUpService != null)
-            {
-                PowerUpService.OnRainbowRoadUsesChanged += HandleRainbowRoadUsesChanged;
-                PowerUpService.OnClearJamUsesChanged += HandleClearJamUsesChanged;
-            }
 
             View.HideCompletion();
             UpdateHintCountText(HintModel.HintsRemaining);
             UpdateScoreText(GameSessionModel.Score);
             View.UpdateTimer(GameSessionModel.ElapsedTime);
             View.UpdateStars(GameSessionModel.StarsEarned);
-            View.HighlightActiveTheme(SettingsModel.CurrentTheme);
+            
             UpdateLevelTitleText();
             View.UpdateViaductCount(GameSessionModel.AvailableViaducts);
-            if (PowerUpService != null)
-            {
-                View.UpdateRainbowRoadCount(PowerUpService.RainbowRoadUses);
-                View.UpdateClearJamCount(PowerUpService.ClearJamUsesRemaining);
-            }
 
             Subscribe<LevelCompletedSignal>(HandleLevelCompleted);
             Subscribe<LoadLevelSignal>(OnLoadLevelSignalReceived);
-            Subscribe<ThemeChangedSignal>(HandleThemeChanged);
             Subscribe<GridUpdatedSignal>(HandleGridUpdated);
             Subscribe<CrashDetectedSignal>(HandleCrashDetected);
             Subscribe<PathIntersectionWarningSignal>(HandleIntersectionWarning);
@@ -104,24 +73,10 @@ namespace PixelFlow.Views
             View.OnNextLevelClicked -= HandleNextLevelClicked;
             View.OnContinueClicked -= HandleContinueClicked;
             View.OnUndoClicked -= HandleUndoClicked;
-            View.OnRedoClicked -= HandleRedoClicked;
-            View.OnSimulateDebugPressed -= HandleSimulateDebugPressed;
-            View.OnCrisisViaductClicked -= HandleCrisisViaductClicked;
-            View.OnCrisisUndoClicked -= HandleCrisisUndoClicked;
             View.OnPauseClicked -= HandlePauseClicked;
             View.OnRetryClicked -= HandleRetryClicked;
             View.OnLevelFailedContinueClicked -= HandleLevelFailedContinueClicked;
             View.OnGarageClicked -= HandleGarageClicked;
-            View.OnRainbowRoadClicked -= HandleRainbowRoadClicked;
-            View.OnClearJamClicked -= HandleClearJamClicked;
-            View.OnViaductClicked -= HandleViaductClicked;
-
-            if (_themeDarkHandler != null) View.OnThemeDarkClicked -= _themeDarkHandler;
-            if (_themeLightHandler != null) View.OnThemeLightClicked -= _themeLightHandler;
-            if (_themeNeonHandler != null) View.OnThemeNeonClicked -= _themeNeonHandler;
-            _themeDarkHandler = null;
-            _themeLightHandler = null;
-            _themeNeonHandler = null;
 
             if (_continueCoroutine != null && View != null) View.StopCoroutine(_continueCoroutine);
             _continueCoroutine = null;
@@ -131,24 +86,12 @@ namespace PixelFlow.Views
             GameSessionModel.OnStarsChanged -= HandleStarsChanged;
             GameSessionModel.OnSimulationTimerChanged -= HandleSimulationTimerChanged;
             GameSessionModel.OnViaductsChanged -= HandleViaductsChanged;
-            if (PowerUpService != null)
-            {
-                PowerUpService.OnRainbowRoadUsesChanged -= HandleRainbowRoadUsesChanged;
-                PowerUpService.OnClearJamUsesChanged -= HandleClearJamUsesChanged;
-            }
             GameStateModel.OnStateChanged -= HandleStateChanged;
-        }
-
-        private void FireTheme(PixelFlow.Models.AppTheme theme)
-        {
-            if (SettingsModel.CurrentTheme == theme) return;
-            SignalBus.Fire(new ChangeThemeSignal { Theme = theme });
         }
 
         private void HandleLoadLevel(LoadLevelSignal signal)
         {
             View.HideCompletion();
-            View.HideCrisis();
             View.HideLevelFailed();
         }
 
@@ -170,35 +113,24 @@ namespace PixelFlow.Views
             SignalBus.Fire(new UndoSignal());
         }
 
-        private void HandleRedoClicked()
-        {
-            LoggerService?.Log("[PixelFlow.HUDMediator] 'Redo' button clicked.");
-            var state = GameStateModel.CurrentState;
-            if (state != GameState.Playing && state != GameState.Paused) return;
-            SignalBus.Fire(new RedoSignal());
-        }
+        // ⚠️ NOTE: Redo removed per game plan (minimal HUD)
+        // private void HandleRedoClicked()
+        // {
+        //     LoggerService?.Log("[PixelFlow.HUDMediator] 'Redo' button clicked.");
+        //     var state = GameStateModel.CurrentState;
+        //     if (state != GameState.Playing && state != GameState.Paused) return;
+        //     SignalBus.Fire(new RedoSignal());
+        // }
 
         private void HandleGridUpdated(GridUpdatedSignal signal)
         {
             RefreshUndoRedoButtons();
-            var state = GameStateModel.CurrentState;
-            if (state == GameState.Playing || state == GameState.Simulating)
-            {
-                View.HideCrisis();
-            }
         }
 
         private void HandleCrashDetected(CrashDetectedSignal signal)
         {
-            _lastCrashPosition = signal.Position;
-            
-            string title = LocalizationService.GetString("crisis_title");
-            string desc = LocalizationService.GetString("crisis_desc");
-            string format = LocalizationService.GetString("crisis_viaducts_format");
-            string viaductBtn = LocalizationService.GetString("crisis_viaduct_btn");
-            string undoBtn = LocalizationService.GetString("crisis_undo_btn");
-
-            View.ShowCrisis(GameSessionModel.AvailableViaducts, title, desc, format, viaductBtn, undoBtn);
+            string msg = LocalizationService.GetString("crash_toast_msg");
+            View.ShowCrashToast(msg);
         }
 
         private void HandleIntersectionWarning(PathIntersectionWarningSignal signal)
@@ -217,41 +149,11 @@ namespace PixelFlow.Views
 
         private void HandleViaductsChanged(int count)
         {
-            // b4: kalıcı Viyadük göstergesini güncelle
             View.UpdateViaductCount(count);
             if (count <= 0)
             {
                 string msg = LocalizationService.GetString("crisis_exhausted_msg");
-                View.ShowViaductLimitReached(msg);
-            }
-        }
-
-        // b4: Kalıcı Viyadük butonu — viyadükler grid'e dokunarak yerleştirildiği için
-        // buton, oyuncuya nasıl kullanacağını hatırlatan yönlendirici toast açar.
-        private void HandleViaductClicked()
-        {
-            string msg = LocalizationService.GetString("viaduct_hint_msg");
-            View.ShowCrashToast(msg);
-        }
-
-        private void HandleCrisisViaductClicked()
-        {
-            LoggerService?.Log($"[HUDMediator] Crisis Viaduct Clicked. Placing viaduct at {_lastCrashPosition}");
-            SignalBus.Fire(new PlaceViaductSignal { Position = _lastCrashPosition });
-        }
-
-        private void HandleCrisisUndoClicked()
-        {
-            LoggerService?.Log("[HUDMediator] Crisis Undo Clicked. Reverting path.");
-            GameSessionModel?.MarkCrisisUndoUsed();
-            SignalBus.Fire(new UndoSignal());
-            View?.HideCrisis();
-            // UndoCommand may have already restored state to Playing (UndoCommand.cs:37).
-            // If still Paused, resume directly — PauseSimulationSignal is a toggle
-            // and would re-pause if Undo already set Playing.
-            if (GameStateModel != null && GameStateModel.CurrentState == GameState.Paused)
-            {
-                GameStateModel.SetState(GameState.Playing);
+                View.ShowCrashToast(msg);
             }
         }
 
@@ -261,12 +163,10 @@ namespace PixelFlow.Views
             if (HistoryService != null)
             {
                 View.SetUndoInteractable(HistoryService.CanUndo);
-                View.SetRedoInteractable(HistoryService.CanRedo);
             }
             else
             {
                 View.SetUndoInteractable(false);
-                View.SetRedoInteractable(false);
             }
         }
 
@@ -303,17 +203,19 @@ namespace PixelFlow.Views
             }
         }
 
-        private void HandleRainbowRoadUsesChanged(int remaining)
-        {
-            LoggerService?.Log($"[PixelFlow.HUDMediator] Rainbow Road uses updated: {remaining}");
-            View?.UpdateRainbowRoadCount(remaining);
-        }
+        // ⚠️ NOTE: Rainbow Road uses changed handler removed (not in game_plan.md)
+        // private void HandleRainbowRoadUsesChanged(int remaining)
+        // {
+        //     LoggerService?.Log($"[PixelFlow.HUDMediator] Rainbow Road uses updated: {remaining}");
+        //     View?.UpdateRainbowRoadCount(remaining);
+        // }
 
-        private void HandleClearJamUsesChanged(int remaining)
-        {
-            LoggerService?.Log($"[PixelFlow.HUDMediator] Clear Jam uses updated: {remaining}");
-            View?.UpdateClearJamCount(remaining);
-        }
+        // ⚠️ NOTE: Clear Jam uses changed handler removed (not in game_plan.md)
+        // private void HandleClearJamUsesChanged(int remaining)
+        // {
+        //     LoggerService?.Log($"[PixelFlow.HUDMediator] Clear Jam uses updated: {remaining}");
+        //     View?.UpdateClearJamCount(remaining);
+        // }
 
         private void HandleHintCountChanged(int count)
         {
@@ -392,7 +294,6 @@ namespace PixelFlow.Views
         {
             View?.HideCompletion();
             View?.HideLevelFailed();
-            View?.HideCrisis();
             UpdateLevelTitleText();
         }
 
@@ -411,43 +312,24 @@ namespace PixelFlow.Views
             View?.UpdateLevelTitle(levelNumber, format);
         }
 
-        private void HandleThemeChanged(ThemeChangedSignal signal)
-        {
-            View.HighlightActiveTheme(SettingsModel.CurrentTheme);
-        }
-
         private void HandleViaductExhausted(ViaductExhaustedSignal signal)
         {
             LoggerService?.Log("[HUDMediator] Viaducts exhausted! Showing crisis prompt.");
-            View.ShowViaductLimitReached($"Viaducts exhausted! ({GameSessionModel.AvailableViaducts} remaining)");
+            string msg = LocalizationService.GetString("crisis_viaduct_exhausted_msg");
+            View.ShowCrashToast(string.Format(msg, GameSessionModel.AvailableViaducts));
         }
 
         private void HandleCrisisRetryExhausted(CrisisRetryExhaustedSignal signal)
         {
             LoggerService?.Log($"[HUDMediator] Crisis retries exhausted ({signal.RetryCount}). Requesting ad/skip.");
-            View.ShowCrisisRetryExhausted(signal.RetryCount);
+            string msg = LocalizationService.GetString("crisis_retry_exhausted_msg");
+            View.ShowCrashToast(string.Format(msg, signal.RetryCount));
         }
 
         private void HandleGarageClicked()
         {
             LoggerService?.Log("[PixelFlow.HUDMediator] 'Garage' button clicked from gameplay.");
             SignalBus.Fire(new PixelFlow.Signals.ShowGarageSignal());
-        }
-
-        private void HandleRainbowRoadClicked()
-        {
-            var state = GameStateModel?.CurrentState ?? GameState.Playing;
-            if (state != GameState.Playing && state != GameState.Simulating) return;
-            LoggerService?.Log("[PixelFlow.HUDMediator] 'Rainbow Road' power-up button clicked. Firing ActivateRainbowRoadSignal.");
-            SignalBus.Fire(new PixelFlow.Signals.ActivateRainbowRoadSignal());
-        }
-
-        private void HandleClearJamClicked()
-        {
-            var state = GameStateModel?.CurrentState ?? GameState.Playing;
-            if (state != GameState.Playing && state != GameState.Simulating) return;
-            LoggerService?.Log("[PixelFlow.HUDMediator] 'Clear Jam' power-up button clicked. Firing ClearJamSignal.");
-            SignalBus.Fire(new PixelFlow.Signals.ClearJamSignal());
         }
 
         private void HandlePauseClicked()
@@ -469,7 +351,6 @@ namespace PixelFlow.Views
             }
             View.HideLevelFailed();
             View.HideCompletion();
-            View.HideCrisis();
             if (state == GameState.Paused)
             {
                 GameStateModel?.SetState(GameState.Playing);
@@ -502,13 +383,6 @@ namespace PixelFlow.Views
         {
             LoggerService?.Log($"[PixelFlow.HUDMediator] HandleStateChanged: State -> {state}");
             UpdateVisibility();
-
-            // Simülasyon modunda power-up butonlarını devre dışı bırak
-            if (View != null)
-            {
-                bool canUsePowerUps = state == GameState.Playing || state == GameState.Paused;
-                View.SetPowerUpButtonsInteractable(canUsePowerUps);
-            }
         }
 
         private void UpdateVisibility()
@@ -543,26 +417,6 @@ namespace PixelFlow.Views
             LoggerService?.Log($"[PixelFlow.HUDMediator] EventSystem check: current={(bool)es}, " +
                 $"inputModule={(es != null ? es.currentInputModule?.GetType().Name : "null")}, " +
                 $"activeGO={(es != null && es.currentSelectedGameObject != null ? es.currentSelectedGameObject.name : "null")}");
-        }
-
-        private void HandleSimulateDebugPressed()
-        {
-            // Debug-only: bypasses command flow for rapid testing
-            // Bu direkt SetState çağrısı sadece Editor/PlayMode debug için kullanılır.
-            // MVCS kuralı: normal oynanışta Signal → Command → SetState akışı kullanılır.
-#if UNITY_EDITOR
-            var state = GameStateModel.CurrentState;
-            if (state == GameState.Playing)
-            {
-                LoggerService?.Log("[HUDMediator] Debug: Manually starting simulation phase (Simulating).");
-                GameStateModel.SetState(GameState.Simulating);
-            }
-            else if (state == GameState.Simulating)
-            {
-                LoggerService?.Log("[HUDMediator] Debug: Manually stopping simulation phase (Playing).");
-                GameStateModel.SetState(GameState.Playing);
-            }
-#endif
         }
     }
 }

@@ -1,10 +1,8 @@
 using NUnit.Framework;
-using Nexus.Core;
 using Nexus.Core.Services;
 using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Services;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace PixelFlow.Editor.Tests
@@ -69,7 +67,6 @@ namespace PixelFlow.Editor.Tests
         {
             using var ctx = GameTestContext.CreateGameContext();
             var prefs = ctx.GetModel<IPlayerPrefsService>();
-            var keys = ctx.Context.Container.Resolve<StorageKeysConfigAsset>();
 
             string id1 = CloudSaveManager.GetOrCreatePlayerId(prefs);
             Assert.IsFalse(string.IsNullOrEmpty(id1));
@@ -107,9 +104,16 @@ namespace PixelFlow.Editor.Tests
             var prefs = ctx.GetModel<IPlayerPrefsService>();
             var keys = ctx.Context.Container.Resolve<StorageKeysConfigAsset>();
 
-            CloudSaveManager.SyncToCloudAsync(prefs, "{\"score\":100}", 1).Wait();
+            var manager = new CloudSaveManager
+            {
+                Adapter = new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter(prefs, keys),
+                Prefs = prefs,
+                Keys = keys
+            };
 
-            var record = CloudSaveManager.LoadCloudRecord(prefs);
+            manager.SyncToCloudAsync("{\"score\":100}", 1).Wait();
+
+            var record = manager.LoadCloudRecord();
             Assert.AreEqual("{\"score\":100}", record.LocalSaveJson);
             Assert.AreEqual("{\"score\":100}", record.CloudSaveJson);
             Assert.AreEqual(1, record.LocalVersion);

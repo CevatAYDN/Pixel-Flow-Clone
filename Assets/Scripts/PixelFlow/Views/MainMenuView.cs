@@ -146,24 +146,22 @@ namespace PixelFlow.Views
             if (_settingsButton != null) _settingsButton.onClick.RemoveAllListeners();
         }
 
-        public void UpdateCoinBalance(int coins)
+        public void UpdateCoinBalance(int coins, string format)
         {
             if (_coinText != null)
-                _coinText.text = $"{coins:N0} GOLD";
+                _coinText.text = string.Format(format, coins);
         }
 
-        public void UpdatePlayButtonText(int levelNumber)
+        public void UpdatePlayButtonText(int levelNumber, string format)
         {
             if (_playButtonText != null)
-                _playButtonText.text = $"OYUNA BAŞLA (SEVİYE {levelNumber})";
+                _playButtonText.text = string.Format(format, levelNumber);
         }
 
-        public void UpdateEquippedVehicle(string vehicleName, string vehicleType)
+        public void UpdateEquippedVehicle(string vehicleName)
         {
             if (_equippedVehicleNameText != null)
-                _equippedVehicleNameText.text = vehicleName;
-            if (_equippedVehicleTypeText != null)
-                _equippedVehicleTypeText.text = vehicleType;
+                _equippedVehicleNameText.text = string.IsNullOrEmpty(vehicleName) ? string.Empty : vehicleName;
         }
 
         public void SetVisible(bool visible)

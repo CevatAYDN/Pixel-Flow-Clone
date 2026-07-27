@@ -1520,8 +1520,16 @@ namespace PixelFlow.Editor.Tests
         public void CloudSave_PlayerId_Persists()
         {
             var prefs = _ctx.Context.Container.Resolve<IPlayerPrefsService>();
-            string id1 = Models.CloudSaveManager.GetOrCreatePlayerId(prefs);
-            string id2 = Models.CloudSaveManager.GetOrCreatePlayerId(prefs);
+            var keys = _ctx.Context.Container.Resolve<StorageKeysConfigAsset>();
+            var manager = new Models.CloudSaveManager
+            {
+                Adapter = new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter(prefs, keys),
+                Prefs = prefs,
+                Keys = keys
+            };
+
+            string id1 = manager.GetOrCreatePlayerId();
+            string id2 = manager.GetOrCreatePlayerId();
             Assert.IsFalse(string.IsNullOrEmpty(id1));
             Assert.AreEqual(id1, id2, "PlayerId should be stable across calls");
         }
@@ -1530,8 +1538,16 @@ namespace PixelFlow.Editor.Tests
         public void CloudSave_SyncToCloud_RoundTrips()
         {
             var prefs = _ctx.Context.Container.Resolve<IPlayerPrefsService>();
-            Models.CloudSaveManager.SyncToCloudAsync(prefs, "save_v1", 1).Wait();
-            var loaded = Models.CloudSaveManager.LoadCloudRecord(prefs);
+            var keys = _ctx.Context.Container.Resolve<StorageKeysConfigAsset>();
+            var manager = new Models.CloudSaveManager
+            {
+                Adapter = new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter(prefs, keys),
+                Prefs = prefs,
+                Keys = keys
+            };
+
+            manager.SyncToCloudAsync("save_v1", 1).Wait();
+            var loaded = manager.LoadCloudRecord();
             Assert.AreEqual("save_v1", loaded.CloudSaveJson);
             Assert.AreEqual(1, loaded.CloudVersion);
         }
@@ -1634,6 +1650,7 @@ namespace PixelFlow.Editor.Tests
             var session = _ctx.GetModel<IGameSessionModel>();
             var level = _ctx.GetModel<ILevelModel>();
             var prefs = _ctx.Context.Container.Resolve<IPlayerPrefsService>();
+            var keys = _ctx.Context.Container.Resolve<StorageKeysConfigAsset>();
             var levelData = ScriptableObject.CreateInstance<LevelData>();
             levelData.levelIndex = 0;
             levelData.width = 3; levelData.height = 3;
@@ -1644,6 +1661,13 @@ namespace PixelFlow.Editor.Tests
             session.IncrementRetryCount();
 
             GridStateSerializer.Save(grid, session, level, prefs);
+            var manager = new CloudSaveManager
+            {
+                Adapter = new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter(prefs, keys),
+                Prefs = prefs,
+                Keys = keys
+            };
+
             var loaded = GridStateSerializer.Load(prefs);
             Assert.IsNotNull(loaded);
             session.ApplySave(loaded.availableViaducts, loaded.maxViaducts, loaded.elapsedTime, loaded.score, loaded.stars, 0);

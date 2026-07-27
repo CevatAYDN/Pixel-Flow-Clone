@@ -74,6 +74,36 @@ namespace PixelFlow.Editor
                 created++;
             }
 
+            if (!EnsureAsset<DifficultyFormulaConfigAsset>("DifficultyFormulaConfig", ref alreadyExists))
+            {
+                CreateAndSave<DifficultyFormulaConfigAsset>("DifficultyFormulaConfig");
+                created++;
+            }
+
+            if (!EnsureAsset<DefaultSkinIdsConfigAsset>("DefaultSkinIdsConfig", ref alreadyExists))
+            {
+                CreateAndSave<DefaultSkinIdsConfigAsset>("DefaultSkinIdsConfig");
+                created++;
+            }
+
+            if (!EnsureAsset<BouncyPhysicsConfigAsset>("BouncyPhysicsConfig", ref alreadyExists))
+            {
+                CreateAndSave<BouncyPhysicsConfigAsset>("BouncyPhysicsConfig");
+                created++;
+            }
+
+            if (!EnsureAsset<StarCriteriaConfigAsset>("StarCriteriaConfig", ref alreadyExists))
+            {
+                CreateAndSave<StarCriteriaConfigAsset>("StarCriteriaConfig");
+                created++;
+            }
+
+            if (!EnsureAsset<RushHourConfigAsset>("RushHourConfig", ref alreadyExists))
+            {
+                CreateAndSave<RushHourConfigAsset>("RushHourConfig");
+                created++;
+            }
+
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 

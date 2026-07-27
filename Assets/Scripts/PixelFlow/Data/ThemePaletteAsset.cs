@@ -30,6 +30,8 @@ namespace PixelFlow.Data
         {
             public Color Background;
             public Color Icon;
+            public Sprite Sprite;
+            public float IconScale;
         }
 
         [Header("=== Camera & Ambient (per theme) ===")]

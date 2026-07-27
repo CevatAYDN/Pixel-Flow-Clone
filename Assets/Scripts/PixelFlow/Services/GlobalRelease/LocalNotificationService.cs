@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.Services;
+using PixelFlow.Data;
 
 namespace PixelFlow.Services.GlobalRelease
 {
@@ -16,6 +17,7 @@ namespace PixelFlow.Services.GlobalRelease
     {
         [Inject, OptionalInject] public ILoggerService LoggerService { get; set; }
         [Inject, OptionalInject] public ILocalizationService LocalizationService { get; set; }
+        [Inject, OptionalInject] public PixelFlow.Data.GameConfig Config { get; set; }
 
         public const string KeyD1Title = "notif_d1_title";
         public const string KeyD1Body = "notif_d1_body";
@@ -32,11 +34,37 @@ namespace PixelFlow.Services.GlobalRelease
 
         public void ScheduleRetentionNotifications()
         {
-            string d1Title = LocalizationService?.GetString(KeyD1Title, "Daily Reward Ready!");
-            string d1Body = LocalizationService?.GetString(KeyD1Body, "New vehicles and challenges are waiting for you!");
-            string d2Title = LocalizationService?.GetString(KeyD2Title, "Rush Hour Event!");
-            string d2Body = LocalizationService?.GetString(KeyD2Body, "Earn 2x coins now!");
+            if (LocalizationService == null)
+            {
+                throw new DataValidationException("LocalNotificationService requires ILocalizationService injection.");
+            }
 
+            if (Config != null && !Config.AllowNotificationFallbackText)
+            {
+                var d1Title = LocalizationService.GetString(Config.NotificationD1TitleKey);
+                var d1Body = LocalizationService.GetString(Config.NotificationD1BodyKey);
+                var d2Title = LocalizationService.GetString(Config.NotificationD2TitleKey);
+                var d2Body = LocalizationService.GetString(Config.NotificationD2BodyKey);
+
+                if (string.IsNullOrEmpty(d1Title) || string.IsNullOrEmpty(d1Body) || string.IsNullOrEmpty(d2Title) || string.IsNullOrEmpty(d2Body))
+                {
+                    throw new DataValidationException("LocalNotificationService: notification localization keys could not be resolved.");
+                }
+
+                ScheduleByPlatform(d1Title, d1Body, d2Title, d2Body);
+                return;
+            }
+
+            string fallbackD1Title = LocalizationService.GetString(KeyD1Title, "Daily Reward Ready!");
+            string fallbackD1Body = LocalizationService.GetString(KeyD1Body, "New vehicles and challenges are waiting for you!");
+            string fallbackD2Title = LocalizationService.GetString(KeyD2Title, "Rush Hour Event!");
+            string fallbackD2Body = LocalizationService.GetString(KeyD2Body, "Earn 2x coins now!");
+
+            ScheduleByPlatform(fallbackD1Title, fallbackD1Body, fallbackD2Title, fallbackD2Body);
+        }
+
+        private void ScheduleByPlatform(string d1Title, string d1Body, string d2Title, string d2Body)
+        {
 #if UNITY_IOS && !UNITY_EDITOR
             ScheduleIosNotification(d1Title, d1Body, delayHours: 24);
             ScheduleIosNotification(d2Title, d2Body, delayHours: 48);

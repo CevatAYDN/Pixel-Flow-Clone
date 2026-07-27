@@ -3,6 +3,7 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using Nexus.Core;
+using Nexus.Core.Services;
 
 namespace PixelFlow.Views
 {
@@ -25,6 +26,8 @@ namespace PixelFlow.Views
 
         public event Action OnCloseClicked;
         public event Action<int> OnStartCrisisClicked;
+
+        [Inject] public ILocalizationService LocalizationService { get; set; }
 
         protected override void OnBind(IContext context)
         {
@@ -63,16 +66,23 @@ namespace PixelFlow.Views
 
         public void UpdateInfo(int streak, int badges, bool easyCompleted, bool mediumCompleted, bool hardCompleted)
         {
-            if (_streakText != null) _streakText.text = $"Galibiyet Serisi: {streak} Gün";
-            if (_badgesText != null) _badgesText.text = $"Rozetler: {badges}";
+            if (_streakText != null) _streakText.text = streak.ToString();
+            if (_badgesText != null) _badgesText.text = badges.ToString();
 
-            if (_easyStatusText != null) _easyStatusText.text = easyCompleted ? "Tamamlandı" : "Başla (Kolay)";
-            if (_mediumStatusText != null) _mediumStatusText.text = mediumCompleted ? "Tamamlandı" : "Başla (Orta)";
-            if (_hardStatusText != null) _hardStatusText.text = hardCompleted ? "Tamamlandı" : "Başla (Zor)";
+            if (_easyStatusText != null) _easyStatusText.text = easyCompleted ? string.Empty : ResolveStatusLabel("daily_crisis_status_easy", "0");
+            if (_mediumStatusText != null) _mediumStatusText.text = mediumCompleted ? string.Empty : ResolveStatusLabel("daily_crisis_status_medium", "1");
+            if (_hardStatusText != null) _hardStatusText.text = hardCompleted ? string.Empty : ResolveStatusLabel("daily_crisis_status_hard", "2");
 
             if (_easyButton != null) _easyButton.interactable = !easyCompleted;
             if (_mediumButton != null) _mediumButton.interactable = !mediumCompleted;
             if (_hardButton != null) _hardButton.interactable = !hardCompleted;
+        }
+
+        private string ResolveStatusLabel(string key, string fallback)
+        {
+            if (LocalizationService == null) return fallback;
+            string value = LocalizationService.GetString(key);
+            return string.IsNullOrWhiteSpace(value) ? fallback : value;
         }
     }
 }

@@ -2,7 +2,6 @@
 using UnityEditor;
 using UnityEngine;
 using PixelFlow.Data;
-using PixelFlow.Models;
 using PixelFlow.Services;
 using System.Collections.Generic;
 using System.Linq;
@@ -82,6 +81,11 @@ namespace PixelFlow.Editor
             _assetStatusCache["EconomyConfig"] = CheckAssetExists<EconomyConfigAsset>("Configs/EconomyConfig");
             _assetStatusCache["LevelCatalog"] = CheckAssetExists<LevelCatalogAsset>("Configs/LevelCatalog");
             _assetStatusCache["PhaseConfig"] = CheckAssetExists<PhaseConfigAsset>("Configs/PhaseConfig");
+            _assetStatusCache["DifficultyFormulaConfig"] = CheckAssetExists<DifficultyFormulaConfigAsset>("Configs/DifficultyFormulaConfig");
+            _assetStatusCache["DefaultSkinIdsConfig"] = CheckAssetExists<DefaultSkinIdsConfigAsset>("Configs/DefaultSkinIdsConfig");
+            _assetStatusCache["BouncyPhysicsConfig"] = CheckAssetExists<BouncyPhysicsConfigAsset>("Configs/BouncyPhysicsConfig");
+            _assetStatusCache["StarCriteriaConfig"] = CheckAssetExists<StarCriteriaConfigAsset>("Configs/StarCriteriaConfig");
+            _assetStatusCache["RushHourConfig"] = CheckAssetExists<RushHourConfigAsset>("Configs/RushHourConfig");
         }
 
         private bool CheckAssetExists<T>(string path) where T : ScriptableObject
@@ -101,6 +105,11 @@ namespace PixelFlow.Editor
                 case "EconomyConfig": CreateIfMissing<EconomyConfigAsset>("Configs/EconomyConfig", "Ekonomi dengesi"); break;
                 case "LevelCatalog": CreateIfMissing<LevelCatalogAsset>("Configs/LevelCatalog", "Seviye kataloğu"); break;
                 case "PhaseConfig": CreateIfMissing<PhaseConfigAsset>("Configs/PhaseConfig", "Faz tanımları"); break;
+                case "DifficultyFormulaConfig": CreateIfMissing<DifficultyFormulaConfigAsset>("Configs/DifficultyFormulaConfig", "Zorluk formülü"); break;
+                case "DefaultSkinIdsConfig": CreateIfMissing<DefaultSkinIdsConfigAsset>("Configs/DefaultSkinIdsConfig", "Varsayılan skin ID'leri"); break;
+                case "BouncyPhysicsConfig": CreateIfMissing<BouncyPhysicsConfigAsset>("Configs/BouncyPhysicsConfig", "Zıplama fizik ayarları"); break;
+                case "StarCriteriaConfig": CreateIfMissing<StarCriteriaConfigAsset>("Configs/StarCriteriaConfig", "Yıldız kriterleri"); break;
+                case "RushHourConfig": CreateIfMissing<RushHourConfigAsset>("Configs/RushHourConfig", "Rush Hour ayarları"); break;
             }
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -129,6 +138,11 @@ namespace PixelFlow.Editor
             CreateAsset("EconomyConfig");
             CreateAsset("LevelCatalog");
             CreateAsset("PhaseConfig");
+            CreateAsset("DifficultyFormulaConfig");
+            CreateAsset("DefaultSkinIdsConfig");
+            CreateAsset("BouncyPhysicsConfig");
+            CreateAsset("StarCriteriaConfig");
+            CreateAsset("RushHourConfig");
 
             Debug.Log("[EditorDataManager] Tüm asset işlemleri tamamlandı.");
         }

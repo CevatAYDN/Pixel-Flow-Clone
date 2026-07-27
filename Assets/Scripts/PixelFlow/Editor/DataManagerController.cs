@@ -1,7 +1,6 @@
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
-using Nexus.Core;
 using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Services;
@@ -35,6 +34,11 @@ namespace PixelFlow.Editor
             _assetStatusCache["EconomyConfig"] = CheckAssetExists<EconomyConfigAsset>("Configs/EconomyConfig");
             _assetStatusCache["LevelCatalog"] = CheckAssetExists<LevelCatalogAsset>("Configs/LevelCatalog");
             _assetStatusCache["PhaseConfig"] = CheckAssetExists<PhaseConfigAsset>("Configs/PhaseConfig");
+            _assetStatusCache["DifficultyFormulaConfig"] = CheckAssetExists<DifficultyFormulaConfigAsset>("Configs/DifficultyFormulaConfig");
+            _assetStatusCache["DefaultSkinIdsConfig"] = CheckAssetExists<DefaultSkinIdsConfigAsset>("Configs/DefaultSkinIdsConfig");
+            _assetStatusCache["BouncyPhysicsConfig"] = CheckAssetExists<BouncyPhysicsConfigAsset>("Configs/BouncyPhysicsConfig");
+            _assetStatusCache["StarCriteriaConfig"] = CheckAssetExists<StarCriteriaConfigAsset>("Configs/StarCriteriaConfig");
+            _assetStatusCache["RushHourConfig"] = CheckAssetExists<RushHourConfigAsset>("Configs/RushHourConfig");
         }
 
         private static bool CheckAssetExists<T>(string path) where T : ScriptableObject
@@ -76,6 +80,11 @@ namespace PixelFlow.Editor
             created += CreateIfMissing<EconomyConfigAsset>("Configs/EconomyConfig", "Ekonomi dengesi");
             created += CreateIfMissing<LevelCatalogAsset>("Configs/LevelCatalog", "Seviye kataloğu");
             created += CreateIfMissing<PhaseConfigAsset>("Configs/PhaseConfig", "Faz tanımları");
+            created += CreateIfMissing<DifficultyFormulaConfigAsset>("Configs/DifficultyFormulaConfig", "Zorluk formülü");
+            created += CreateIfMissing<DefaultSkinIdsConfigAsset>("Configs/DefaultSkinIdsConfig", "Varsayılan skin ID'leri");
+            created += CreateIfMissing<BouncyPhysicsConfigAsset>("Configs/BouncyPhysicsConfig", "Zıplama fizik ayarları");
+            created += CreateIfMissing<StarCriteriaConfigAsset>("Configs/StarCriteriaConfig", "Yıldız kriterleri");
+            created += CreateIfMissing<RushHourConfigAsset>("Configs/RushHourConfig", "Rush Hour ayarları");
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();

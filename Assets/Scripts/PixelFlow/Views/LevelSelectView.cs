@@ -194,9 +194,8 @@ namespace PixelFlow.Views
 
         private static string BuildStarString(int stars)
         {
-            if (stars < 0) stars = 0;
+            if (stars <= 0) return "";
             if (stars > 3) stars = 3;
-            // LiberationSans SDF unicode \u2605 içermediğinden ASCII '*' kullanılır.
             return new string('*', stars);
         }
 

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using Nexus.Core;
 using Nexus.Core.Services;
+using PixelFlow.Data;
 
 namespace PixelFlow.Services
 {
@@ -16,6 +17,7 @@ namespace PixelFlow.Services
     public class LocalizationService : Nexus.Core.Services.ILocalizationService, INexusService
     {
         [Inject, OptionalInject] public ILoggerService LoggerService { get; set; }
+        [Inject, OptionalInject] public PixelFlow.Data.GameConfig Config { get; set; }
 
         private string _currentLanguage = "en";
         private readonly Dictionary<string, string> _dictionary = new Dictionary<string, string>();
@@ -85,9 +87,14 @@ namespace PixelFlow.Services
             var textAsset = Resources.Load<TextAsset>("Localization/LocalizationTable");
             if (textAsset == null)
             {
-                LoggerService?.LogWarning("[LocalizationService] Resources/Localization/LocalizationTable.csv not found. Using fallback dictionary.");
-                PopulateDefaultFallback(langCode);
-                return;
+                if (Config != null && Config.AllowLocalizationFallbackDictionary)
+                {
+                    LoggerService?.LogWarning("[LocalizationService] Resources/Localization/LocalizationTable.csv not found. Using fallback dictionary because Config اجازت veriyor.");
+                    PopulateDefaultFallback(langCode);
+                    return;
+                }
+
+                throw new DataValidationException("Resources/Localization/LocalizationTable.csv bulunamadı ve fallback dictionary devre dışı.");
             }
 
             using (var reader = new StringReader(textAsset.text))
@@ -125,10 +132,13 @@ namespace PixelFlow.Services
 
         private void PopulateDefaultFallback(string langCode)
         {
-            _dictionary["notif_d1_title"] = "Daily Reward Ready!";
-            _dictionary["notif_d1_body"] = "New vehicles and challenges are waiting for you!";
-            _dictionary["notif_d2_title"] = "Rush Hour Event!";
-            _dictionary["notif_d2_body"] = "Earn 2x coins now!";
+            if (Config == null || !Config.AllowLocalizationFallbackDictionary)
+                throw new DataValidationException("Localization fallback dictionary disabled. CSV localization table is required.");
+
+            _dictionary[Config.NotificationD1TitleKey] = "Daily Reward Ready!";
+            _dictionary[Config.NotificationD1BodyKey] = "New vehicles and challenges are waiting for you!";
+            _dictionary[Config.NotificationD2TitleKey] = "Rush Hour Event!";
+            _dictionary[Config.NotificationD2BodyKey] = "Earn 2x coins now!";
         }
     }
 }

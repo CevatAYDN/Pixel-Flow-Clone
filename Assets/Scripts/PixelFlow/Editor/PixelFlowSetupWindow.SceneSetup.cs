@@ -238,31 +238,7 @@ namespace PixelFlow.Editor
                 boot = bootObj.AddComponent<GameBootstrapper>();
             }
             boot.nexusRoot = root;
-            if (boot.initialLevel == null)
-            {
-                var levelGuids = AssetDatabase.FindAssets("t:LevelData");
-                var levels = levelGuids
-                    .Select(g => AssetDatabase.LoadAssetAtPath<LevelData>(AssetDatabase.GUIDToAssetPath(g)))
-                    .Where(l => l != null)
-                    .OrderBy(l => l.levelIndex)
-                    .ToList();
-                if (levels.Count == 0)
-                {
-                    CreatePhase1And2HandCraftedPack();
-                    levelGuids = AssetDatabase.FindAssets("t:LevelData");
-                    levels = levelGuids
-                        .Select(g => AssetDatabase.LoadAssetAtPath<LevelData>(AssetDatabase.GUIDToAssetPath(g)))
-                        .Where(l => l != null)
-                        .OrderBy(l => l.levelIndex)
-                        .ToList();
-                }
-                if (levels.Count > 0)
-                {
-                    Undo.RecordObject(boot, "Başlangıç Seviyesi Ata");
-                    boot.initialLevel = levels[0];
-                    EditorUtility.SetDirty(boot);
-                }
-            }
+            EnsureInitialLevel(boot);
 
             EnsureExtendedViews(canvasObj.transform);
             SetupGlobalVolume(rootObj.transform);
@@ -281,6 +257,39 @@ namespace PixelFlow.Editor
 
 
 
+
+        private void EnsureInitialLevel(GameBootstrapper boot)
+        {
+            if (boot.initialLevel != null)
+            {
+                return;
+            }
+
+            var levelGuids = AssetDatabase.FindAssets("t:LevelData");
+            var levels = levelGuids
+                .Select(g => AssetDatabase.LoadAssetAtPath<LevelData>(AssetDatabase.GUIDToAssetPath(g)))
+                .Where(l => l != null)
+                .OrderBy(l => l.levelIndex)
+                .ToList();
+
+            if (levels.Count == 0)
+            {
+                CreatePhase1And2HandCraftedPack();
+                levelGuids = AssetDatabase.FindAssets("t:LevelData");
+                levels = levelGuids
+                    .Select(g => AssetDatabase.LoadAssetAtPath<LevelData>(AssetDatabase.GUIDToAssetPath(g)))
+                    .Where(l => l != null)
+                    .OrderBy(l => l.levelIndex)
+                    .ToList();
+            }
+
+            if (levels.Count > 0)
+            {
+                Undo.RecordObject(boot, "Başlangıç Seviyesi Ata");
+                boot.initialLevel = levels[0];
+                EditorUtility.SetDirty(boot);
+            }
+        }
 
         private GameObject FindOrCreateChild(Transform parent, string childName)
         {
@@ -1172,12 +1181,18 @@ namespace PixelFlow.Editor
             var eventSystem = Object.FindAnyObjectByType<EventSystem>(FindObjectsInactive.Include);
             if (eventSystem != null)
             {
+                var inputModule = eventSystem.GetComponent<InputSystemUIInputModule>();
+                if (inputModule == null)
+                {
+                    inputModule = eventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
+                    EditorUtility.SetDirty(eventSystem.gameObject);
+                }
                 if (eventSystem.transform.parent == null && parent != null)
                 {
                     eventSystem.transform.SetParent(parent, false);
                 }
                 Debug.Log($"[PixelFlow.SceneSetup] EventSystem found: {(bool)eventSystem}, " +
-                    $"inputModule={(eventSystem.currentInputModule != null ? eventSystem.currentInputModule.GetType().Name : "null")}");
+                    $"inputModule={(inputModule != null ? inputModule.GetType().Name : "null")}");
                 return;
             }
 

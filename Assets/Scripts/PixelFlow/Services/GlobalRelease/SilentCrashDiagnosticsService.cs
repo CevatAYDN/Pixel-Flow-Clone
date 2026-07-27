@@ -115,6 +115,11 @@ namespace PixelFlow.Services.GlobalRelease
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
+            if (Config != null && !Config.EnableConsoleCrashReporter)
+            {
+                ClearReporters();
+            }
+
             if (_reporters.Count > 0 && _reporters[0] is ConsoleCrashReporter consoleReporter)
             {
                 _reporters[0] = new ConsoleCrashReporter(LoggerService, includeStackTraces: true);

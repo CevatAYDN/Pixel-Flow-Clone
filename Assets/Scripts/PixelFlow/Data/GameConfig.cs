@@ -96,6 +96,10 @@ namespace PixelFlow.Data
         [Tooltip("Banner Reklam Placement ID")]
         public string BannerPlacementId = "banner_bottom";
 
+        [Header("=== HUD ===")]
+        [Tooltip("Crash toast bildirimi görünme süresi (saniye)")]
+        public float CrashToastDuration = 1.5f;
+
         [Header("=== Gameplay Timer ===")]
         [Tooltip("Boşta kalma hatırlatma süresi (saniye)")]
         public float IdleReminderSeconds = 300f;
@@ -255,6 +259,37 @@ namespace PixelFlow.Data
         [Header("=== Global Release & Store Review ===")]
         [Tooltip("In-App Review API'nin tetikleneceği seviye tamamlama sayıları")]
         public int[] InAppReviewTriggerLevels = new int[] { 10, 15 };
+
+        [Header("=== Global Release & Compliance ===")]
+        [Tooltip("ATT / UMP / notification / crash gibi release yüzeylerinde fallback davranışı açık mı")]
+        public bool AllowFallbackReleaseText = false;
+
+        [Tooltip("Local notification başlıkları için localization key")]
+        public string NotificationD1TitleKey = "notif_d1_title";
+
+        [Tooltip("Local notification gövde metni için localization key")]
+        public string NotificationD1BodyKey = "notif_d1_body";
+
+        [Tooltip("Rush hour bildirim başlığı için localization key")]
+        public string NotificationD2TitleKey = "notif_d2_title";
+
+        [Tooltip("Rush hour bildirim gövde metni için localization key")]
+        public string NotificationD2BodyKey = "notif_d2_body";
+
+        [Tooltip("Localization CSV yoksa izin verilecek minimum fallback")]
+        public bool AllowLocalizationFallbackDictionary = false;
+
+        [Tooltip("Crash diagnostics console reporter etkin mi")]
+        public bool EnableConsoleCrashReporter = true;
+
+        [Tooltip("Cloud save adapter yoksa offline davranışa izin verilsin mi")]
+        public bool AllowOfflineCloudSave = false;
+
+        [Tooltip("Local notification scheduling için fallback metin kullanımına izin verilsin mi")]
+        public bool AllowNotificationFallbackText = false;
+
+        [Tooltip("Global release servisleri için katı doğrulama modu")]
+        public bool StrictGlobalReleaseValidation = true;
         [Tooltip("Kolay günlük kriz (crisisIndex 0) zorluk parametreleri")]
         public DifficultyParams DailyCrisisEasy = new DifficultyParams(10, 10, 3, 2, false, true);
 

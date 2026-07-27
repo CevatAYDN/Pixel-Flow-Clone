@@ -44,14 +44,14 @@
 
 ---
 
-### 3. Seviye İçeriği — Launch İçin Yetersiz
+### 3. Seviye İçeriği & Katalog Yönetimi
 
 | Kategori | Planlanan | Mevcut | Durum |
 |----------|-----------|--------|-------|
-| Authored LevelData | 150 seviye | **3 adet** (Level1, Level2, Level3) | ❌ %98 eksik |
-| Procedural Fallback | — | ✅ Config'de tanımlı | ⚠️ Geçici çözüm |
+| Authored LevelData | 150 seviye | **3 adet** (Level1, Level2, Level3) | ⚠️ Diskteki varlıklara kısıtlı |
+| Katalog Yapısı | Kısıtlı Katalog | ✅ Strictly diske bağlı | ✅ Sahte doldurma ve canlı üretim engellendi |
 
-**Detay:** `LevelCatalog.asset` içinde 60 seviye referansı var ama bunların çoğu **procedural fallback** kullanıyor. Authored (el yapımı) seviyelerden sadece 3 tanesi mevcut.
+**Detay:** `LevelCatalog.asset` otomatik sahte seviye doldurma döngüsünden arındırılmış ve strictly diskteki varlıklara kısıtlanmıştır. Diskte olmayan seviyeler (örn. Seviye 4) için oyun anında kendiliğinden seviye üretilmesi engellenmiştir (`LevelProgressionService`). İsteğe bağlı tekil seviye üretimi `PixelFlowSetupWindow` üzerindeki `Tek Seviye Ekle` aracı ile kontrollü yapılır.
 
 ---
 
@@ -63,17 +63,18 @@
 | `Resources/Audio/MUSIC/` | ❌ Boş |
 | `Resources/Audio/SFX/` | ❌ Boş |
 
-**Detay:** Tüm ses referansları null. `AudioService.cs` var ama çalınacak dosya yok.
+**Detay:** Tüm ses referansları null. `AudioService.cs` mimarisi hazır ancak `AudioClip` asset'leri beklenmektedir.
 
 ---
 
-### 5. Tema Görselleri / Arkaplanlar
+### 5. Tema Görselleri & Engel Dokuları (ThemePaletteAsset)
 
 | Durum | Açıklama |
 |-------|----------|
-| ❌ **YOK** | `ThemePaletteAsset` renk değerleri var ama **görsel texture/material** yok |
-| ❌ **YOK** | `ToyThemeType` enum'da PastelToy, NeonCity, CandyPark, Woodland tanımlı ama **tema asset'leri** yok |
-| ⚠️ **VAR** | `BentoGlass.shader`, `GlowPulse.shader`, `VehicleGhost.shader` — shader'lar var ama tema geçişlerinde nasıl kullanıldıkları belirsiz |
+| ✅ **VAR** | `ThemePaletteAsset` renk paletleri ve `ObstaclePalette` yapıları tam entegre |
+| ✅ **VAR** | `CellView.cs` prosedürel engel ikonları/dokuları (İnşaat hazard stripes, Gölet su dalgaları, Park çim deseni, Tek Yön okları) |
+| ✅ **VAR** | `CellView.cs` ve `ThemePaletteAsset.cs` üzerinde hardcoded fallback renkler kaldırıldı, katı `DataValidationException` eklendi (§2.2) |
+| ⚠️ **VAR** | `BentoGlass.shader`, `GlowPulse.shader`, `VehicleGhost.shader` — shader'lar mevcut |
 
 ---
 

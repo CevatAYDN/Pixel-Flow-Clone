@@ -100,6 +100,137 @@ Projedeki tüm konfigürasyonlar `Assets/Resources/Configs/` klasöründe yer al
   1. `StrictEncryptedStorageService.cs` içerisindeki okuma getter metotlarının, anahtar yokken depolamaya hayalet kayıt yazması engellendi.
   2. `MainMenuMediator.TryRestoreSavedGame()` metodu `try-catch (DataValidationException)` bloğuyla sarmalandı. Boş veya bozuk kayıt durumunda kayıt otomatik temizlenip yeni seviye başlatılması sağlandı.
 
+### 🔴 Hata 11: PixelFlowSetupWindow Sekme Yığını Tek Dosyada Fazla Şişti
+- **Belirti**: Editör kontrol merkezi kurulum, tanılama, veri yönetimi, performans, garaj, reklam ve doğrulama akışlarını tek giriş üzerinden topluyor; yeni katkı yapan biri hangi sekmenin hangi sorumluluğu taşıdığını anlamak için birden fazla parça arasında gidip gelmek zorunda kalıyor.
+- **Kök Neden**: `PixelFlowSetupWindow.cs` ana kabuğu ve `PixelFlowSetupWindow.SceneSetup.cs`, `PixelFlowSetupWindow.DataManager.cs`, `PixelFlowSetupWindow.GameAndDiagnostics.cs`, `PixelFlowSetupWindow.HybridCasualTabs.cs` parçaları tek bir editör module'unun farklı yüzleri olarak büyümüş durumda. Bu yapı çalışıyor ama interface büyük ve gezinme yükü yüksek.
+- **Çözüm**: Mevcut kabuğu koruyup sekme gruplarını daha net iç module'lara ayırmak, ortak header/sidebar iskeletini tek yerde tutmak ve her grubun implementation'unu daha küçük dosyalara bölmek.
+- **Neden tekrar hatırlanmalı**: Bu alan tekrar tekrar editör ve konfigürasyon değişikliklerinin merkezi oldu; geçmişte yapılan sahne kurulum ve doğrulama işleri de aynı yüzeyde toplandığı için tekrar eden iş önerilerini buradan ayıklamak gerekiyor.
+
+### 🔴 Hata 12: PreBuildDataValidator Editör Kurulumuyla Fazla Örtüşüyor
+- **Belirti**: Kurulum penceresi, build öncesi validation ve test bağlamı aynı config varlıklarını farklı yollarla kontrol ediyor.
+- **Kök Neden**: `PreBuildDataValidator.cs` hem play-mode/build gate görevi görüyor hem de editör kurulum akışının bir uzantısı gibi davranıyor; `PixelFlowSetupWindow.SceneSetup.cs` içindeki otomatik asset oluşturma mantığı ile aynı veri kurallarını tekrar okuyor.
+- **Çözüm**: Validation çekirdeğini ayrı tutup editör ve build tarafını ince adapter'larla beslemek.
+- **Neden tekrar hatırlanmalı**: Önceki düzeltmeler config eksiklikleri ve setup akışındaki kopukluklar etrafında döndü; bu yüzey yeniden öneri üretmeye çok açık olduğu için hafızada görünür kalmalı.
+
+### 🔴 Hata 13: GameTestContext Çok Geniş Bir Test Bağlamı Haline Geldi
+- **Belirti**: EditMode testleri aynı factory üzerinden çok sayıda config oluşturuyor ve bağlam kuruyor.
+- **Kök Neden**: `GameTestContext.cs` içinde config üretimi, DI wiring ve level factory işleri tek module'da birleşmiş durumda.
+- **Çözüm**: Config factory'lerini ve context wiring'i ayrı küçük module'lara bölmek.
+- **Neden tekrar hatırlanmalı**: Testlerde eksik config yaşanan önceki hatalar, bu yüzeyin zaten hassas olduğunu gösterdi; burada yeniden aynı setup yükünü büyütmemek gerekiyor.
+
+### 🔴 Hata 14: Güvenli Kayıt Hattı Birden Fazla Module'a Yayılıyor
+- **Belirti**: `StrictEncryptedStorageService`, `EncryptedCloudSaveAdapter`, `GridStateSerializer` ve `CloudSaveManager` kayıt davranışını farklı açılardan dokuyor; aynı kayıt kavramı birden fazla seam üzerinden okunuyor.
+- **Kök Neden**: Yerel kayıt, şifreleme, cloud sync ve save/load kararları ayrı implementation'lara yayılmış durumda; `CloudSaveManager` içindeki geri dönüş değerleri de testteki sözleşmelerle aynı dili konuşmuyor.
+- **Çözüm**: Kayıt kararlarını tek bir çekirdek module'da toplamak, adapter'ları sadece ortam farkı için kullanmak ve save/load sözleşmesini tek isimli bir module'dan yönetmek.
+- **Neden tekrar hatırlanmalı**: Önceki kayıt hataları aynı yüzeyde tekrar etti; bu yüzden yeni çalışma açılırken aynı problem kümesini yeniden kurmamak için not düşülmeli.
+
+### 🔴 Hata 15: Raporlar Güncel Kodu Tam Yansıtmıyor
+- **Belirti**: `config_validation_report.md`, `editor_status_report.md`, `release_readiness_report.md`, `project_status_report.md` ve `development_update_report.md` dosyaları bazı alanlarda kodun şu anki durumunu fazla iyimser gösteriyor.
+- **Kök Neden**: Raporlar; 3D araç modelleri, UI prefab ayrımı, reklam/IAP/cloud/backend entegrasyonları ve editör araçlarının gerçek sınırlarını aynı güncellenme seviyesinde taşımıyor.
+- **Çözüm**: Bu raporlar, kodla çelişen maddeler için tekrar doğrulanmalı ve bir sonraki çalışma öncesi tek bir güncel durum kaynağına indirgenmeli.
+- **Neden tekrar hatırlanmalı**: Kod incelemesinde yanlış olumlu algı yaratmamak için dokümanların son durumla senkron olması gerekiyor.
+
+### 🔴 Hata 16: CloudSaveManager Statik Geri Dönüş Yolu Module Sınırını Bulandırıyor
+- **Belirti**: `CloudSaveManager.SyncToCloudAsync(IPlayerPrefsService, ...)` statik shortcut'ı doğrudan `EncryptedCloudSaveAdapter` üreterek kayıt hattını by-pass ediyor.
+- **Kök Neden**: Instance module ile adapter rolü aynı sınıfta hem runtime hem legacy çağrıları taşıyor.
+- **Çözüm**: Statik shortcut'u kaldırıp yalnızca DI üzerinden gelen `ICloudSaveAdapter` ile çalışmak; legacy kullanım için ayrı bir adapter veya migration notu bırakmak.
+- **Neden tekrar hatırlanmalı**: Kayıt hattı zaten dağınık; bu shortcut, tekrar aynı yüzeyde gizli seam oluşturuyor.
+
+### 🔴 Hata 17: GameTestContext Ekonomi Konfigürasyonu Boş Kalıyor
+- **Belirti**: Test bağlamında `EconomyConfigAsset` oluşturuluyor ama bazı ekonomik alanlar açık şekilde doldurulmuyordu; bu da test ile üretim davranışı arasında gereksiz fark bırakıyordu.
+- **Kök Neden**: `GameTestContext.cs` içinde config üretimi ile validasyon beklentileri aynı module içinde tam hizalanmıyordu.
+- **Çözüm**: Test economy config'ini `IapProducts` listesiyle minimum geçerli değerlerle doldurmak ve bunu tek fixture üreticisi altında toplamak.
+- **Neden tekrar hatırlanmalı**: Testler sonradan kırılmaya açık olduğu için bu config boşluğu tekrar üretilmemeli.
+
+### 🔴 Hata 18: PixelFlowSetupWindow.SceneSetup Başlangıç Seviye Ataması Yardımcıya Bölündü
+- **Belirti**: Scene setup içindeki başlangıç seviye seçimi ana akışta yer alıyordu ve editör kurulum module'unu şişiriyordu.
+- **Kök Neden**: `PixelFlowSetupWindow.SceneSetup.cs` içinde `GameBootstrapper.initialLevel` seçimi doğrudan scene setup akışına gömülüydü.
+- **Çözüm**: Başlangıç seviye seçimi `EnsureInitialLevel(GameBootstrapper boot)` yardımcı metoduna taşındı.
+- **Neden tekrar hatırlanmalı**: Bu helper, scene setup akışını biraz sadeleştirir ama module'ü tek başına yeterince derinleştirmez; daha büyük ayrışma gerekirse tekrar bakılmalı.
+
+### 🔴 Hata 19: UI Ekranları Sert Kodlanmış Metin ve Kimlik Aramasına Aşırı Bağımlı
+- **Belirti**: `MainMenuView`, `HUDView`, `SettingsView`, `GarageView`, `LevelSelectView`, `DailyCrisisView`, `StarPassView` ve `TutorialView` içinde çok sayıda Türkçe/İngilizce doğrudan string, sayı ve simge var; button/text referansları da çoğunlukla isim eşleşmesiyle bulunuyor.
+- **Kök Neden**: UI module'ları localization service'i tam seam olarak kullanmak yerine hem gösterim metnini hem referans keşfini aynı yerde elle yönetiyor.
+- **Çözüm**: Ekran metinlerini localization key'lerine taşımak, button etiketlerini semantics-based isimlendirmek ve auto-wire için ad-hoc string eşleşmelerini azaltmak.
+- **Neden tekrar hatırlanmalı**: Bu yüzeyde tasarım ve localization hataları sürekli tekrar üretilebilir; ekran üreticileri de aynı kırılgan sözleşmeyi kopyalıyor.
+
+### 🔴 Hata 20: UI Prefab Üreticisi ve Auto-Reference Aracı Aynı Kırılgan Sözleşmeyi Üretiyor
+- **Belirti**: `UIPrefabCreator.cs` prefab içine doğrudan ekran metinleri ve emoji yerleştiriyor; `AutoReferenceEditor.cs` ise referansları çoğunlukla isim benzerliğiyle çözüyor.
+- **Kök Neden**: UI üretim module'u ile runtime view module'u arasında ortak, tip güvenli bir isim ve localization seam'i yok.
+- **Çözüm**: Prefab üretimini localization key'leriyle hizalamak, auto-reference için isim eşleşmesini azaltmak ve view referanslarını mümkün olduğunca sahne/prefab sözleşmesine sabitlemek.
+- **Neden tekrar hatırlanmalı**: UI ekranlarında tekrar eden tasarım ve button kırıkları çoğunlukla bu iki üretici yüzeyden doğuyor.
+
+### 🔴 Hata 21: UIPrefabCreator Hala Hardcoded UI Üretimi Yapıyor
+- **Belirti**: Main menu, HUD ve garage prefab üretimi sırasında başlık, coin, button ve skin metinleri doğrudan string olarak yazılıyor.
+- **Kök Neden**: Prefab üretici, view module'larının localization/seam sözleşmesini paylaşmıyor; üretilen UI gerçek runtime ekranlarından bağımsız davranabiliyor.
+- **Çözüm**: Prefab üreticisini view sözleşmesiyle aynı kaynak metinleri kullanacak şekilde hizalamak veya bu üretimi tamamen runtime view kurulumuna devretmek.
+- **Neden tekrar hatırlanmalı**: UI değişikliklerinde tekrar hardcoded metin üretmemek için bu yüzey görünür kalmalı.
+
+### 🔴 Plan Karşılaştırması: `game_plan.md` ile Mevcut Implementasyon Arasındaki Doğrulanmış Farklar
+- **Planın istediği ama kodda tam doğrulanmayan durumlar**
+  - `PixelFlowSetupWindow` içinde planın tarif ettiği 12 sekmeli tek merkez yapısı var; ancak `HybridCasualTabs` içindeki `Garaj & Skin Stüdyosu`, `Reklam & Monetization`, `Pre-Build Validator` ve `Araçlar` sekmeleri planın anlattığı kadar derin değil.
+  - `BuildGarageTab` skin listesini ve asset seçimini gösteriyor; fakat planın istediği editör içi canlı 3D model/ses önizlemesi burada görünmüyor.
+  - `BuildAdMonetizationTab` yalnızca `GameConfig` değerlerini okuyor; placement ID, rewarded ödül oranları ve UMP/ATT ayarlarını editörden yönetme akışı yok.
+  - `PreBuildDataValidator` config varlığı ve bazı alanları doğruluyor; ancak tüm ScriptableObject referanslarını ve bütün seviyeler için çözülebilirlik kontrolünü tek başına doğrulayan bir kapsama sahip olduğu bu incelemede görülmedi.
+  - `PrivacyComplianceService`, `InAppReviewService` ve `LocalNotificationService` var; buna karşın Crashlytics/Sentry, gerçek push notification teslimi ve açık cloud-save senkronizasyonu doğrulanmadı.
+
+- **Planla uyumlu olarak doğrulanan durumlar**
+  - Mevcut editör kabuğu sıfırdan yeniden yazılmamış; ana `PixelFlowSetupWindow` partial yapılarla korunmuş.
+  - `LevelDataEditor` içinde 3D toy theme, bouncy physics, star criteria ve mevcut grid edit araçları mevcut.
+  - `GameConfig` içinde interstitial, rewarded, in-app review, daily chest ve diğer global-release ayarları için veri alanları bulunuyor.
+  - `GameContextLifecycle`, `SceneSetup`, `DataManager`, `GameAndDiagnostics` ve `HybridCasualTabs` parçalarıyla setup penceresi modülerleştirilmiş.
+
+- **Planla çelişen veya eksik kalan noktalar**
+  - `Zero-Hardcode` hedefi birebir sağlanmıyor; `GameConfig` ve bazı global-release servislerinde literal default değerler var.
+  - `Zero-Silent-Fallback` hedefi de tam sağlanmış değil; bazı platform servisleri plugin yoksa warning loglayıp devam ediyor.
+  - `SetupScene` mevcut ve 14 config asset bağlayabiliyor; bu, planın tek merkezli kurulum beklentisine en yakın parça.
+  - `GarageView` runtime skin kartlarını ve equip/buy akışını üretiyor; fakat planın editör içi canlı önizleme kısmı burada yok.
+
+### 🔎 Güncel Gerçeklik Notu
+- Bu proje çekirdek oyun döngüsü, editör araçları ve bazı global-release servislerini içeriyor; fakat plan dokümanındaki tam production-ready kapsam ve katı zero-hardcode politikası kodda tamamlanmış görünmüyor.
+- Bundan sonraki geliştirmelerde önce bu dosyadaki doğrulanmış kurallar ve bu bölümdeki farklar referans alınmalı.
+
+### ✅ Bu Turda Güçlendirilen Yüzeyler
+- `PixelFlowSetupWindow.HybridCasualTabs.cs` içinde garaj sekmesi araç ve durak skin'lerini birlikte gösterir hale getirildi; reklam sekmesi placement ve reward bilgilerini açar hale geldi; araç merkezi config üretme ve katalog yenileme kısayolları kazandı.
+- `PreBuildDataValidator.cs` artık duplicate level index, procedural difficulty sanity, authored level solvability, skin display name ve reklam placement ID kontrollerini de yapıyor.
+- `GameConfig.cs` içine release/policy bayrakları ve notification key alanları eklendi; notification ve localization servisleri bu bayraklara bağlandı.
+- `EditorDataManager.cs`, `DataManagerController.cs` ve `AssetCreator.cs` 14/14 config setini tamamlayacak şekilde genişletildi.
+- `GlobalRelease` servislerinde fallback metinler ve sessiz davranışlar azaltıldı; notification akışı localization anahtarlarına dayandı.
+
+### 🔴 Hata 24: TextMeshPro `\u2605` Font Atlas Uyarısı ve Engellerin Görsel Anlam Eksikliği
+- **Belirti**: `LiberationSans SDF` fontunda `\u2605` (★) karakterinin bulunamadığına dair TMP uyarısı alınıyor ve yoldaki engeller (İnşaat, Gölet, Park, Tek Yön) kullanıcıya görsel anlam ifade etmeyen düz renkli kareler olarak görünüyordu.
+- **Kök Neden**: 
+  1. `LevelSelectView.cs`: Yıldız metinleri üretilirken default TMP font atlasında yer almayan `★` karakteri kullanılıyordu.
+  2. `CellView.cs`: Engel hücresi görselleri prefab veya özel sprite olmadığında düz renkli geometrik şekillere düşüyordu (`game_plan.md §9.4` ihlali).
+- **Çözüm**: 
+  1. `LevelSelectView.cs`: `BuildStarString` içerisindeki Unicode `★` karakteri font atlası uyumlu `*` karakteri ile değiştirildi.
+  2. `CellView.cs`: `_fallbackConstruction`, `_fallbackLake`, `_fallbackPark`, `_fallbackArrow` static değişken bildirimleri tamamlanarak CS0103 derleme hataları çözüldü.
+  3. **Zero-Hardcode & Zero-Silent-Fallback Entegrasyonu (§2.2)**: `CellView.cs` içindeki tüm hardcoded renk ve fallback dalları temizlendi. Tüm engel paletleri, ikon ölçekleri ve renkler doğrudan `ThemePaletteAsset` ScriptableObject varlığından okunacak şekilde bağlandı. Asset bulunamadığı durumda sessizce devam etmek yerine katı `DataValidationException` fırlatılması sağlandı.
+  4. 3D Araç Modeli Desteği: `VehicleSkinConfig.Prefab3D` ve `VehicleVisualFactory.CreateFromSkin` entegrasyonu belgelendi ve 3D model prefab kullanım altyapısı doğrulandı.
+
+### 🔴 Hata 25: `LevelCatalog` İçinde `AuthoredLevel NULL` Uyarısı ve Otomatik Tamir
+- **Belirti**: `PreBuildDataValidator` Play Mode öncesinde `LevelCatalog içindeki LevelIndex 3 için AuthoredLevel NULL!` uyarısı veriyor ve oyunu başlatmayı engelliyordu.
+- **Kök Neden**: `LevelCatalog.asset` içerisinde Seviye #3 için *"Hazır Tasarlanmış Seviye"* bayrağı (`UseProceduralFallback = false`) açık kalmış, ancak disktaki ilgili seviye asset'i silindiği veya koptuğu için `AuthoredLevel` referansı NULL'a düşmüştü.
+- **Çözüm**: 
+  1. `PreBuildDataValidator.cs`: Doğrulama sırasında `AuthoredLevel == null` ve `UseProceduralFallback == false` olan girdiler tespit edildiğinde oyunu kilitletmek yerine otomatik olarak `UseProceduralFallback = true` yapılarak seviye kataloğu anında tamir edildi.
+  2. `PixelFlowSetupWindow.RegenerateLevelCatalog`: Katalog yenileme fonksiyonuna kopuk asset referanslarını prosedürel üretime geçiren otomatik düzeltme mantığı eklendi.
+  3. `ProceduralLevelGeneratorValidationTests.cs`: `LevelCatalog_NullAuthoredLevel_AutoRepairsToProceduralFallback` testi eklendi.
+
+### 🔴 Hata 26: İstenmeyen Otomatik Seviye Doldurma ve Canlı Seviye Üretimi
+- **Belirti**: Projede yalnızca 3 adet somut seviye asset'i (`Level1.asset`, `Level2.asset`, `Level3.asset`) bulunmasına rağmen sistem otomatik olarak 150 seviyelik katalog dolduruyor ve 3. seviye bittiğinde kendiliğinden Seviye 4 üretiyordu.
+- **Kök Neden**: 
+  1. `PixelFlowSetupWindow.RegenerateLevelCatalog`: Katalog yenilenirken 150 sayısına ulaşana kadar otomatik olarak `UseProceduralFallback = true` bayraklı sahte katalog girdileri ekliyordu.
+  2. `LevelProgressionService.GetOrGenerateLevel`: Katalogda ve diskte bulunmayan seviyeler için oyun anında otomatik prosedürel jeneratörü çağırıyordu.
+- **Çözüm**: 
+  1. `PixelFlowSetupWindow.RegenerateLevelCatalog`: Otomatik 150 sahte seviye doldurma döngüsü kaldırıldı. Katalog **yalnızca diskte fiziksel olarak var olan** `LevelData` dosyalarını indeksleyecek şekilde kısıtlandı.
+  2. `LevelProgressionService.cs`: Katalogda ve diskte yer almayan seviye indeksleri için oyun anında canlı seviye üretilmesi engellendi (`null` dönerek seviye paketinin bittiğini bildirir).
+  3. `ProceduralLevelGeneratorValidationTests.cs`: `LevelProgressionService_UnindexedLevel_DoesNotAutoGenerateProceduralLevel` unit testi ile doğrulandı.
+
+### 🔴 Hata 27: Editör Penceresinde `MissingReferenceException: initialLevel` Hatası
+- **Belirti**: `PixelFlowSetupWindow` açılırken veya `Oyun Kontrol` sekmesine geçilirken `MissingReferenceException: The variable initialLevel of GameBootstrapper doesn't exist anymore.` hatası alınıyordu.
+- **Kök Neden**: Unity'de silinen/kopan bir `UnityEngine.Object` (varsayılan silinmiş `LevelData` referansı) üzerinde C# null-conditional (`boot.initialLevel?.name`) operatörü kullanıldığında C# referansı null görmediği için Unity'nin aşırı yüklenmiş `== null` operatörünü atlayıp `.name` özelliğine erişmeye çalışıyor ve `MissingReferenceException` fırlatıyordu.
+- **Çözüm**: `PixelFlowSetupWindow.GameAndDiagnostics.cs` içerisinde `?.name` kullanımı kaldırıldı; açık Unity `operator== null` kontrolü (`bool hasLevel = boot.initialLevel != null;`) ile güvenli hale getirildi.
+
 ---
 
 ## 3.1. Domain-Scoped Locality (Sinyal ve Komut Klasörleşmesi)
@@ -134,9 +265,16 @@ Projedeki tüm konfigürasyonlar `Assets/Resources/Configs/` klasöründe yer al
 
 ## 5. Yetenekler ve Yapay Zeka Altyapısı (AI Skills Framework)
 
-- **Paket**: `mattpocock/skills` (48+ mühendislik yeteneği).
-- **Yüklendiği Konum**: Proje içi `.agents/skills/` ve `.agents/skills.json`.
-- **Aktif Yetenekler**: `/code-review`, `/codebase-design`, `/diagnosing-bugs`, `/domain-modeling`, `/implement`, `/tdd`, `/obsidian-vault`, `/grill-me`, `/qa`, `/research`.
+- **Paket**: `mattpocock/skills` + `Game Studio Execution Team (Enriched)`.
+- **Yüklendiği Konum**: Proje içi `.agents/skills/`.
+- **Geliştirilmiş Oyun Stüdyosu Ajan Ekibi**:
+  - `/game-studio`: Principal Director (Fable Method döngüsü, Fable Judge doğrulama kapısı & Çift Eksenli Code Review).
+  - `/game-lead-architect`: Sistem Mimarisi (Domain-Scoped Locality, Derin Modül Tasarımı, 14/14 Config Vault & Şifreli Kayıt).
+  - `/game-level-designer`: Seviye Tasarımcısı (TDD Seviye Doğrulaması, DFS/IDA* Solver & Softlock Önleyici Çok Adımlı Jeneratör).
+  - `/game-ui-artist`: UI/UX Sanatçısı (AAA Mobil UI Tasarım Sistemi, HSL Paletleri, ButtonJuice, ColorBlind Desteği & Responsive Layout).
+  - `/game-tech-artist`: Teknik Sanatçı (Zero-GC MaterialPropertyBlock, Harici 3D Prefab Entegrasyonu & 60 FPS Render Bütçesi).
+  - `/game-qa-engineer`: QA & Doğrulama Mühendisi (Diagnosing Bugs Kök Neden Döngüsü, PreBuild Validator & NUnit Test Paketi).
+- **Diğer Mühendislik Yetenekleri**: `/code-review`, `/codebase-design`, `/diagnosing-bugs`, `/domain-modeling`, `/implement`, `/tdd`, `/fable-method`, `/fable-loop`, `/fable-judge`, `/obsidian-vault`, `/grill-me`, `/qa`, `/research`.
 
 ---
 

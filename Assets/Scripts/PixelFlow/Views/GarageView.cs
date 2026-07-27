@@ -111,7 +111,7 @@ namespace PixelFlow.Views
         {
             LoggerService?.Log($"[PixelFlow.GarageView] Updating UI Coins: {coins:N0}");
             if (_coinsText != null)
-                _coinsText.text = $"{coins:N0} GOLD";
+                _coinsText.text = $"{coins:N0}";
         }
 
         private static string SanitizeText(string text)
@@ -159,7 +159,7 @@ namespace PixelFlow.Views
             }
         }
 
-        public void PopulateSkins(IReadOnlyList<VehicleSkinConfig> skins, Func<string, bool> isUnlocked, Func<ColorType, string, bool> isEquipped)
+        public void PopulateSkins(IReadOnlyList<VehicleSkinConfig> skins, Func<string, bool> isUnlocked, Func<ColorType, string, bool> isEquipped, Func<int, string> formatCoinCost, string equipLabel, string equippedLabel)
         {
             if (_skinContainer == null) return;
             EnsureLayoutGroup(_skinContainer);
@@ -245,7 +245,7 @@ namespace PixelFlow.Views
                 badgeTmp.fontStyle = FontStyles.Bold;
                 badgeTmp.alignment = TextAlignmentOptions.Center;
                 badgeTmp.color = equipped ? new Color(0.02f, 0.59f, 0.41f) : (unlocked ? new Color(0.14f, 0.38f, 0.92f) : new Color(0.7f, 0.35f, 0.05f));
-                badgeTmp.text = equipped ? "KUŞANILDI" : (unlocked ? "KUŞAN" : $"{skin.UnlockCoinCost} GOLD");
+                badgeTmp.text = equipped ? equippedLabel : (unlocked ? equipLabel : formatCoinCost(skin.UnlockCoinCost));
                 var badgeTxtRect = badgeTxtObj.GetComponent<RectTransform>();
                 badgeTxtRect.anchorMin = Vector2.zero;
                 badgeTxtRect.anchorMax = Vector2.one;
@@ -253,7 +253,7 @@ namespace PixelFlow.Views
             }
         }
 
-        public void PopulateStopSkins(IReadOnlyList<StopSkinConfig> skins, Func<string, bool> isUnlocked, Func<ColorType, string, bool> isEquipped)
+        public void PopulateStopSkins(IReadOnlyList<StopSkinConfig> skins, Func<string, bool> isUnlocked, Func<ColorType, string, bool> isEquipped, Func<int, string> formatCoinCost, string equipLabel, string equippedLabel)
         {
             var container = _stopSkinContainer != null ? _stopSkinContainer : _skinContainer;
             if (container == null) return;
@@ -339,7 +339,7 @@ namespace PixelFlow.Views
                 badgeTmp.fontStyle = FontStyles.Bold;
                 badgeTmp.alignment = TextAlignmentOptions.Center;
                 badgeTmp.color = equipped ? new Color(0.02f, 0.59f, 0.41f) : (unlocked ? new Color(0.14f, 0.38f, 0.92f) : new Color(0.7f, 0.35f, 0.05f));
-                badgeTmp.text = equipped ? "KUŞANILDI" : (unlocked ? "KUŞAN" : $"{skin.UnlockCoinCost} GOLD");
+                badgeTmp.text = equipped ? equippedLabel : (unlocked ? equipLabel : formatCoinCost(skin.UnlockCoinCost));
                 var badgeTxtRect = badgeTxtObj.GetComponent<RectTransform>();
                 badgeTxtRect.anchorMin = Vector2.zero;
                 badgeTxtRect.anchorMax = Vector2.one;

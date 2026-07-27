@@ -35,8 +35,9 @@ namespace PixelFlow.Editor
             var boot = FindAnyObjectByType<GameBootstrapper>(FindObjectsInactive.Include);
             if (boot != null)
             {
-                bootCard.Add(Row("Active:", StatusLabel(true)));
-                bootCard.Add(Row("Initial Level:", StatusLabel(boot.initialLevel != null, boot.initialLevel?.name ?? "Yok")));
+                bool hasLevel = boot.initialLevel != null;
+                string levelName = hasLevel ? boot.initialLevel.name : "Yok";
+                bootCard.Add(Row("Initial Level:", StatusLabel(hasLevel, levelName)));
                 var so = new SerializedObject(boot);
                 var lvlProp = so.FindProperty("initialLevel");
                 var field = new PropertyField(lvlProp);

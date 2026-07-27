@@ -22,10 +22,15 @@ namespace PixelFlow.Views
         [Inject] public ILevelProgressionService ProgressionService { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public GameConfig Config { get; set; }
+        [Inject] public ILocalizationService LocalizationService { get; set; }
 
         protected override void OnBind()
         {
             if (View == null) return;
+            if (LocalizationService == null)
+                throw new DataValidationException("LevelSelectMediator.OnBind: ILocalizationService not injected! Cannot localize UI.");
+            if (ProgressModel == null)
+                throw new DataValidationException("LevelSelectMediator.OnBind: IProgressModel not injected! Cannot populate levels.");
 
             View.OnBackClicked += HandleBackClicked;
             View.OnLevelSelected += HandleLevelSelected;
@@ -68,7 +73,7 @@ namespace PixelFlow.Views
         {
             if (View == null) return;
 
-            int unlocked = ProgressModel != null ? ProgressModel.UnlockedLevels : 1;
+            int unlocked = ProgressModel.UnlockedLevels;
             if (unlocked < 1) unlocked = 1;
 
             // Açılan seviyeler + birkaç kilitli önizleme; düzgün ızgara için 4'ün katına yuvarla.
@@ -86,7 +91,7 @@ namespace PixelFlow.Views
                     LevelIndex = i,
                     DisplayNumber = i + 1,
                     Unlocked = i < unlocked,
-                    Stars = ProgressModel != null ? ProgressModel.GetStars(i) : 0
+                    Stars = ProgressModel.GetStars(i)
                 });
             }
 

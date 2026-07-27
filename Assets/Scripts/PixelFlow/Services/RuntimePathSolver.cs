@@ -84,6 +84,34 @@ namespace PixelFlow.Services
             _perSolveMaxIterations = CalculateMaxIterations(level.width, level.height, colorNodes.Count);
 
             var bridges = new HashSet<Vector2Int>(level.bridgePositions ?? new List<Vector2Int>());
+            var blockedCells = new HashSet<Vector2Int>();
+            var oneWayDict = new Dictionary<Vector2Int, Vector2Int>();
+
+            if (level.obstacles != null)
+            {
+                foreach (var obs in level.obstacles)
+                {
+                    if (obs.type == ObstacleType.Construction || obs.type == ObstacleType.Lake ||
+                        obs.type == ObstacleType.Park || obs.type == ObstacleType.Ferry ||
+                        obs.type == ObstacleType.NarrowPass)
+                    {
+                        if (obs.position.x >= 0 && obs.position.x < level.width &&
+                            obs.position.y >= 0 && obs.position.y < level.height)
+                        {
+                            blockedCells.Add(obs.position);
+                        }
+                    }
+                }
+            }
+
+            if (level.oneWayCells != null)
+            {
+                foreach (var ow in level.oneWayCells)
+                {
+                    oneWayDict[ow.position] = ow.allowedDirection;
+                }
+            }
+
             var grid = new ColorType[level.width, level.height];
 
             foreach (var node in level.initialNodes)
@@ -95,12 +123,17 @@ namespace PixelFlow.Services
                 }
             }
 
+            foreach (var blocked in blockedCells)
+            {
+                grid[blocked.x, blocked.y] = ColorType.Red; // Occupy grid so path cannot enter
+            }
+
             var colors = new List<ColorType>(colorNodes.Keys);
             var result = new Dictionary<ColorType, List<Vector2Int>>();
             foreach (var c in colors) result[c] = new List<Vector2Int>();
             int iterationCount = 0;
 
-            if (SolveRecursive(0, colors, colorNodes, result, grid, bridges, level.width, level.height, ref iterationCount))
+            if (SolveRecursive(0, colors, colorNodes, result, grid, bridges, blockedCells, oneWayDict, level.width, level.height, ref iterationCount))
             {
                 solutions = result;
                 return true;
@@ -256,6 +289,8 @@ namespace PixelFlow.Services
             Dictionary<ColorType, List<Vector2Int>> colorNodes,
             Dictionary<ColorType, List<Vector2Int>> solutions,
             ColorType[,] grid, HashSet<Vector2Int> bridges,
+            HashSet<Vector2Int> blockedCells,
+            Dictionary<Vector2Int, Vector2Int> oneWayDict,
             int w, int h, ref int iterationCount)
         {
             if (colorIndex >= colors.Count)
@@ -264,7 +299,7 @@ namespace PixelFlow.Services
                     return true;
                 for (int x = 0; x < w; x++)
                     for (int y = 0; y < h; y++)
-                        if (grid[x, y] == ColorType.None && !bridges.Contains(new Vector2Int(x, y)))
+                        if (grid[x, y] == ColorType.None && !bridges.Contains(new Vector2Int(x, y)) && !blockedCells.Contains(new Vector2Int(x, y)))
                             return false;
                 return true;
             }
@@ -278,25 +313,17 @@ namespace PixelFlow.Services
             var end = colorNodes[color][1];
 
             // Grid snapshot: FindPathIterative grid'i path ile işaretler.
-            // Sonraki renk başarısız olursa, bu rengin grid değişikliklerini
-            // geri almak için snapshot'ı kullanırız.
-            // Grid max 20×20 = 400 eleman, snapshot maliyeti ihmal edilebilir.
             var gridSnapshot = (ColorType[,])grid.Clone();
 
-            // FindPathIterative bu renk için bir path bulur.
-            // NOT: FindPathIterative deterministik DFS kullanır (sıralı yönler).
-            // Grid snapshot'a döndürülüp tekrar çağrılırsa AYNI path'i bulur.
-            // Bu nedenle sadece bir alternatif deneriz — doğru backtracking
-            // üst seviyedeki SolveRecursive çağrıları tarafından sağlanır.
-            var path = FindPathIterative(start, end, color, colorIndex, colors, colorNodes, solutions, grid, bridges, w, h, ref iterationCount);
+            var path = FindPathIterative(start, end, color, colorIndex, colors, colorNodes, solutions, grid, bridges, blockedCells, oneWayDict, w, h, ref iterationCount);
             if (path != null)
             {
                 solutions[color] = path;
-                if (SolveRecursive(colorIndex + 1, colors, colorNodes, solutions, grid, bridges, w, h, ref iterationCount))
+                if (SolveRecursive(colorIndex + 1, colors, colorNodes, solutions, grid, bridges, blockedCells, oneWayDict, w, h, ref iterationCount))
                     return true;
                 solutions[color].Clear();
 
-                // Backtrack: grid'i eski haline döndür (üst seviye alternatif deneyebilir)
+                // Backtrack: grid'i eski haline döndür
                 for (int x = 0; x < w; x++)
                     for (int y = 0; y < h; y++)
                         grid[x, y] = gridSnapshot[x, y];
@@ -305,14 +332,6 @@ namespace PixelFlow.Services
             return false;
         }
 
-        /// <summary>
-        /// Hücre-seviyesi iterative backtracking (DFS).
-        /// Explicit Stack kullanır — recursive versiyon gibi stack derinliği yaratmaz.
-        /// 20×20 grid'de 400+ adımda dahi StackOverflow riski yoktur.
-        ///
-        /// NOT: Grid üzerinde yaptığı path işaretlemelerini geri almaz.
-        /// Çağıran (SolveRecursive) bu işaretlemeleri yönetir.
-        /// </summary>
         private List<Vector2Int> FindPathIterative(
             Vector2Int start, Vector2Int end, ColorType color,
             int colorIndex,
@@ -320,6 +339,8 @@ namespace PixelFlow.Services
             Dictionary<ColorType, List<Vector2Int>> colorNodes,
             Dictionary<ColorType, List<Vector2Int>> solutions,
             ColorType[,] grid, HashSet<Vector2Int> bridges,
+            HashSet<Vector2Int> blockedCells,
+            Dictionary<Vector2Int, Vector2Int> oneWayDict,
             int w, int h, ref int iterationCount)
         {
             // Quick check: if end node is completely surrounded by occupied cells, return null immediately
@@ -372,6 +393,18 @@ namespace PixelFlow.Services
                     // Sınır ve path kontrolü (HashSet ile O(1))
                     if (next.x < 0 || next.x >= w || next.y < 0 || next.y >= h) continue;
                     if (_pathSet.Contains(next)) continue;
+
+                    // Obstacle check
+                    if (blockedCells != null && blockedCells.Contains(next)) continue;
+
+                    // OneWay cell direction check
+                    if (oneWayDict != null && oneWayDict.Count > 0)
+                    {
+                        if (oneWayDict.TryGetValue(frame.Position, out var allowedFrom) && allowedFrom != Vector2Int.zero && dir != allowedFrom)
+                            continue;
+                        if (oneWayDict.TryGetValue(next, out var allowedTo) && allowedTo != Vector2Int.zero && dir != allowedTo)
+                            continue;
+                    }
 
                     bool isBridge = bridges.Contains(next);
                     bool canMove = false;

@@ -1,3 +1,4 @@
+using PixelFlow.Data;
 using Nexus.Core;
 using Nexus.Core.Services;
 using PixelFlow.Models;
@@ -11,10 +12,15 @@ namespace PixelFlow.Views
         [Inject] public ISettingsModel SettingsModel { get; set; }
         [Inject] public IGameStateModel GameStateModel { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject] public ILocalizationService LocalizationService { get; set; }
 
         protected override void OnBind()
         {
             LoggerService?.Log("[PixelFlow.SettingsMediator] Binding Settings UI...");
+            if (LocalizationService == null)
+                throw new DataValidationException("SettingsMediator.OnBind: ILocalizationService not injected! Cannot localize UI.");
+            if (SettingsModel == null)
+                throw new DataValidationException("SettingsMediator.OnBind: ISettingsModel not injected! Cannot populate settings UI.");
 
             View.OnMasterVolumeChanged += HandleMasterVolume;
             View.OnSfxVolumeChanged += HandleSfxVolume;
@@ -48,12 +54,15 @@ namespace PixelFlow.Views
         protected override void OnUnbind()
         {
             LoggerService?.Log("[PixelFlow.SettingsMediator] Unbinding Settings UI...");
-            View.OnMasterVolumeChanged -= HandleMasterVolume;
-            View.OnSfxVolumeChanged -= HandleSfxVolume;
-            View.OnMusicVolumeChanged -= HandleMusicVolume;
-            View.OnColorBlindChanged -= HandleColorBlind;
-            View.OnHapticsToggled -= HandleHaptics;
-            View.OnCloseClicked -= HandleClose;
+            if (View != null)
+            {
+                View.OnMasterVolumeChanged -= HandleMasterVolume;
+                View.OnSfxVolumeChanged -= HandleSfxVolume;
+                View.OnMusicVolumeChanged -= HandleMusicVolume;
+                View.OnColorBlindChanged -= HandleColorBlind;
+                View.OnHapticsToggled -= HandleHaptics;
+                View.OnCloseClicked -= HandleClose;
+            }
 
             if (GameStateModel != null)
             {
@@ -100,7 +109,7 @@ namespace PixelFlow.Views
         private void HandleClose()
         {
             LoggerService?.Log("[PixelFlow.SettingsMediator] Closing Settings panel...");
-            View.SetVisible(false);
+            View?.SetVisible(false);
             if (GameStateModel != null && GameStateModel.CurrentState == GameState.Paused)
             {
                 var targetState = GameStateModel.PreviousState != GameState.Paused ? GameStateModel.PreviousState : GameState.Playing;

@@ -23,10 +23,10 @@ namespace PixelFlow.Editor
         private Vector2 _scrollPos;
         private bool _verboseLogging = false;
 
+        [MenuItem("PixelFlow/Level Generator")]
         public static void ShowWindow()
         {
-            var window = GetWindow<GenerateLevels>("Level Generator");
-            window.minSize = new Vector2(600, 500);
+            PixelFlowSetupWindow.OpenTab(2);
         }
 
         private void OnGUI()
