@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 using PixelFlow.Models;
 using PixelFlow.Data;
@@ -7,26 +9,68 @@ using Nexus.Core.Services;
 
 namespace PixelFlow.Services
 {
-    public class GridStateSerializer
+    public class GridStateSerializer : INexusService
     {
-        public static string GetSaveKey(StorageKeysConfigAsset storageKeys = null)
+        [Inject] public StorageKeysConfigAsset StorageKeysConfig { get; set; }
+
+        public ValueTask InitializeAsync(CancellationToken ct) => default;
+        public void OnDispose() { }
+
+        public string GetSaveKey()
         {
-            if (storageKeys != null && !string.IsNullOrEmpty(storageKeys.KeyPuzzleSavePrefix))
-                return storageKeys.KeyPuzzleSavePrefix;
-            var loaded = Resources.Load<StorageKeysConfigAsset>("Configs/StorageKeysConfig");
-            if (loaded != null && !string.IsNullOrEmpty(loaded.KeyPuzzleSavePrefix))
-                return loaded.KeyPuzzleSavePrefix;
+            if (StorageKeysConfig != null && !string.IsNullOrEmpty(StorageKeysConfig.KeyPuzzleSavePrefix))
+                return StorageKeysConfig.KeyPuzzleSavePrefix;
+            
             throw new DataValidationException("StorageKeysConfigAsset.KeyPuzzleSavePrefix missing!");
         }
 
-        public static bool HasSavedGame(IPlayerPrefsService prefs, StorageKeysConfigAsset storageKeys = null)
+        public bool HasSavedGame(IPlayerPrefsService prefs)
         {
-            return prefs.HasKey(GetSaveKey(storageKeys));
+            return prefs.HasKey(GetSaveKey());
         }
 
-        public static void ClearSave(IPlayerPrefsService prefs, StorageKeysConfigAsset storageKeys = null)
+        public void ClearSave(IPlayerPrefsService prefs)
         {
-            prefs.DeleteKey(GetSaveKey(storageKeys));
+            prefs.DeleteKey(GetSaveKey());
+            prefs.Save();
+        }
+
+        // Static backward-compatible API
+        public static string GetSaveKeyStatic(StorageKeysConfigAsset storageKeys = null)
+        {
+            if (storageKeys != null && !string.IsNullOrEmpty(storageKeys.KeyPuzzleSavePrefix))
+                return storageKeys.KeyPuzzleSavePrefix;
+            
+            // Try to resolve from DI container
+            var resolved = TryResolveStorageKeys();
+            if (resolved != null && !string.IsNullOrEmpty(resolved.KeyPuzzleSavePrefix))
+                return resolved.KeyPuzzleSavePrefix;
+            
+            throw new DataValidationException("StorageKeysConfigAsset.KeyPuzzleSavePrefix missing!");
+        }
+
+        private static StorageKeysConfigAsset TryResolveStorageKeys()
+        {
+            try
+            {
+                var root = UnityEngine.Object.FindAnyObjectByType<Nexus.Core.Root>(UnityEngine.FindObjectsInactive.Include);
+                if (root?.Context?.Container != null)
+                {
+                    return root.Context.Container.Resolve<StorageKeysConfigAsset>();
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        public static bool HasSavedGameStatic(IPlayerPrefsService prefs, StorageKeysConfigAsset storageKeys = null)
+        {
+            return prefs.HasKey(GetSaveKeyStatic(storageKeys));
+        }
+
+        public static void ClearSaveStatic(IPlayerPrefsService prefs, StorageKeysConfigAsset storageKeys = null)
+        {
+            prefs.DeleteKey(GetSaveKeyStatic(storageKeys));
             prefs.Save();
         }
 
@@ -135,7 +179,7 @@ namespace PixelFlow.Services
             }
 
             string json = JsonUtility.ToJson(data);
-            prefs.SetString(GetSaveKey(), json);
+            prefs.SetString(GetSaveKeyStatic(), json);
             prefs.Save();
             Logger?.Log($"[PixelFlow.GridStateSerializer] 💾 Game state saved: Level {data.levelIndex + 1} ({data.width}x{data.height}, Cells: {data.cells.Count}, Active Paths: {data.paths.Count}, Score: {data.score})");
         }
@@ -146,7 +190,7 @@ namespace PixelFlow.Services
         /// </summary>
         public static GridSaveData Load(IPlayerPrefsService prefs)
         {
-            string saveKey = GetSaveKey();
+            string saveKey = GetSaveKeyStatic();
             if (!prefs.HasKey(saveKey))
             {
                 throw new DataValidationException($"Save file not found for key: {saveKey}. No saved game to load.");

@@ -28,6 +28,8 @@ namespace PixelFlow.Views
         [Inject] public IObstacleService ObstacleService { get; set; }
         [Inject] public ITutorialDriver TutorialDriver { get; set; }
 
+        [Inject] public GridStateSerializer GridStateSerializer { get; set; }
+
         protected override void OnBind()
         {
             View.OnPlayClicked += HandlePlayClicked;
@@ -57,7 +59,7 @@ namespace PixelFlow.Views
             LoggerService?.Log("[PixelFlow.MainMenuMediator] 'OYUNA BAŞLA' clicked. Clearing mid-level save and loading level fresh from the beginning...");
 
             // Clear mid-level path save so the level always starts fresh from scratch
-            if (PlayerPrefsService != null)
+            if (PlayerPrefsService != null && GridStateSerializer != null)
             {
                 GridStateSerializer.ClearSave(PlayerPrefsService);
             }

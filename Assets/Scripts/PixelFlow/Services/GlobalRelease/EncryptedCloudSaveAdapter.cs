@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using UnityEngine;
+using Nexus.Core;
 using Nexus.Core.Services;
 using PixelFlow.Models;
 using PixelFlow.Data;
@@ -15,20 +16,20 @@ namespace PixelFlow.Services.GlobalRelease
     public class EncryptedCloudSaveAdapter : ICloudSaveAdapter
     {
         private readonly IPlayerPrefsService _prefs;
-        private readonly StorageKeysConfigAsset _keys;
 
-        public EncryptedCloudSaveAdapter(IPlayerPrefsService prefs, StorageKeysConfigAsset keys = null)
+        [Inject] public StorageKeysConfigAsset Keys { get; set; }
+
+        public EncryptedCloudSaveAdapter(IPlayerPrefsService prefs)
         {
             _prefs = prefs ?? throw new DataValidationException("IPlayerPrefsService cannot be null in EncryptedCloudSaveAdapter!");
-            _keys = keys ?? Resources.Load<StorageKeysConfigAsset>("Configs/StorageKeysConfig") ?? ScriptableObject.CreateInstance<StorageKeysConfigAsset>();
         }
 
         private string CloudStorePrefKey
         {
             get
             {
-                if (_keys != null && !string.IsNullOrEmpty(_keys.KeyCloudRecord))
-                    return _keys.KeyCloudRecord;
+                if (Keys != null && !string.IsNullOrEmpty(Keys.KeyCloudRecord))
+                    return Keys.KeyCloudRecord;
                 throw new DataValidationException("StorageKeysConfigAsset.KeyCloudRecord missing!");
             }
         }

@@ -36,25 +36,26 @@ namespace PixelFlow.Models
         private int _hintsRemaining;
         private int _totalHintsUsed;
 
+        [Inject] public GameConfig Config { get; set; }
+
         public int HintsRemaining => _hintsRemaining;
         public int TotalHintsUsed => _totalHintsUsed;
         public event Action<int> OnHintCountChanged;
 
         [Inject]
-        public HintModel(IPlayerPrefsService prefs, GameConfig config, StorageKeysConfigAsset keys)
+        public HintModel(IPlayerPrefsService prefs, StorageKeysConfigAsset keys = null)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
-            if (config == null) throw new DataValidationException("GameConfig erişilemedi! HintModel başlatılamıyor.");
-            _keys = keys ?? Resources.Load<StorageKeysConfigAsset>("Configs/StorageKeysConfig") ?? ScriptableObject.CreateInstance<StorageKeysConfigAsset>();
-            _twoStarHintChance = config.TwoStarHintChance;
-            _hintsRemaining = _prefs.GetInt(Key, config.DefaultHintCount);
+            _keys = keys;
+            _twoStarHintChance = Config?.TwoStarHintChance ?? 0.5f;
+            _hintsRemaining = _prefs.GetInt(Key, Config?.DefaultHintCount ?? 3);
         }
 
         // Test amaçlı constructor (config olmadan) — SO varsayılanını yansıtır
         internal HintModel(IPlayerPrefsService prefs, int defaultHints, StorageKeysConfigAsset keys = null)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
-            _keys = keys ?? Resources.Load<StorageKeysConfigAsset>("Configs/StorageKeysConfig") ?? ScriptableObject.CreateInstance<StorageKeysConfigAsset>();
+            _keys = keys;
             _twoStarHintChance = 0.5f;
             _hintsRemaining = _prefs.GetInt(Key, defaultHints);
         }

@@ -40,6 +40,8 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void ProceduralLevelGenerator_CalculateDifficultyScore_MatchesFormula()
         {
+            var solver = CreateTestRuntimePathSolver();
+            var generator = new ProceduralLevelGenerator(solver);
             var level = ScriptableObject.CreateInstance<LevelData>();
             level.width = 5;
             level.height = 5;
@@ -52,7 +54,7 @@ namespace PixelFlow.Editor.Tests
                 bridgeCount = 1
             };
 
-            int score = ProceduralLevelGenerator.CalculateDifficultyScore(level, diffParams);
+            int score = generator.CalculateDifficultyScore(level, diffParams);
 
             // Formula: (colors 3 * 10) + (intersections 0 * 5) + (obstacles 0 * 3) - (viaductLimit 1 * 4) = 26
             Assert.AreEqual(26, score);

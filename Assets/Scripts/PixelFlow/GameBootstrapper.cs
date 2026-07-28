@@ -41,6 +41,7 @@ namespace PixelFlow
         private ILoggerService _loggerService;
         private IPlayerPrefsService _prefs;
         private ILevelProgressionService _progressionService;
+        private GridStateSerializer _gridStateSerializer;
 
         // Save format version — GameConfig ScriptableObject'ten okunur (§2.2 Zero-Silent-Fallback).
         // _gameConfig, ResolveServices'te container.Resolve ile çözülür; null ise orada fail-loud edilir.
@@ -126,6 +127,8 @@ namespace PixelFlow
                 container.Resolve<IVehicleSimulator>();
                 container.Resolve<IObstacleService>();
 
+                _gridStateSerializer = container.Resolve<GridStateSerializer>();
+
                 return true;
             }
             catch (System.Exception ex)
@@ -145,19 +148,19 @@ namespace PixelFlow
             // User requirement: Every time a level starts, start clean from the beginning (do not continue mid-level paths)
             if (_prefs != null)
             {
-                GridStateSerializer.ClearSave(_prefs);
+                _gridStateSerializer?.ClearSave(_prefs);
             }
             return false;
         }
 
         private void OnApplicationPause(bool pause)
         {
-            if (pause) SaveGameState();
+            if (pause) _gridStateSerializer?.ClearSave(_prefs);
         }
 
         private void OnApplicationQuit()
         {
-            SaveGameState();
+            _gridStateSerializer?.ClearSave(_prefs);
         }
 
         private void SaveGameState()
@@ -165,7 +168,7 @@ namespace PixelFlow
             // User requirement: Level always starts clean from the beginning without restoring mid-level paths
             if (_prefs != null)
             {
-                GridStateSerializer.ClearSave(_prefs);
+                _gridStateSerializer?.ClearSave(_prefs);
             }
         }
 

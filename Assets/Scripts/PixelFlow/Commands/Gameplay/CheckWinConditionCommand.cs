@@ -19,6 +19,7 @@ namespace PixelFlow.Commands
         [Inject] public ISignalBus SignalBus { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject, OptionalInject] public Data.EconomyConfigAsset EconomyConfig { get; set; }
+        [Inject] public IScoreCalculator ScoreCalculator { get; set; }
 
         public void Execute(CheckWinConditionSignal signal)
         {
@@ -121,12 +122,10 @@ namespace PixelFlow.Commands
             int viaductsUsed = GameSessionModel.MaxViaducts - GameSessionModel.AvailableViaducts;
 
             var (finalScore, stars) = ScoreCalculator.Calculate(
-                GridModel.Width, GridModel.Height,
-                GameSessionModel.ElapsedTime,
-                hintsUsed, totalHints,
-                viaductsUsed,
-                EconomyConfig);
-
+                            GridModel.Width, GridModel.Height,
+                            GameSessionModel.ElapsedTime,
+                            hintsUsed, totalHints,
+                            viaductsUsed);
             LoggerService?.Log($"[PixelFlow.CheckWinConditionCommand] Score calculation - Width: {GridModel.Width}, Height: {GridModel.Height}, Time: {GameSessionModel.ElapsedTime}s, Hints Used: {hintsUsed}/{totalHints}, Viaducts Used: {viaductsUsed}. Resulting Score: {finalScore}, Stars: {stars}");
 
             GameSessionModel.AddScore(finalScore);

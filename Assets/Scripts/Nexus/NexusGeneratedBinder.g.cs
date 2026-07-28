@@ -94,6 +94,14 @@ namespace Nexus.Generated
             {
                 instance.AssetProvider = null;
             });
+            NexusDI.RegisterInjector<Nexus.Core.Services.ResourceLocalizationTableProvider>((instance, di) =>
+            {
+                instance.Logger = di.Resolve<Nexus.Core.Services.ILoggerService>();
+            });
+            NexusDI.RegisterClearer<Nexus.Core.Services.ResourceLocalizationTableProvider>(instance =>
+            {
+                instance.Logger = null;
+            });
             NexusDI.RegisterInjector<PixelFlow.Views.BloomFlashMediator>((instance, di) =>
             {
                 instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
@@ -290,6 +298,7 @@ namespace Nexus.Generated
                 instance.PlayerPrefsService = di.Resolve<Nexus.Core.Services.IPlayerPrefsService>();
                 instance.ObstacleService = di.Resolve<PixelFlow.Services.IObstacleService>();
                 instance.TutorialDriver = di.Resolve<PixelFlow.Services.ITutorialDriver>();
+                instance.GridStateSerializer = di.Resolve<PixelFlow.Services.GridStateSerializer>();
                 instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
             });
             NexusDI.RegisterClearer<PixelFlow.Views.MainMenuMediator>(instance =>
@@ -306,6 +315,7 @@ namespace Nexus.Generated
                 instance.PlayerPrefsService = null;
                 instance.ObstacleService = null;
                 instance.TutorialDriver = null;
+                instance.GridStateSerializer = null;
                 instance.SignalBus = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Views.MainMenuView>((instance, di) =>
@@ -546,6 +556,14 @@ namespace Nexus.Generated
                 instance.Config = null;
                 instance.TickService = null;
             });
+            NexusDI.RegisterInjector<PixelFlow.Services.GridStateSerializer>((instance, di) =>
+            {
+                instance.StorageKeysConfig = di.Resolve<PixelFlow.Data.StorageKeysConfigAsset>();
+            });
+            NexusDI.RegisterClearer<PixelFlow.Services.GridStateSerializer>(instance =>
+            {
+                instance.StorageKeysConfig = null;
+            });
             NexusDI.RegisterInjector<PixelFlow.Services.HintService>((instance, di) =>
             {
                 instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
@@ -587,6 +605,7 @@ namespace Nexus.Generated
                 instance.PlayerPrefsService = di.Resolve<Nexus.Core.Services.IPlayerPrefsService>();
                 instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
                 instance.EconomyConfig = di.Resolve<PixelFlow.Data.EconomyConfigAsset>();
+                instance.GridStateSerializer = di.Resolve<PixelFlow.Services.GridStateSerializer>();
             });
             NexusDI.RegisterClearer<PixelFlow.Services.LevelLoaderService>(instance =>
             {
@@ -603,6 +622,15 @@ namespace Nexus.Generated
                 instance.PlayerPrefsService = null;
                 instance.LoggerService = null;
                 instance.EconomyConfig = null;
+                instance.GridStateSerializer = null;
+            });
+            NexusDI.RegisterInjector<PixelFlow.Services.LevelValidator>((instance, di) =>
+            {
+                instance.DifficultyFormulaConfig = di.Resolve<PixelFlow.Data.DifficultyFormulaConfigAsset>();
+            });
+            NexusDI.RegisterClearer<PixelFlow.Services.LevelValidator>(instance =>
+            {
+                instance.DifficultyFormulaConfig = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Services.LocalEconomyValidator>((instance, di) =>
             {
@@ -616,11 +644,13 @@ namespace Nexus.Generated
             {
                 instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
                 instance.Config = di.Resolve<PixelFlow.Data.GameConfig>();
+                instance.LocalizationTableProvider = di.Resolve<Nexus.Core.Services.ILocalizationTableProvider>();
             });
             NexusDI.RegisterClearer<PixelFlow.Services.LocalizationService>(instance =>
             {
                 instance.LoggerService = null;
                 instance.Config = null;
+                instance.LocalizationTableProvider = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Services.ObstacleService>((instance, di) =>
             {
@@ -670,6 +700,14 @@ namespace Nexus.Generated
             {
                 instance.Config = null;
             });
+            NexusDI.RegisterInjector<PixelFlow.Services.ProceduralLevelGenerator>((instance, di) =>
+            {
+                instance.DifficultyFormulaConfig = di.Resolve<PixelFlow.Data.DifficultyFormulaConfigAsset>();
+            });
+            NexusDI.RegisterClearer<PixelFlow.Services.ProceduralLevelGenerator>(instance =>
+            {
+                instance.DifficultyFormulaConfig = null;
+            });
             NexusDI.RegisterInjector<PixelFlow.Services.RuntimePathSolver>((instance, di) =>
             {
                 instance.Config = di.Resolve<PixelFlow.Data.GameConfig>();
@@ -697,6 +735,14 @@ namespace Nexus.Generated
                 instance.RushHourConfig = null;
                 instance.Config = null;
                 instance.Keys = null;
+            });
+            NexusDI.RegisterInjector<PixelFlow.Services.ScoreCalculator>((instance, di) =>
+            {
+                instance.Config = di.Resolve<PixelFlow.Data.EconomyConfigAsset>();
+            });
+            NexusDI.RegisterClearer<PixelFlow.Services.ScoreCalculator>(instance =>
+            {
+                instance.Config = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Services.SkinCatalogService>((instance, di) =>
             {
@@ -762,6 +808,14 @@ namespace Nexus.Generated
                 instance.BouncyPhysicsConfig = null;
                 instance.InventoryModel = null;
             });
+            NexusDI.RegisterInjector<PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter>((instance, di) =>
+            {
+                instance.Keys = di.Resolve<PixelFlow.Data.StorageKeysConfigAsset>();
+            });
+            NexusDI.RegisterClearer<PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter>(instance =>
+            {
+                instance.Keys = null;
+            });
             NexusDI.RegisterInjector<PixelFlow.Services.GlobalRelease.InAppReviewService>((instance, di) =>
             {
                 instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
@@ -822,6 +876,14 @@ namespace Nexus.Generated
                 instance.LoggerService = null;
                 instance.Keys = null;
             });
+            NexusDI.RegisterInjector<PixelFlow.Models.DailyCrisisModel>((instance, di) =>
+            {
+                instance.Config = di.Resolve<PixelFlow.Data.GameConfig>();
+            });
+            NexusDI.RegisterClearer<PixelFlow.Models.DailyCrisisModel>(instance =>
+            {
+                instance.Config = null;
+            });
             NexusDI.RegisterInjector<PixelFlow.Models.GameSessionModel>((instance, di) =>
             {
                 instance.Logger = di.Resolve<Nexus.Core.Services.ILoggerService>();
@@ -829,6 +891,14 @@ namespace Nexus.Generated
             NexusDI.RegisterClearer<PixelFlow.Models.GameSessionModel>(instance =>
             {
                 instance.Logger = null;
+            });
+            NexusDI.RegisterInjector<PixelFlow.Models.HintModel>((instance, di) =>
+            {
+                instance.Config = di.Resolve<PixelFlow.Data.GameConfig>();
+            });
+            NexusDI.RegisterClearer<PixelFlow.Models.HintModel>(instance =>
+            {
+                instance.Config = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Models.InventoryModel>((instance, di) =>
             {
@@ -850,6 +920,7 @@ namespace Nexus.Generated
                 instance.SignalBus = di.Resolve<Nexus.Core.ISignalBus>();
                 instance.LoggerService = di.Resolve<Nexus.Core.Services.ILoggerService>();
                 instance.EconomyConfig = di.Resolve<PixelFlow.Data.EconomyConfigAsset>();
+                instance.ScoreCalculator = di.Resolve<PixelFlow.Services.IScoreCalculator>();
             });
             NexusDI.RegisterClearer<PixelFlow.Commands.CheckWinConditionCommand>(instance =>
             {
@@ -861,6 +932,7 @@ namespace Nexus.Generated
                 instance.SignalBus = null;
                 instance.LoggerService = null;
                 instance.EconomyConfig = null;
+                instance.ScoreCalculator = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.ClearJamCommand>((instance, di) =>
             {
@@ -945,6 +1017,7 @@ namespace Nexus.Generated
                 instance.GameSessionModel = di.Resolve<PixelFlow.Models.IGameSessionModel>();
                 instance.LevelModel = di.Resolve<PixelFlow.Models.ILevelModel>();
                 instance.SaveThrottler = di.Resolve<Nexus.Core.Services.ISaveThrottler>();
+                instance.GridStateSerializer = di.Resolve<PixelFlow.Services.GridStateSerializer>();
                 instance.HapticService = di.Resolve<Nexus.Core.Services.IHapticService>();
                 instance.ObstacleService = di.Resolve<PixelFlow.Services.IObstacleService>();
                 instance.PowerUpService = di.Resolve<PixelFlow.Services.IPowerUpService>();
@@ -963,6 +1036,7 @@ namespace Nexus.Generated
                 instance.GameSessionModel = null;
                 instance.LevelModel = null;
                 instance.SaveThrottler = null;
+                instance.GridStateSerializer = null;
                 instance.HapticService = null;
                 instance.ObstacleService = null;
                 instance.PowerUpService = null;
@@ -1100,6 +1174,7 @@ namespace Nexus.Generated
                 instance.RushHourEventService = di.Resolve<PixelFlow.Services.IRushHourEventService>();
                 instance.Config = di.Resolve<PixelFlow.Data.GameConfig>();
                 instance.Keys = di.Resolve<PixelFlow.Data.StorageKeysConfigAsset>();
+                instance.GridStateSerializer = di.Resolve<PixelFlow.Services.GridStateSerializer>();
             });
             NexusDI.RegisterClearer<PixelFlow.Commands.SaveProgressCommand>(instance =>
             {
@@ -1115,6 +1190,7 @@ namespace Nexus.Generated
                 instance.RushHourEventService = null;
                 instance.Config = null;
                 instance.Keys = null;
+                instance.GridStateSerializer = null;
             });
             NexusDI.RegisterInjector<PixelFlow.Commands.InterstitialAdCommand>((instance, di) =>
             {
@@ -1250,6 +1326,8 @@ namespace Nexus.Generated
                 _ = _p_SaveThrottler_TimeProvider; // Suppress CS0219 warning
                 var _p_WindowManager_AssetProvider = default(Nexus.Core.Services.WindowManager).AssetProvider;
                 _ = _p_WindowManager_AssetProvider; // Suppress CS0219 warning
+                var _p_ResourceLocalizationTableProvider_Logger = default(Nexus.Core.Services.ResourceLocalizationTableProvider).Logger;
+                _ = _p_ResourceLocalizationTableProvider_Logger; // Suppress CS0219 warning
                 var _p_BloomFlashMediator_SignalBus = default(PixelFlow.Views.BloomFlashMediator).SignalBus;
                 _ = _p_BloomFlashMediator_SignalBus; // Suppress CS0219 warning
                 var _p_CellView_ThemePalette = default(PixelFlow.Views.CellView).ThemePalette;
@@ -1378,6 +1456,8 @@ namespace Nexus.Generated
                 _ = _p_MainMenuMediator_ObstacleService; // Suppress CS0219 warning
                 var _p_MainMenuMediator_TutorialDriver = default(PixelFlow.Views.MainMenuMediator).TutorialDriver;
                 _ = _p_MainMenuMediator_TutorialDriver; // Suppress CS0219 warning
+                var _p_MainMenuMediator_GridStateSerializer = default(PixelFlow.Views.MainMenuMediator).GridStateSerializer;
+                _ = _p_MainMenuMediator_GridStateSerializer; // Suppress CS0219 warning
                 var _p_MainMenuMediator_SignalBus = default(PixelFlow.Views.MainMenuMediator).SignalBus;
                 _ = _p_MainMenuMediator_SignalBus; // Suppress CS0219 warning
                 var _p_MainMenuView_LoggerService = default(PixelFlow.Views.MainMenuView).LoggerService;
@@ -1504,6 +1584,8 @@ namespace Nexus.Generated
                 _ = _p_GameplayTimerService_Config; // Suppress CS0219 warning
                 var _p_GameplayTimerService_TickService = default(PixelFlow.Services.GameplayTimerService).TickService;
                 _ = _p_GameplayTimerService_TickService; // Suppress CS0219 warning
+                var _p_GridStateSerializer_StorageKeysConfig = default(PixelFlow.Services.GridStateSerializer).StorageKeysConfig;
+                _ = _p_GridStateSerializer_StorageKeysConfig; // Suppress CS0219 warning
                 var _p_HintService_LoggerService = default(PixelFlow.Services.HintService).LoggerService;
                 _ = _p_HintService_LoggerService; // Suppress CS0219 warning
                 var _p_IapIntegrationService_IapService = default(PixelFlow.Services.IapIntegrationService).IapService;
@@ -1544,12 +1626,18 @@ namespace Nexus.Generated
                 _ = _p_LevelLoaderService_LoggerService; // Suppress CS0219 warning
                 var _p_LevelLoaderService_EconomyConfig = default(PixelFlow.Services.LevelLoaderService).EconomyConfig;
                 _ = _p_LevelLoaderService_EconomyConfig; // Suppress CS0219 warning
+                var _p_LevelLoaderService_GridStateSerializer = default(PixelFlow.Services.LevelLoaderService).GridStateSerializer;
+                _ = _p_LevelLoaderService_GridStateSerializer; // Suppress CS0219 warning
+                var _p_LevelValidator_DifficultyFormulaConfig = default(PixelFlow.Services.LevelValidator).DifficultyFormulaConfig;
+                _ = _p_LevelValidator_DifficultyFormulaConfig; // Suppress CS0219 warning
                 var _p_LocalEconomyValidator_EconomyConfig = default(PixelFlow.Services.LocalEconomyValidator).EconomyConfig;
                 _ = _p_LocalEconomyValidator_EconomyConfig; // Suppress CS0219 warning
                 var _p_LocalizationService_LoggerService = default(PixelFlow.Services.LocalizationService).LoggerService;
                 _ = _p_LocalizationService_LoggerService; // Suppress CS0219 warning
                 var _p_LocalizationService_Config = default(PixelFlow.Services.LocalizationService).Config;
                 _ = _p_LocalizationService_Config; // Suppress CS0219 warning
+                var _p_LocalizationService_LocalizationTableProvider = default(PixelFlow.Services.LocalizationService).LocalizationTableProvider;
+                _ = _p_LocalizationService_LocalizationTableProvider; // Suppress CS0219 warning
                 var _p_ObstacleService_GridModel = default(PixelFlow.Services.ObstacleService).GridModel;
                 _ = _p_ObstacleService_GridModel; // Suppress CS0219 warning
                 var _p_ObstacleService_SignalBus = default(PixelFlow.Services.ObstacleService).SignalBus;
@@ -1574,6 +1662,8 @@ namespace Nexus.Generated
                 _ = _p_PixelFlowAnalyticsTracker_LoggerService; // Suppress CS0219 warning
                 var _p_PowerUpService_Config = default(PixelFlow.Services.PowerUpService).Config;
                 _ = _p_PowerUpService_Config; // Suppress CS0219 warning
+                var _p_ProceduralLevelGenerator_DifficultyFormulaConfig = default(PixelFlow.Services.ProceduralLevelGenerator).DifficultyFormulaConfig;
+                _ = _p_ProceduralLevelGenerator_DifficultyFormulaConfig; // Suppress CS0219 warning
                 var _p_RuntimePathSolver_Config = default(PixelFlow.Services.RuntimePathSolver).Config;
                 _ = _p_RuntimePathSolver_Config; // Suppress CS0219 warning
                 var _p_RushHourEventService_EconomyService = default(PixelFlow.Services.RushHourEventService).EconomyService;
@@ -1590,6 +1680,8 @@ namespace Nexus.Generated
                 _ = _p_RushHourEventService_Config; // Suppress CS0219 warning
                 var _p_RushHourEventService_Keys = default(PixelFlow.Services.RushHourEventService).Keys;
                 _ = _p_RushHourEventService_Keys; // Suppress CS0219 warning
+                var _p_ScoreCalculator_Config = default(PixelFlow.Services.ScoreCalculator).Config;
+                _ = _p_ScoreCalculator_Config; // Suppress CS0219 warning
                 var _p_SkinCatalogService_LoggerService = default(PixelFlow.Services.SkinCatalogService).LoggerService;
                 _ = _p_SkinCatalogService_LoggerService; // Suppress CS0219 warning
                 var _p_TutorialDriver_TutorialModel = default(PixelFlow.Services.TutorialDriver).TutorialModel;
@@ -1636,6 +1728,8 @@ namespace Nexus.Generated
                 _ = _p_VehicleSimulator_BouncyPhysicsConfig; // Suppress CS0219 warning
                 var _p_VehicleSimulator_InventoryModel = default(PixelFlow.Services.VehicleSimulator).InventoryModel;
                 _ = _p_VehicleSimulator_InventoryModel; // Suppress CS0219 warning
+                var _p_EncryptedCloudSaveAdapter_Keys = default(PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter).Keys;
+                _ = _p_EncryptedCloudSaveAdapter_Keys; // Suppress CS0219 warning
                 var _p_InAppReviewService_SignalBus = default(PixelFlow.Services.GlobalRelease.InAppReviewService).SignalBus;
                 _ = _p_InAppReviewService_SignalBus; // Suppress CS0219 warning
                 var _p_InAppReviewService_Prefs = default(PixelFlow.Services.GlobalRelease.InAppReviewService).Prefs;
@@ -1666,8 +1760,12 @@ namespace Nexus.Generated
                 _ = _p_CloudSaveManager_LoggerService; // Suppress CS0219 warning
                 var _p_CloudSaveManager_Keys = default(PixelFlow.Models.CloudSaveManager).Keys;
                 _ = _p_CloudSaveManager_Keys; // Suppress CS0219 warning
+                var _p_DailyCrisisModel_Config = default(PixelFlow.Models.DailyCrisisModel).Config;
+                _ = _p_DailyCrisisModel_Config; // Suppress CS0219 warning
                 var _p_GameSessionModel_Logger = default(PixelFlow.Models.GameSessionModel).Logger;
                 _ = _p_GameSessionModel_Logger; // Suppress CS0219 warning
+                var _p_HintModel_Config = default(PixelFlow.Models.HintModel).Config;
+                _ = _p_HintModel_Config; // Suppress CS0219 warning
                 var _p_InventoryModel_LoggerService = default(PixelFlow.Models.InventoryModel).LoggerService;
                 _ = _p_InventoryModel_LoggerService; // Suppress CS0219 warning
                 var _p_InventoryModel_Config = default(PixelFlow.Models.InventoryModel).Config;
@@ -1688,6 +1786,8 @@ namespace Nexus.Generated
                 _ = _p_CheckWinConditionCommand_LoggerService; // Suppress CS0219 warning
                 var _p_CheckWinConditionCommand_EconomyConfig = default(PixelFlow.Commands.CheckWinConditionCommand).EconomyConfig;
                 _ = _p_CheckWinConditionCommand_EconomyConfig; // Suppress CS0219 warning
+                var _p_CheckWinConditionCommand_ScoreCalculator = default(PixelFlow.Commands.CheckWinConditionCommand).ScoreCalculator;
+                _ = _p_CheckWinConditionCommand_ScoreCalculator; // Suppress CS0219 warning
                 var _p_ClearJamCommand_PowerUpService = default(PixelFlow.Commands.ClearJamCommand).PowerUpService;
                 _ = _p_ClearJamCommand_PowerUpService; // Suppress CS0219 warning
                 var _p_ClearJamCommand_PathService = default(PixelFlow.Commands.ClearJamCommand).PathService;
@@ -1754,6 +1854,8 @@ namespace Nexus.Generated
                 _ = _p_ProcessInputCommand_LevelModel; // Suppress CS0219 warning
                 var _p_ProcessInputCommand_SaveThrottler = default(PixelFlow.Commands.ProcessInputCommand).SaveThrottler;
                 _ = _p_ProcessInputCommand_SaveThrottler; // Suppress CS0219 warning
+                var _p_ProcessInputCommand_GridStateSerializer = default(PixelFlow.Commands.ProcessInputCommand).GridStateSerializer;
+                _ = _p_ProcessInputCommand_GridStateSerializer; // Suppress CS0219 warning
                 var _p_ProcessInputCommand_HapticService = default(PixelFlow.Commands.ProcessInputCommand).HapticService;
                 _ = _p_ProcessInputCommand_HapticService; // Suppress CS0219 warning
                 var _p_ProcessInputCommand_ObstacleService = default(PixelFlow.Commands.ProcessInputCommand).ObstacleService;
@@ -1870,6 +1972,8 @@ namespace Nexus.Generated
                 _ = _p_SaveProgressCommand_Config; // Suppress CS0219 warning
                 var _p_SaveProgressCommand_Keys = default(PixelFlow.Commands.SaveProgressCommand).Keys;
                 _ = _p_SaveProgressCommand_Keys; // Suppress CS0219 warning
+                var _p_SaveProgressCommand_GridStateSerializer = default(PixelFlow.Commands.SaveProgressCommand).GridStateSerializer;
+                _ = _p_SaveProgressCommand_GridStateSerializer; // Suppress CS0219 warning
                 var _p_InterstitialAdCommand_LoggerService = default(PixelFlow.Commands.InterstitialAdCommand).LoggerService;
                 _ = _p_InterstitialAdCommand_LoggerService; // Suppress CS0219 warning
                 var _p_RewardedAdCommand_Logger = default(PixelFlow.Commands.RewardedAdCommand).Logger;

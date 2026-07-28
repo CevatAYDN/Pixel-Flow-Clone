@@ -22,27 +22,15 @@ namespace PixelFlow.Services
     /// </summary>
     public sealed class RuntimePathSolver : IPathSolver
     {
-        [Inject, OptionalInject] public GameConfig Config { get; set; }
+        [Inject] public GameConfig Config { get; set; }
 
-        // Editor/test context'inde DI olmadığında Config'i elle set etmek için.
-        // game_plan.md §15.9 KURAL 6: new ile oluşturma → AMA editor aracı olduğu için exception fırlatmak yerine
-        // Resources.Load ile fallback yap (DataValidationException sadece runtime build'de).
-        internal void SetEditorConfig(GameConfig config) => Config = config;
+        /// Editor/test context'inde DI olmadığında Config'i elle set etmek için.
+                // game_plan.md §15.9 KURAL 6: new ile oluşturma → AMA editor aracı olduğu için exception fırlatmak yerine
+                // testlerde manual set edilebilir.
+                public void SetEditorConfig(GameConfig config) => Config = config;
 
-        private GameConfig ResolvedConfig
-        {
-            get
-            {
-                if (Config != null) return Config;
-                var loaded = Resources.Load<GameConfig>("Configs/GameConfig");
-                if (loaded != null) { Config = loaded; return Config; }
-                Config = ScriptableObject.CreateInstance<GameConfig>();
-                return Config;
-            }
-        }
-
-        private int MinIterations => ResolvedConfig.PathSolverMaxIterations;
-        private int MaxIterationsCap => ResolvedConfig.PathSolverMaxIterationsCap;
+        private int MinIterations => Config?.PathSolverMaxIterations ?? 2000;
+        private int MaxIterationsCap => Config?.PathSolverMaxIterationsCap ?? 20000;
 
         private int _perSolveMaxIterations;
         private CancellationToken _cancellationToken;
@@ -527,7 +515,7 @@ namespace PixelFlow.Services
         private int CalculateMaxIterations(int width, int height, int colorCount)
         {
             int maxCap = MaxIterationsCap > 0 ? MaxIterationsCap : 10000;
-            int baseFactor = ResolvedConfig != null && ResolvedConfig.PathSolverMaxIterations > 0 ? ResolvedConfig.PathSolverMaxIterations : 1000;
+            int baseFactor = MinIterations > 0 ? MinIterations : 1000;
             long raw = width * height * colorCount * (long)baseFactor;
             int clamped = (int)Math.Min(maxCap, Math.Max(200, raw));
             return clamped;

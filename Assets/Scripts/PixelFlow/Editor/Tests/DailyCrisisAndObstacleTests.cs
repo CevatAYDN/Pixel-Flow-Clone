@@ -12,22 +12,31 @@ namespace PixelFlow.Editor.Tests
     [TestFixture]
     public class DailyCrisisAndObstacleTests
     {
+        private IScoreCalculator _scoreCalculator;
+
+        [SetUp]
+        public void SetUp()
+        {
+            using var ctx = GameTestContext.CreateGameContext();
+            _scoreCalculator = ctx.Context.Container.Resolve<IScoreCalculator>();
+        }
+
         [Test]
         public void ScoreCalculator_FollowsGddStarRules()
         {
             // 0 viaducts used -> 3 stars (Perfect Flow)
-            var (_, stars0) = ScoreCalculator.Calculate(5, 5, 10f, 0, 3, 0);
+            var (_, stars0) = _scoreCalculator.Calculate(5, 5, 10f, 0, 3, 0);
             Assert.AreEqual(3, stars0, "0 viaducts must yield 3 stars per GDD §2.8.");
 
             // 1 or 2 viaducts used -> 2 stars
-            var (_, stars1) = ScoreCalculator.Calculate(5, 5, 10f, 0, 3, 1);
+            var (_, stars1) = _scoreCalculator.Calculate(5, 5, 10f, 0, 3, 1);
             Assert.AreEqual(2, stars1, "1 viaduct must yield 2 stars per GDD §2.8.");
 
-            var (_, stars2) = ScoreCalculator.Calculate(5, 5, 10f, 0, 3, 2);
+            var (_, stars2) = _scoreCalculator.Calculate(5, 5, 10f, 0, 3, 2);
             Assert.AreEqual(2, stars2, "2 viaducts must yield 2 stars per GDD §2.8.");
 
             // 3+ viaducts used -> 1 star
-            var (_, stars3) = ScoreCalculator.Calculate(5, 5, 10f, 0, 3, 3);
+            var (_, stars3) = _scoreCalculator.Calculate(5, 5, 10f, 0, 3, 3);
             Assert.AreEqual(1, stars3, "3+ viaducts must yield 1 star per GDD §2.8.");
         }
 
@@ -41,7 +50,7 @@ namespace PixelFlow.Editor.Tests
             param.gridWidth = 10;
             param.gridHeight = 10;
             param.colorCount = 3;
-            param.requireFullGridCoverage = false; // Matematiksel tıkanıklığı önlemek için false yapıyoruz
+            param.requireFullGridCoverage = false;
             param.obstaclesEnabled = true;
 
             var level = generator.Generate(param);

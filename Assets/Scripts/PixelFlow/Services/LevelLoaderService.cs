@@ -38,6 +38,7 @@ namespace PixelFlow.Services
         [Inject] public IPlayerPrefsService PlayerPrefsService { get; set; }
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public EconomyConfigAsset EconomyConfig { get; set; }
+        [Inject] public GridStateSerializer GridStateSerializer { get; set; }
 
         public ValueTask InitializeAsync(CancellationToken ct) => default;
         public void OnDispose() { }

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using PixelFlow.Data;
 using PixelFlow.Models;
 using UnityEngine;
+using Nexus.Core;
 
 namespace PixelFlow.Services
 {
@@ -12,6 +13,8 @@ namespace PixelFlow.Services
     public class LevelValidator : ILevelValidator
     {
         private readonly IPathSolver _pathSolver;
+
+        [Inject] public DifficultyFormulaConfigAsset DifficultyFormulaConfig { get; set; }
 
         public LevelValidator(IPathSolver pathSolver = null)
         {
@@ -134,9 +137,12 @@ namespace PixelFlow.Services
             int colorCount = level.initialNodes != null ? level.initialNodes.Count / 2 : 0;
             int obstacleCount = level.obstacles != null ? level.obstacles.Count : 0;
             int bridgeCount = level.bridgePositions != null ? level.bridgePositions.Count : 0;
-            var diffConfig = Resources.Load<DifficultyFormulaConfigAsset>("Configs/DifficultyFormulaConfig");
-            if (diffConfig == null) throw new DataValidationException("DifficultyFormulaConfigAsset missing in LevelValidator!");
-            int complexity = diffConfig.CalculateDifficulty(colorCount, bridgeCount, obstacleCount, level.viaductLimit);
+            
+            if (DifficultyFormulaConfig == null)
+            {
+                throw new DataValidationException("DifficultyFormulaConfigAsset missing in LevelValidator! Ensure it's bound in GameContextLifecycle.");
+            }
+            int complexity = DifficultyFormulaConfig.CalculateDifficulty(colorCount, bridgeCount, obstacleCount, level.viaductLimit);
             result.ComplexityScore = Mathf.Max(0, complexity);
 
             // 6. Solvability Validation

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "unity-addressables": {
+      "source": "Codeturion/skills",
+      "sourceType": "github",
+      "skillPath": "skills/unity-addressables/SKILL.md",
+      "computedHash": "04240cd57705a5771f9fb75e08e8ca14b5b9a1175191be1f7d5f0372425f3478"
+    },
+    "unity-headless-cli": {
+      "source": "Codeturion/skills",
+      "sourceType": "github",
+      "skillPath": "skills/unity-headless-cli/SKILL.md",
+      "computedHash": "99480b24f9244353031c4e5b9cfa163be0c24a4d978ced60215e31a28b179b0d"
+    },
+    "unity-ios-cicd": {
+      "source": "Codeturion/skills",
+      "sourceType": "github",
+      "skillPath": "skills/unity-ios-cicd/SKILL.md",
+      "computedHash": "9a31143c8c986cf6bfa635254ffe2e4a911cd08f3f2c568b9bdd9f402782c9dd"
+    },
+    "unity-object-pooling": {
+      "source": "Codeturion/skills",
+      "sourceType": "github",
+      "skillPath": "skills/unity-object-pooling/SKILL.md",
+      "computedHash": "2189ee089ab659d2ff24c2aaf7620650f06af217b9e1fe2c2ceaece440ce903b"
+    }
+  }
+}

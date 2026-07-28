@@ -91,11 +91,17 @@ namespace PixelFlow
             builder.BindService<ILevelLoaderService, LevelLoaderService>(); // GDD §8: DI injection for level loading
             builder.BindService<IapIntegrationService, IapIntegrationService>(); // IAP integration with EconomyConfig
 
+            // Score Calculator
+            builder.BindService<IScoreCalculator, ScoreCalculator>();
+
             // Skin Catalog Service (LiveOps: Garage & Collection)
             builder.BindService<ISkinCatalogService, SkinCatalogService>();
 
+            // Grid State Serializer
+            builder.BindService<GridStateSerializer>();
+
             // Global Release Production Services (game_plan.md §3)
-            builder.BindInstance<ICloudSaveAdapter>(new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter(storageService, storageKeysConfig));
+            builder.BindInstance<ICloudSaveAdapter>(new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter(storageService));
             builder.BindService<CloudSaveManager>();
             builder.BindService<PixelFlowAnalyticsTracker>();
             builder.BindService<PixelFlow.Services.GlobalRelease.PrivacyComplianceService>();

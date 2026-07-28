@@ -22,6 +22,7 @@ namespace PixelFlow.Commands
         [Inject] public IGameSessionModel GameSessionModel { get; set; }
         [Inject] public ILevelModel LevelModel { get; set; }
         [Inject] public ISaveThrottler SaveThrottler { get; set; }
+        [Inject] public GridStateSerializer GridStateSerializer { get; set; }
         [Inject] public IHapticService HapticService { get; set; }
         [Inject] public IObstacleService ObstacleService { get; set; }
         [Inject, OptionalInject] public IPowerUpService PowerUpService { get; set; }
@@ -37,12 +38,9 @@ namespace PixelFlow.Commands
             HistoryService.Record(GridModel, GameSessionModel);
         }
 
-        private Action _cachedSaveAction;
         private void RequestSave()
         {
-            if (_cachedSaveAction == null)
-                _cachedSaveAction = () => GridStateSerializer.Save(GridModel, GameSessionModel, LevelModel, PlayerPrefsService);
-            SaveThrottler?.TryRequestSave(_cachedSaveAction);
+            SaveHelper.TrySave(SaveThrottler, GridModel, GameSessionModel, LevelModel, PlayerPrefsService);
         }
 
         public void Reset()
@@ -74,6 +72,19 @@ namespace PixelFlow.Commands
             }
 
             var currentCell = GridModel.Grid[signal.GridPosition.x, signal.GridPosition.y];
+
+            // Active Viaduct placement mode: place Viaduct on any valid cell tapped by player
+            if (signal.Type == InputType.PointerDown && GridModel != null && GridModel.IsViaductPlacementActive.Value)
+            {
+                GridModel.IsViaductPlacementActive.Value = false;
+                if (currentCell.State != CellState.Node && !currentCell.HasViaduct && GameSessionModel != null && GameSessionModel.AvailableViaducts > 0)
+                {
+                    LoggerService?.Log($"[PixelFlow.ProcessInputCommand] Viaduct placement mode active: placing Viaduct on tapped cell {signal.GridPosition}.");
+                    SignalBus.Fire(new PlaceViaductSignal { Position = signal.GridPosition });
+                    HapticService?.Vibrate(HapticType.Heavy);
+                    return;
+                }
+            }
 
             if (state == GameState.Paused)
             {

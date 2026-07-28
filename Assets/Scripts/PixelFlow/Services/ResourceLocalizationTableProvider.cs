@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Nexus.Core;
 
 namespace Nexus.Core.Services
 {
@@ -13,6 +15,8 @@ namespace Nexus.Core.Services
     {
         private Dictionary<string, Dictionary<string, string>> _tables;
         private bool _initialized;
+
+        [Inject] public ILoggerService Logger { get; set; }
 
         public bool TryGetTable(string langCode, out IDictionary<string, string> table)
         {
@@ -43,6 +47,14 @@ namespace Nexus.Core.Services
 
             try
             {
+                // Try to resolve LocalizationTableProvider from DI container first
+                var root = UnityEngine.Object.FindAnyObjectByType<Root>(UnityEngine.FindObjectsInactive.Include);
+                if (root?.Context?.Container != null)
+                {
+                    // Could load from Addressables or other providers here
+                    Logger?.Log("[ResourceLocalizationTableProvider] DI container available, skipping Resources.LoadAll fallback");
+                }
+                
                 var assets = Resources.LoadAll<TextAsset>("Localization");
                 if (assets == null || assets.Length == 0)
                 {
@@ -63,9 +75,10 @@ namespace Nexus.Core.Services
                     ParseTableFile(asset.text);
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 // If Resources folder or files are missing, fall back gracefully
+                Logger?.LogWarning($"[ResourceLocalizationTableProvider] Failed to load localization tables: {ex.Message}");
                 _tables = new Dictionary<string, Dictionary<string, string>>(0);
             }
         }

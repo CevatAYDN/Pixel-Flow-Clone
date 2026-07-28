@@ -34,7 +34,7 @@ namespace PixelFlow.Views
         [SerializeField] private Sprite _starSprite;
         [SerializeField] private Sprite _warningSprite;
 
-        private static Sprite _fallbackCircle, _fallbackSquare, _fallbackTriangle, _fallbackDiamond, _fallbackStar, _fallbackWarning, _fallbackBg, _fallbackConstruction, _fallbackLake, _fallbackPark, _fallbackArrow;
+        private static Sprite _fallbackCircle, _fallbackSquare, _fallbackTriangle, _fallbackDiamond, _fallbackStar, _fallbackWarning, _fallbackBg, _fallbackConstruction, _fallbackLake, _fallbackPark, _fallbackArrow, _fallbackBridge;
         private static Color _fallbackBorderColor = new Color(0.18f, 0.22f, 0.32f, 0.85f);
 
         public Vector2Int GridPosition { get; private set; }
@@ -309,6 +309,29 @@ namespace PixelFlow.Views
             texArrow.SetPixels(colorsArrow);
             texArrow.Apply();
             _fallbackArrow = Sprite.Create(texArrow, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 128f);
+
+            // 9. Viaduct Bridge Sprite
+            Texture2D texBridge = new Texture2D(size, size);
+            Color[] colorsBridge = new Color[size * size];
+            Color cBridgeDeck = new Color(0.82f, 0.84f, 0.90f, 1f);
+            Color cBridgeRail = new Color(0.95f, 0.75f, 0.20f, 1f);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float nx = (x - center.x) / (size * 0.5f);
+                    float ny = (y - center.y) / (size * 0.5f);
+                    bool inDeck = (Mathf.Abs(ny) <= 0.28f && Mathf.Abs(nx) <= 0.46f);
+                    bool inRail = (Mathf.Abs(ny) >= 0.20f && Mathf.Abs(ny) <= 0.32f && Mathf.Abs(nx) <= 0.46f);
+                    float alpha = (inDeck || inRail) ? 1f : 0f;
+                    Color col = inRail ? cBridgeRail : cBridgeDeck;
+                    col.a *= alpha;
+                    colorsBridge[y * size + x] = col;
+                }
+            }
+            texBridge.SetPixels(colorsBridge);
+            texBridge.Apply();
+            _fallbackBridge = Sprite.Create(texBridge, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 128f);
         }
 
         private static float DistToLine(Vector2 p, Vector2 a, Vector2 b)
@@ -316,6 +339,53 @@ namespace PixelFlow.Views
             Vector2 v = b - a;
             Vector2 n = new Vector2(-v.y, v.x).normalized;
             return Vector2.Dot(p - a, n);
+        }
+
+        private void EnsureProceduralBridge3D()
+        {
+            if (_bridge3D != null) return;
+
+            var bridgeObj = new GameObject("ProceduralBridge3D");
+            bridgeObj.transform.SetParent(transform, false);
+            bridgeObj.transform.localPosition = new Vector3(0f, 0f, -0.3f);
+
+            var deck = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            deck.name = "BridgeDeck";
+            deck.transform.SetParent(bridgeObj.transform, false);
+            deck.transform.localPosition = new Vector3(0f, 0f, 0f);
+            deck.transform.localScale = new Vector3(0.85f, 0.4f, 0.15f);
+
+            var deckRenderer = deck.GetComponent<MeshRenderer>();
+            if (deckRenderer != null)
+            {
+                var mat = new Material(Shader.Find("Sprites/Default") ?? Shader.Find("Standard"));
+                mat.color = new Color(0.78f, 0.80f, 0.88f, 1f);
+                deckRenderer.sharedMaterial = mat;
+            }
+
+            var railLeft = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            railLeft.name = "RailLeft";
+            railLeft.transform.SetParent(bridgeObj.transform, false);
+            railLeft.transform.localPosition = new Vector3(0f, 0.18f, -0.1f);
+            railLeft.transform.localScale = new Vector3(0.85f, 0.06f, 0.2f);
+            var railLeftRenderer = railLeft.GetComponent<MeshRenderer>();
+            if (railLeftRenderer != null)
+            {
+                railLeftRenderer.sharedMaterial = deckRenderer?.sharedMaterial;
+            }
+
+            var railRight = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            railRight.name = "RailRight";
+            railRight.transform.SetParent(bridgeObj.transform, false);
+            railRight.transform.localPosition = new Vector3(0f, -0.18f, -0.1f);
+            railRight.transform.localScale = new Vector3(0.85f, 0.06f, 0.2f);
+            var railRightRenderer = railRight.GetComponent<MeshRenderer>();
+            if (railRightRenderer != null)
+            {
+                railRightRenderer.sharedMaterial = deckRenderer?.sharedMaterial;
+            }
+
+            _bridge3D = bridgeObj;
         }
 
         public Color GetCellBackgroundColor(AppTheme theme)
@@ -373,11 +443,29 @@ namespace PixelFlow.Views
                 _rainbowHueOffset = (GridPosition.x * 0.137f + GridPosition.y * 0.269f) % 1f;
             }
 
+            GenerateFallbackSpritesIfNeeded();
+            EnsureProceduralBridge3D();
+
             _bgRenderer.transform.localScale = new Vector3(0.92f, 0.92f, 1f);
+
+            bool isBridge = cellData.HasViaduct || cellData.State == CellState.Bridge;
 
             if (_bg3D != null) _bg3D.SetActive(true);
             if (_dot3D != null) _dot3D.SetActive(cellData.State == CellState.Node);
-            if (_bridge3D != null) _bridge3D.SetActive(cellData.HasViaduct || cellData.State == CellState.Bridge);
+            if (_bridge3D != null) _bridge3D.SetActive(isBridge);
+
+            if (_bridgeRenderer != null)
+            {
+                _bridgeRenderer.enabled = isBridge;
+                if (isBridge)
+                {
+                    if (_bridgeRenderer.sprite == null)
+                        _bridgeRenderer.sprite = _fallbackBridge;
+                    _bridgeRenderer.color = Color.white;
+                    _bridgeRenderer.transform.localScale = new Vector3(0.9f, 0.9f, 1f);
+                    _bridgeRenderer.transform.localPosition = new Vector3(0f, 0f, -0.3f);
+                }
+            }
 
             bool hasConflict = cellData.PathColorCount >= 2 && !cellData.HasViaduct;
             if (_warningRenderer != null)
@@ -393,15 +481,6 @@ namespace PixelFlow.Views
             if (cellData.ObstacleType != ObstacleType.None)
             {
                 ApplyObstacleVisual(cellBg, cellData.ObstacleType);
-                if (cellData.HasViaduct || cellData.State == CellState.Bridge)
-                {
-                    if (_bridgeRenderer != null)
-                    {
-                        _bridgeRenderer.enabled = true;
-                        _bridgeRenderer.color = Color.white;
-                    }
-                    if (_bridge3D != null) _bridge3D.SetActive(true);
-                }
             }
             else
             {
@@ -411,7 +490,6 @@ namespace PixelFlow.Views
                         _bgRenderer.color = cellBg;
                         _bgRenderer.enabled = true;
                         _dotRenderer.enabled = false;
-                        _bridgeRenderer.enabled = false;
                         if (_oneWayArrow != null) _oneWayArrow.enabled = false;
                         break;
 
@@ -422,7 +500,6 @@ namespace PixelFlow.Views
                         _dotRenderer.color = GetColor(cellData.Color);
                         AssignShapeSprite(_dotRenderer, cellData.Color);
                         _dotRenderer.transform.localScale = new Vector3(0.45f, 0.45f, 1f);
-                        _bridgeRenderer.enabled = false;
                         if (_oneWayArrow != null) _oneWayArrow.enabled = false;
                         break;
 
@@ -430,7 +507,6 @@ namespace PixelFlow.Views
                         _bgRenderer.color = cellBg;
                         _bgRenderer.enabled = true;
                         _dotRenderer.enabled = false;
-                        _bridgeRenderer.enabled = false;
                         if (_oneWayArrow != null) _oneWayArrow.enabled = false;
                         break;
 
@@ -442,8 +518,6 @@ namespace PixelFlow.Views
                         _bgRenderer.color = cellBg;
                         _bgRenderer.enabled = true;
                         _dotRenderer.enabled = false;
-                        _bridgeRenderer.enabled = true;
-                        _bridgeRenderer.color = Color.white;
                         if (_oneWayArrow != null) _oneWayArrow.enabled = false;
                         break;
                 }

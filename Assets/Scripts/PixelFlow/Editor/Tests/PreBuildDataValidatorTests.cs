@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using PixelFlow.Data;
+using PixelFlow.Editor;
 using UnityEngine;
 
 namespace PixelFlow.Editor.Tests

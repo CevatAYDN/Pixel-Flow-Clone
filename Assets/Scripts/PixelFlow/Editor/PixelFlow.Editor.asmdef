@@ -1,12 +1,13 @@
 {
-    "name": "PixelFlow.Editor.Tests",
-    "rootNamespace": "PixelFlow.Editor.Tests",
+    "name": "PixelFlow.Editor",
+    "rootNamespace": "PixelFlow.Editor",
     "references": [
         "PixelFlow",
-        "PixelFlow.Editor",
         "com.nexus.core",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"
@@ -17,7 +18,7 @@
     "precompiledReferences": [
         "nunit.framework.dll"
     ],
-    "autoReferenced": false,
+    "autoReferenced": true,
     "defineConstraints": [
         "UNITY_INCLUDE_TESTS"
     ],

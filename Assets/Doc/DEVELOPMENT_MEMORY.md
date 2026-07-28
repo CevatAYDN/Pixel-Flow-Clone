@@ -248,11 +248,11 @@ Projedeki tüm konfigürasyonlar `Assets/Resources/Configs/` klasöründe yer al
 - **Kök Neden**: `CreateCar3D` me `CreateTrain3D` metotlarında `_visualConfig != null ? ... : CreateDefaultCarConfig()` ternary kontrolü kullanılıyordu.
 - **Çözüm**: `_visualConfig == null` olduğunda sessizce devam etmek yerine katı `DataValidationException` fırlatılması sağlandı. `VehicleAndGenerationTests.cs` içerisine `PixelFlow.Data.DataValidationException` namespace'i ile `CreateCar3D_WithNullVisualConfig_ThrowsDataValidationException` unit testi eklendi ve tam yeşillendi.
 
-### 🔴 Hata 38: HUD Viyadük Butonunun Hedef Hücre Seçim Mantığının İyileştirilmesi
-- **Belirti**: Oyuncu HUD üzerindeki VİYADÜK butonuna bastığında viyadük köprüsü rastgele veya alakasız bir hücreye koyuluyordu.
-- **Kök Neden**: `HUDMediator.HandleViaductClicked` metodu `cell.PathColorCount >= 2` şartını arıyordu. Ancak kesişim sürüklemesi engellendiği için bu koşul hiçbir zaman sağlanmıyor ve kod eski bayat `LastCrashPosition` koordinatına düşüyordu.
+### 🔴 Hata 41: `GridInputService` İçinde Ekran Dokunmalarının Z=0 Düzlemine Raycast Edilmemesi Hatası
+- **Belirti**: Oyuncu VİYADÜK modundayken veya ızgarada bir hücreye dokunduğunda dokunulan koordinat yanlış algılanıyor, Viyadük farklı yere koyuluyordu.
+- **Kök Neden**: `GridInputService.ProcessPressed` metodu `cam.ScreenToWorldPoint(screenPos)` çağrısında Z derinliği belirtilmemiş Vector2 veriyordu. Bu da 3D perspektif kameranın yakın kırpma düzleminde (`nearClipPlane`) sapmalı koordinat üretmesine neden oluyordu.
 - **Çözüm**: 
-  1. `HUDMediator.cs`: Hedef hücre seçimi önceliklendirildi: (1) Aktif kaza hücresi (`LastCrashPosition`), (2) Oyuncunun dokunduğu/çizdiği son yol hücresi (`LastPosition`), (3) Izgarada henüz viyadüğü olmayan çizili ilk yol hücresi.
+  1. `GridInputService.cs`: `ScreenPointToRay` ve `Plane(Vector3.back, Vector3.zero)` ile dokunma noktası 3D ızgara düzlemine (Z=0) hassas olarak ışınlandı (raycast).
   2. `unityMCP` üzerinden tüm **351/351 test başarıyla geçti.**
 
 ---

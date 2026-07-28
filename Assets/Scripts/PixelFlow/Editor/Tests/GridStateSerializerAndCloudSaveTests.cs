@@ -5,11 +5,22 @@ using PixelFlow.Models;
 using PixelFlow.Services;
 using UnityEngine;
 
+using static PixelFlow.Editor.Tests.GameTestContext;
+
 namespace PixelFlow.Editor.Tests
 {
     [TestFixture]
     public class GridStateSerializerAndCloudSaveTests
     {
+        private GridStateSerializer _serializer;
+
+        [SetUp]
+        public void SetUp()
+        {
+            using var ctx = GameTestContext.CreateGameContext();
+            _serializer = ctx.Context.Container.Resolve<GridStateSerializer>();
+        }
+
         [Test]
         public void GridStateSerializer_SaveAndLoad_RestoresGridModelData()
         {
@@ -20,7 +31,7 @@ namespace PixelFlow.Editor.Tests
             var prefs = ctx.GetModel<IPlayerPrefsService>();
 
             // Setup level & grid
-            var testLevel = GameTestContext.CreateTestLevel(0);
+            var testLevel = CreateTestLevel(0);
             level.SetLevel(testLevel);
             grid.Initialize(5, 5);
 
@@ -32,11 +43,11 @@ namespace PixelFlow.Editor.Tests
             session.StartSession(3);
             session.TryUseViaduct();
 
-            // Save
+            // Save (static method)
             GridStateSerializer.Save(grid, session, level, prefs);
-            Assert.IsTrue(GridStateSerializer.HasSavedGame(prefs));
+            Assert.IsTrue(_serializer.HasSavedGame(prefs));
 
-            // Load into a fresh grid & session
+            // Load into a fresh grid & session (static method)
             var loadedData = GridStateSerializer.Load(prefs);
             Assert.IsNotNull(loadedData);
 
@@ -56,10 +67,10 @@ namespace PixelFlow.Editor.Tests
             var prefs = ctx.GetModel<IPlayerPrefsService>();
 
             prefs.SetString("NT_PuzzleSave_", "{ \"width\": 5, \"height\": 5 }");
-            Assert.IsTrue(GridStateSerializer.HasSavedGame(prefs));
+            Assert.IsTrue(_serializer.HasSavedGame(prefs));
 
-            GridStateSerializer.ClearSave(prefs);
-            Assert.IsFalse(GridStateSerializer.HasSavedGame(prefs));
+            _serializer.ClearSave(prefs);
+            Assert.IsFalse(_serializer.HasSavedGame(prefs));
         }
 
         [Test]
@@ -106,7 +117,7 @@ namespace PixelFlow.Editor.Tests
 
             var manager = new CloudSaveManager
             {
-                Adapter = new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter(prefs, keys),
+                Adapter = ctx.Context.Container.Resolve<ICloudSaveAdapter>(),
                 Prefs = prefs,
                 Keys = keys
             };

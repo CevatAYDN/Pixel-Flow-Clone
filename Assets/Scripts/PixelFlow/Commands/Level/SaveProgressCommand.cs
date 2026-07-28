@@ -23,6 +23,7 @@ namespace PixelFlow.Commands
         [Inject, OptionalInject] public IRushHourEventService RushHourEventService { get; set; }
         [Inject, OptionalInject] public GameConfig Config { get; set; }
         [Inject, OptionalInject] public StorageKeysConfigAsset Keys { get; set; }
+        [Inject] public GridStateSerializer GridStateSerializer { get; set; }
 
         private string CoinCurrencyId => Keys?.CurrencyIdCoin;
 

@@ -19,6 +19,8 @@ namespace PixelFlow.Services
         private readonly System.Random _rng;
         private readonly ILoggerService _logger;
 
+        [Inject] public DifficultyFormulaConfigAsset DifficultyFormulaConfig { get; set; }
+
         public ProceduralLevelGenerator(IPathSolver solver) : this(solver, new System.Random(), null) { }
 
         public ProceduralLevelGenerator(IPathSolver solver, int seed)
@@ -60,7 +62,7 @@ namespace PixelFlow.Services
         /// <summary>
         /// GDD §9: Centralized Procedural difficulty formula.
         /// </summary>
-        public static int CalculateDifficultyScore(LevelData level, DifficultyParams param)
+        public int CalculateDifficultyScore(LevelData level, DifficultyParams param)
         {
             int colors = param.colorCount;
             
@@ -93,12 +95,11 @@ namespace PixelFlow.Services
             int obstacles = level.obstacles?.Count ?? 0;
             int viaductLimit = param.bridgeCount;
             
-            var diffConfig = Resources.Load<DifficultyFormulaConfigAsset>("Configs/DifficultyFormulaConfig");
-            if (diffConfig == null)
+            if (DifficultyFormulaConfig == null)
             {
-                throw new DataValidationException("DifficultyFormulaConfigAsset missing at Resources/Configs/DifficultyFormulaConfig!");
+                throw new DataValidationException("DifficultyFormulaConfigAsset not injected! ProceduralLevelGenerator requires DI container.");
             }
-            return diffConfig.CalculateDifficulty(colors, intersections, obstacles, viaductLimit);
+            return DifficultyFormulaConfig.CalculateDifficulty(colors, intersections, obstacles, viaductLimit);
         }
 
         private LevelData TryGenerate(DifficultyParams param)

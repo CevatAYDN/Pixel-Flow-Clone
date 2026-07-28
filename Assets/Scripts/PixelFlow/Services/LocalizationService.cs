@@ -18,6 +18,7 @@ namespace PixelFlow.Services
     {
         [Inject, OptionalInject] public ILoggerService LoggerService { get; set; }
         [Inject, OptionalInject] public PixelFlow.Data.GameConfig Config { get; set; }
+        [Inject] public ILocalizationTableProvider LocalizationTableProvider { get; set; }
 
         private string _currentLanguage = "en";
         private readonly Dictionary<string, string> _dictionary = new Dictionary<string, string>();
@@ -31,7 +32,7 @@ namespace PixelFlow.Services
             string savedLang = PlayerPrefs.GetString("SelectedLanguage", "");
             if (string.IsNullOrEmpty(savedLang))
             {
-                savedLang = Application.systemLanguage == SystemLanguage.Turkish ? "tr" : "en";
+                savedLang = "tr";
             }
             _currentLanguage = savedLang.ToLowerInvariant();
             LoadLocalizationTable(_currentLanguage);
@@ -113,12 +114,25 @@ namespace PixelFlow.Services
         private void LoadLocalizationTable(string langCode)
         {
             _dictionary.Clear();
+            
+            // Try to load from ILocalizationTableProvider (DI) first
+            if (LocalizationTableProvider != null && LocalizationTableProvider.TryGetTable(langCode, out var table))
+            {
+                foreach (var kvp in table)
+                {
+                    _dictionary[kvp.Key] = kvp.Value;
+                }
+                LoggerService?.Log($"[LocalizationService] Loaded {table.Count} entries from ILocalizationTableProvider for '{langCode}'");
+                return;
+            }
+            
+            // Fallback to Resources.Load for backward compatibility
             var textAsset = Resources.Load<TextAsset>("Localization/LocalizationTable");
             if (textAsset == null)
             {
                 if (Config != null && Config.AllowLocalizationFallbackDictionary)
                 {
-                    LoggerService?.LogWarning("[LocalizationService] Resources/Localization/LocalizationTable.csv not found. Using fallback dictionary because Config اجازت veriyor.");
+                    LoggerService?.LogWarning("[LocalizationService] Resources/Localization/LocalizationTable.csv not found. Using fallback dictionary because Config allows it.");
                     PopulateDefaultFallback(langCode);
                     return;
                 }

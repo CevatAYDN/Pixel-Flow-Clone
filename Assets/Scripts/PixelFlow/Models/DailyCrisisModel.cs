@@ -23,14 +23,14 @@ namespace PixelFlow.Models
     public class DailyCrisisModel : IDailyCrisisModel, IReactiveModel
     {
         private readonly IPlayerPrefsService _prefs;
-        private readonly GameConfig _config;
         private readonly StorageKeysConfigAsset _storageKeys;
 
-        public DailyCrisisModel(IPlayerPrefsService prefs, GameConfig config = null, StorageKeysConfigAsset storageKeys = null)
+        [Inject] public GameConfig Config { get; set; }
+
+        public DailyCrisisModel(IPlayerPrefsService prefs, StorageKeysConfigAsset storageKeys = null)
         {
             _prefs = prefs ?? throw new System.ArgumentNullException(nameof(prefs));
-            _config = config;
-            _storageKeys = storageKeys ?? Resources.Load<StorageKeysConfigAsset>("Configs/StorageKeysConfig");
+            _storageKeys = storageKeys;
             LoadState();
         }
 
@@ -39,7 +39,7 @@ namespace PixelFlow.Models
         private GameConfig _resolvedConfig;
         private GameConfig ResolveConfig()
         {
-            if (_config != null) return _config;
+            if (Config != null) return Config;
             throw new DataValidationException("GameConfig erişilemedi! DailyCrisisModel kriz skorları yüklenemiyor. GameContextLifecycle'da GameConfig yüklü olmalı.");
         }
 

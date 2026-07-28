@@ -43,6 +43,8 @@ transcript*.jsonl
 *.devin
 *.kilo
 *.omo
+*.od-skills
+*.omo
 
 
 # ==========================================

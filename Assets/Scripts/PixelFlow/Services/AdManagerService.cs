@@ -93,7 +93,7 @@ namespace PixelFlow.Services
                     // 2x Coin reward
                     if (GameSessionModel != null && EconomyService != null)
                     {
-                        int baseCoins = GameSessionModel.CoinsEarnedThisLevel > 0 ? GameSessionModel.CoinsEarnedThisLevel : ResolvedConfig.RewardedAdCoinReward;
+                        int baseCoins = GameSessionModel.CoinsEarnedThisLevel > 0 ? GameSessionModel.CoinsEarnedThisLevel : Config?.RewardedAdCoinReward ?? 100;
                         EconomyService.Earn(CoinCurrencyId, baseCoins, $"rewarded_ad:{placementId}");
                     }
                     else if (InventoryModel != null)
@@ -115,12 +115,12 @@ namespace PixelFlow.Services
                     // Daily Chest 2x
                     if (EconomyService != null)
                     {
-                        int baseCoins = ResolvedConfig.DailyChestCoins;
+                        int baseCoins = Config?.DailyChestCoins ?? 100;
                         EconomyService.Earn(CoinCurrencyId, baseCoins, $"rewarded_ad:{placementId}");
                     }
                     else if (InventoryModel != null)
                     {
-                        int baseCoins = ResolvedConfig.DailyChestCoins;
+                        int baseCoins = Config?.DailyChestCoins ?? 100;
                         InventoryModel.AddCoins(baseCoins);
                     }
                     return true;

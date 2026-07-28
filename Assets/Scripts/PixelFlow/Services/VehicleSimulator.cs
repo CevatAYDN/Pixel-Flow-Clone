@@ -62,9 +62,11 @@ namespace PixelFlow.Services
                 AllColors[i] = (ColorType)values.GetValue(i);
         }
 
-        private readonly List<VehicleInstance> _activeVehicles = new List<VehicleInstance>();
-        private readonly Dictionary<ColorType, float> _spawnTimers = new Dictionary<ColorType, float>();
         private readonly Dictionary<ColorType, (Vector2Int, Vector2Int)> _cachedEndpoints = new Dictionary<ColorType, (Vector2Int, Vector2Int)>();
+
+        // Cached node positions per level to avoid iterating initialNodes every tick
+        private readonly Dictionary<int, Dictionary<ColorType, (Vector2Int, Vector2Int)>> _levelNodeCache = new Dictionary<int, Dictionary<ColorType, (Vector2Int, Vector2Int)>>();
+        
         private Transform _vehicleContainer;
         private Transform _cachedGridView;
         private CameraController _cachedCameraController;
@@ -88,6 +90,11 @@ namespace PixelFlow.Services
         // Grid-based spatial partitioning collision detection — List pool for GC alloc reduction
         private readonly Dictionary<Vector2Int, List<VehicleInstance>> _cellOccupancy = new Dictionary<Vector2Int, List<VehicleInstance>>();
         private readonly List<List<VehicleInstance>> _occupancyListPool = new List<List<VehicleInstance>>();
+        
+        // Active vehicles and spawn timers
+        private readonly List<VehicleInstance> _activeVehicles = new List<VehicleInstance>();
+        private readonly Dictionary<ColorType, float> _spawnTimers = new Dictionary<ColorType, float>();
+        
         private ISignalSubscription _undoSubscription;
         private ISignalSubscription _redoSubscription;
         private ISignalSubscription _levelFailedSubscription;
@@ -335,7 +342,7 @@ namespace PixelFlow.Services
                 if (IsColorConnected(color))
                 {
                     float spawnInterval = _spawnInterval;
-                    if (!_spawnTimers.ContainsKey(color))
+                    if (_spawnTimers[color] == 0f && _spawnTimers[color] != spawnInterval)
                     {
                         _spawnTimers[color] = spawnInterval; // Spawn first vehicle immediately
                     }
@@ -349,7 +356,7 @@ namespace PixelFlow.Services
                 }
                 else
                 {
-                    _spawnTimers.Remove(color);
+                    _spawnTimers[color] = 0f;
                 }
             }
         }
@@ -364,19 +371,34 @@ namespace PixelFlow.Services
                 var currentLevel = LevelModel.CurrentLevel;
                 if (currentLevel?.initialNodes == null) return false;
 
-                Vector2Int n1 = new Vector2Int(-1, -1), n2 = new Vector2Int(-1, -1);
-                int found = 0;
-                for (int i = 0; i < currentLevel.initialNodes.Count; i++)
+                int levelIndex = currentLevel.levelIndex;
+                
+                // Try to get from level cache first
+                if (!_levelNodeCache.TryGetValue(levelIndex, out var levelCache))
                 {
-                    if (currentLevel.initialNodes[i].color == color)
+                    levelCache = new Dictionary<ColorType, (Vector2Int, Vector2Int)>();
+                    _levelNodeCache[levelIndex] = levelCache;
+                    
+                    // Pre-compute all node pairs for this level
+                    for (int i = 0; i < currentLevel.initialNodes.Count; i++)
                     {
-                        if (found == 0) n1 = currentLevel.initialNodes[i].position;
-                        else if (found == 1) n2 = currentLevel.initialNodes[i].position;
-                        found++;
+                        var node = currentLevel.initialNodes[i];
+                        if (node.color == ColorType.None) continue;
+                        
+                        if (!levelCache.TryGetValue(node.color, out var existing))
+                        {
+                            levelCache[node.color] = (node.position, new Vector2Int(-1, -1));
+                        }
+                        else if (existing.Item2 == new Vector2Int(-1, -1))
+                        {
+                            levelCache[node.color] = (existing.Item1, node.position);
+                        }
                     }
                 }
-                if (found != 2) return false;
-                endpoints = (n1, n2);
+                
+                if (!levelCache.TryGetValue(color, out endpoints) || endpoints.Item2 == new Vector2Int(-1, -1))
+                    return false;
+                
                 _cachedEndpoints[color] = endpoints;
             }
 

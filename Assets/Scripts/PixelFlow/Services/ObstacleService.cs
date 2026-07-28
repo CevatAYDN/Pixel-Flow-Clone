@@ -42,18 +42,21 @@ namespace PixelFlow.Services
         private readonly Dictionary<Vector2Int, bool> _ferryBlocked = new Dictionary<Vector2Int, bool>();
         private readonly Dictionary<Vector2Int, ColorType> _narrowPassOccupants = new Dictionary<Vector2Int, ColorType>();
         private float _ferryTimer;
+        
+        // Cached list for ferry keys to avoid allocation each tick
+        private readonly List<Vector2Int> _ferryKeys = new List<Vector2Int>();
 
         // game_plan.md §2.2: config zorunludur. Build'de erişilemezse DataValidationException;
         // editor/testte SO varsayılan instance'ı (cache'li — Tick her frame çağrıldığı için alloc yok).
-        private Data.GameConfig ResolvedConfig
-        {
-            get
-            {
-                if (Config != null) return Config;
-                throw new Data.DataValidationException("GameConfig erişilemedi! ObstacleService feribot periyodu yüklenemiyor. GameContextLifecycle'da GameConfig yüklü olmalı.");
-            }
-        }
-        private float ConfigFerryPeriod => ResolvedConfig.FerryPeriod;
+                private Data.GameConfig ResolvedConfig
+                {
+                    get
+                    {
+                        if (Config != null) return Config;
+                        throw new Data.DataValidationException("GameConfig erişilemedi! ObstacleService feribot periyodu yüklenemiyor. GameContextLifecycle'da GameConfig yüklü olmalı.");
+                    }
+                }
+                private float ConfigFerryPeriod => Config?.FerryPeriod ?? 10f;
 
         public ValueTask InitializeAsync(CancellationToken ct) => default;
         public void OnDispose()
@@ -119,11 +122,17 @@ namespace PixelFlow.Services
             if (_ferryTimer < ConfigFerryPeriod) return;
             _ferryTimer = 0f;
             // Tüm ferilerin blok durumunu ters çevir.
-            var keys = new List<Vector2Int>(_ferryBlocked.Keys);
-            for (int i = 0; i < keys.Count; i++)
+            // Use cached keys list to avoid allocation
+            _ferryKeys.Clear();
+            foreach (var key in _ferryBlocked.Keys)
             {
-                _ferryBlocked[keys[i]] = !_ferryBlocked[keys[i]];
-                LoggerService?.Log($"[PixelFlow.ObstacleService] Ferry at {keys[i]} block status toggled: {_ferryBlocked[keys[i]]}");
+                _ferryKeys.Add(key);
+            }
+            for (int i = 0; i < _ferryKeys.Count; i++)
+            {
+                var key = _ferryKeys[i];
+                _ferryBlocked[key] = !_ferryBlocked[key];
+                LoggerService?.Log($"[PixelFlow.ObstacleService] Ferry at {key} block status toggled: {_ferryBlocked[key]}");
             }
 
             SignalBus?.Fire(new GridUpdatedSignal());

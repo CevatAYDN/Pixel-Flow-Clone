@@ -311,6 +311,7 @@ namespace PixelFlow.Editor.Tests
                 builder.BindService<IHintService, HintService>();
                 builder.BindService<IVehicleSimulator, VehicleSimulator>();
                 builder.BindService<ISaveThrottler, SaveThrottler>();
+                builder.BindService<IScoreCalculator, ScoreCalculator>();
                 builder.BindService<IHapticService, HapticService>();
                 var quietLogger = new LoggerService { IsEnabled = false };
                 builder.BindInstance<ILoggerService>(quietLogger);

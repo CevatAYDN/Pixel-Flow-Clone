@@ -1,30 +1,37 @@
 using PixelFlow.Data;
 using PixelFlow.Models;
-using UnityEngine;
+using Nexus.Core;
+using Nexus.Core.Services;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PixelFlow.Services
 {
-    public static class ScoreCalculator
+    public interface IScoreCalculator
     {
-        /// <summary>
-        /// Skor hesaplar. game_plan.md §2.2 (Zero-Hardcode): tüm sabitler EconomyConfigAsset'ten gelir.
-        /// config null ise build'de DataValidationException fırlatılır; editor/testte varsayılan
-        /// EconomyConfigAsset instance'ı kullanılır (SO default değerleri).
-        /// </summary>
-        public static (int finalScore, int stars) Calculate(
+        (int finalScore, int stars) Calculate(
             int gridWidth, int gridHeight,
-            double elapsedTime, int hintsUsed, int totalHintsAvailable, int viaductsUsed,
-            EconomyConfigAsset config = null)
+            double elapsedTime, int hintsUsed, int totalHintsAvailable, int viaductsUsed);
+    }
+
+    public class ScoreCalculator : IScoreCalculator, INexusService
+    {
+        [Inject] public EconomyConfigAsset Config { get; set; }
+
+        public ValueTask InitializeAsync(CancellationToken ct) => default;
+        public void OnDispose() { }
+
+        public (int finalScore, int stars) Calculate(
+            int gridWidth, int gridHeight,
+            double elapsedTime, int hintsUsed, int totalHintsAvailable, int viaductsUsed)
         {
-            if (config == null)
+            if (Config == null)
             {
-                config = Resources.Load<EconomyConfigAsset>("Configs/EconomyConfig");
-                if (config == null)
-                    config = ScriptableObject.CreateInstance<EconomyConfigAsset>();
+                throw new DataValidationException("EconomyConfigAsset not injected! ScoreCalculator requires DI container initialization.");
             }
 
+            var config = Config;
             double cellCount = gridWidth * gridHeight;
-
             double baseScore = cellCount * config.BaseScorePerCell;
             double idealTime = cellCount * config.IdealTimeFactor;
             double timeMultiplier = elapsedTime <= idealTime

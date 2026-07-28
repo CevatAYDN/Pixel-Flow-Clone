@@ -1271,7 +1271,8 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void ScoreCalculator_MaximumHintPenalty_CapsAtZero()
         {
-            var (score, stars) = ScoreCalculator.Calculate(
+            var scoreCalc = _ctx.Context.Container.Resolve<IScoreCalculator>();
+            var (score, stars) = scoreCalc.Calculate(
                 gridWidth: 5, gridHeight: 5,
                 elapsedTime: 1f, hintsUsed: 15, totalHintsAvailable: 20, viaductsUsed: 3);
 
@@ -1284,7 +1285,8 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void ScoreCalculator_ZeroHintsWithinIdealTime_EarnsThreeStars()
         {
-            var (score, stars) = ScoreCalculator.Calculate(
+            var scoreCalc = _ctx.Context.Container.Resolve<IScoreCalculator>();
+            var (score, stars) = scoreCalc.Calculate(
                 gridWidth: 5, gridHeight: 5,
                 elapsedTime: 5f, hintsUsed: 0, totalHintsAvailable: 5, viaductsUsed: 0);
 
@@ -1296,7 +1298,8 @@ namespace PixelFlow.Editor.Tests
         [Test]
         public void ScoreCalculator_MinimumTimeMultiplier_IsTwentyFivePercent()
         {
-            var (score, stars) = ScoreCalculator.Calculate(
+            var scoreCalc = _ctx.Context.Container.Resolve<IScoreCalculator>();
+            var (score, stars) = scoreCalc.Calculate(
                 gridWidth: 5, gridHeight: 5,
                 elapsedTime: 200f, hintsUsed: 0, totalHintsAvailable: 5, viaductsUsed: 0);
 
@@ -1523,7 +1526,7 @@ namespace PixelFlow.Editor.Tests
             var keys = _ctx.Context.Container.Resolve<StorageKeysConfigAsset>();
             var manager = new Models.CloudSaveManager
             {
-                Adapter = new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter(prefs, keys),
+                Adapter = new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter(prefs),
                 Prefs = prefs,
                 Keys = keys
             };
@@ -1541,7 +1544,7 @@ namespace PixelFlow.Editor.Tests
             var keys = _ctx.Context.Container.Resolve<StorageKeysConfigAsset>();
             var manager = new Models.CloudSaveManager
             {
-                Adapter = new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter(prefs, keys),
+                Adapter = new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter(prefs),
                 Prefs = prefs,
                 Keys = keys
             };
@@ -1663,7 +1666,7 @@ namespace PixelFlow.Editor.Tests
             GridStateSerializer.Save(grid, session, level, prefs);
             var manager = new CloudSaveManager
             {
-                Adapter = new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter(prefs, keys),
+                Adapter = new PixelFlow.Services.GlobalRelease.EncryptedCloudSaveAdapter(prefs),
                 Prefs = prefs,
                 Keys = keys
             };

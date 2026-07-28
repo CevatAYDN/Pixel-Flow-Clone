@@ -185,7 +185,27 @@ namespace PixelFlow.Services
             if (_isPointerDown && isMouse != _isPointerMouse)
                 return GridInputResult.None;
 
-            Vector3 worldPos = cam.ScreenToWorldPoint(screenPos);
+            Vector3 worldPos;
+            if (cam.orthographic)
+            {
+                Vector3 screenPosWithZ = new Vector3(screenPos.x, screenPos.y, Mathf.Abs(cam.transform.position.z));
+                worldPos = cam.ScreenToWorldPoint(screenPosWithZ);
+            }
+            else
+            {
+                Ray ray = cam.ScreenPointToRay(screenPos);
+                Plane groundPlane = new Plane(Vector3.back, Vector3.zero);
+                if (groundPlane.Raycast(ray, out float distance))
+                {
+                    worldPos = ray.GetPoint(distance);
+                }
+                else
+                {
+                    Vector3 screenPosWithZ = new Vector3(screenPos.x, screenPos.y, 10f);
+                    worldPos = cam.ScreenToWorldPoint(screenPosWithZ);
+                }
+            }
+
             int gx = Mathf.RoundToInt(worldPos.x);
             int gy = Mathf.RoundToInt(worldPos.y);
 
@@ -201,6 +221,7 @@ namespace PixelFlow.Services
 
                 if (insideGrid)
                 {
+                    Nexus.Core.Services.NexusLog.Info("GridInputService", "PointerDown", "?", $"Raycast hit grid cell ({gx}, {gy}) from screen position {screenPos}");
                     return new GridInputResult
                     {
                         HasEvent = true,

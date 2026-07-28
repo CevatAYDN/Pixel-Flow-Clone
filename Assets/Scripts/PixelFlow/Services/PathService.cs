@@ -190,12 +190,26 @@ namespace PixelFlow.Services
         {
             var path = GridModel.Paths[color];
             LoggerService?.Log($"[PixelFlow.PathService] ClearRange for color {color} from index {path.Count - 1} down to {stopIndex + 1}.");
+            
+            // Collect cells to clear first (avoid modifying list while iterating)
+            _clearRangeBuffer.Clear();
             for (int i = path.Count - 1; i > stopIndex; i--)
             {
-                ClearCell(color, path[i]);
-                path.RemoveAt(i);
+                _clearRangeBuffer.Add(path[i]);
             }
+            
+            // Clear cells
+            for (int i = 0; i < _clearRangeBuffer.Count; i++)
+            {
+                ClearCell(color, _clearRangeBuffer[i]);
+            }
+            
+            // Remove range in one operation (more efficient than multiple RemoveAt)
+            path.RemoveRange(stopIndex + 1, _clearRangeBuffer.Count);
         }
+
+        // Reusable buffer for ClearRange to avoid allocation
+        private readonly List<Vector2Int> _clearRangeBuffer = new List<Vector2Int>();
 
         /// <summary>
         /// Tüm renklere ait tüm yolları temizler.

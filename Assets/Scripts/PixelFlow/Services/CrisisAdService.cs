@@ -44,8 +44,8 @@ namespace PixelFlow.Services
             }
         }
 
-        private int ConfigMaxRetries => ResolvedConfig.MaxRetriesBeforeInterstitial;
-        protected int ConfigMinLevel => ResolvedConfig.MinLevelForInterstitial;
+        private int ConfigMaxRetries => Config?.MaxRetriesBeforeInterstitial ?? 3;
+        protected int ConfigMinLevel => Config?.MinLevelForInterstitial ?? 5;
 
         public int RetryCount
         {

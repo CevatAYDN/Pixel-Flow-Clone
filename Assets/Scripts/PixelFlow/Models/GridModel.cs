@@ -89,6 +89,7 @@ namespace PixelFlow.Models
         ObservableProperty<Vector2Int> LastCrashPosition { get; }
         ObservableProperty<ColorType> CrashColorA { get; }
         ObservableProperty<ColorType> CrashColorB { get; }
+        ObservableProperty<bool> IsViaductPlacementActive { get; }
 
         void Initialize(int width, int height);
         CellData GetCell(int x, int y);
@@ -116,6 +117,7 @@ namespace PixelFlow.Models
         public ObservableProperty<Vector2Int> LastCrashPosition { get; } = new(new Vector2Int(-1, -1));
         public ObservableProperty<ColorType> CrashColorA { get; } = new(ColorType.None);
         public ObservableProperty<ColorType> CrashColorB { get; } = new(ColorType.None);
+        public ObservableProperty<bool> IsViaductPlacementActive { get; } = new(false);
 
         // Pool for CellData reuse across grid reinitialization
         private CellData[] _cellDataPool;
@@ -160,6 +162,7 @@ namespace PixelFlow.Models
             ActiveColor.Value = ColorType.None;
             LastPosition.Value = new Vector2Int(-1, -1);
             LastCrashPosition.Value = new Vector2Int(-1, -1);
+            IsViaductPlacementActive.Value = false;
         }
 
         public ValueTask OnBind(CancellationToken ct) => default;

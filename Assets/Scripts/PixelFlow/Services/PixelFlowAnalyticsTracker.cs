@@ -25,19 +25,34 @@ namespace PixelFlow.Services
         {
             if (SignalBus != null)
             {
-                SignalBus.Subscribe<LoadLevelSignal>(OnLoadLevel);
-                SignalBus.Subscribe<LevelCompletedSignal>(OnLevelCompleted);
-                SignalBus.Subscribe<LevelFailedSignal>(OnLevelFailed);
-                SignalBus.Subscribe<UndoSignal>(OnUndo);
-                SignalBus.Subscribe<SkinUnlockedSignal>(OnSkinUnlocked);
-                SignalBus.Subscribe<RushHourStartedSignal>(OnEventJoin);
+                _loadLevelSub = SignalBus.Subscribe<LoadLevelSignal>(OnLoadLevel);
+                _levelCompletedSub = SignalBus.Subscribe<LevelCompletedSignal>(OnLevelCompleted);
+                _levelFailedSub = SignalBus.Subscribe<LevelFailedSignal>(OnLevelFailed);
+                _undoSub = SignalBus.Subscribe<UndoSignal>(OnUndo);
+                _skinUnlockedSub = SignalBus.Subscribe<SkinUnlockedSignal>(OnSkinUnlocked);
+                _rushHourSub = SignalBus.Subscribe<RushHourStartedSignal>(OnEventJoin);
             }
 
             TrackEvent("session_start", new Dictionary<string, object> { { "timestamp", System.DateTime.UtcNow.Ticks } });
             return default;
         }
 
-        public void OnDispose() { }
+        public void OnDispose()
+        {
+            _loadLevelSub?.Dispose();
+            _levelCompletedSub?.Dispose();
+            _levelFailedSub?.Dispose();
+            _undoSub?.Dispose();
+            _skinUnlockedSub?.Dispose();
+            _rushHourSub?.Dispose();
+        }
+
+        private ISignalSubscription _loadLevelSub;
+        private ISignalSubscription _levelCompletedSub;
+        private ISignalSubscription _levelFailedSub;
+        private ISignalSubscription _undoSub;
+        private ISignalSubscription _skinUnlockedSub;
+        private ISignalSubscription _rushHourSub;
 
         private void OnLoadLevel(LoadLevelSignal sig)
         {

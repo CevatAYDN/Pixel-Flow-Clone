@@ -138,65 +138,43 @@ namespace PixelFlow.Views
             var state = GameStateModel.CurrentState;
             if (state != GameState.Playing && state != GameState.Paused) return;
 
-            Vector2Int? targetCell = null;
-            var grid = GridModel?.Grid;
+            if (GameSessionModel != null && GameSessionModel.AvailableViaducts <= 0)
+            {
+                string noViaductsMsg = LocalizationService?.GetString("crisis_viaduct_exhausted_msg") ?? "Kullanılabilir viyadük yok!";
+                View?.ShowCrashToast(noViaductsMsg);
+                return;
+            }
 
+            var grid = GridModel?.Grid;
             if (grid != null && GridModel != null)
             {
-                // Priority 1: Active crash position if valid and cell lacks a Viaduct
+                // Active crash position: place immediately on crash cell
                 var crashPos = GridModel.LastCrashPosition.Value;
                 if (crashPos.x >= 0 && crashPos.y >= 0 && crashPos.x < GridModel.Width && crashPos.y < GridModel.Height)
                 {
                     var crashCell = grid[crashPos.x, crashPos.y];
                     if (crashCell != null && crashCell.State != CellState.Node && !crashCell.HasViaduct)
                     {
-                        targetCell = crashPos;
+                        LoggerService?.Log($"[PixelFlow.HUDMediator] Placing Viaduct on active crash cell {crashPos}.");
+                        SignalBus.Fire(new PlaceViaductSignal { Position = crashPos });
+                        return;
                     }
                 }
 
-                // Priority 2: Last touched/drawn path cell if valid and lacks a Viaduct
-                if (!targetCell.HasValue)
+                // Otherwise: Toggle Viaduct placement mode so player can tap ANY cell on the grid
+                bool newActiveState = !GridModel.IsViaductPlacementActive.Value;
+                GridModel.IsViaductPlacementActive.Value = newActiveState;
+
+                if (newActiveState)
                 {
-                    var lastPos = GridModel.LastPosition.Value;
-                    if (lastPos.x >= 0 && lastPos.y >= 0 && lastPos.x < GridModel.Width && lastPos.y < GridModel.Height)
-                    {
-                        var lastCell = grid[lastPos.x, lastPos.y];
-                        if (lastCell != null && lastCell.State != CellState.Node && !lastCell.HasViaduct && lastCell.PathColorCount > 0)
-                        {
-                            targetCell = lastPos;
-                        }
-                    }
+                    LoggerService?.Log("[PixelFlow.HUDMediator] Viaduct placement mode ACTIVATED. Awaiting player grid cell tap.");
+                    string selectCellMsg = LocalizationService?.GetString("select_viaduct_cell_toast", "Viyadük koymak istediğiniz hücreye dokunun!") ?? "Viyadük koymak istediğiniz hücreye dokunun!";
+                    View?.ShowCrashToast(selectCellMsg);
                 }
-
-                // Priority 3: First drawn path cell on the grid that lacks a Viaduct
-                if (!targetCell.HasValue)
+                else
                 {
-                    for (int x = 0; x < GridModel.Width; x++)
-                    {
-                        for (int y = 0; y < GridModel.Height; y++)
-                        {
-                            var cell = grid[x, y];
-                            if (cell != null && cell.State != CellState.Node && !cell.HasViaduct && cell.PathColorCount > 0)
-                            {
-                                targetCell = new Vector2Int(x, y);
-                                break;
-                            }
-                        }
-                        if (targetCell.HasValue) break;
-                    }
+                    LoggerService?.Log("[PixelFlow.HUDMediator] Viaduct placement mode DEACTIVATED.");
                 }
-            }
-
-            if (targetCell.HasValue)
-            {
-                LoggerService?.Log($"[PixelFlow.HUDMediator] Placing Viaduct on target cell {targetCell.Value}.");
-                SignalBus.Fire(new PlaceViaductSignal { Position = targetCell.Value });
-            }
-            else
-            {
-                LoggerService?.Log("[PixelFlow.HUDMediator] No path cell found for Viaduct. Showing toast info.");
-                string msg = LocalizationService.GetString("intersection_warning_toast_msg") ?? "Kesişme! Viyadük gerekiyor!";
-                View.ShowCrashToast(msg);
             }
         }
 

@@ -251,7 +251,7 @@ namespace PixelFlow.Editor.Tests
             var param = new DifficultyParams(6, 6, 2, 1, false);
             var level = _generator.Generate(param, maxAttempts: 5);
 
-            int score = ProceduralLevelGenerator.CalculateDifficultyScore(level, param);
+            int score = _generator.CalculateDifficultyScore(level, param);
             Assert.Greater(score, 0, "Zorluk skoru pozitif olmalı");
         }
 
