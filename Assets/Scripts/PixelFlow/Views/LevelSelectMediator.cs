@@ -77,8 +77,11 @@ namespace PixelFlow.Views
             if (unlocked < 1) unlocked = 1;
 
             // Açılan seviyeler + birkaç kilitli önizleme; düzgün ızgara için 4'ün katına yuvarla.
-            int lockedPreview = Config != null ? Config.LevelSelectLockedPreviewCount : 4;
-            int minLevels = Config != null ? Config.LevelSelectMinLevelsShown : 12;
+            if (Config == null)
+                throw new DataValidationException("[LevelSelectMediator] GameConfig is not injected. Bind GameConfig in GameContextLifecycle.");
+
+            int lockedPreview = Config.LevelSelectLockedPreviewCount;
+            int minLevels = Config.LevelSelectMinLevelsShown;
             int total = Mathf.Max(minLevels, unlocked + lockedPreview);
             int remainder = total % 4;
             if (remainder != 0) total += (4 - remainder);

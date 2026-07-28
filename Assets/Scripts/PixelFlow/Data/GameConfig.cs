@@ -23,7 +23,7 @@ namespace PixelFlow.Data
         [Tooltip("Araç spawn aralığı (saniye)")]
         public float SpawnInterval = 1.2f;
 
-        [Tooltip("Frame başına maksimum ilerleme miktarı")]
+        [Tooltip("Sabit zaman adımı başına maksimum araç ilerlemesi (grid birimi).\nAraç hızı × fixedTimeStep = normal ilerleme; bu cap aşırı gecikmelerde\nteleportasyonu önler. Mevcut: 3 hız × 0.0167s = 0.05/adım, cap=0.25 → güvenli.")]
         public float MaxProgressPerFrame = 0.25f;
 
         [Tooltip("Simülasyon güvenlik zaman aşımı (saniye) — darboğazda kilitlenmeyi önler")]
@@ -114,6 +114,12 @@ namespace PixelFlow.Data
         [Header("=== Procedural Audio ===")]
         [Tooltip("Prosedürel ses örnekleme hızı")]
         public int AudioSampleRate = 44100;
+        [Tooltip("Prosedürel fallback ses temel frekansı (Hz) — A4 notası varsayılan")]
+        public float AudioBaseFrequencyHz = 440f;
+
+        [Header("=== HUD Timer ===")]
+        [Tooltip("Bu saniyenin altında timer rengi kırmızıya döner (düşük süre uyarısı)")]
+        public float LowTimerThresholdSeconds = 3f;
 
         [Header("=== Level Select ===")]
         [Tooltip("Seviye seçim ekranında kilitli seviyelerden kaç tanesinin önden gösterileceği")]
@@ -164,11 +170,11 @@ namespace PixelFlow.Data
         public int DefaultTickets = 0;
 
         [Header("=== Vehicle Simulation (Advanced) ===")]
-        [Tooltip("Sabit zaman adımı (saniye) — fizik tutarlılığı için")]
+        [Tooltip("Sabit zaman adımı (saniye) — fizik tutarlılığı için.\nAccumulator en fazla adım×5 biriktirir (<12fps'te simülasyon yavaşlar).\nHer adım: ObstacleService.Tick + VehicleMovementService.UpdateMovement.")]
         public float FixedTimeStep = 1f / 60f;
 
-        [Tooltip("Spawn kontrolü frame atlama aralığı (performans optimizasyonu)")]
-        public int SpawnCheckInterval = 10;
+        [Tooltip("Spawn kontrolü frame atlama aralığı (performans optimizasyonu).\nAktif araç yokken spawn kontrolü bu kadar frame'de 1 çalışır.\nVehicleSimulator aktif renk cache yenileme aralığı ile eşleştirildi.")]
+        public int SpawnCheckInterval = 15;
 
         [Tooltip("Araç hız rastgele varyasyon aralığı (+/-)")]
         public float SpeedVariationRange = 0.3f;
@@ -224,6 +230,10 @@ namespace PixelFlow.Data
 
         [Tooltip("Dinamik solver stratejisine geçiş için yüksek zorluk eşiği")]
         public int HighDifficultySolverThreshold = 40;
+
+        [Header("=== Skins Resource Path ===")]
+        [Tooltip("Resources klasörü altında VehicleSkinConfig ve StopSkinConfig varlıklarının arandığı yol. Boş bırakılırsa DataValidationException fırlatılır.")]
+        public string SkinsResourcePath = "Configs/Skins";
 
         [Header("=== Vehicle Visual Pool ===")]
         [Tooltip("Önceden tahsis edilen küp (cube) sayısı")]

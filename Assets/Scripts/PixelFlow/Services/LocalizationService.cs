@@ -18,6 +18,8 @@ namespace PixelFlow.Services
     {
         [Inject, OptionalInject] public ILoggerService LoggerService { get; set; }
         [Inject, OptionalInject] public PixelFlow.Data.GameConfig Config { get; set; }
+        [Inject, OptionalInject] public IPlayerPrefsService PlayerPrefsService { get; set; }
+        [Inject, OptionalInject] public StorageKeysConfigAsset StorageKeysConfig { get; set; }
         [Inject] public ILocalizationTableProvider LocalizationTableProvider { get; set; }
 
         private string _currentLanguage = "en";
@@ -27,9 +29,16 @@ namespace PixelFlow.Services
         public bool IsRTL => RtlUtility.IsRtlLanguage(_currentLanguage);
         public event Action<string> OnLanguageChanged;
 
+        private string LanguageStorageKey => StorageKeysConfig != null
+            ? StorageKeysConfig.KeySelectedLanguage
+            : throw new DataValidationException("[LocalizationService] StorageKeysConfigAsset is not injected. Bind StorageKeysConfigAsset in GameContextLifecycle.");
+
         public ValueTask InitializeAsync(CancellationToken ct)
         {
-            string savedLang = PlayerPrefs.GetString("SelectedLanguage", "");
+            if (PlayerPrefsService == null)
+                throw new DataValidationException("[LocalizationService] IPlayerPrefsService is not injected. Bind IPlayerPrefsService in GameContextLifecycle.");
+
+            string savedLang = PlayerPrefsService.GetString(LanguageStorageKey, "");
             if (string.IsNullOrEmpty(savedLang))
             {
                 savedLang = "tr";
@@ -44,9 +53,12 @@ namespace PixelFlow.Services
         public void SetLanguage(string langCode)
         {
             if (string.IsNullOrEmpty(langCode)) return;
+            if (PlayerPrefsService == null)
+                throw new DataValidationException("[LocalizationService] IPlayerPrefsService is not injected. Bind IPlayerPrefsService in GameContextLifecycle.");
+
             _currentLanguage = langCode.ToLowerInvariant();
-            PlayerPrefs.SetString("SelectedLanguage", _currentLanguage);
-            PlayerPrefs.Save();
+            PlayerPrefsService.SetString(LanguageStorageKey, _currentLanguage);
+            PlayerPrefsService.Save();
             LoadLocalizationTable(_currentLanguage);
             OnLanguageChanged?.Invoke(_currentLanguage);
         }

@@ -91,6 +91,11 @@ namespace PixelFlow.Services
         private readonly Dictionary<Vector2Int, List<VehicleInstance>> _cellOccupancy = new Dictionary<Vector2Int, List<VehicleInstance>>();
         private readonly List<List<VehicleInstance>> _occupancyListPool = new List<List<VehicleInstance>>();
         
+        // PERFORMANCE: Her frame AllColors döngüsünden kaçınmak için aktif renk cache'i
+        private readonly HashSet<ColorType> _activeConnectedColors = new HashSet<ColorType>();
+        private int _activeColorCacheCounter = 0;
+        private const int ActiveColorRefreshInterval = 15; // 15 frame'de bir yenile (~250ms @60fps). Keep in sync with GameConfig.SpawnCheckInterval
+
         // Active vehicles and spawn timers
         private readonly List<VehicleInstance> _activeVehicles = new List<VehicleInstance>();
         private readonly Dictionary<ColorType, float> _spawnTimers = new Dictionary<ColorType, float>();
@@ -101,32 +106,19 @@ namespace PixelFlow.Services
 
         private void CacheConfigValues()
         {
-            if (Config != null)
-            {
-                _fixedTimeStep = Config.FixedTimeStep > 0f ? Config.FixedTimeStep : (1f / 60f);
-                _vehicleSpeed = Config.VehicleSpeed;
-                _spawnInterval = Config.SpawnInterval;
-                _spawnCheckInterval = Config.SpawnCheckInterval;
-                _maxSimulationSafetyDuration = Config.MaxSimulationSafetyDuration;
-                _viaductOverZOffset = Config.ViaductOverZOffset;
-                _viaductUnderZOffset = Config.ViaductUnderZOffset;
-                _normalZOffset = Config.NormalZOffset;
-                _collisionDistance = Config.CollisionDistance;
-                _speedVariationRange = Config.SpeedVariationRange;
-            }
-            else
-            {
-                _fixedTimeStep = 1f / 60f;
-                _vehicleSpeed = 2f;
-                _spawnInterval = 0.5f;
-                _spawnCheckInterval = 1;
-                _maxSimulationSafetyDuration = 30f;
-                _viaductOverZOffset = -0.5f;
-                _viaductUnderZOffset = -0.1f;
-                _normalZOffset = -0.2f;
-                _collisionDistance = 0.4f;
-                _speedVariationRange = 0.1f;
-            }
+            if (Config == null)
+                throw new DataValidationException("[VehicleSimulator] GameConfig is not injected. Bind GameConfig in GameContextLifecycle. Zero-Silent-Fallback policy forbids magic number defaults.");
+
+            _fixedTimeStep = Config.FixedTimeStep > 0f ? Config.FixedTimeStep : (1f / 60f);
+            _vehicleSpeed = Config.VehicleSpeed;
+            _spawnInterval = Config.SpawnInterval;
+            _spawnCheckInterval = Config.SpawnCheckInterval;
+            _maxSimulationSafetyDuration = Config.MaxSimulationSafetyDuration;
+            _viaductOverZOffset = Config.ViaductOverZOffset;
+            _viaductUnderZOffset = Config.ViaductUnderZOffset;
+            _normalZOffset = Config.NormalZOffset;
+            _collisionDistance = Config.CollisionDistance;
+            _speedVariationRange = Config.SpeedVariationRange;
         }
 
         public ValueTask InitializeAsync(CancellationToken ct)
@@ -298,7 +290,8 @@ namespace PixelFlow.Services
             UpdateSpawning(deltaTime);
 
             // Remove vehicles whose path has been modified by the player
-            for (int i = _activeVehicles.Count - 1; i >= 0; i--)
+            int vehicleCount = _activeVehicles.Count;
+            for (int i = vehicleCount - 1; i >= 0; i--)
             {
                 if (IsVehiclePathStale(_activeVehicles[i]))
                 {
@@ -312,7 +305,7 @@ namespace PixelFlow.Services
                 }
             }
             
-            if (state == GameState.Playing || state == GameState.Simulating)
+            if ((state == GameState.Playing || state == GameState.Simulating) && _activeVehicles.Count > 1)
             {
                 UpdateCollisionDetection();
             }
@@ -334,29 +327,71 @@ namespace PixelFlow.Services
             }
             _spawnSkipCounter = 0;
 
-            for (int i = 0; i < AllColors.Length; i++)
+            // PERFORMANCE: Aktif renk cache'ini periyodik olarak yenile
+            // Her frame tüm renkleri (7+) IsColorConnected ile kontrol etmek yerine,
+            // sadece cache'teki renkler üzerinde spawn kontrolü yapılır.
+            _activeColorCacheCounter++;
+            if (_activeColorCacheCounter >= ActiveColorRefreshInterval)
             {
-                var color = AllColors[i];
-                if (color == ColorType.None) continue;
+                _activeColorCacheCounter = 0;
+                RefreshActiveColors();
+            }
 
-                if (IsColorConnected(color))
+            foreach (var color in _activeConnectedColors)
+            {
+                float spawnInterval = _spawnInterval;
+
+                // İlk spawn hemen olsun (timer 0'da başla)
+                if (!_spawnTimers.ContainsKey(color))
                 {
-                    float spawnInterval = _spawnInterval;
-                    if (_spawnTimers[color] == 0f && _spawnTimers[color] != spawnInterval)
-                    {
-                        _spawnTimers[color] = spawnInterval; // Spawn first vehicle immediately
-                    }
-
-                    _spawnTimers[color] += deltaTime;
-                    if (_spawnTimers[color] >= spawnInterval)
-                    {
-                        _spawnTimers[color] = 0f;
-                        SpawnVehicle(color);
-                    }
+                    _spawnTimers[color] = spawnInterval;
                 }
-                else
+
+                _spawnTimers[color] += deltaTime;
+                if (_spawnTimers[color] >= spawnInterval)
                 {
                     _spawnTimers[color] = 0f;
+                    SpawnVehicle(color);
+                }
+            }
+
+            // Eskiden kullanılıp artık bağlı olmayan renklerin timer'larını temizle
+            if (_spawnTimers.Count > _activeConnectedColors.Count * 2)
+            {
+                // Sadece ara sıra temizlik yap (GC koruması)
+                var staleKeys = new List<ColorType>();
+                foreach (var kvp in _spawnTimers)
+                {
+                    if (!_activeConnectedColors.Contains(kvp.Key))
+                        staleKeys.Add(kvp.Key);
+                }
+                foreach (var key in staleKeys)
+                    _spawnTimers.Remove(key);
+            }
+        }
+
+        /// <summary>
+        /// PERFORMANCE: Hangi renklerin bağlı (endpoint'leri eşleşen) path'e sahip
+        /// olduğunu belirler ve cache'ler. Her ActiveColorRefreshInterval frame'de
+        /// bir çağrılır — her frame AllColors + IsColorConnected döngüsü yerine
+        /// sadece cache'teki renkler taranır.
+        /// IsColorConnected çağrısı _cachedEndpoints'i de doldurur, böylece
+        /// sonraki spawn'larda tekrar kontrol gerekmez.
+        /// </summary>
+        private void RefreshActiveColors()
+        {
+            _activeConnectedColors.Clear();
+            if (GridModel?.Paths == null) return;
+
+            foreach (var kvp in GridModel.Paths)
+            {
+                if (kvp.Key != ColorType.None && kvp.Value != null && kvp.Value.Count >= 2)
+                {
+                    // IsColorConnected endpoint eşleşmesini doğrular ve _cachedEndpoints'i doldurur
+                    if (IsColorConnected(kvp.Key))
+                    {
+                        _activeConnectedColors.Add(kvp.Key);
+                    }
                 }
             }
         }
@@ -454,6 +489,7 @@ namespace PixelFlow.Services
             var inst = new VehicleInstance
             {
                 Color = color,
+                AnimationOffset = UnityEngine.Random.Range(0f, 100f),
                 Style = vehicleStyle,
                 // Path'in KOPYASINI al — referans değil!
                 // Aksi halde kullanıcı çizimi değiştirince daha önce spawnlanmış
@@ -619,7 +655,7 @@ namespace PixelFlow.Services
             Vector2Int gridPos2 = new Vector2Int(Mathf.RoundToInt(v2.CurrentPosition.x), Mathf.RoundToInt(v2.CurrentPosition.y));
 
             bool sameCell = gridPos1 == gridPos2;
-            float collisionDist = Mathf.Max(Config != null ? Config.CollisionDistance : 0.75f, 0.75f);
+            float collisionDist = Config != null ? Config.CollisionDistance : throw new DataValidationException("[VehicleSimulator] GameConfig.CollisionDistance erişilemedi!");
             float sqrDist = (v1.CurrentPosition - v2.CurrentPosition).sqrMagnitude;
 
             if (sameCell || sqrDist < collisionDist * collisionDist)

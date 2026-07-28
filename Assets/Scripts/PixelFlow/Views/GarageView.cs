@@ -25,6 +25,7 @@ namespace PixelFlow.Views
         public event Action<StopSkinConfig> OnEquipStopSkinClicked;
 
         [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject] public ThemePaletteAsset ThemePalette { get; set; }
 
         protected override void OnBind(IContext context)
         {
@@ -84,7 +85,9 @@ namespace PixelFlow.Views
                 closeRect.sizeDelta = new Vector2(44f, 44f);
 
                 var img = closeGo.GetComponent<Image>();
-                img.color = new Color(0.94f, 0.27f, 0.27f); // Vibrant Red #EF4444
+                if (ThemePalette == null)
+                    throw new DataValidationException("[GarageView] ThemePaletteAsset is not injected. Bind ThemePaletteAsset in GameContextLifecycle.");
+                img.color = ThemePalette.GarageCloseBtnBg;
 
                 var txtGo = new GameObject("Text", typeof(RectTransform));
                 txtGo.transform.SetParent(closeGo.transform, false);
@@ -172,17 +175,11 @@ namespace PixelFlow.Views
             return sb.ToString().Trim();
         }
 
-        private static Color GetColorFamilyBg(ColorType color)
+        private Color GetColorFamilyBg(ColorType color)
         {
-            return color switch
-            {
-                ColorType.Red => new Color(0.99f, 0.88f, 0.88f),
-                ColorType.Blue => new Color(0.88f, 0.94f, 0.99f),
-                ColorType.Green => new Color(0.88f, 0.99f, 0.92f),
-                ColorType.Yellow => new Color(0.99f, 0.97f, 0.82f),
-                ColorType.Purple => new Color(0.94f, 0.88f, 0.99f),
-                _ => new Color(0.92f, 0.95f, 0.98f)
-            };
+            if (ThemePalette == null)
+                throw new DataValidationException("[GarageView] ThemePaletteAsset is not injected. Bind ThemePaletteAsset in GameContextLifecycle.");
+            return ThemePalette.GetGarageColorFamilyBg(color);
         }
 
         private void EnsureLayoutGroup(Transform container)
@@ -267,7 +264,7 @@ namespace PixelFlow.Views
                 nameTmp.fontSize = 11;
                 nameTmp.fontStyle = FontStyles.Bold;
                 nameTmp.alignment = TextAlignmentOptions.Center;
-                nameTmp.color = new Color(0.06f, 0.09f, 0.16f); // #0F172A Dark Slate
+                nameTmp.color = ThemePalette.GarageSkinNameText;
                 nameTmp.text = SanitizeText(skin.DisplayName);
                 var nameRect = nameObj.GetComponent<RectTransform>();
                 nameRect.anchorMin = new Vector2(0.04f, 0.22f);
@@ -278,7 +275,8 @@ namespace PixelFlow.Views
                 var badgeObj = new GameObject("StatusBadge", typeof(RectTransform), typeof(Image));
                 badgeObj.transform.SetParent(itemObj.transform, false);
                 var badgeImg = badgeObj.GetComponent<Image>();
-                badgeImg.color = equipped ? new Color(0.92f, 0.99f, 0.95f) : (unlocked ? new Color(0.94f, 0.96f, 1f) : new Color(0.99f, 0.95f, 0.78f));
+                badgeImg.color = equipped ? ThemePalette.GarageBadgeBgEquipped
+                    : (unlocked ? ThemePalette.GarageBadgeBgUnlocked : ThemePalette.GarageBadgeBgLocked);
                 var badgeRect = badgeObj.GetComponent<RectTransform>();
                 badgeRect.anchorMin = new Vector2(0.06f, 0.04f);
                 badgeRect.anchorMax = new Vector2(0.94f, 0.20f);
@@ -290,7 +288,8 @@ namespace PixelFlow.Views
                 badgeTmp.fontSize = 10;
                 badgeTmp.fontStyle = FontStyles.Bold;
                 badgeTmp.alignment = TextAlignmentOptions.Center;
-                badgeTmp.color = equipped ? new Color(0.02f, 0.59f, 0.41f) : (unlocked ? new Color(0.14f, 0.38f, 0.92f) : new Color(0.7f, 0.35f, 0.05f));
+                badgeTmp.color = equipped ? ThemePalette.GarageBadgeTextEquipped
+                    : (unlocked ? ThemePalette.GarageBadgeTextUnlocked : ThemePalette.GarageBadgeTextLocked);
                 badgeTmp.text = equipped ? equippedLabel : (unlocked ? equipLabel : formatCoinCost(skin.UnlockCoinCost));
                 var badgeTxtRect = badgeTxtObj.GetComponent<RectTransform>();
                 badgeTxtRect.anchorMin = Vector2.zero;
@@ -362,7 +361,7 @@ namespace PixelFlow.Views
                 nameTmp.fontSize = 11;
                 nameTmp.fontStyle = FontStyles.Bold;
                 nameTmp.alignment = TextAlignmentOptions.Center;
-                nameTmp.color = new Color(0.06f, 0.09f, 0.16f);
+                nameTmp.color = ThemePalette.GarageSkinNameText;
                 nameTmp.text = SanitizeText(skin.DisplayName);
                 var nameRect = nameObj.GetComponent<RectTransform>();
                 nameRect.anchorMin = new Vector2(0.04f, 0.22f);
@@ -372,7 +371,8 @@ namespace PixelFlow.Views
                 var badgeObj = new GameObject("StatusBadge", typeof(RectTransform), typeof(Image));
                 badgeObj.transform.SetParent(itemObj.transform, false);
                 var badgeImg = badgeObj.GetComponent<Image>();
-                badgeImg.color = equipped ? new Color(0.92f, 0.99f, 0.95f) : (unlocked ? new Color(0.94f, 0.96f, 1f) : new Color(0.99f, 0.95f, 0.78f));
+                badgeImg.color = equipped ? ThemePalette.GarageBadgeBgEquipped
+                    : (unlocked ? ThemePalette.GarageBadgeBgUnlocked : ThemePalette.GarageBadgeBgLocked);
                 var badgeRect = badgeObj.GetComponent<RectTransform>();
                 badgeRect.anchorMin = new Vector2(0.06f, 0.04f);
                 badgeRect.anchorMax = new Vector2(0.94f, 0.20f);
@@ -384,7 +384,8 @@ namespace PixelFlow.Views
                 badgeTmp.fontSize = 10;
                 badgeTmp.fontStyle = FontStyles.Bold;
                 badgeTmp.alignment = TextAlignmentOptions.Center;
-                badgeTmp.color = equipped ? new Color(0.02f, 0.59f, 0.41f) : (unlocked ? new Color(0.14f, 0.38f, 0.92f) : new Color(0.7f, 0.35f, 0.05f));
+                badgeTmp.color = equipped ? ThemePalette.GarageBadgeTextEquipped
+                    : (unlocked ? ThemePalette.GarageBadgeTextUnlocked : ThemePalette.GarageBadgeTextLocked);
                 badgeTmp.text = equipped ? equippedLabel : (unlocked ? equipLabel : formatCoinCost(skin.UnlockCoinCost));
                 var badgeTxtRect = badgeTxtObj.GetComponent<RectTransform>();
                 badgeTxtRect.anchorMin = Vector2.zero;

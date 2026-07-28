@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using Nexus.Core;
+using PixelFlow.Data;
 using PixelFlow.Signals;
 
 namespace PixelFlow.Views
@@ -8,6 +9,8 @@ namespace PixelFlow.Views
     [Mediator(typeof(BloomFlashMediator))]
     public class BloomFlashView : View
     {
+        [Inject] public ThemePaletteAsset ThemePalette { get; set; }
+
         [SerializeField] private Image _flashImage;
         [SerializeField] private float _duration = 0.6f;
 
@@ -23,7 +26,7 @@ namespace PixelFlow.Views
             while (t < _duration)
             {
                 t += Time.deltaTime;
-                _flashImage.color = new Color(1f, 0.95f, 0.6f, Mathf.Lerp(0.7f, 0f, t / _duration));
+                _flashImage.color = ThemePalette.BloomFlashColor.WithAlpha(Mathf.Lerp(0.7f, 0f, t / _duration));
                 yield return null;
             }
         }

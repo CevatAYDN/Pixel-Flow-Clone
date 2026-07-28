@@ -48,8 +48,18 @@ namespace PixelFlow.Editor
 
             var saveCard = Card("💾 Kayıt Yönetimi");
             saveCard.Add(MakeBtn("Save PlayerPrefs", () => PlayerPrefs.Save()));
-            saveCard.Add(MakeBtn("Tüm Seviyeleri Aç", () => { PlayerPrefs.SetInt("UnlockedLevels", 999); PlayerPrefs.Save(); }));
-            saveCard.Add(MakeBtn("Progress Sıfırla", () => { PlayerPrefs.SetInt("UnlockedLevels", 1); PlayerPrefs.Save(); }));
+            saveCard.Add(MakeBtn("Tüm Seviyeleri Aç", () => {
+                var keys = Resources.Load<StorageKeysConfigAsset>("Configs/StorageKeysConfig");
+                string key = keys != null ? keys.KeyUnlockedLevels : "NT_UnlockedLevels";
+                PlayerPrefs.SetInt(key, 999);
+                PlayerPrefs.Save();
+            }));
+            saveCard.Add(MakeBtn("Progress Sıfırla", () => {
+                var keys = Resources.Load<StorageKeysConfigAsset>("Configs/StorageKeysConfig");
+                string key = keys != null ? keys.KeyUnlockedLevels : "NT_UnlockedLevels";
+                PlayerPrefs.SetInt(key, 1);
+                PlayerPrefs.Save();
+            }));
             saveCard.Add(MakeBtn("Tüm Kaydı Sil", () => { PlayerPrefs.DeleteAll(); PlayerPrefs.Save(); }));
             parent.Add(saveCard);
         }

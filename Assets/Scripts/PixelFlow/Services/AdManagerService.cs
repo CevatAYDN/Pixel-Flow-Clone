@@ -142,7 +142,8 @@ namespace PixelFlow.Services
 
         private bool ShouldShowInterstitial(int level)
         {
-            if (Config == null) return true;
+            if (Config == null)
+                throw new DataValidationException("[AdManagerService] GameConfig is not injected. Bind GameConfig in GameContextLifecycle. Zero-Silent-Fallback policy forbids silent ad gate bypass.");
 
             // First N levels no ads (game_plan.md §9.4)
             if (level <= Config.MinLevelForInterstitial)

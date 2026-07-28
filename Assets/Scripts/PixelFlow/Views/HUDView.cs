@@ -66,7 +66,7 @@ namespace PixelFlow.Views
         [Inject] public ISettingsModel SettingsModel { get; set; }
         [Inject] public GameConfig GameConfig { get; set; }
 
-        private readonly Color _goldPillBg = new Color(0.99f, 0.95f, 0.78f, 1f);
+
 
         public void SetupHUD()
         {
@@ -267,13 +267,19 @@ namespace PixelFlow.Views
             if (_levelTitleText != null)
                 _levelTitleText.color = colors.CameraBackground;
             if (_hintButton != null && _hintButton.GetComponent<Image>() != null)
-                _hintButton.GetComponent<Image>().color = _goldPillBg;
+                _hintButton.GetComponent<Image>().color = ThemePalette.HudGoldPillBg;
         }
 
         private void UpdateTimerColor(float remaining)
         {
             if (_timerText == null) return;
-            _timerText.color = remaining > 3f ? Color.white : Color.Lerp(Color.red, Color.yellow, remaining / 3f);
+            float threshold = GameConfig != null ? GameConfig.LowTimerThresholdSeconds
+                : throw new DataValidationException("[HUDView] GameConfig.LowTimerThresholdSeconds erişilemedi!");
+            if (ThemePalette == null)
+                throw new DataValidationException("[HUDView] ThemePaletteAsset is not injected. Bind ThemePaletteAsset in GameContextLifecycle.");
+            _timerText.color = remaining > threshold
+                ? Color.white
+                : Color.Lerp(ThemePalette.HudTimerLowStart, ThemePalette.HudTimerLowEnd, remaining / threshold);
         }
 
         private static void SetPanelVisible(GameObject panel, bool visible)

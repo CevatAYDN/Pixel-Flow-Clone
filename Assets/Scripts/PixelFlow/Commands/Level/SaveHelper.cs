@@ -1,5 +1,6 @@
 using System;
 using Nexus.Core.Services;
+using PixelFlow.Data;
 using PixelFlow.Models;
 using PixelFlow.Services;
 
@@ -27,10 +28,11 @@ namespace PixelFlow.Commands
             IGridModel grid,
             IGameSessionModel session,
             ILevelModel level,
-            IPlayerPrefsService prefs)
+            IPlayerPrefsService prefs,
+            StorageKeysConfigAsset storageKeys = null)
         {
             if (throttler == null) return;
-            throttler.TryRequestSave(() => GridStateSerializer.Save(grid, session, level, prefs));
+            throttler.TryRequestSave(() => GridStateSerializer.Save(grid, session, level, prefs, storageKeys));
         }
     }
 }

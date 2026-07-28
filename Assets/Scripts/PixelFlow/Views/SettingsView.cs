@@ -2,6 +2,7 @@ using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using PixelFlow.Data;
 using PixelFlow.Models;
 using Nexus.Core;
 using Nexus.Core.Services;
@@ -44,6 +45,7 @@ namespace PixelFlow.Views
         public event Action<string> OnLanguageSelected;
 
         [Inject] public ILoggerService LoggerService { get; set; }
+        [Inject] public Data.ThemePaletteAsset ThemePalette { get; set; }
 
         public void AutoWireUIReferences()
         {
@@ -96,7 +98,9 @@ namespace PixelFlow.Views
                 closeRect.sizeDelta = new Vector2(44f, 44f);
 
                 var img = closeGo.GetComponent<Image>();
-                img.color = new Color(0.94f, 0.27f, 0.27f); // #EF4444
+                if (ThemePalette == null)
+                    throw new DataValidationException("[SettingsView] ThemePaletteAsset is not injected. Bind ThemePaletteAsset in GameContextLifecycle.");
+                img.color = ThemePalette.SettingsCloseBtnBg;
 
                 var txtGo = new GameObject("Text", typeof(RectTransform));
                 txtGo.transform.SetParent(closeGo.transform, false);
@@ -151,11 +155,13 @@ namespace PixelFlow.Views
             SetButtonActive(_colorBlindTritanButton, mode == ColorBlindMode.Tritanopia);
         }
 
-        private static void SetButtonActive(Button btn, bool active)
+        private void SetButtonActive(Button btn, bool active)
         {
             if (btn == null) return;
+            if (ThemePalette == null)
+                throw new DataValidationException("[SettingsView] ThemePaletteAsset is not injected. Bind ThemePaletteAsset in GameContextLifecycle.");
             var img = btn.GetComponent<Image>();
-            if (img != null) img.color = active ? new Color(0.2f, 0.6f, 1f) : new Color(0.2f, 0.2f, 0.25f);
+            if (img != null) img.color = active ? ThemePalette.SettingsButtonActive : ThemePalette.SettingsButtonInactive;
         }
 
         private void LogCanvasGroupDiagnostics()

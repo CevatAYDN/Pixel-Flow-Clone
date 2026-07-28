@@ -117,6 +117,96 @@ namespace PixelFlow.Data
             Icon = new Color(0.85f, 0.85f, 0.90f, 1f)
         };
 
+        [Header("=== LevelSelect Box Colors ===")]
+        [Tooltip("Tamamlanan seviye kutusu arka planı (#ECFDF5 açık mint)")]
+        public Color LevelSelectCompletedBox = new Color(0.925f, 0.992f, 0.957f);
+        [Tooltip("Kilitli olmayan seviye kutusu arka planı (#FFFFFF beyaz)")]
+        public Color LevelSelectUnlockedBox = new Color(1f, 1f, 1f);
+        [Tooltip("Kilitli seviye kutusu arka planı (#F1F5F9 açık gri)")]
+        public Color LevelSelectLockedBox = new Color(0.945f, 0.961f, 0.976f);
+        [Tooltip("Tamamlanan seviye metin rengi (#059669 yeşil)")]
+        public Color LevelSelectCompletedText = new Color(0.02f, 0.59f, 0.41f);
+        [Tooltip("Kilitli olmayan seviye metin rengi (#334155 slate)")]
+        public Color LevelSelectUnlockedText = new Color(0.20f, 0.25f, 0.33f);
+        [Tooltip("Kilitli seviye metin rengi (#94A3B8 muted slate)")]
+        public Color LevelSelectLockedText = new Color(0.58f, 0.64f, 0.72f);
+        [Tooltip("Yıldız rengi (#F59E0B amber)")]
+        public Color LevelSelectStarColor = new Color(0.96f, 0.62f, 0.04f);
+
+        [Header("=== Garage UI Colors ===")]
+        [Tooltip("Kapat butonu arka planı (#EF4444 kırmızı)")]
+        public Color GarageCloseBtnBg = new Color(0.94f, 0.27f, 0.27f);
+        [Tooltip("Skin kart isim metni (#0F172A dark slate)")]
+        public Color GarageSkinNameText = new Color(0.06f, 0.09f, 0.16f);
+        [Tooltip("Equipped durum badge arka planı")]
+        public Color GarageBadgeBgEquipped = new Color(0.92f, 0.99f, 0.95f);
+        [Tooltip("Unlocked durum badge arka planı")]
+        public Color GarageBadgeBgUnlocked = new Color(0.94f, 0.96f, 1f);
+        [Tooltip("Locked durum badge arka planı (altın/amber)")]
+        public Color GarageBadgeBgLocked = new Color(0.99f, 0.95f, 0.78f);
+        [Tooltip("Equipped durum badge metin rengi (yeşil)")]
+        public Color GarageBadgeTextEquipped = new Color(0.02f, 0.59f, 0.41f);
+        [Tooltip("Unlocked durum badge metin rengi (mavi)")]
+        public Color GarageBadgeTextUnlocked = new Color(0.14f, 0.38f, 0.92f);
+        [Tooltip("Locked durum badge metin rengi (turuncu/altın)")]
+        public Color GarageBadgeTextLocked = new Color(0.7f, 0.35f, 0.05f);
+
+        [Header("=== Garage ColorFamily Background Colors ===")]
+        [Tooltip("Red renk ailesi kart arka planı")]
+        public Color GarageColorFamilyRed = new Color(0.99f, 0.88f, 0.88f);
+        [Tooltip("Blue renk ailesi kart arka planı")]
+        public Color GarageColorFamilyBlue = new Color(0.88f, 0.94f, 0.99f);
+        [Tooltip("Green renk ailesi kart arka planı")]
+        public Color GarageColorFamilyGreen = new Color(0.88f, 0.99f, 0.92f);
+        [Tooltip("Yellow renk ailesi kart arka planı")]
+        public Color GarageColorFamilyYellow = new Color(0.99f, 0.97f, 0.82f);
+        [Tooltip("Purple renk ailesi kart arka planı")]
+        public Color GarageColorFamilyPurple = new Color(0.94f, 0.88f, 0.99f);
+        [Tooltip("Default/diğer renk ailesi kart arka planı")]
+        public Color GarageColorFamilyDefault = new Color(0.92f, 0.95f, 0.98f);
+
+        [Header("=== HUD Colors ===")]
+        [Tooltip("Coin pill arka plan rengi (altın sarısı)")]
+        public Color HudGoldPillBg = new Color(0.99f, 0.95f, 0.78f, 1f);
+        [Tooltip("Düşük süre timer rengi — Color.Lerp başlangıcı (kırmızı)")]
+        public Color HudTimerLowStart = new Color(1f, 0.18f, 0.18f, 1f);
+        [Tooltip("Düşük süre timer rengi — Color.Lerp bitişi (sarı)")]
+        public Color HudTimerLowEnd = new Color(1f, 0.92f, 0.02f, 1f);
+
+        [Header("=== Procedural View Colors ===")]
+        [Tooltip("GridView rainbow gradientinin mor (purple) renk ucu — varsayılan #7F00FF")]
+        public Color ProceduralRainbowGradientPurple = new Color(0.5f, 0f, 1f);
+        [Tooltip("BloomFlashView seviye tamamlama flaş rengi — sıcak sarı")]
+        public Color BloomFlashColor = new Color(1f, 0.95f, 0.6f);
+        [Tooltip("Construction engeli hazard stripe amber (turuncu) rengi")]
+        public Color ProceduralConstructionAmber = new Color(0.95f, 0.65f, 0.1f, 1f);
+        [Tooltip("Construction engeli hazard stripe koyu rengi")]
+        public Color ProceduralConstructionDark = new Color(0.2f, 0.15f, 0.05f, 1f);
+        [Tooltip("Lake su ripple koyu mavi rengi")]
+        public Color ProceduralLakeWaterDeep = new Color(0.12f, 0.38f, 0.75f, 1f);
+        [Tooltip("Lake su ripple açık mavi rengi")]
+        public Color ProceduralLakeWaterLight = new Color(0.40f, 0.75f, 0.95f, 1f);
+        [Tooltip("Park çim taban rengi (koyu yeşil)")]
+        public Color ProceduralParkBase = new Color(0.18f, 0.52f, 0.24f, 1f);
+        [Tooltip("Park yaprak rengi (açık yeşil)")]
+        public Color ProceduralParkLeaf = new Color(0.35f, 0.75f, 0.38f, 1f);
+        [Tooltip("Viyadük/bridge deck (güverte) rengi — açık gri")]
+        public Color ProceduralBridgeDeck = new Color(0.82f, 0.84f, 0.90f, 1f);
+        [Tooltip("Viyadük/bridge rail (korkuluk) rengi — altın sarısı")]
+        public Color ProceduralBridgeRail = new Color(0.95f, 0.75f, 0.20f, 1f);
+        [Tooltip("Procedural 3D bridge material rengi — açık gri-mavi")]
+        public Color ProceduralBridgeMaterial = new Color(0.78f, 0.80f, 0.88f, 1f);
+        [Tooltip("GridView crash glow rengi — kırmızı")]
+        public Color PathGlowCrashRed = new Color(1f, 0f, 0f);
+
+        [Header("=== Settings UI Colors ===")]
+        [Tooltip("Aktif/seçili buton rengi (mavi)")]
+        public Color SettingsButtonActive = new Color(0.2f, 0.6f, 1f);
+        [Tooltip("Pasif/seçilmemiş buton rengi (koyu gri)")]
+        public Color SettingsButtonInactive = new Color(0.2f, 0.2f, 0.25f);
+        [Tooltip("Settings kapat butonu arka planı (kırmızı)")]
+        public Color SettingsCloseBtnBg = new Color(0.94f, 0.27f, 0.27f);
+
         // ─── Helper Methods ───
 
         public Color GetCellBackground(AppTheme theme)
@@ -152,6 +242,19 @@ namespace PixelFlow.Data
                 case ObstacleType.Ferry: return Ferry;
                 case ObstacleType.NarrowPass: return NarrowPass;
                 default: return default;
+            }
+        }
+
+        public Color GetGarageColorFamilyBg(ColorType color)
+        {
+            switch (color)
+            {
+                case ColorType.Red:    return GarageColorFamilyRed;
+                case ColorType.Blue:   return GarageColorFamilyBlue;
+                case ColorType.Green:  return GarageColorFamilyGreen;
+                case ColorType.Yellow: return GarageColorFamilyYellow;
+                case ColorType.Purple: return GarageColorFamilyPurple;
+                default:               return GarageColorFamilyDefault;
             }
         }
     }

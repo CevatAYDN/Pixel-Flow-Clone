@@ -61,7 +61,7 @@ namespace PixelFlow.Editor.Tests
             testConfig.DefaultGems = 0;
             testConfig.DefaultTickets = 0;
             testConfig.FixedTimeStep = 1f / 60f;
-            testConfig.SpawnCheckInterval = 10;
+            testConfig.SpawnCheckInterval = 15;
             testConfig.SpeedVariationRange = 0.3f;
             testConfig.CollisionDistance = 0.45f;
             testConfig.ViaductZDiffThreshold = 0.15f;

@@ -302,5 +302,112 @@ Projedeki tüm konfigürasyonlar `Assets/Resources/Configs/` klasöründe yer al
 
 ---
 
-> **Son Güncelleme Tarihi:** 27 Temmuz 2026  
-> **Sürüm:** v6.0.0 Prodüksiyon Hazır Hafıza Dökümanı (%100 Spec Compliant)
+## 6. Zero-Hardcode & Zero-Silent-Fallback Denetim Kaydı (Oturum Düzeltmeleri)
+
+### 🟢 Düzeltme A: `LocalizationService.cs` — Çıplak `PlayerPrefs` Fallback Kaldırıldı
+- **İhlal**: `InitializeAsync` ve `SetLanguage` metodlarında `PlayerPrefsService == null` durumunda `PlayerPrefs.GetString/SetString` doğrudan çağrılıyordu (Zero-Silent-Fallback ihlali).
+- **Çözüm**: Her iki metoda null guard eklendi, `PlayerPrefsService == null` ise `DataValidationException` fırlatılıyor. Artık `IPlayerPrefsService` zorunlu DI bağımlılığı olarak çalışır.
+- **Dosya**: `Assets/Scripts/PixelFlow/Services/LocalizationService.cs`
+
+### 🟢 Düzeltme B: `GameConfig.cs` — `SkinsResourcePath` Alanı Eklendi
+- **İhlal**: `GameContextLifecycle.cs` içinde skin yükleme için `"Configs/Skins"` ve `"Skins"` stringleri hardcode yazılmıştı (Zero-Hardcode ihlali).
+- **Çözüm**: `GameConfig`'e `public string SkinsResourcePath = "Configs/Skins"` alanı eklendi. Artık path tek bir ScriptableObject'ten okunur.
+- **Dosya**: `Assets/Scripts/PixelFlow/Data/GameConfig.cs`
+
+### 🟢 Düzeltme C: `GameContextLifecycle.cs` — Hardcoded Skin Path Temizlendi
+- **İhlal**: `OnConfigure` ve `OnInitializeAsync` metodlarında `Resources.LoadAll<...>("Configs/Skins")` ve `"Skins"` fallback path hardcoded idi.
+- **Çözüm**: Path artık `gameConfig.SkinsResourcePath`'ten okunuyor. Boş/null ise `DataValidationException` fırlatılıyor. Fallback `"Skins"` dizisi kaldırıldı.
+- **Dosya**: `Assets/Scripts/PixelFlow/GameContextLifecycle.cs`
+
+### 🟢 Düzeltme D: `LocalNotificationService.cs` — `public const string` Key Literal'ları Kaldırıldı
+- **İhlal**: `KeyD1Title`, `KeyD1Body`, `KeyD2Title`, `KeyD2Body` adında 4 adet `public const string` literal sınıf üyesi tanımlanmıştı. Bu değerler zaten `GameConfig.NotificationD*Key` alanlarında SO'dan okunuyor. Const'lar Zero-Hardcode ihlali oluşturuyordu.
+- **Çözüm**: 4 const kaldırıldı. Fallback path tamamen temizlendi, artık tüm key okumalar `Config.NotificationD*Key`'den alınıyor. `Config == null` durumunda `DataValidationException` fırlatılıyor.
+- **Dosya**: `Assets/Scripts/PixelFlow/Services/GlobalRelease/LocalNotificationService.cs`
+
+---
+
+> **Son Güncelleme Tarihi:** 28 Temmuz 2026  
+> **Sürüm:** v6.1.0 → **v6.2.0** — Kapsamlı Zero-Hardcode & Zero-Silent-Fallback Denetimi (21 İhlal Giderildi)
+
+---
+
+## 7. v6.2.0 — Kapsamlı Denetim Oturumu (28 Temmuz 2026)
+
+> **Kapsam:** Tüm `Assets/Scripts/PixelFlow/` tarındı — 21 kritik ihlal bulundu ve düzeltildi.
+
+### 🟢 Düzeltme E: `VehicleSimulator.cs` — `CacheConfigValues` Magic Number Fallback Kaldırıldı
+- **İhlal**: `Config == null` durumunda `_vehicleSpeed = 2f`, `_spawnInterval = 0.5f` vb. 9 magic number sessizce kullanılıyordu. `L622`'de `CollisionDistance` için de `0.75f` fallback vardı.
+- **Çözüm**: `else` bloğu kaldırıldı; `Config == null` ise `DataValidationException` fırlatılıyor. L622 de `throw` ile sertleştirildi.
+- **Dosya**: `Assets/Scripts/PixelFlow/Services/VehicleSimulator.cs`
+
+### 🟢 Düzeltme F: `AdManagerService.cs` — Config null → return true Sessiz Reklam Bypass
+- **İhlal**: `ShouldShowInterstitial` içinde `if (Config == null) return true` — Config yoksa tüm seviyelerde reklam gösteriliyordu.
+- **Çözüm**: `DataValidationException` fırlatılıyor.
+- **Dosya**: `Assets/Scripts/PixelFlow/Services/AdManagerService.cs`
+
+### 🟢 Düzeltme G: `LocalizationService.cs` — StorageKeysConfig null → Hardcoded Key Fallback
+- **İhlal**: `LanguageStorageKey` property'si `StorageKeysConfig == null` ise `"NT_SelectedLanguage"` string literal döndürüyordu.
+- **Çözüm**: `DataValidationException` fırlatılıyor.
+- **Dosya**: `Assets/Scripts/PixelFlow/Services/LocalizationService.cs`
+
+### 🟢 Düzeltme H: `VehicleVisualFactory.cs` — Material Renk Fallback new Color(...)
+- **İhlal**: `EnsureAllSharedMaterialsCreated` içinde `cfg == null` ise 5 adet `new Color(...)` literal ile materyal oluşturuluyordu.
+- **Çözüm**: `_materialConfig == null` ise `DataValidationException` fırlatılıyor; tüm renkler `cfg.*` ile doğrudan okunuyor.
+- **Dosya**: `Assets/Scripts/PixelFlow/Views/VehicleVisualFactory.cs`
+
+### 🟢 Düzeltme I: `VehiclePartPool.cs` — 512/256 Magic Number Pool Size Fallback
+- **İhlal**: `_config == null` ise `cubes = 512`, `cylinders = 256` magic sayılarla pool oluşturuluyordu.
+- **Çözüm**: `_config == null` ve explicit değer verilmemişse `DataValidationException` fırlatılıyor.
+- **Dosya**: `Assets/Scripts/PixelFlow/Views/VehiclePartPool.cs`
+
+### 🟢 Düzeltme J: `LevelSelectMediator.cs` — 4/12 Magic Number Fallback
+- **İhlal**: `Config == null` ise `lockedPreview = 4`, `minLevels = 12` literal değerlere düşüyordu.
+- **Çözüm**: `DataValidationException` fırlatılıyor.
+- **Dosya**: `Assets/Scripts/PixelFlow/Views/LevelSelectMediator.cs`
+
+### 🟢 Düzeltme K: `ThemePaletteAsset.cs` — UI Renk Alanları Genişletildi
+- **Değişiklik**: LevelSelect (7 renk), Garage UI (9 renk + 6 ColorFamily bg), HUD (3 renk), Settings (3 renk) için yeni alanlar eklendi. `GetGarageColorFamilyBg()` helper metodu eklendi.
+- **Dosya**: `Assets/Scripts/PixelFlow/Data/ThemePaletteAsset.cs`
+
+### 🟢 Düzeltme L: `GameConfig.cs` — AudioBaseFrequencyHz ve LowTimerThresholdSeconds Eklendi
+- **Değişiklik**: `AudioBaseFrequencyHz = 440f` ve `LowTimerThresholdSeconds = 3f` alanları eklendi.
+- **Dosya**: `Assets/Scripts/PixelFlow/Data/GameConfig.cs`
+
+### 🟢 Düzeltme M: `LevelSelectView.cs` — 7 static readonly Color → ThemePaletteAsset
+- **İhlal**: `CompletedBoxColor`, `UnlockedBoxColor`, `LockedBoxColor`, `CompletedTextColor`, `UnlockedTextColor`, `LockedTextColor`, `StarColor` — 7 adet `static readonly Color` literal.
+- **Çözüm**: `[Inject] ThemePaletteAsset ThemePalette` eklendi. Tüm renkler `ThemePalette.*` ile okunuyor.
+- **Dosya**: `Assets/Scripts/PixelFlow/Views/LevelSelectView.cs`
+
+### 🟢 Düzeltme N: `GarageView.cs` — 10+ inline new Color(...) → ThemePaletteAsset
+- **İhlal**: `GetColorFamilyBg()` içinde 6 inline `new Color(...)`, kapat butonu, badge bg/text renkleri inline literal.
+- **Çözüm**: `[Inject] ThemePaletteAsset ThemePalette` eklendi. `GetColorFamilyBg()` `ThemePalette.GetGarageColorFamilyBg()` delegasyonuna çevrildi.
+- **Dosya**: `Assets/Scripts/PixelFlow/Views/GarageView.cs`
+
+### 🟢 Düzeltme O: `HUDView.cs` — _goldPillBg ve UpdateTimerColor Magic Values
+- **İhlal**: `_goldPillBg = new Color(0.99f, 0.95f, 0.78f, 1f)` field literal. `UpdateTimerColor` içinde `3f`, `Color.red`, `Color.yellow` magic değerleri.
+- **Çözüm**: `ThemePalette.HudGoldPillBg`, `GameConfig.LowTimerThresholdSeconds`, `ThemePalette.HudTimerLowStart/End` ile değiştirildi.
+- **Dosya**: `Assets/Scripts/PixelFlow/Views/HUDView.cs`
+
+### 🟢 Düzeltme P: `SettingsView.cs` — 3 new Color(...) → ThemePaletteAsset
+- **İhlal**: Kapat butonu ve `SetButtonActive` içinde `new Color(0.94f,...)`, `new Color(0.2f, 0.6f, 1f)`, `new Color(0.2f, 0.2f, 0.25f)`.
+- **Çözüm**: `[Inject] ThemePaletteAsset ThemePalette` eklendi. Tüm renkler SO'dan okunuyor.
+- **Dosya**: `Assets/Scripts/PixelFlow/Views/SettingsView.cs`
+
+### 🟢 Düzeltme Q: `CellView.cs` — _fallbackBorderColor Literal + RejectionPulseFrequency 15f Fallback
+- **İhlal**: `_fallbackBorderColor = new Color(0.18f,...)` static literal init. `RejectionPulseFrequency` `: 15f` silent fallback.
+- **Çözüm**: `_fallbackBorderColor` `Setup()` içinde `ThemePalette.FallbackBorderColor`'dan okunuyor. `RejectionPulseFrequency` `DataValidationException` fırlatıyor.
+- **Dosya**: `Assets/Scripts/PixelFlow/Views/CellView.cs`
+
+### 🟢 Düzeltme R: `ProceduralAudioFactory.cs` — 440f ve 44100 Editor-Only Fallback Belgelendi
+- **Durum**: `CreateEditorProceduralClip` Editor-only (`#if !UNITY_EDITOR`) bir static metot. DI inject edilemez.
+- **Çözüm**: `Load()` metoduna opsiyonel `GameConfig config` parametresi eklendi. Config varsa `AudioBaseFrequencyHz`/`AudioSampleRate` kullanılır. Fallback sadece Editor önizlemesi için — `§2.2` istisnası açıkça belgelendi.
+- **Dosya**: `Assets/Scripts/PixelFlow/Services/ProceduralAudioFactory.cs`
+
+### 📊 v6.2.0 Oturum Özeti
+| Kategori | Önceki | Sonraki |
+|---|---|---|
+| Zero-Silent-Fallback İhlali | 8 | 0 |
+| Zero-Hardcode (magic literal) | 13 | 1 (belgelenmiş Editor istisna) |
+| ThemePaletteAsset renk alanı sayısı | ~15 | ~45 |
+| GameConfig yeni alan | 0 | +2 |
+| Düzeltilen sınıf sayısı | — | 11 sınıf |

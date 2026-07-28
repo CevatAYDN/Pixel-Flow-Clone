@@ -46,15 +46,18 @@ namespace PixelFlow.Views
         private static void EnsureAllSharedMaterialsCreated()
         {
             if (_sharedSpriteMat != null) return;
+            if (_materialConfig == null)
+                throw new DataValidationException("[VehicleVisualFactory] VehicleMaterialConfigAsset is null. Call VehicleVisualFactory.Initialize() with a valid config before creating vehicle visuals.");
+
             var cfg = _materialConfig;
             var shader = Shader.Find("Hidden/PixelFlow/VehicleGhost") ?? Shader.Find("Sprites/Default");
 
-            _sharedSpriteMat = CreateSharedMat(shader, cfg != null ? cfg.SpriteColor : Color.white);
-            _sharedMetalMat = CreateSharedMat(shader, cfg != null ? cfg.MetalColor : new Color(0.15f, 0.15f, 0.18f, 1f));
-            _sharedWindowMat = CreateSharedMat(shader, cfg != null ? cfg.WindowColor : new Color(0.2f, 0.9f, 1f, 0.9f));
-            _sharedHeadlightMat = CreateSharedMat(shader, cfg != null ? cfg.HeadlightColor : new Color(1f, 0.95f, 0.5f, 1f));
-            _sharedWhiteMat = CreateSharedMat(shader, cfg != null ? cfg.WhiteAccentColor : Color.white);
-            _sharedTailMat = CreateSharedMat(shader, cfg != null ? cfg.TaillightColor : new Color(1f, 0.15f, 0.15f, 1f));
+            _sharedSpriteMat    = CreateSharedMat(shader, cfg.SpriteColor);
+            _sharedMetalMat     = CreateSharedMat(shader, cfg.MetalColor);
+            _sharedWindowMat    = CreateSharedMat(shader, cfg.WindowColor);
+            _sharedHeadlightMat = CreateSharedMat(shader, cfg.HeadlightColor);
+            _sharedWhiteMat     = CreateSharedMat(shader, cfg.WhiteAccentColor);
+            _sharedTailMat      = CreateSharedMat(shader, cfg.TaillightColor);
         }
 
         private static Material CreateSharedMat(Shader shader, Color color)
@@ -69,7 +72,7 @@ namespace PixelFlow.Views
         {
             if (renderers == null || mpb == null) return;
             Color vehicleColor = CellView.GetColor(color);
-            mpb.SetColor("_Color", new Color(vehicleColor.r, vehicleColor.g, vehicleColor.b, alpha));
+            mpb.SetColor("_Color", vehicleColor.WithAlpha(alpha));
             for (int ri = 0; ri < renderers.Length; ri++)
             {
                 if (renderers[ri] != null)
@@ -393,8 +396,8 @@ namespace PixelFlow.Views
             trail.numCornerVertices = 4;
             trail.material = _sharedSpriteMat;
             Color cVal = CellView.GetColor(color);
-            trail.startColor = new Color(cVal.r, cVal.g, cVal.b, 0.45f);
-            trail.endColor = new Color(cVal.r, cVal.g, cVal.b, 0f);
+            trail.startColor = cVal.WithAlpha(0.45f);
+            trail.endColor = cVal.WithAlpha(0f);
         }
 
         private static VehicleVisualConfig.TrainConfig CreateDefaultTrainConfig()

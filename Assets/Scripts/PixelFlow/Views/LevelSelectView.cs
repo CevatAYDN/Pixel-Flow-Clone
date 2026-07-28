@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using Nexus.Core;
 using Nexus.Core.Services;
+using PixelFlow.Data;
 
 namespace PixelFlow.Views
 {
@@ -35,16 +36,7 @@ namespace PixelFlow.Views
         public event Action<int> OnLevelSelected;
 
         [Inject] public ILoggerService LoggerService { get; set; }
-
-        // settings-levels.html renk paleti (pastel kutu + renkli metin)
-        private static readonly Color CompletedBoxColor = new Color(0.925f, 0.992f, 0.957f); // #ECFDF5 açık mint
-        private static readonly Color UnlockedBoxColor  = new Color(1f, 1f, 1f);             // #FFFFFF beyaz
-        private static readonly Color LockedBoxColor    = new Color(0.945f, 0.961f, 0.976f); // #F1F5F9 açık gri
-
-        private static readonly Color CompletedTextColor = new Color(0.02f, 0.59f, 0.41f);   // #059669 yeşil
-        private static readonly Color UnlockedTextColor  = new Color(0.20f, 0.25f, 0.33f);   // #334155 slate
-        private static readonly Color LockedTextColor    = new Color(0.58f, 0.64f, 0.72f);   // #94A3B8 muted slate
-        private static readonly Color StarColor          = new Color(0.96f, 0.62f, 0.04f);   // #F59E0B amber
+        [Inject] public Data.ThemePaletteAsset ThemePalette { get; set; }
 
         protected override void OnBind(IContext context)
         {
@@ -159,7 +151,12 @@ namespace PixelFlow.Views
 
             var img = go.GetComponent<Image>();
             bool completed = info.Unlocked && info.Stars > 0;
-            img.color = !info.Unlocked ? LockedBoxColor : (completed ? CompletedBoxColor : UnlockedBoxColor);
+
+            if (ThemePalette == null)
+                throw new DataValidationException("[LevelSelectView] ThemePaletteAsset is not injected. Bind ThemePaletteAsset in GameContextLifecycle.");
+
+            img.color = !info.Unlocked ? ThemePalette.LevelSelectLockedBox
+                : (completed ? ThemePalette.LevelSelectCompletedBox : ThemePalette.LevelSelectUnlockedBox);
 
             var btn = go.GetComponent<Button>();
             btn.interactable = info.Unlocked;
@@ -175,7 +172,8 @@ namespace PixelFlow.Views
                 info.DisplayNumber.ToString());
             numText.fontSize = 30;
             numText.fontStyle = FontStyles.Bold;
-            numText.color = !info.Unlocked ? LockedTextColor : (completed ? CompletedTextColor : UnlockedTextColor);
+            numText.color = !info.Unlocked ? ThemePalette.LevelSelectLockedText
+                : (completed ? ThemePalette.LevelSelectCompletedText : ThemePalette.LevelSelectUnlockedText);
             numText.alignment = TextAlignmentOptions.Center;
             var numRect = numText.GetComponent<RectTransform>();
             numRect.anchorMin = new Vector2(0f, 0.32f);
@@ -187,7 +185,7 @@ namespace PixelFlow.Views
             {
                 var starsText = CreateChildText(go.transform, "Stars", BuildStarString(info.Stars));
                 starsText.fontSize = 18;
-                starsText.color = StarColor; // #F59E0B amber
+                starsText.color = ThemePalette.LevelSelectStarColor;
                 starsText.alignment = TextAlignmentOptions.Center;
                 var starRect = starsText.GetComponent<RectTransform>();
                 starRect.anchorMin = new Vector2(0f, 0.04f);

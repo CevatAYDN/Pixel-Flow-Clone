@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using PixelFlow.Data;
 
 namespace PixelFlow.Views
 {
@@ -55,9 +56,12 @@ namespace PixelFlow.Views
         {
             if (_initialized) return;
 
-            // Config-driven defaults
-            int cubes = preAllocCubes ?? (_config != null ? _config.VehiclePartPoolCubes : 512);
-            int cylinders = preAllocCylinders ?? (_config != null ? _config.VehiclePartPoolCylinders : 256);
+            if (_config == null && (preAllocCubes == null || preAllocCylinders == null))
+                throw new DataValidationException("[VehiclePartPool] GameConfig is null and no explicit pool sizes provided. Call VehiclePartPool.SetConfig() before Initialize().");
+
+            // Config-driven pool sizes
+            int cubes     = preAllocCubes     ?? _config.VehiclePartPoolCubes;
+            int cylinders = preAllocCylinders ?? _config.VehiclePartPoolCylinders;
             _initialized = true;
 
             var rootObj = new GameObject("[VehiclePartPool]");

@@ -30,7 +30,7 @@ namespace PixelFlow.Services
     public static class AudioClipProvider
     {
         /// <summary>Belirtilen SfxType için AudioClip yükler.</summary>
-        public static AudioClip Load(SfxType type)
+        public static AudioClip Load(SfxType type, PixelFlow.Data.GameConfig config = null)
         {
             string path = GetResourcePath(type);
             var clip = Resources.Load<AudioClip>(path);
@@ -41,7 +41,7 @@ namespace PixelFlow.Services
             throw new DataValidationException($"[AudioClipProvider] Mandatory audio clip missing for {type} at Resources path '{path}'!");
 #else
             Debug.LogWarning($"[AudioClipProvider] '{path}' not found! Generating temporary editor procedural clip.");
-            return CreateEditorProceduralClip(type.ToString());
+            return CreateEditorProceduralClip(type.ToString(), config);
 #endif
         }
 
@@ -78,11 +78,19 @@ namespace PixelFlow.Services
         }
 
         /// <summary>Editör önizlemesi için prosedürel synth ses dalgası üretir.</summary>
-        private static AudioClip CreateEditorProceduralClip(string name)
+        /// <remarks>
+        /// game_plan.md §2.2 Zero-Hardcode istisnası: Bu metot YALNIZCA Editor önizlemesinde çalışır.
+        /// GameConfig enjekte edilemezse AudioSampleRate ve temel frekans için varsayılan değerler kullanılır.
+        /// Runtime'da daima gerçek ses dosyaları kullanılır.
+        /// </remarks>
+        private static AudioClip CreateEditorProceduralClip(string name, PixelFlow.Data.GameConfig config = null)
         {
-            int sampleRate = 44100;
+            // §2.2 istisnası: Editor-only → GameConfig null ise varsayılan kullan
+            int sampleRate = config != null ? config.AudioSampleRate : 44100;
+            float baseFreq = config != null ? config.AudioBaseFrequencyHz : 440f;
+
             float duration = 0.15f;
-            float freq = 440f; // Default A4 note
+            float freq = baseFreq;
 
             if (name.Contains("UIClick")) { duration = 0.05f; freq = 800f; }
             else if (name.Contains("CoinCollect")) { duration = 0.2f; freq = 1200f; }

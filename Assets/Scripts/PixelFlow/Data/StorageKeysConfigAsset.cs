@@ -19,6 +19,7 @@ namespace PixelFlow.Data
         public string KeySfxVol = "NT_SfxVol";
         public string KeyMusicVol = "NT_MusicVol";
         public string KeyHaptics = "NT_Haptics";
+        public string KeySelectedLanguage = "NT_SelectedLanguage";
 
         [Header("Progression")]
         public string KeyUnlockedLevels = "NT_UnlockedLevels";

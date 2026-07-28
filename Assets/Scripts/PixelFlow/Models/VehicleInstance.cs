@@ -29,7 +29,17 @@ namespace PixelFlow.Models
 
         public readonly MaterialPropertyBlock Mpb = new MaterialPropertyBlock();
 
-        // Not: Bobbing animasyonu için v.GetHashCode() direkt kullanılır
-        // (GetCachedHash eklenmişti ama runtime'da kullanılmıyor — temizlendi)
+        /// <summary>
+        /// Bobbing ve ghost alpha animasyonları için per-vehicle offset.
+        /// Spawn'da Random.Range ile doldurulur. GetHashCode() yerine kullanılır
+        /// çünkü GetHashCode() GC compaction sonrası değişebilir → stutter.
+        /// </summary>
+        public float AnimationOffset;
+
+        /// <summary>
+        /// Ghost alpha MPB güncelleme throttle sayacı.
+        /// VehicleMovementService her frame 1 artırır, 2 olunca MPB günceller ve sıfırlar.
+        /// </summary>
+        public int GhostAlphaCounter;
     }
 }

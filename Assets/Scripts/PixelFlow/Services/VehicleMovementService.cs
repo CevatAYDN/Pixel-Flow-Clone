@@ -126,23 +126,31 @@ namespace PixelFlow.Services
                 // Narrow pass enter/leave tracking
                 UpdateNarrowPassTracking(v);
 
-                // Per-vehicle ghost alpha via MaterialPropertyBlock
+                // Ghost alpha her frame hesaplanır (Mathf.Sin ~10 CPU cycle, çok ucuz)
                 float vehicleAlpha = isPlaying 
-                    ? (0.45f + Mathf.Sin(Time.time * 6f + v.GetHashCode() * 0.1f) * 0.25f) 
+                    ? (0.45f + Mathf.Sin(Time.time * 6f + v.AnimationOffset * 0.1f) * 0.25f) 
                     : 1f;
-                
-                if (v.CachedRenderers != null && v.CachedRenderers.Length > 0)
+
+                // PERFORMANCE: MPB güncellemesi (GPU sync) 2 frame'de 1 yapılır.
+                // Ghost alpha Sin(Time.time * 6) ≈ 1Hz — 2 frame gecikme < 33ms, fark edilmez.
+                v.GhostAlphaCounter++;
+                if (v.GhostAlphaCounter >= 2)
                 {
-                    for (int r = 0; r < v.CachedRenderers.Length; r++)
+                    v.GhostAlphaCounter = 0;
+                    
+                    if (v.CachedRenderers != null && v.CachedRenderers.Length > 0)
                     {
-                        var renderer = v.CachedRenderers[r];
-                        if (renderer == null) continue;
-                        
-                        renderer.GetPropertyBlock(v.Mpb);
-                        Color c = renderer.sharedMaterial.color;
-                        c.a = vehicleAlpha;
-                        v.Mpb.SetColor("_BaseColor", c);
-                        renderer.SetPropertyBlock(v.Mpb);
+                        for (int r = 0; r < v.CachedRenderers.Length; r++)
+                        {
+                            var renderer = v.CachedRenderers[r];
+                            if (renderer == null) continue;
+                            
+                            renderer.GetPropertyBlock(v.Mpb);
+                            Color c = renderer.sharedMaterial.color;
+                            c.a = vehicleAlpha;
+                            v.Mpb.SetColor("_BaseColor", c);
+                            renderer.SetPropertyBlock(v.Mpb);
+                        }
                     }
                 }
 
@@ -200,7 +208,6 @@ namespace PixelFlow.Services
                 if (_obstacleService.IsNarrowPass(prevCell))
                 {
                     _obstacleService.OnVehicleLeftNarrowPass(prevCell, v.Color);
-                    Nexus.Core.Services.NexusLog.Info("VehicleMovementService", "UpdateNarrowPassTracking", "?", "Vehicle of color " + v.Color + " left narrow pass at " + prevCell);
                 }
             }
             if (v.SegmentIndex < v.Path.Count && v.Progress < 0.1f)
@@ -209,7 +216,6 @@ namespace PixelFlow.Services
                 if (_obstacleService.IsNarrowPass(curCell))
                 {
                     _obstacleService.OnVehicleEnteredNarrowPass(curCell, v.Color);
-                    Nexus.Core.Services.NexusLog.Info("VehicleMovementService", "UpdateNarrowPassTracking", "?", "Vehicle of color " + v.Color + " entered narrow pass at " + curCell);
                 }
             }
         }
@@ -239,15 +245,21 @@ namespace PixelFlow.Services
             // ÖNCE parçaları pool'a geri ver, SONRA root'u destroy et
             // SafeDestroy sadece Destroy çağırır, pool'a geri vermez → pool depletion → GC spike
             VehicleVisualFactory.RecycleVehicle(v.Visual);
-            string scoreInfo = _gameSessionModel != null ? $" (Score: {_gameSessionModel.CurrentFlowScore}/{_gameSessionModel.TargetFlowScore})" : "";
-            Nexus.Core.Services.NexusLog.Info("VehicleMovementService", "CompleteVehicleMovement", "?", "Vehicle of color " + v.Color + " completed its path" + scoreInfo + ". Recycled visual.");
+#if DEBUG
+            // PERFORMANCE: #if DEBUG ile sarıldı — Release build'lerde string allocation olmaz.
+            string scoreInfo = _gameSessionModel != null 
+                ? $" (Score: {_gameSessionModel.CurrentFlowScore}/{_gameSessionModel.TargetFlowScore})" 
+                : "";
+            Nexus.Core.Services.NexusLog.Info("VehicleMovementService", "CompleteVehicleMovement", "?", 
+                $"Vehicle of color {v.Color} completed its path{scoreInfo}. Recycled visual.");
+#endif
             activeVehicles.RemoveAt(index);
         }
 
         private void UpdateTrainTransform(VehicleInstance v, Vector3 basePos, Vector3 tangent, float zOffset, float deltaTime, float locoDist)
         {
             v.Visual.transform.localPosition = Vector3.zero;
-            float bobbing = Mathf.Sin(Time.time * 8f + v.GetHashCode()) * 0.01f;
+            float bobbing = Mathf.Sin(Time.time * 8f + v.AnimationOffset) * 0.01f;
 
             // 1. Locomotive
             Vector3 locoPos = basePos;
@@ -327,7 +339,7 @@ namespace PixelFlow.Services
             float nextAngle = nextTangent.sqrMagnitude > 0.001f ? Mathf.Atan2(nextTangent.y, nextTangent.x) * Mathf.Rad2Deg : baseAngle;
             float deltaAngle = Mathf.DeltaAngle(baseAngle, nextAngle);
 
-            float bobbing = Mathf.Sin(Time.time * 12f + v.GetHashCode()) * 0.02f;
+            float bobbing = Mathf.Sin(Time.time * 12f + v.AnimationOffset) * 0.02f;
             Vector3 finalPos = v.CurrentPosition;
             finalPos.z += bobbing;
             v.Visual.transform.localPosition = finalPos;

@@ -23,6 +23,7 @@ namespace PixelFlow.Views
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public IGridInputService InputService { get; set; }
         [Inject] public PixelFlow.Data.GameConfig Config { get; set; }
+        [Inject] public PixelFlow.Data.ThemePaletteAsset ThemePalette { get; set; }
 
         private Camera _cam;
         private CellView[,] _cells;
@@ -59,6 +60,34 @@ namespace PixelFlow.Views
         // Eskiden: her 3 frame'de 1 sin(Time.time * 6.5f) + LineRenderer.width set
         // Şimdi: 0 CPU, GPU _Time.y ile otomatik animasyon
         private static Shader _glowPulseShader;
+        // Animasyonlu hücreleri takip eder — her frame tüm grid'i dolaşmak yerine
+        // sadece animasyon yapan hücrelere TickAnimation çağrılır.
+        // Her N frame'de bir (AnimationRescanInterval) liste yeniden taranır.
+        private readonly List<CellView> _animatingCells = new List<CellView>();
+        private int _animationScanCounter = 0;
+        private const int AnimationRescanInterval = 2; // 2 frame'de bir yenile — bounce (0.12s) gecikmesi < 33ms
+
+        // Path LineRenderer'lar için önceden oluşturulmuş material cache'i:
+        // Her path güncellemesinde yeni Material() oluşturma — GC yükünü azaltır.
+        private static Material _cachedPathSpriteMaterial;
+        private static Material _cachedGlowPulseMaterial;
+        private static bool _materialsCached;
+
+        private static void EnsureCachedMaterials()
+        {
+            if (_materialsCached) return;
+            _materialsCached = true;
+
+            Shader spriteShader = _cachedSpriteShader ?? (_cachedSpriteShader = Shader.Find("Sprites/Default"));
+            if (spriteShader != null)
+                _cachedPathSpriteMaterial = new Material(spriteShader);
+            else
+                _cachedPathSpriteMaterial = new Material(Shader.Find("Unlit/Color"));
+
+            if (_glowPulseShader == null)
+                _glowPulseShader = Shader.Find("Hidden/PixelFlow/GlowPulse") ?? spriteShader ?? Shader.Find("Sprites/Default");
+            _cachedGlowPulseMaterial = new Material(_glowPulseShader);
+        }
 
         private void Awake()
         {
@@ -72,15 +101,21 @@ namespace PixelFlow.Views
 
             if (_cells == null) return;
 
-            // Tick cell animations on all cells in a fast 2D loop
-            int cellW = _cells.GetLength(0);
-            int cellH = _cells.GetLength(1);
-            for (int x = 0; x < cellW; x++)
+            // PERFORMANS: Animasyonlu hücrelerin takibi
+            // Her frame tüm grid'i dolaşmak (100+ hücre) yerine, sadece aktif animasyonlu
+            // hücrelere TickAnimation çağrılır. Liste her N frame'de bir yenilenir.
+            int animCount = _animatingCells.Count;
+            for (int i = 0; i < animCount; i++)
             {
-                for (int y = 0; y < cellH; y++)
-                {
-                    _cells[x, y]?.TickAnimation(deltaTime);
-                }
+                _animatingCells[i]?.TickAnimation(deltaTime);
+            }
+
+            // Her AnimationRescanInterval frame'de bir animasyon listesini yenile
+            _animationScanCounter++;
+            if (_animationScanCounter >= AnimationRescanInterval)
+            {
+                _animationScanCounter = 0;
+                RefreshAnimatingCells();
             }
 
             HandlePinchZoom();
@@ -99,14 +134,6 @@ namespace PixelFlow.Views
             if (overUI)
             {
                 return;
-            }
-
-            // Log EventSystem status periodically (every 60 ticks ~1 sec at 60fps)
-            if (Time.frameCount % 60 == 0)
-            {
-                LoggerService?.Log($"[PixelFlow.GridView] EventSystem: current={(bool)es}, " +
-                    $"inputModule={(es != null ? es.currentInputModule?.GetType().Name : "null")}, " +
-                    $"overUI={overUI}, inputServiceActive={InputService != null}");
             }
 
             var result = InputService?.ProcessInput(_cam, _cells.GetLength(0), _cells.GetLength(1));
@@ -231,8 +258,9 @@ namespace PixelFlow.Views
 
         /// <summary>
         /// Rainbow Road hücrelerinden geçen path'ler için gökkuşağı gradient'i oluşturur.
+        /// Renkler ThemePaletteAsset'ten okunur (Zero-Hardcode §2.2).
         /// </summary>
-        private static Gradient GetRainbowGradient()
+        private static Gradient GetRainbowGradient(ThemePaletteAsset palette)
         {
             if (_rainbowGradientInitialized)
                 return _rainbowGradient;
@@ -245,7 +273,7 @@ namespace PixelFlow.Views
                 new GradientColorKey(Color.green, 2f / 5f),
                 new GradientColorKey(Color.cyan, 3f / 5f),
                 new GradientColorKey(Color.blue, 4f / 5f),
-                new GradientColorKey(new Color(0.5f, 0f, 1f), 5f / 5f) // purple
+                new GradientColorKey(palette != null ? palette.ProceduralRainbowGradientPurple : Color.magenta, 5f / 5f)
             };
             _rainbowGradient.alphaKeys = new GradientAlphaKey[]
             {
@@ -362,6 +390,8 @@ namespace PixelFlow.Views
 
                 if (!_pathLines.TryGetValue(colorType, out var lineRenderer))
                 {
+                    EnsureCachedMaterials();
+
                     GameObject lineObj = new GameObject($"PathLine_{colorType}");
                     lineObj.transform.SetParent(_gridContainer);
                     lineRenderer = lineObj.AddComponent<LineRenderer>();
@@ -373,8 +403,9 @@ namespace PixelFlow.Views
                     lineRenderer.useWorldSpace = false;
                     lineRenderer.sortingOrder = 5;
                     
-                    Shader spriteShader = _cachedSpriteShader ?? (_cachedSpriteShader = Shader.Find("Sprites/Default"));
-                    Material mat = new Material(spriteShader != null ? spriteShader : Shader.Find("Unlit/Color"));
+                    // PERFORMANS: Material her seferinde new Material() ile oluşturulmaz,
+                    // static cache'ten Instantiate ile kopya alınır — GC yükü azalır.
+                    var mat = Object.Instantiate(_cachedPathSpriteMaterial);
                     lineRenderer.material = mat;
                     
                     _pathLines[colorType] = lineRenderer;
@@ -382,6 +413,8 @@ namespace PixelFlow.Views
 
                 if (!_glowLines.TryGetValue(colorType, out var glowRenderer))
                 {
+                    EnsureCachedMaterials();
+
                     GameObject glowObj = new GameObject($"PathLineGlow_{colorType}");
                     glowObj.transform.SetParent(_gridContainer);
                     glowRenderer = glowObj.AddComponent<LineRenderer>();
@@ -393,12 +426,8 @@ namespace PixelFlow.Views
                     glowRenderer.useWorldSpace = false;
                     glowRenderer.sortingOrder = 2;
                     
-                    // GPU glow pulse: GlowPulse.shader _Time.y ile alpha animasyonu yapar
-                    // Width sabit (0.55), alpha GPU'da pulse eder — CPU yükü 0
-                    // Vertex alpha 0.55 × shader pulse 0.65±0.10 = final alpha 0.30-0.41
-                    if (_glowPulseShader == null)
-                        _glowPulseShader = Shader.Find("Hidden/PixelFlow/GlowPulse") ?? _cachedSpriteShader ?? Shader.Find("Sprites/Default");
-                    Material mat = new Material(_glowPulseShader);
+                    // PERFORMANS: Önbelleklenmiş GlowPulse material'ından Instantiate
+                    var mat = Object.Instantiate(_cachedGlowPulseMaterial);
                     glowRenderer.material = mat;
                     
                     _glowLines[colorType] = glowRenderer;
@@ -412,7 +441,7 @@ namespace PixelFlow.Views
                 
                 bool hasRainbow = PathHasRainbowCell(pathPositions, gridData);
                 Color pipeColor = CellView.GetColor(colorType);
-                Color glowColor = new Color(pipeColor.r, pipeColor.g, pipeColor.b, 0.55f);
+                Color glowColor = pipeColor.WithAlpha(0.55f);
 
                 bool isCrashColor = crashPos.x >= 0 && 
                     (colorType == crashColorA || colorType == crashColorB);
@@ -420,9 +449,9 @@ namespace PixelFlow.Views
                 if (hasRainbow && !isCrashColor)
                 {
                     // Rainbow Road path'i: gradient ile gökkuşağı renkleri
-                    lineRenderer.colorGradient = GetRainbowGradient();
-                    glowRenderer.startColor = new Color(1f, 1f, 1f, 0.55f);
-                    glowRenderer.endColor = new Color(1f, 1f, 1f, 0.55f);
+                    lineRenderer.colorGradient = GetRainbowGradient(ThemePalette);
+                    glowRenderer.startColor = Color.white.WithAlpha(0.55f);
+                    glowRenderer.endColor = Color.white.WithAlpha(0.55f);
                 }
                 else
                 {
@@ -459,7 +488,7 @@ namespace PixelFlow.Views
                             lineRenderer.startColor = Color.Lerp(crashColor, pipeColor, dist / 3f);
                             lineRenderer.endColor = Color.Lerp(crashColor, pipeColor, dist / 3f);
 
-                            Color crashGlow = new Color(1f, 0f, 0f, 0.35f);
+                            Color crashGlow = ThemePalette.PathGlowCrashRed.WithAlpha(0.35f);
                             glowRenderer.startColor = Color.Lerp(crashGlow, glowColor, dist / 3f);
                             glowRenderer.endColor = Color.Lerp(crashGlow, glowColor, dist / 3f);
                         }
@@ -478,6 +507,27 @@ namespace PixelFlow.Views
             }
         }
 
+        /// <summary>
+        /// Tüm grid hücrelerini tarar ve animasyon yapan hücreleri _animatingCells listesine ekler.
+        /// Her AnimationRescanInterval frame'de bir çağrılır — OnTick'teki 2D döngü yükünü azaltır.
+        /// </summary>
+        private void RefreshAnimatingCells()
+        {
+            _animatingCells.Clear();
+            int cellW = _cells.GetLength(0);
+            int cellH = _cells.GetLength(1);
+            for (int x = 0; x < cellW; x++)
+            {
+                for (int y = 0; y < cellH; y++)
+                {
+                    var cell = _cells[x, y];
+                    if (cell != null && cell.IsAnimating)
+                    {
+                        _animatingCells.Add(cell);
+                    }
+                }
+            }
+        }
 
         private void OnDestroy()
         {

@@ -172,7 +172,10 @@ namespace PixelFlow
             builder.BindInstance(gameConfig);
 
             // VehiclePartPool'u config ile başlat (pool boyutları data-driven)
+            // PERFORMANCE: Lazy init yerine boot'ta önceden başlat — 768 GameObject CreatePrimitive
+            // ilk araç spawn'ında değil, oyun başlangıcında yapılır (splash ekranı gösterilirken).
             Views.VehiclePartPool.SetConfig(gameConfig);
+            Views.VehiclePartPool.Initialize();
 
             // StorageKeysConfigAsset — zero-hardcode PlayerPrefs anahtarları
             if (storageKeysConfig == null)
@@ -280,15 +283,11 @@ namespace PixelFlow
             builder.BindInstance(starCriteriaConfig);
             
             // Register skins from Resources into SkinCatalogService
-            var vehicleSkins = Resources.LoadAll<VehicleSkinConfig>("Configs/Skins");
-            var stopSkins = Resources.LoadAll<StopSkinConfig>("Configs/Skins");
-            
-            // Fallback to "Skins" folder if not found in "Configs/Skins"
-            if ((vehicleSkins == null || vehicleSkins.Length == 0) && (stopSkins == null || stopSkins.Length == 0))
-            {
-                vehicleSkins = Resources.LoadAll<VehicleSkinConfig>("Skins");
-                stopSkins = Resources.LoadAll<StopSkinConfig>("Skins");
-            }
+            if (string.IsNullOrEmpty(gameConfig.SkinsResourcePath))
+                throw new DataValidationException("[GameContextLifecycle] GameConfig.SkinsResourcePath is empty. Zero-Hardcode policy requires a valid resource path.");
+
+            var vehicleSkins = Resources.LoadAll<VehicleSkinConfig>(gameConfig.SkinsResourcePath);
+            var stopSkins = Resources.LoadAll<StopSkinConfig>(gameConfig.SkinsResourcePath);
 
             // We'll initialize the catalog after all services are bound by using a callback
             // The SkinCatalogService will be initialized in OnInitializeAsync
@@ -304,14 +303,8 @@ namespace PixelFlow
                 var skinCatalog = root.Context.Container.Resolve<ISkinCatalogService>();
                 if (skinCatalog != null)
                 {
-                    var vehicleSkins = Resources.LoadAll<VehicleSkinConfig>("Configs/Skins");
-                    var stopSkins = Resources.LoadAll<StopSkinConfig>("Configs/Skins");
-                    
-                    if ((vehicleSkins == null || vehicleSkins.Length == 0) && (stopSkins == null || stopSkins.Length == 0))
-                    {
-                        vehicleSkins = Resources.LoadAll<VehicleSkinConfig>("Skins");
-                        stopSkins = Resources.LoadAll<StopSkinConfig>("Skins");
-                    }
+                    var vehicleSkins = Resources.LoadAll<VehicleSkinConfig>(gameConfig.SkinsResourcePath);
+                    var stopSkins = Resources.LoadAll<StopSkinConfig>(gameConfig.SkinsResourcePath);
 
                     if (vehicleSkins != null && vehicleSkins.Length > 0)
                         skinCatalog.RegisterVehicleSkins(vehicleSkins);

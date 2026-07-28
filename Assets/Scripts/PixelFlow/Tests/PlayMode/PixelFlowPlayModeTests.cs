@@ -145,6 +145,7 @@ namespace PixelFlow.PlayMode.Tests
             storageKeys.CurrencyIdCoin = "coins";
             storageKeys.CurrencyIdGem = "gems";
             storageKeys.CurrencyIdTicket = "tickets";
+            storageKeys.KeyPuzzleSavePrefix = "NT_PuzzleSave_";
             storageKeys.EditorKeyUnlockedLevelsAllOverride = "UnlockedLevels";
             return storageKeys;
         }
@@ -277,6 +278,9 @@ namespace PixelFlow.PlayMode.Tests
                 builder.BindService<ILevelLoaderService, LevelLoaderService>();
 
                 builder.BindInstance<IRecoveryStrategy>(new DefaultRecoveryStrategy(maxRetries: 3));
+                builder.BindService<IScoreCalculator, ScoreCalculator>();
+                builder.BindService<GridStateSerializer>();
+
                 builder.Bind<ICameraProvider, StubCameraProvider>();
                 builder.Bind<IGridViewProvider, StubGridViewProvider>();
 

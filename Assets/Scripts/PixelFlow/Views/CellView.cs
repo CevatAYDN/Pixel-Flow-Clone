@@ -15,6 +15,7 @@ namespace PixelFlow.Views
         [Inject, OptionalInject] public GameConfig Config { get; set; }
         [Header("Sprite Renderers")]
         [SerializeField] private SpriteRenderer _bgRenderer;
+        [SerializeField] private SpriteRenderer _borderRenderer;
         [SerializeField] private SpriteRenderer _dotRenderer;
         [SerializeField] private SpriteRenderer _bridgeRenderer;
         [SerializeField] private SpriteRenderer _warningRenderer;
@@ -35,7 +36,8 @@ namespace PixelFlow.Views
         [SerializeField] private Sprite _warningSprite;
 
         private static Sprite _fallbackCircle, _fallbackSquare, _fallbackTriangle, _fallbackDiamond, _fallbackStar, _fallbackWarning, _fallbackBg, _fallbackConstruction, _fallbackLake, _fallbackPark, _fallbackArrow, _fallbackBridge;
-        private static Color _fallbackBorderColor = new Color(0.18f, 0.22f, 0.32f, 0.85f);
+        private static Sprite _fallbackBorderFrame;
+        private static Color _fallbackBorderColor;
 
         public Vector2Int GridPosition { get; private set; }
 
@@ -43,8 +45,10 @@ namespace PixelFlow.Views
         {
             GridPosition = pos;
             EnsureRenderersAndSprites();
-            if (ThemePalette != null)
-                _rejectionColor = ThemePalette.RejectionPulse;
+            if (ThemePalette == null)
+                throw new DataValidationException("[CellView] ThemePaletteAsset is not injected. Bind ThemePaletteAsset in GameContextLifecycle.");
+            _rejectionColor = ThemePalette.RejectionPulse;
+            _fallbackBorderColor = ThemePalette.FallbackBorderColor;
         }
 
         private void Awake()
@@ -68,6 +72,23 @@ namespace PixelFlow.Views
             {
                 _bgRenderer.transform.localPosition = new Vector3(0, 0, 0f);
             }
+
+            // Border overlay: hücre çerçevesi için ayrı SpriteRenderer
+            // tema renginden bağımsız sabit bir renk ile çizilir
+            if (_borderRenderer == null)
+            {
+                var borderObj = transform.Find("Border");
+                if (borderObj != null) _borderRenderer = borderObj.GetComponent<SpriteRenderer>();
+                if (_borderRenderer == null)
+                {
+                    var newBorder = new GameObject("Border");
+                    newBorder.transform.SetParent(transform, false);
+                    _borderRenderer = newBorder.AddComponent<SpriteRenderer>();
+                }
+            }
+            _borderRenderer.transform.localPosition = new Vector3(0, 0, -0.01f);
+            // sortingOrder varsayılan (0): Z=-0.01f → bg (0)'ın önünde,
+            // bridge (-0.3f), dot (-0.4f) gibi elemanların arkasında kalır
 
             if (_dotRenderer == null)
             {
@@ -110,12 +131,12 @@ namespace PixelFlow.Views
 
             if (_bgRenderer != null && _bgRenderer.sprite == null)
             {
-                GenerateFallbackSpritesIfNeeded();
+                GenerateFallbackSpritesIfNeeded(ThemePalette);
                 _bgRenderer.sprite = _fallbackBg;
             }
         }
 
-        private static void GenerateFallbackSpritesIfNeeded()
+        private static void GenerateFallbackSpritesIfNeeded(ThemePaletteAsset palette)
         {
             if (_fallbackSquare != null) return;
 
@@ -123,15 +144,28 @@ namespace PixelFlow.Views
             Debug.LogWarning("[CellView] Using runtime fallback sprites — assign shape sprites in the prefab for production quality.");
 #endif
 
+            // Zero-Hardcode §2.2: tüm renkler ThemePaletteAsset'ten okunur
+            bool hasPalette = palette != null;
+            Color cAmber = hasPalette ? palette.ProceduralConstructionAmber : new Color(0.95f, 0.65f, 0.1f, 1f);
+            Color cDark = hasPalette ? palette.ProceduralConstructionDark : new Color(0.2f, 0.15f, 0.05f, 1f);
+            Color cWaterDeep = hasPalette ? palette.ProceduralLakeWaterDeep : new Color(0.12f, 0.38f, 0.75f, 1f);
+            Color cWaterLight = hasPalette ? palette.ProceduralLakeWaterLight : new Color(0.40f, 0.75f, 0.95f, 1f);
+            Color cParkBase = hasPalette ? palette.ProceduralParkBase : new Color(0.18f, 0.52f, 0.24f, 1f);
+            Color cParkLeaf = hasPalette ? palette.ProceduralParkLeaf : new Color(0.35f, 0.75f, 0.38f, 1f);
+            Color cBridgeDeck = hasPalette ? palette.ProceduralBridgeDeck : new Color(0.82f, 0.84f, 0.90f, 1f);
+            Color cBridgeRail = hasPalette ? palette.ProceduralBridgeRail : new Color(0.95f, 0.75f, 0.20f, 1f);
+
             int size = 128;
             Vector2 center = new Vector2(size * 0.5f, size * 0.5f);
 
             // 1. Square / Bg with rounded corners and anti-aliased borders
+            // Grid çerçeve iyileştirmesi: border daha kalın (innerHalfWidth 54→48),
+            // ayrıca tema renginden bağımsız border overlay sprite'ı oluşturulur
             Texture2D texSquare = new Texture2D(size, size);
             Color[] colorsSq = new Color[size * size];
             float cornerRadius = 24f;
-            float outerHalfWidth = 58f;
-            float innerHalfWidth = 54f;
+            float outerHalfWidth = 57f;
+            float innerHalfWidth = 48f; // 54→48: border genişliği 4px → 9px
             Color borderColor = _fallbackBorderColor;
             Color innerColor = Color.white;
 
@@ -165,6 +199,44 @@ namespace PixelFlow.Views
             _fallbackSquare = Sprite.Create(texSquare, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 128f);
             _fallbackBg = _fallbackSquare;
 
+            // 1b. Border frame overlay sprite (tema renginden bağımsız çerçeve)
+            // Sadece border bölgesini içeren ayrı bir texture — center kısmı saydam
+            Texture2D texBorderFrame = new Texture2D(size, size);
+            Color[] colorsBorder = new Color[size * size];
+            float borderOuterHW = 57f;
+            float borderInnerHW = 47f; // border kalınlığından 1px içeriden başla (üst üste binme)
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float px = x - center.x;
+                    float py = y - center.y;
+
+                    // Outer edge
+                    float dxBO = Mathf.Max(Mathf.Abs(px) - borderOuterHW + cornerRadius, 0f);
+                    float dyBO = Mathf.Max(Mathf.Abs(py) - borderOuterHW + cornerRadius, 0f);
+                    float distBO = Mathf.Sqrt(dxBO * dxBO + dyBO * dyBO) - cornerRadius;
+
+                    // Inner edge (border inner side)
+                    float dxBI = Mathf.Max(Mathf.Abs(px) - borderInnerHW + (cornerRadius - 2f), 0f);
+                    float dyBI = Mathf.Max(Mathf.Abs(py) - borderInnerHW + (cornerRadius - 2f), 0f);
+                    float distBI = Mathf.Sqrt(dxBI * dxBI + dyBI * dyBI) - (cornerRadius - 2f);
+
+                    float alphaOut = Mathf.Clamp01(1f - (distBO + 0.5f));
+                    float alphaIn = Mathf.Clamp01(1f - (distBI + 0.5f));
+
+                    // Sadece border bölgesi (outer ile inner arası): alpha = outerAlpha * (1 - innerAlpha)
+                    // Dışarıdaki alan: alphaOut
+                    // İçerideki alan: alphaIn
+                    // Border bölgesi: alphaOut * (1 - alphaIn) — yani dışarıda görünür, içeride saydam
+                    float borderAlpha = alphaOut * (1f - alphaIn);
+                    colorsBorder[y * size + x] = Color.white.WithAlpha(borderAlpha);
+                }
+            }
+            texBorderFrame.SetPixels(colorsBorder);
+            texBorderFrame.Apply();
+            _fallbackBorderFrame = Sprite.Create(texBorderFrame, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 128f);
+
             // 2. Circle with anti-aliasing
             Texture2D texCircle = new Texture2D(size, size);
             Color[] colorsCirc = new Color[size * size];
@@ -176,7 +248,7 @@ namespace PixelFlow.Views
                     float sqrDist = (new Vector2(x, y) - center).sqrMagnitude;
                     float dist = Mathf.Sqrt(sqrDist);
                     float alpha = Mathf.Clamp01(radius - dist);
-                    colorsCirc[y * size + x] = new Color(1f, 1f, 1f, alpha);
+                    colorsCirc[y * size + x] = Color.white.WithAlpha(alpha);
                 }
             }
             texCircle.SetPixels(colorsCirc);
@@ -199,7 +271,7 @@ namespace PixelFlow.Views
                     float d3 = DistToLine(P, C, A);
                     float dist = Mathf.Min(d1, Mathf.Min(d2, d3));
                     float alpha = Mathf.Clamp01(dist);
-                    colorsTri[y * size + x] = new Color(1f, 1f, 1f, alpha);
+                    colorsTri[y * size + x] = Color.white.WithAlpha(alpha);
                 }
             }
             texTri.SetPixels(colorsTri);
@@ -218,7 +290,7 @@ namespace PixelFlow.Views
                     float dy = Mathf.Abs(y - center.y);
                     float edgeDist = (diamondRadius - (dx + dy)) * 0.7071f;
                     float alpha = Mathf.Clamp01(edgeDist);
-                    colorsDia[y * size + x] = new Color(1f, 1f, 1f, alpha);
+                    colorsDia[y * size + x] = Color.white.WithAlpha(alpha);
                 }
             }
             texDiamond.SetPixels(colorsDia);
@@ -231,8 +303,6 @@ namespace PixelFlow.Views
             // 5. Construction Hazard Stripes Sprite
             Texture2D texConst = new Texture2D(size, size);
             Color[] colorsConst = new Color[size * size];
-            Color cAmber = new Color(0.95f, 0.65f, 0.1f, 1f);
-            Color cDark = new Color(0.2f, 0.15f, 0.05f, 1f);
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
@@ -252,8 +322,6 @@ namespace PixelFlow.Views
             // 6. Lake Water Ripple Sprite
             Texture2D texLake = new Texture2D(size, size);
             Color[] colorsLake = new Color[size * size];
-            Color cWaterDeep = new Color(0.12f, 0.38f, 0.75f, 1f);
-            Color cWaterLight = new Color(0.40f, 0.75f, 0.95f, 1f);
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
@@ -273,8 +341,6 @@ namespace PixelFlow.Views
             // 7. Park Grass & Foliage Sprite
             Texture2D texPark = new Texture2D(size, size);
             Color[] colorsPark = new Color[size * size];
-            Color cParkBase = new Color(0.18f, 0.52f, 0.24f, 1f);
-            Color cParkLeaf = new Color(0.35f, 0.75f, 0.38f, 1f);
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
@@ -303,7 +369,7 @@ namespace PixelFlow.Views
                     bool inShaft = (nx >= -0.6f && nx <= 0.1f && Mathf.Abs(ny) <= 0.2f);
                     bool inHead = (nx >= 0.1f && nx <= 0.6f && Mathf.Abs(ny) <= (0.6f - nx));
                     float alpha = (inShaft || inHead) ? 1f : 0f;
-                    colorsArrow[y * size + x] = new Color(1f, 1f, 1f, alpha);
+                    colorsArrow[y * size + x] = Color.white.WithAlpha(alpha);
                 }
             }
             texArrow.SetPixels(colorsArrow);
@@ -313,8 +379,6 @@ namespace PixelFlow.Views
             // 9. Viaduct Bridge Sprite
             Texture2D texBridge = new Texture2D(size, size);
             Color[] colorsBridge = new Color[size * size];
-            Color cBridgeDeck = new Color(0.82f, 0.84f, 0.90f, 1f);
-            Color cBridgeRail = new Color(0.95f, 0.75f, 0.20f, 1f);
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
@@ -359,7 +423,7 @@ namespace PixelFlow.Views
             if (deckRenderer != null)
             {
                 var mat = new Material(Shader.Find("Sprites/Default") ?? Shader.Find("Standard"));
-                mat.color = new Color(0.78f, 0.80f, 0.88f, 1f);
+                mat.color = ThemePalette != null ? ThemePalette.ProceduralBridgeMaterial : new Color(0.78f, 0.80f, 0.88f, 1f);
                 deckRenderer.sharedMaterial = mat;
             }
 
@@ -390,24 +454,14 @@ namespace PixelFlow.Views
 
         public Color GetCellBackgroundColor(AppTheme theme)
         {
-            return ThemePalette != null ? ThemePalette.GetCellBackground(theme) : GetDefaultCellBackground(theme);
-        }
-
-        private static Color GetDefaultCellBackground(AppTheme theme)
-        {
-            switch (theme)
-            {
-                case AppTheme.Dark: return new Color(0.043f, 0.059f, 0.098f, 1f);
-                case AppTheme.Light: return new Color(0.92f, 0.92f, 0.94f, 1f);
-                case AppTheme.Neon: return new Color(0.078f, 0.055f, 0.157f, 1f);
-                default: return new Color(0.043f, 0.059f, 0.098f, 1f);
-            }
+            // ThemePalette, Setup()'de null controlünden geçer — DataValidationException fırlatır
+            return ThemePalette.GetCellBackground(theme);
         }
 
         public void AssignShapeSprite(SpriteRenderer renderer, ColorType colorType)
         {
             if (renderer == null) return;
-            GenerateFallbackSpritesIfNeeded();
+            GenerateFallbackSpritesIfNeeded(ThemePalette);
             Sprite sprite = null;
             switch (colorType)
             {
@@ -426,8 +480,9 @@ namespace PixelFlow.Views
         {
             Color cellBg = GetCellBackgroundColor(theme);
 
-            Color crashBright = ThemePalette != null ? ThemePalette.CrashPulseBright : new Color(0.937f, 0.267f, 0.267f);
-            Color crashDark = ThemePalette != null ? ThemePalette.CrashPulseDark : new Color(0.6f, 0.1f, 0.1f);
+            // ThemePalette, Setup()'de null controlünden geçer — direkt property access
+            Color crashBright = ThemePalette.CrashPulseBright;
+            Color crashDark = ThemePalette.CrashPulseDark;
 
             if (crashPos.x >= 0 && crashPos.y >= 0 && GridPosition == crashPos)
             {
@@ -443,10 +498,20 @@ namespace PixelFlow.Views
                 _rainbowHueOffset = (GridPosition.x * 0.137f + GridPosition.y * 0.269f) % 1f;
             }
 
-            GenerateFallbackSpritesIfNeeded();
+            GenerateFallbackSpritesIfNeeded(ThemePalette);
             EnsureProceduralBridge3D();
 
-            _bgRenderer.transform.localScale = new Vector3(0.92f, 0.92f, 1f);
+            _bgRenderer.transform.localScale = new Vector3(0.96f, 0.96f, 1f); // 0.92→0.96: hücreler arası boşluk azaltıldı
+
+            // Border overlay: tema renginden bağımsız sabit beyaz çerçeve (görünürlük artışı)
+            if (_borderRenderer != null)
+            {
+                GenerateFallbackSpritesIfNeeded(ThemePalette);
+                _borderRenderer.enabled = true;
+                _borderRenderer.sprite = _fallbackBorderFrame;
+                _borderRenderer.color = Color.white.WithAlpha(0.25f); // sabit düşük alpha — her temada görünür
+                _borderRenderer.transform.localScale = new Vector3(0.96f, 0.96f, 1f);
+            }
 
             bool isBridge = cellData.HasViaduct || cellData.State == CellState.Bridge;
 
@@ -595,6 +660,12 @@ namespace PixelFlow.Views
             }
         }
 
+        /// <summary>
+        /// PERFORMANS: GridView.OnTick'te animasyonlu hücre takibi için.
+        /// true ise hücre şu anda bounce, rejection veya rainbow animasyonu oynatıyor demektir.
+        /// </summary>
+        public bool IsAnimating => _isBouncing || _isRejecting || _isRainbow;
+
         // GC-free animations variables
         private float _bounceScale = 1f;
         private float _bounceDuration = 0f;
@@ -606,8 +677,9 @@ namespace PixelFlow.Views
         private float _rejectionTimer = 0f;
         private bool _isRejecting = false;
         private Color _rejectionOriginalColor;
-        private Color _rejectionColor = new Color(0.937f, 0.267f, 0.267f, 1f); // Default fallback; overridden by ThemePaletteAsset
-        private float RejectionPulseFrequency => Config != null ? Config.RejectionPulseFrequency : 15f;
+        private Color _rejectionColor; // Overridden by ThemePaletteAsset in Setup()
+        private float RejectionPulseFrequency => Config != null ? Config.RejectionPulseFrequency
+            : throw new DataValidationException("[CellView] GameConfig.RejectionPulseFrequency erişilemedi!");
 
         // Rainbow Road visual effect
         private bool _isRainbow = false;
@@ -627,7 +699,7 @@ namespace PixelFlow.Views
                 if (_bgRenderer != null)
                 {
                     Color current = _bgRenderer.color;
-                    _bgRenderer.color = new Color(rainbowColor.r, rainbowColor.g, rainbowColor.b, current.a);
+                    _bgRenderer.color = rainbowColor.WithAlpha(current.a);
                 }
             }
 

@@ -123,7 +123,7 @@ namespace PixelFlow.Services
 
         private static ILoggerService Logger => NexusRuntime.Logger;
 
-        public static void Save(IGridModel grid, IGameSessionModel session, ILevelModel level, IPlayerPrefsService prefs)
+        public static void Save(IGridModel grid, IGameSessionModel session, ILevelModel level, IPlayerPrefsService prefs, StorageKeysConfigAsset storageKeys = null)
         {
             if (grid == null) return;
 
@@ -179,7 +179,7 @@ namespace PixelFlow.Services
             }
 
             string json = JsonUtility.ToJson(data);
-            prefs.SetString(GetSaveKeyStatic(), json);
+            prefs.SetString(GetSaveKeyStatic(storageKeys), json);
             prefs.Save();
             Logger?.Log($"[PixelFlow.GridStateSerializer] 💾 Game state saved: Level {data.levelIndex + 1} ({data.width}x{data.height}, Cells: {data.cells.Count}, Active Paths: {data.paths.Count}, Score: {data.score})");
         }

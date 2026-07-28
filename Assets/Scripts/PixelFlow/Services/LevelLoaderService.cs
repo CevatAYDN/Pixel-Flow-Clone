@@ -39,6 +39,7 @@ namespace PixelFlow.Services
         [Inject] public ILoggerService LoggerService { get; set; }
         [Inject] public EconomyConfigAsset EconomyConfig { get; set; }
         [Inject] public GridStateSerializer GridStateSerializer { get; set; }
+        [Inject] public StorageKeysConfigAsset StorageKeysConfig { get; set; }
 
         public ValueTask InitializeAsync(CancellationToken ct) => default;
         public void OnDispose() { }
@@ -167,7 +168,7 @@ namespace PixelFlow.Services
             SignalBus.Fire(new GridUpdatedSignal());
             LoggerService?.Log($"[PixelFlow.LevelLoaderService] GameState changing: {GameStateModel.CurrentState} -> Playing");
             GameStateModel.SetState(GameState.Playing);
-            SaveThrottler?.TryRequestSave(() => GridStateSerializer.Save(GridModel, GameSessionModel, LevelModel, PlayerPrefsService));
+            SaveThrottler?.TryRequestSave(() => GridStateSerializer.Save(GridModel, GameSessionModel, LevelModel, PlayerPrefsService, StorageKeysConfig));
 
             LoggerService?.Log($"[PixelFlow.LevelLoaderService] ✔ Level {ld.levelIndex + 1} loaded successfully.");
         }
